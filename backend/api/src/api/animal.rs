@@ -1,6 +1,5 @@
 use chrono::NaiveDate;
 use poem_openapi::{ApiResponse, Object, payload::Json};
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use yams_core::{domain::ClientId, use_cases};
 
