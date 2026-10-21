@@ -1,0 +1,29 @@
+name: Discovery / spike
+description: Answer a question before committing to a spec or design
+labels: ["type: spike"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What must be answered?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters
+      description: Which spec, decision, or issue is waiting on this?
+  - type: textarea
+    id: output
+    attributes:
+      label: Expected output
+      description: Where the answer lands (spec decision log, ADR, issue comment).
+      placeholder: Proposed ADR in specs/decisions/
+    validations:
+      required: true
+  - type: input
+    id: timebox
+    attributes:
+      label: Timebox
+      placeholder: "1 agent session"

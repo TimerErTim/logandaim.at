@@ -1,0 +1,17 @@
+---
+description: Agentic project management workflow for logandaim.at (specs, GitHub issues, changelog)
+alwaysApply: true
+---
+
+# Project management
+
+Follow [.github/CONTRIBUTING.md](../../.github/CONTRIBUTING.md) and [specs/README.md](../../specs/README.md).
+
+- GitHub `TimerErTim/logandaim.at` is the hub: issues are work items, PRs are delivery. No local backlog files.
+- Product intent lives in `specs/product/`. Only implement against `PO-approved` specs and `ready` issues.
+- Specs and ADRs you write are `Draft` / `Proposed`. Never set `PO-approved`, `Accepted`, or `Superseded`.
+- If a spec does not define the behavior you need: stop, comment on the issue, and label it `needs-PO`. Do not guess.
+- Never change issue priority labels (`P0`–`P3`) or milestones without PO instruction.
+- Reference acceptance criteria by number (`AC-3`) in tests, commits, and PRs.
+- Add a `CHANGELOG.md` entry under `Unreleased` for every user-visible change (Keep a Changelog sections).
+- Do not add YAMS names, assets, or veterinary domain terms. Do not reintroduce Tauri without an ADR.

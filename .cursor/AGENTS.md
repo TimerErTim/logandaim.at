@@ -57,7 +57,7 @@ Two rules apply everywhere in this repo.
 - Rust types and modules: `Klient`, `Behandlung`, `Leistung`, `Tagesabschluss`, `KlientErstellen`
 - Persisted names: SQLite tables/columns for domain fields (`klienten`, `leistungen`, `straße_und_hausnummer`)
 - API surface for domain: HTTP paths (`/klient`, `/tagesabschluss`), JSON keys (`vorname`, `straßeUndHausnummer`, `ländercode`, `mwst`)
-- Domain specs ([`specs/abrechnung.md`](specs/abrechnung.md)) — trust code over stale English specs
+- Domain specs ([`specs/legacy/abrechnung.md`](specs/legacy/abrechnung.md)) — trust code over stale English specs
 
 **Naming ladder** — `NeuerKlient` (domain) → `KlientErstellen` (use case) → `KlientErstellung` (API request). German feature-slice file names (`klient.rs`, `abrechnung.rs`), not English technical names (`client.rs`, `billing.rs`).
 
