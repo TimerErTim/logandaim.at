@@ -30,18 +30,22 @@ Labels are defined in [`labels.yml`](labels.yml) and synced by a workflow. Edit 
 Markers: `needs-PO` (blocked on a PO decision), `ready` (meets the Ready gate), `agent-ok`
 (suitable for autonomous agent work), `blocked` (waiting on another issue).
 
-## GitHub Project setup
+## GitHub Project
 
-Created once by a maintainer (the API tools agents use cannot create projects or milestones):
+Project: [logandaim.at](https://github.com/users/TimerErTim/projects/3), linked to this repository.
 
-0. Create milestones `M0 Rebrand`, `M1 MVP`, `M2 Offline`, `Later` (see [charter](../specs/product/charter.md#milestones)).
-   Assign seeded issues by their `Milestone:` line.
-1. Create a project "logandaim.at" (Board layout) under the repository owner and link the repository.
-2. Status field options: `Inbox`, `Ready`, `In progress`, `In review`, `Done`.
-3. Add a single-select field `Priority` with `P0`–`P3` (mirrors the label).
-4. Views: "Board" grouped by Status, and "MVP" table filtered to milestone `M1 MVP`, sorted by Priority.
-5. Enable the built-in workflows: item added → `Inbox`, PR merged → `Done`, issue closed → `Done`.
-6. Enable auto-add for issues from this repository.
+- Status: `Inbox`, `Ready`, `In progress`, `In review`, `Done`.
+- `Priority` single-select `P0`–`P3`, mirrors the label.
+- Milestones: `M0 Rebrand`, `M1 MVP`, `M2 Offline`, `Later` (see [charter](../specs/product/charter.md#milestones)).
+
+Agents add new issues with `gh project item-add 3 --owner TimerErTim --url <issue-url>` and set
+Status and Priority with `gh project item-edit`.
+
+UI-only settings (no API exists), set once by a maintainer:
+
+1. Views: "Board" grouped by Status, and "MVP" table filtered to milestone `M1 MVP`, sorted by Priority.
+2. Built-in workflows: item added → `Inbox`, PR merged → `Done`, issue closed → `Done`.
+3. Auto-add for issues and PRs from this repository.
 
 Add more views only when a real coordination question needs one.
 

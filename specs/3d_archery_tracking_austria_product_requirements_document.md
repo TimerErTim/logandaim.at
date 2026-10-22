@@ -4,7 +4,7 @@
 ---
 
 ## 1. Executive Summary & Vision
-Ziel des Projekts ist die Konzeption und Entwicklung einer spezialisierten Web-Applikation (optimiert für Mobile/PWA) zur Erfassung, Analyse und Verfolgung des persönlichen Fortschritts im 3D-Bogensport in Österreich. 
+Ziel des Projekts ist die Konzeption und Entwicklung einer spezialisierten Web-Applikation (optimiert für Mobile/PWA) zur Erfassung, Analyse und Verfolgung des persönlichen Fortschritts im 3D-Bogensport in Österreich.
 
 Bestehende Lösungen beschränken sich häufig auf reine Scorekarten oder Turniersoftware nach WA/IFAA-Regeln, ohne differenzierte Treffergenauigkeit über Zeit (z. B. auf Parcours-/Zielebene) oder stufenlose Distanzzuordnungen abzubilden. Die App schließt diese Lücke, indem sie Betreibern von Bogenparcours eine standardisierte Plattform bietet und Schützinnen und Schützen ein datengestütztes Trainingstool an die Hand gibt.
 

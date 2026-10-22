@@ -3,7 +3,7 @@ id: SPEC-charter
 title: logandaim.at product charter
 status: PO-approved
 owner: TimerErTim
-issues: []
+issues: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 superseded_by: null
 ---
 
