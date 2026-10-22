@@ -12,12 +12,11 @@ jobs:
     uses: ./.github/workflows/main_ci.yml
 
   release:
-    name: Release for all platforms
+    name: Release backend binaries
     needs: [main-ci]
     strategy:
       matrix:
         platform: [ubuntu-latest, windows-latest]
-
     runs-on: ${{ matrix.platform }}
     permissions:
       contents: write
@@ -41,27 +40,6 @@ jobs:
           reshim: true
           cache: true
           cache_key: mise-v1-{{platform}}-{{file_hash}}
-
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev gdk-pixbuf2.0-dev webkit2gtk-4.0 libappindicator3-dev librsvg2-dev patchelf libglib2.0-dev pkg-config libsoup-3.0-dev libjavascriptcoregtk-4.1-dev libwebkit2gtk-4.1-dev
-          mise deps
-
-      - name: Build and release Tauri app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: v__VERSION__
-          releaseName: "YAMS - v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
-          releaseDraft: true
-          prerelease: false
-          projectPath: frontend
-          tauriScript: "mise run"
-          iconPath: resources/logos/yams.png
 
       - name: Build backend binaries
         run: mise run build:server build:scheduler

@@ -10,13 +10,12 @@ import {
   useMemo,
   useState,
 } from "react";
-import { DeploymentMode, getConfig } from "@/lib/config";
+import { getConfig } from "@/lib/config";
 import { createYamsApi, resetYamsApiCache } from "./index";
 import type { YamsApi } from "./yams-api";
 
 type YamsApiContextValue = {
   api: YamsApi | null;
-  mode: DeploymentMode | null;
   remoteApiBaseUrl: string | null;
   dev: boolean;
   loading: boolean;
@@ -28,7 +27,6 @@ const YamsApiContext = createContext<YamsApiContextValue | null>(null);
 
 export function YamsApiProvider({ children }: { children: ReactNode }) {
   const [api, setApi] = useState<YamsApi | null>(null);
-  const [mode, setMode] = useState<DeploymentMode | null>(null);
   const [remoteApiBaseUrl, setRemoteApiBaseUrl] = useState<string | null>(null);
   const [dev, setDev] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -55,12 +53,7 @@ export function YamsApiProvider({ children }: { children: ReactNode }) {
         const resolvedApi = await createYamsApi();
 
         if (!cancelled) {
-          setMode(config.mode);
-          if (config.mode === DeploymentMode.Remote) {
-            setRemoteApiBaseUrl(config.remoteApiUrl);
-          } else {
-            setRemoteApiBaseUrl(null);
-          }
+          setRemoteApiBaseUrl(config.remoteApiUrl);
           setDev(config.dev);
           setApi(resolvedApi);
         }
@@ -68,7 +61,6 @@ export function YamsApiProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setError(String(bootstrapError));
           setApi(null);
-          setMode(null);
           setRemoteApiBaseUrl(null);
           setDev(false);
         }
@@ -89,14 +81,13 @@ export function YamsApiProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       api,
-      mode,
       remoteApiBaseUrl,
       dev,
       loading,
       error,
       reload,
     }),
-    [api, mode, remoteApiBaseUrl, dev, loading, error, reload],
+    [api, remoteApiBaseUrl, dev, loading, error, reload],
   );
 
   return (
