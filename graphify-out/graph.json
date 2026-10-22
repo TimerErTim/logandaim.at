@@ -15605,7 +15605,7 @@
       "node_kind": "heading",
       "norm_label": "closed enums",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L63"
+      "source_location": "L60"
     },
     {
       "id": "crates_yams_core_src_domain_readme_creation_input_and_construction",
@@ -15617,7 +15617,7 @@
       "node_kind": "heading",
       "norm_label": "creation input and construction",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L104"
+      "source_location": "L101"
     },
     {
       "id": "crates_yams_core_src_domain_readme_derived_values",
@@ -15629,7 +15629,7 @@
       "node_kind": "heading",
       "norm_label": "derived values",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L129"
+      "source_location": "L126"
     },
     {
       "id": "crates_yams_core_src_domain_readme_domain_model",
@@ -15653,7 +15653,7 @@
       "node_kind": "heading",
       "norm_label": "encapsulation",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L121"
+      "source_location": "L118"
     },
     {
       "id": "crates_yams_core_src_domain_readme_errors",
@@ -15665,7 +15665,7 @@
       "node_kind": "heading",
       "norm_label": "errors",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L144"
+      "source_location": "L141"
     },
     {
       "id": "crates_yams_core_src_domain_readme_identity_newtypes",
@@ -15677,7 +15677,7 @@
       "node_kind": "heading",
       "norm_label": "identity newtypes",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L28"
+      "source_location": "L25"
     },
     {
       "id": "crates_yams_core_src_domain_readme_layout",
@@ -15689,7 +15689,7 @@
       "node_kind": "heading",
       "norm_label": "layout",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L12"
+      "source_location": "L9"
     },
     {
       "id": "crates_yams_core_src_domain_readme_make_invalid_state_unrepresentable",
@@ -15701,7 +15701,7 @@
       "node_kind": "heading",
       "norm_label": "make invalid state unrepresentable",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L23"
+      "source_location": "L20"
     },
     {
       "id": "crates_yams_core_src_domain_readme_references_between_aggregates",
@@ -15713,7 +15713,7 @@
       "node_kind": "heading",
       "norm_label": "references between aggregates",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L139"
+      "source_location": "L136"
     },
     {
       "id": "crates_yams_core_src_domain_readme_snapshots",
@@ -15725,7 +15725,7 @@
       "node_kind": "heading",
       "norm_label": "snapshots",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L134"
+      "source_location": "L131"
     },
     {
       "id": "crates_yams_core_src_domain_readme_tests",
@@ -15737,7 +15737,7 @@
       "node_kind": "heading",
       "norm_label": "tests",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L156"
+      "source_location": "L153"
     },
     {
       "id": "crates_yams_core_src_domain_readme_type_state_aggregates",
@@ -15749,7 +15749,7 @@
       "node_kind": "heading",
       "norm_label": "type-state aggregates",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L74"
+      "source_location": "L71"
     },
     {
       "id": "crates_yams_core_src_domain_readme_validated_value_objects",
@@ -15761,7 +15761,7 @@
       "node_kind": "heading",
       "norm_label": "validated value objects",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L37"
+      "source_location": "L34"
     },
     {
       "id": "crates_yams_core_src_domain_readme_variant_data_in_enums",
@@ -15773,7 +15773,7 @@
       "node_kind": "heading",
       "norm_label": "variant data in enums",
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L68"
+      "source_location": "L65"
     },
     {
       "id": "crates_yams_core_src_domain_mod",
@@ -105465,24 +105465,13 @@
     },
     {
       "source": "crates_yams_core_src_domain_readme_domain_model",
-      "target": "crates_yams_core_src_domain_readme_layout",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L12",
-      "weight": 1.0
-    },
-    {
-      "source": "crates_yams_core_src_domain_readme_domain_model",
       "target": "crates_yams_core_src_domain_readme_errors",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L144",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -105493,7 +105482,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L156",
+      "source_location": "L153",
       "weight": 1.0
     },
     {
@@ -105504,7 +105493,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L23",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "crates_yams_core_src_domain_readme_domain_model",
+      "target": "crates_yams_core_src_domain_readme_layout",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "crates/yams-core/src/domain/README.md",
+      "source_location": "L9",
       "weight": 1.0
     },
     {
@@ -105515,7 +105515,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L104",
+      "source_location": "L101",
       "weight": 1.0
     },
     {
@@ -105526,7 +105526,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L121",
+      "source_location": "L118",
       "weight": 1.0
     },
     {
@@ -105537,7 +105537,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L129",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -105548,7 +105548,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L134",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -105559,7 +105559,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L139",
+      "source_location": "L136",
       "weight": 1.0
     },
     {
@@ -105570,7 +105570,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L28",
+      "source_location": "L25",
       "weight": 1.0
     },
     {
@@ -105581,7 +105581,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L37",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -105592,7 +105592,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L63",
+      "source_location": "L60",
       "weight": 1.0
     },
     {
@@ -105603,7 +105603,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L68",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -105614,7 +105614,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/yams-core/src/domain/README.md",
-      "source_location": "L74",
+      "source_location": "L71",
       "weight": 1.0
     },
     {
@@ -128251,5 +128251,5 @@
       "source_file": ".cursor/AGENTS.md"
     }
   ],
-  "built_at_commit": "00060c115dd3b798481d9ccac68703f654b84690"
+  "built_at_commit": "14482763267cd3c9e5912e666da64b85600a2585"
 }
