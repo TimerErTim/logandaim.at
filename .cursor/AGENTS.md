@@ -93,28 +93,20 @@ Ports are `async_trait` traits; all repository and use-case I/O is async.
 
 ### Design Principles
 
-**Make invalid state unrepresentable.** Guiding principle for domain modeling:
+**Domain modeling rules** (make invalid state unrepresentable: ID newtypes, validated value objects, type-state aggregates, `Neues*` / `neu` / `from_parts` construction, domain errors, domain unit tests) live in [`crates/yams-core/src/domain/README.md`](../crates/yams-core/src/domain/README.md), rendered as the `domain` module docs. Read it before touching `domain/`. It is domain-agnostic: keep it when replacing the domain types.
 
-- **Newtypes for identity** — `KlientId(Uuid)`, `HaustierId(Uuid)` prevent ID mix-ups at compile time.
-- **Validated value objects** — `EmailAdresse`, `Mobilnummer`, `Preis`, `Ratio` (`0..=1`; 100% = `1`), `Menge` (non-negative, unitless) via `new()` / `TryFrom`. Invalid values cannot exist in the type system.
-- **Closed enums where closed** — `Ländercode` is an enum (`AT`, `DE`, `CH`), not a free-form string.
-- **Type-state aggregates** — `LeistungIn<Offen>` / `LeistungIn<Abgerechnet>` (aliases `LeistungOffen`, `LeistungAbgerechnet`), `RechnungIn<…>` likewise. Enum `Leistung` / `Rechnung` sums all valid states when compile-time state unknown.
-- **Separate creation types** — `NeuerKlient` / `NeuesHaustier` (and the other `Neue*` builders) have no ID and do **not** validate; they are input records. Repositories call `Haustier::neu` / `Klient::neu` (and `from_parts` when loading), which own empty-name and construction invariants.
-- **Encapsulation over `pub`** — aggregate fields private; expose accessors and mutation through domain methods (`neu`, `mark_abgerechnet`, `aus_leistungen`). Request DTOs and `Neue*` builders never assemble a valid aggregate. Repositories invoke `::neu` on create and `from_parts` on load. Construction `Report`s `.attach("while constructing klient")` (and the analogous haustier/produkt/behandlung/leistung strings) so the site is visible in the report.
-- **Derived values as getters** — `Leistung::betrag()` from `LeistungQuelle`; `Rechnung::gesamtbetrag_brutto()` from `Rechnungspositionen`. No stored duplicates that can drift.
-- **Price snapshots on Leistung** — `LeistungQuelle` stores booked prices (`einzelpreis`, `menge`, `preis`) so Tagesabschluss uses historical values, not current catalog prices.
+Application-level principles:
+
 - **Versioned concurrency** — `Versioned<T>` bundles entity + optimistic-lock version.
 - **UoW** — use cases call `ctx.enter()` for an owned UoW (borrows ctx). Nested work uses `ctx.sub(&uow)` (ports stay on the context). Nested `enter` joins the outer TX; nested `commit`/`rollback` are no-ops. Collect work without `?` across the UoW, then `uow.finish(result, commit_context)` (commit on `Ok`, rollback on `Err`). Drop panics if neither `commit` nor `rollback` ran. `#[must_use]` on `UnitOfWork`.
-- **Single linkage** — `Haustier.klient_id` is source of truth; no `haustier_ids` on `Klient`.
 
 **Repositories are dumb.** Ports persist and load domain types — no business logic (no `mark_abgerechnet` on repository). State transitions happen in domain/use cases; repos `update` the mutated entity.
 
 **Error handling conventions:**
 - **`Report<E>` everywhere** — use cases, domain services (`RechnungOffen::aus_leistungen`), orchestration. Use `.change_context()` directly; avoid redundant `IntoReport::into_report`.
-- **Exception: newtype validation** — `EmailAdresse::new`, `Preis::new`, `Ländercode::from_str` return plain `Result<T, ValidationError>` — nothing cross-cutting can fail at construction.
-- **Preis arithmetic** — implement `Add`; addition of two `Preis` values cannot fail. Scaling is infallible `Mul`: `&Preis * &Menge` and `&Preis * &Ratio` (MwSt is a ratio, so `netto * 0.19`, never `/100`).
+- **Exception: value-object validation** returns plain `Result` (see domain README).
 
-Domain may depend on ports directly (e.g. `Clock`). Use cases receive an `ExecutionContext` (ports + UoW provider). They `enter` / `finish` the UoW themselves.
+Use cases receive an `ExecutionContext` (ports + UoW provider). They `enter` / `finish` the UoW themselves.
 
 ### App & Orchestration
 
@@ -331,7 +323,7 @@ Recreate **workflow and visual language** from the legacy frontend, not its stac
    `domain/` (unit tests in the same file) → `application/ports/` → `service/use_cases/` → `yams-api` (`requests/`, `schema/`, `YamsAppApi` method, `spec.rs` route if HTTP) → `yams-sqlite/repos/` → migration in `migrations/` (if schema change) → use-case case in `yams-core/tests/cases/` → API e2e in `yams-api/tests/e2e/` when the public surface changed → `mise run sync:openapi` (if API surface changed).
 2. **Domain changes stay in core.** API DTOs are a separate translation layer; never leak serde/openapi concerns into core.
 3. **All mutations through `App::execute`.** No direct repo calls from adapters.
-4. **Prefer types over runtime checks.** If a value can be invalid, make it impossible to construct without validation.
+4. **Domain modeling** — follow [`crates/yams-core/src/domain/README.md`](../crates/yams-core/src/domain/README.md).
 5. **Errors: `thiserror` in domain/use cases, `Report` at boundaries.** Use `.contextualize()` / `.change_context()` when crossing layers. English for technical messages; German only in domain/user-facing UL strings where appropriate.
 6. **Language** — English docs/comments/technical code; German UL for domain names; UTF-8 identifiers, no `ae`/`oe`/`ue` transliteration (see Language & Naming).
 7. **Tests:** domain units live in a `#[cfg(test)]` module in the source file; use-case flows go in `yams-core/tests/cases/` (persistence conformance follows automatically); API e2e uses Poem `YamsApiTestClient` in `yams-api/tests/e2e/` (`main.rs` holds the client, `base_app_builder()`, and JSON helpers).

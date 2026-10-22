@@ -1,3 +1,5 @@
+#![doc = include_str!("README.md")]
+
 pub mod adresse;
 pub mod behandlung;
 pub mod haustier;
