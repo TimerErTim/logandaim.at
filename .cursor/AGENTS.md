@@ -298,7 +298,7 @@ Next.js in `frontend/`. OpenAPI types at `frontend/src/api/schema.ts` (`mise run
 
 ### UI design (legacy parity)
 
-Recreate **workflow and visual language** from `frontend-legacy/`, not its stack (MobX, HeroUI, Pages Router).
+Recreate **workflow and visual language** from the legacy frontend, not its stack (MobX, HeroUI, Pages Router).
 
 | Legacy pattern | New frontend |
 |----------------|--------------|
