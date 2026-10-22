@@ -1,6 +1,5 @@
 import { getConfig } from "@/lib/config";
 import { HttpYamsApi } from "./http-client";
-import { TauriYamsApi } from "./tauri-client";
 import type { YamsApi } from "./yams-api";
 
 function normalizeApiBaseUrl(url: string): string {
@@ -13,9 +12,7 @@ function normalizeApiBaseUrl(url: string): string {
 
 export async function createYamsApi(): Promise<YamsApi> {
   const config = await getConfig();
-  return config.mode === "embedded"
-    ? new TauriYamsApi()
-    : new HttpYamsApi(normalizeApiBaseUrl(config.remoteApiUrl));
+  return new HttpYamsApi(normalizeApiBaseUrl(config.remoteApiUrl));
 }
 
 /** Kept for provider reload(); instances are not cached module-wide. */

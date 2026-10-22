@@ -5,7 +5,6 @@ members = [
     "crates/*",
     "backend/server",
     "backend/scheduler",
-    "frontend/src-tauri",
 ]
 resolver = "2"
 

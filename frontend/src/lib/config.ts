@@ -1,45 +1,17 @@
-import { invoke, isTauri } from "@tauri-apps/api/core";
 import standaloneConfig from "@/standalone-config.json";
 
-export enum DeploymentMode {
-  Embedded = "embedded",
-  Remote = "remote",
-}
-
-type BaseConfig = {
-  isTauri: boolean;
+export type FrontendConfig = typeof standaloneConfig & {
   dev: boolean;
 };
 
-export type FrontendConfig = BaseConfig &
-  (
-    | (typeof standaloneConfig & {
-        mode: DeploymentMode.Remote;
-      })
-    | {
-        mode: DeploymentMode.Embedded;
-      }
-  );
-
-async function loadStandaloneConfig(): Promise<FrontendConfig> {
-  return {
-    isTauri: false,
-    dev: process.env.NODE_ENV === "development",
-    mode: DeploymentMode.Remote,
-    ...standaloneConfig,
-  };
-}
-
-async function loadTauriConfig(): Promise<FrontendConfig> {
-  const config = (await invoke<Omit<FrontendConfig, "isTauri">>(
-    "frontend_config",
-  )) as any;
-  config.isTauri = true;
-  return config as FrontendConfig;
-}
-
 async function loadConfig(): Promise<FrontendConfig> {
-  return isTauri() ? await loadTauriConfig() : await loadStandaloneConfig();
+  return {
+    remoteApiUrl:
+      process.env.NEXT_PUBLIC_YAMS_API_URL ?? standaloneConfig.remoteApiUrl,
+    dev: process.env.NEXT_PUBLIC_YAMS_DEV
+      ? process.env.NEXT_PUBLIC_YAMS_DEV === "true"
+      : process.env.NODE_ENV === "development",
+  };
 }
 
 let cachedConfig: FrontendConfig | null = null;

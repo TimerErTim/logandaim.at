@@ -114,7 +114,6 @@ async fn main() -> Result<(), Report<BackendServerError>> {
             || origin.starts_with("http://127.0.0.1:")
             || origin.starts_with("https://localhost:")
             || origin.starts_with("https://127.0.0.1:")
-            || origin == "tauri://localhost"
     });
 
     let tracing = Tracing.combine(RequestId::new().reuse_id(ReuseId::Use));
