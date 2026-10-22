@@ -11,6 +11,7 @@ pub mod ratio;
 pub mod rechnung;
 pub mod seminar;
 pub mod seminar_termin;
+pub mod wertung;
 pub mod zeitraum;
 
 pub use adresse::Adresse;
@@ -53,4 +54,8 @@ pub use seminar_termin::SeminarTerminGeplant;
 pub use seminar_termin::SeminarTerminId;
 pub use seminar_termin::SeminarTerminIn;
 pub use seminar_termin::SeminarTerminZustandTeile;
+pub use wertung::Punkte;
+pub use wertung::Rundenergebnis;
+pub use wertung::Wertungszone;
+pub use wertung::Zielwertung;
 pub use zeitraum::Zeitraum;
