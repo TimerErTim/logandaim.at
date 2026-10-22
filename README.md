@@ -1,4 +1,4 @@
-![YAMS Banner](resources/logos/banner.png)
+# logandaim.at
 
 ## [![HTL Grieskirchen](https://img.shields.io/badge/Education-HTL%20Grieskirchen-ffffff?style=flat&logo=internetarchive&logoColor=ffffff)](https://htl-grieskirchen.net)
 
