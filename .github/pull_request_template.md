@@ -21,7 +21,7 @@ What changes for the user or for the system.
 
 - [ ] `CHANGELOG.md` updated under `Unreleased` (user-visible changes only)
 - [ ] Spec updated if behavior differs from it
-- [ ] No new YAMS names, assets, or domain terms
+- [ ] No new legacy names, assets, or veterinary domain terms
 - [ ] Migration or data notes below, if any
 
 ## Notes

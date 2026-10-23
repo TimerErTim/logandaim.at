@@ -1,5 +1,5 @@
 [package]
-name = "yams-server"
+name = "logandaim-server"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -7,10 +7,10 @@ license-file.workspace = true
 repository.workspace = true
 
 [dependencies]
-yams-core = { path = "../../crates/yams-core" }
-yams-sqlite = { path = "../../crates/yams-sqlite" }
-yams-api = { path = "../../crates/yams-api" }
-yams-filesystemstore = { path = "../../crates/yams-filesystemstore" }
+logandaim-core = { path = "../../crates/logandaim-core" }
+logandaim-sqlite = { path = "../../crates/logandaim-sqlite" }
+logandaim-api = { path = "../../crates/logandaim-api" }
+logandaim-filesystemstore = { path = "../../crates/logandaim-filesystemstore" }
 
 thiserror = { workspace = true }
 error-stack = { workspace = true }

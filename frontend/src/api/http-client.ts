@@ -1,8 +1,8 @@
 import createClient from "openapi-fetch";
 
 import { ApiError } from "./errors";
+import type { LogandaimApi } from "./logandaim-api";
 import type { paths } from "./schema";
-import type { YamsApi } from "./yams-api";
 
 type JsonClient = ReturnType<typeof createClient<paths>>;
 
@@ -13,7 +13,7 @@ async function unwrap<T>(result: { data?: T; error?: unknown }): Promise<T> {
   return result.data as T;
 }
 
-export class HttpYamsApi implements YamsApi {
+export class HttpLogandaimApi implements LogandaimApi {
   private readonly client: JsonClient;
   private readonly baseUrl: string;
 

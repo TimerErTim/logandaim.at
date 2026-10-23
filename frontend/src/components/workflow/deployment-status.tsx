@@ -1,7 +1,7 @@
 "use client";
 
 import { useHealthQuery } from "@/api/hooks";
-import { useYamsApi } from "@/api/provider";
+import { useLogandaimApi } from "@/api/provider";
 import { Alert } from "@/components/ui/alert";
 import {
   Card,
@@ -16,7 +16,7 @@ export function DeploymentStatus() {
     remoteApiBaseUrl,
     loading: apiBootstrapping,
     error: apiBootstrapError,
-  } = useYamsApi();
+  } = useLogandaimApi();
   const health = useHealthQuery();
 
   return (

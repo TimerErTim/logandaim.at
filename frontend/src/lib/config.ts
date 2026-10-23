@@ -7,9 +7,10 @@ export type FrontendConfig = typeof standaloneConfig & {
 async function loadConfig(): Promise<FrontendConfig> {
   return {
     remoteApiUrl:
-      process.env.NEXT_PUBLIC_YAMS_API_URL ?? standaloneConfig.remoteApiUrl,
-    dev: process.env.NEXT_PUBLIC_YAMS_DEV
-      ? process.env.NEXT_PUBLIC_YAMS_DEV === "true"
+      process.env.NEXT_PUBLIC_LOGANDAIM_API_URL ??
+      standaloneConfig.remoteApiUrl,
+    dev: process.env.NEXT_PUBLIC_LOGANDAIM_DEV
+      ? process.env.NEXT_PUBLIC_LOGANDAIM_DEV === "true"
       : process.env.NODE_ENV === "development",
   };
 }

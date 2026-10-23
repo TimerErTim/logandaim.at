@@ -72,7 +72,7 @@ MVP capabilities:
 | Master data: Anlage, Parcours, Ziel, Pflock (admin seeding) | to be written |
 | Log a Runde target by target, with distance slider between Pflöcke | to be written |
 | Personal history: scores and first-arrow hit rate per Parcours over time | to be written |
-| Remove YAMS branding and domain | [GitHub milestone "M0 Rebrand"](https://github.com/TimerErTim/logandaim.at/milestones) |
+| Remove legacy branding and domain | [GitHub milestone "M0 Rebrand"](https://github.com/TimerErTim/logandaim.at/milestones) |
 
 ## Non-goals for MVP
 
@@ -113,7 +113,7 @@ Issues: #49.
 
 1. No user-facing string is hardcoded in a component; all text comes from one locale source.
 2. Dates, numbers, and distances render in `de-AT` format.
-3. Domain terms match the glossary of this charter; a lint or test rejects YAMS names, veterinary
+3. Domain terms match the glossary of this charter; a lint or test rejects legacy names, veterinary
    terms, and stray English UI text.
 4. Validation and error messages come from one source and use the same wording for the same
    condition everywhere.
@@ -145,7 +145,7 @@ Open questions:
 
 | Milestone | Goal |
 |-----------|------|
-| M0 Rebrand | No YAMS name, logo, domain, or Tauri shell remains. Build, check, and test pass. |
+| M0 Rebrand | No legacy name, logo, domain, or Tauri shell remains. Build, check, and test pass. |
 | M1 MVP | Archer registers, picks a pilot Parcours, logs a Runde, sees personal history. |
 | M2 Offline | Full Runde capture without network, background sync. |
 | Later | Power-user features, operators, benchmarks, tournaments. |

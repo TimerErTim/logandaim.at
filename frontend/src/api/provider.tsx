@@ -11,11 +11,11 @@ import {
   useState,
 } from "react";
 import { getConfig } from "@/lib/config";
-import { createYamsApi, resetYamsApiCache } from "./index";
-import type { YamsApi } from "./yams-api";
+import { createLogandaimApi, resetLogandaimApiCache } from "./index";
+import type { LogandaimApi } from "./logandaim-api";
 
-type YamsApiContextValue = {
-  api: YamsApi | null;
+type LogandaimApiContextValue = {
+  api: LogandaimApi | null;
   remoteApiBaseUrl: string | null;
   dev: boolean;
   loading: boolean;
@@ -23,10 +23,12 @@ type YamsApiContextValue = {
   reload: () => void;
 };
 
-const YamsApiContext = createContext<YamsApiContextValue | null>(null);
+const LogandaimApiContext = createContext<LogandaimApiContextValue | null>(
+  null,
+);
 
-export function YamsApiProvider({ children }: { children: ReactNode }) {
-  const [api, setApi] = useState<YamsApi | null>(null);
+export function LogandaimApiProvider({ children }: { children: ReactNode }) {
+  const [api, setApi] = useState<LogandaimApi | null>(null);
   const [remoteApiBaseUrl, setRemoteApiBaseUrl] = useState<string | null>(null);
   const [dev, setDev] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -34,11 +36,11 @@ export function YamsApiProvider({ children }: { children: ReactNode }) {
   const [reloadToken, setReloadToken] = useState(0);
 
   const reload = useCallback(() => {
-    resetYamsApiCache();
+    resetLogandaimApiCache();
     setReloadToken((value) => value + 1);
   }, []);
 
-  // reloadToken retriggers bootstrap after resetYamsApiCache()
+  // reloadToken retriggers bootstrap after resetLogandaimApiCache()
   useEffect(() => {
     void reloadToken;
     let cancelled = false;
@@ -50,7 +52,7 @@ export function YamsApiProvider({ children }: { children: ReactNode }) {
 
       try {
         const config = await getConfig();
-        const resolvedApi = await createYamsApi();
+        const resolvedApi = await createLogandaimApi();
 
         if (!cancelled) {
           setRemoteApiBaseUrl(config.remoteApiUrl);
@@ -91,17 +93,17 @@ export function YamsApiProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <YamsApiContext.Provider value={value}>
+    <LogandaimApiContext.Provider value={value}>
       {children}
       {dev ? <ReactQueryDevtools initialIsOpen={false} /> : null}
-    </YamsApiContext.Provider>
+    </LogandaimApiContext.Provider>
   );
 }
 
-export function useYamsApi(): YamsApiContextValue {
-  const context = useContext(YamsApiContext);
+export function useLogandaimApi(): LogandaimApiContextValue {
+  const context = useContext(LogandaimApiContext);
   if (!context) {
-    throw new Error("useYamsApi must be used within YamsApiProvider");
+    throw new Error("useLogandaimApi must be used within LogandaimApiProvider");
   }
   return context;
 }

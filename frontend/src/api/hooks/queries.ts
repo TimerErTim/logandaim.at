@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { yamsKeys } from "../query-keys";
-import { useYamsApiReady } from "./use-yams-api-ready";
+import { logandaimKeys } from "../query-keys";
+import { useLogandaimApiReady } from "./use-logandaim-api-ready";
 
 export function useHealthQuery() {
-  const { api, isReady } = useYamsApiReady();
+  const { api, isReady } = useLogandaimApiReady();
 
   return useQuery({
-    queryKey: yamsKeys.health(),
+    queryKey: logandaimKeys.health(),
     queryFn: () => api?.health(),
     enabled: isReady,
   });

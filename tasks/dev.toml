@@ -2,12 +2,12 @@
 
 ["dev:server"]
 description = "Start backend dev server"
-env.YAMS_BIND_ADDRESS = "127.0.0.1"
-env.YAMS_BIND_PORT = 3000
-env.YAMS_LOG_DIR = "{{ vars.REPO_ROOT }}/data.local/logs/"
-env.YAMS_DATABASE_URL = "{{ vars.REPO_ROOT }}/data.local/yams.db"
-env.YAMS_OBJECT_STORE_DIR = "{{ vars.REPO_ROOT }}/data.local/storage/"
-run = "cargo run -p yams-server --"
+env.LOGANDAIM_BIND_ADDRESS = "127.0.0.1"
+env.LOGANDAIM_BIND_PORT = 3000
+env.LOGANDAIM_LOG_DIR = "{{ vars.REPO_ROOT }}/data.local/logs/"
+env.LOGANDAIM_DATABASE_URL = "{{ vars.REPO_ROOT }}/data.local/logandaim.db"
+env.LOGANDAIM_OBJECT_STORE_DIR = "{{ vars.REPO_ROOT }}/data.local/storage/"
+run = "cargo run -p logandaim-server --"
 
 ["dev:frontend"]
 description = "Start Next.js dev server"

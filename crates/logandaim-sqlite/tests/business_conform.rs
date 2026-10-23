@@ -1,0 +1,15 @@
+use logandaim_core::{
+    App,
+    application::{AppBuilder, SetUowProvider},
+};
+use logandaim_sqlite::SQLiteInstance;
+
+#[path = "../../logandaim-core/tests/cases/mod.rs"]
+mod cases;
+
+pub async fn base_app_builder() -> AppBuilder<SetUowProvider> {
+    let sqlite_instance = SQLiteInstance::in_temp_dir().await.unwrap();
+    sqlite_instance.migrate_repos_to_latest().await.unwrap();
+
+    App::builder().uow_provider(Box::new(sqlite_instance))
+}

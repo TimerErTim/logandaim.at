@@ -32,7 +32,7 @@ jobs:
             ~/.local/share/mise/
             ~/.cargo/registry
             ~/.cargo/git
-          key: ${{ runner.os }}-yams-${{ hashFiles('mise.toml', 'rust-toolchain.toml', 'frontend/package-lock.json') }}
+          key: ${{ runner.os }}-logandaim-${{ hashFiles('mise.toml', 'rust-toolchain.toml', 'frontend/package-lock.json') }}
 
       - name: Install mise
         uses: jdx/mise-action@v4
@@ -42,21 +42,19 @@ jobs:
           cache_key: mise-v1-{{platform}}-{{file_hash}}
 
       - name: Build backend binaries
-        run: mise run build:server build:scheduler
+        run: mise run build:server
 
       - name: Upload backend binaries
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
-          if [ -f target/release/yams-server.exe ]; then
+          if [ -f target/release/logandaim-server.exe ]; then
             gh release upload "${GITHUB_REF_NAME}" \
-              "target/release/yams-server.exe#yams-server-windows-x64.exe" \
-              "target/release/yams-scheduler.exe#yams-scheduler-windows-x64.exe" \
+              "target/release/logandaim-server.exe#logandaim-server-windows-x64.exe" \
               --clobber
           else
             gh release upload "${GITHUB_REF_NAME}" \
-              "target/release/yams-server#yams-server-linux-x64" \
-              "target/release/yams-scheduler#yams-scheduler-linux-x64" \
+              "target/release/logandaim-server#logandaim-server-linux-x64" \
               --clobber
           fi

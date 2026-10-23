@@ -1,2 +1,2 @@
 export { useHealthQuery } from "./queries";
-export { useYamsApiReady } from "./use-yams-api-ready";
+export { useLogandaimApiReady } from "./use-logandaim-api-ready";

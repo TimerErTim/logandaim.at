@@ -1,6 +1,6 @@
 import { getConfig } from "@/lib/config";
-import { HttpYamsApi } from "./http-client";
-import type { YamsApi } from "./yams-api";
+import { HttpLogandaimApi } from "./http-client";
+import type { LogandaimApi } from "./logandaim-api";
 
 function normalizeApiBaseUrl(url: string): string {
   const trimmed = url.replace(/\/$/, "");
@@ -10,14 +10,14 @@ function normalizeApiBaseUrl(url: string): string {
   return `${trimmed}/api`;
 }
 
-export async function createYamsApi(): Promise<YamsApi> {
+export async function createLogandaimApi(): Promise<LogandaimApi> {
   const config = await getConfig();
-  return new HttpYamsApi(normalizeApiBaseUrl(config.remoteApiUrl));
+  return new HttpLogandaimApi(normalizeApiBaseUrl(config.remoteApiUrl));
 }
 
 /** Kept for provider reload(); instances are not cached module-wide. */
-export function resetYamsApiCache(): void {}
+export function resetLogandaimApiCache(): void {}
 
-export async function getYamsApi(): Promise<YamsApi> {
-  return createYamsApi();
+export async function getLogandaimApi(): Promise<LogandaimApi> {
+  return createLogandaimApi();
 }

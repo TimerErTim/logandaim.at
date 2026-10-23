@@ -12,7 +12,7 @@ version = "0.1.0"
 authors = ["Tim Peko <timerertim@gmail.com>", "David Rathmair", "Dominik Wernsdorfer", "Julian Bachinger", "David Edthaler", "Daniel Ferihumer"]
 license-file = "../../LICENSE"
 edition = "2024"
-repository = "https://github.com/HTBLA-Grieskirchen/YAMS/"
+repository = "https://github.com/TimerErTim/logandaim.at"
 
 [workspace.dependencies]
 thiserror = "2.0.20"

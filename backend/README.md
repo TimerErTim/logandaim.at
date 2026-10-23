@@ -21,15 +21,15 @@ mise run dev:server
 
 Resolution order: **config path → file → env → CLI**.
 
-Default file: `yams-server.json` in the current working directory. Override with `YAMS_CONFIG_PATH` or `--config-path`. Missing default file falls back to built-in defaults. An explicit path that is missing or malformed is an error.
+Default file: `logandaim-server.json` in the current working directory. Override with `LOGANDAIM_CONFIG_PATH` or `--config-path`. Missing default file falls back to built-in defaults. An explicit path that is missing or malformed is an error.
 
 mise sets environment variables for the server suitable for a dev environment automatically.
 
 | Source | Keys |
 |--------|------|
 | File (camelCase JSON) | `databaseUrl`, `objectStoreDir`, `bindAddress`, `port`, `subpath` |
-| Env / CLI | `YAMS_DATABASE_URL` / `--database-url`, `YAMS_OBJECT_STORE_DIR` / `--object-store-dir`, `BIND_ADDRESS` / `--bind-address`, `PORT` / `--port`, `SUBPATH` / `--subpath` |
-| Tracing | `YAMS_LOG_LEVEL` (default `info`) |
+| Env / CLI | `LOGANDAIM_DATABASE_URL` / `--database-url`, `LOGANDAIM_OBJECT_STORE_DIR` / `--object-store-dir`, `BIND_ADDRESS` / `--bind-address`, `PORT` / `--port`, `SUBPATH` / `--subpath` |
+| Tracing | `LOGANDAIM_LOG_LEVEL` (default `info`) |
 
 ## Spec Export
 

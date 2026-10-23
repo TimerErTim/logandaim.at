@@ -1,5 +1,5 @@
 /** Hierarchical keys for TanStack Query — invalidate at the right granularity. */
-export const yamsKeys = {
-  root: ["yams"] as const,
-  health: () => [...yamsKeys.root, "health"] as const,
+export const logandaimKeys = {
+  root: ["logandaim.at"] as const,
+  health: () => [...logandaimKeys.root, "health"] as const,
 };

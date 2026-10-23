@@ -4,7 +4,7 @@ use clap::Parser;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-const DEFAULT_CONFIG_FILE: &str = "yams-server.json";
+const DEFAULT_CONFIG_FILE: &str = "logandaim-server.json";
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
@@ -36,7 +36,7 @@ impl Default for ServerConfig {
             bind_address: "127.0.0.1".into(),
             bind_port: 3000,
             subpath: "/".into(),
-            database_url: "yams.db".into(),
+            database_url: "logandaim.db".into(),
             object_store_dir: PathBuf::from("storage/"),
             log_dir: None,
         }
@@ -47,15 +47,15 @@ impl Default for ServerConfig {
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     /// Path to the config file (`.json` or `.toml`)
-    #[arg(long = "config-path", env = "YAMS_CONFIG_PATH")]
+    #[arg(long = "config-path", env = "LOGANDAIM_CONFIG_PATH")]
     pub config_path: Option<PathBuf>,
 
     /// IP address to bind to
-    #[arg(long, env = "YAMS_BIND_ADDRESS")]
+    #[arg(long, env = "LOGANDAIM_BIND_ADDRESS")]
     pub bind_address: Option<String>,
 
     /// Port to bind to
-    #[arg(long, env = "YAMS_BIND_PORT")]
+    #[arg(long, env = "LOGANDAIM_BIND_PORT")]
     pub bind_port: Option<u16>,
 
     /// Subpath this service is hosted on
@@ -63,15 +63,15 @@ pub struct Cli {
     pub subpath: Option<String>,
 
     /// Database URL
-    #[arg(long, env = "YAMS_DATABASE_URL")]
+    #[arg(long, env = "LOGANDAIM_DATABASE_URL")]
     pub database_url: Option<String>,
 
     /// Directory for object store
-    #[arg(long, env = "YAMS_OBJECT_STORE_DIR")]
+    #[arg(long, env = "LOGANDAIM_OBJECT_STORE_DIR")]
     pub object_store_dir: Option<PathBuf>,
 
     /// Directory for rotated JSON log files (omit to disable logging)
-    #[arg(long, env = "YAMS_LOG_DIR")]
+    #[arg(long, env = "LOGANDAIM_LOG_DIR")]
     pub log_dir: Option<PathBuf>,
 }
 
@@ -210,17 +210,20 @@ mod tests {
     #[test_log::test]
     fn overlays_log_dir() {
         let cli = Cli {
-            log_dir: Some(PathBuf::from("/var/log/yams")),
+            log_dir: Some(PathBuf::from("/var/log/logandaim.at")),
             ..Cli::default()
         };
         let resolved = cli_overlay(cli);
-        assert_eq!(resolved.log_dir, Some(PathBuf::from("/var/log/yams")));
+        assert_eq!(
+            resolved.log_dir,
+            Some(PathBuf::from("/var/log/logandaim.at"))
+        );
     }
 
     #[test_log::test]
     fn loads_log_dir_from_json_file() {
         let dir = std::env::temp_dir().join(format!(
-            "yams-server-config-log-{}",
+            "logandaim-server-config-log-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -245,7 +248,7 @@ mod tests {
     #[test_log::test]
     fn loads_log_dir_from_toml_file() {
         let dir = std::env::temp_dir().join(format!(
-            "yams-server-config-log-{}",
+            "logandaim-server-config-log-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -269,14 +272,14 @@ logDir = "server-logs/"
 
     #[test_log::test]
     fn missing_default_file_uses_defaults() {
-        let path = PathBuf::from("definitely-missing-yams-server.json");
+        let path = PathBuf::from("definitely-missing-logandaim-server.json");
         let loaded = load_file(&path, false).unwrap();
         assert_eq!(loaded, ServerConfig::default());
     }
 
     #[test_log::test]
     fn missing_explicit_file_errors() {
-        let path = PathBuf::from("definitely-missing-yams-server.json");
+        let path = PathBuf::from("definitely-missing-logandaim-server.json");
         let err = load_file(&path, true).unwrap_err();
         assert!(matches!(err, ConfigError::NotFound { .. }));
     }
@@ -284,7 +287,7 @@ logDir = "server-logs/"
     #[test_log::test]
     fn loads_json_file() {
         let dir = std::env::temp_dir().join(format!(
-            "yams-server-config-{}",
+            "logandaim-server-config-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -299,7 +302,7 @@ logDir = "server-logs/"
                 "objectStoreDir": "objects/",
                 "bindAddress": "10.0.0.1",
                 "bindPort": 1234,
-                "subpath": "/yams/"
+                "subpath": "/logandaim.at/"
             }"#,
         )
         .unwrap();
@@ -309,7 +312,7 @@ logDir = "server-logs/"
         assert_eq!(loaded.object_store_dir, PathBuf::from("objects/"));
         assert_eq!(loaded.bind_address, "10.0.0.1");
         assert_eq!(loaded.bind_port, 1234);
-        assert_eq!(loaded.subpath, "/yams/");
+        assert_eq!(loaded.subpath, "/logandaim.at/");
 
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -317,7 +320,7 @@ logDir = "server-logs/"
     #[test_log::test]
     fn malformed_explicit_file_errors() {
         let dir = std::env::temp_dir().join(format!(
-            "yams-server-config-bad-{}",
+            "logandaim-server-config-bad-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -335,7 +338,8 @@ logDir = "server-logs/"
 
     #[test_log::test]
     fn clap_cli_wins_over_env_for_config_path() {
-        let cli = Cli::try_parse_from(["yams-server", "--config-path", "/tmp/cli.json"]).unwrap();
+        let cli =
+            Cli::try_parse_from(["logandaim-server", "--config-path", "/tmp/cli.json"]).unwrap();
         assert_eq!(cli.config_path, Some(PathBuf::from("/tmp/cli.json")));
     }
 }

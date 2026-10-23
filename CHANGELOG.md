@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Renamed everything from `yams` to `logandaim`: crates (`logandaim-core`, `logandaim-api`,
+  `logandaim-sqlite`, `logandaim-fakes`, `logandaim-filesystemstore`), the `logandaim-server`
+  binary, `Logandaim*` types, `LOGANDAIM_*` environment variables, `logandaim-server.json`
+  config file, and the frontend package and `logandaimKeys`/`useLogandaimApiReady` identifiers.
 - Removed the entire veterinary practice-management domain (clients, pets, treatments, products,
   services, invoices, seminars, day-close, catalog, objects) from the domain, use cases, ports,
   repositories, migrations, API, and frontend. The hexagonal skeleton, generic infrastructure
