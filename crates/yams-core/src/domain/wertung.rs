@@ -28,6 +28,7 @@ impl Punkte {
 
     /// Classic 3-arrow table. `pfeil` is 1-based; Pfeil 4 and later score 0.
     pub fn für_schuss(pfeil: usize, zone: Wertungszone) -> Self {
+        debug_assert!(pfeil >= 1, "Pfeil ist 1-basiert, war aber {pfeil}");
         let punkte = match (pfeil, zone) {
             (_, Wertungszone::Miss) => 0,
             (1, Wertungszone::Spot) => 20,
@@ -106,9 +107,11 @@ pub struct Rundenergebnis {
 }
 
 impl Rundenergebnis {
-    pub fn aus_zielen<'a>(ziele: impl IntoIterator<Item = &'a Zielwertung>) -> Self {
+    /// Sum per Wertung over all Ziel results. Ziele without result are skipped (AC-8).
+    pub fn aus_zielen<'a>(ziele: impl IntoIterator<Item = Option<&'a Zielwertung>>) -> Self {
         ziele
             .into_iter()
+            .flatten()
             .fold(Self::default(), |ergebnis, ziel| Self {
                 erster_treffer: ergebnis.erster_treffer + ziel.erster_treffer(),
                 mehrschuss: ergebnis.mehrschuss + ziel.mehrschuss(),
@@ -193,7 +196,7 @@ mod tests {
             Zielwertung::aus_schüssen(vec![]),
             Zielwertung::aus_schüssen(vec![Miss, Spot]),
         ];
-        let ergebnis = Rundenergebnis::aus_zielen(ziele.iter().flatten());
+        let ergebnis = Rundenergebnis::aus_zielen(ziele.iter().map(Option::as_ref));
         assert_eq!(ergebnis.erster_treffer.value(), 18 + 14);
         assert_eq!(ergebnis.mehrschuss.value(), 38 + 14);
     }
