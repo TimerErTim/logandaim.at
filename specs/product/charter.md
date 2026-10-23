@@ -66,7 +66,7 @@ MVP capabilities:
 | Capability | Spec |
 |------------|------|
 | Classic 3-arrow scoring (Erster Treffer, Mehrschuss) | [`wertung.md`](wertung.md) |
-| Account registration and login | to be written |
+| Account registration and login | [`konto.md`](konto.md) |
 | Master data: Anlage, Parcours, Ziel, Pflock (admin seeding) | to be written |
 | Log a Runde target by target, with distance slider between Pflöcke | to be written |
 | Personal history: scores and first-arrow hit rate per Parcours over time | to be written |
@@ -115,3 +115,4 @@ MVP capabilities:
 |------|--------|----|
 | 2026-10-21 | Initial charter from PRD and PO decisions. | Agent (Claude) |
 | 2026-10-21 | Approved. | TimerErTim |
+| 2026-10-23 | Linked the konto.md draft for the accounts capability. | Agent (MiMo) |

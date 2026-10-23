@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Draft spec [`specs/product/konto.md`](specs/product/konto.md) for accounts and login
+  (registration, login, password reset, account deletion, admin role) and proposed
+  [ADR-0002](specs/decisions/0002-session-cookie-auth.md) for session-cookie auth with
+  explicit-origin CORS.
+
 ### Changed
 
 - Remove the Tauri desktop shell; the app now runs as a web frontend with an HTTP backend.
