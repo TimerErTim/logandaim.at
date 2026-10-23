@@ -2,16 +2,12 @@ use std::ops::{ControlFlow, Deref, DerefMut};
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use error_stack::{FrameKind, Report, ResultExt};
+use error_stack::{FrameKind, Report};
 use std::cmp::Ordering;
 use std::fmt::Debug;
 
 use crate::application::ThreadSafeError;
-use crate::ports::{
-    BehandlungRepository, HaustierRepository, KlientRepository, LeistungRepository,
-    ProduktRepository, RechnungRepository, RepositoryError, RepositoryResult, SeminarRepository,
-    SeminarTerminRepository,
-};
+use crate::ports::{RepositoryError, RepositoryResult};
 
 /// Active unit of work. `commit` / `rollback` consume it.
 ///
@@ -72,7 +68,7 @@ impl UnitOfWork<'_> {
             }
             Err(mut error) => {
                 if let Err(_rollback_error) = self.rollback().await {
-                    // Atach the rollback report to the outer error
+                    // Attach the rollback report to the outer error
                     let _ = error.frames_mut(|frame| {
                         let FrameKind::Context(_) = frame.kind() else {
                             return ControlFlow::Continue(());
@@ -104,38 +100,6 @@ impl UnitOfWork<'_> {
             .take()
             .expect("UnitOfWork already committed or rolled back")
     }
-
-    pub fn klienten(&self) -> &dyn KlientRepository {
-        self.as_impl().klienten()
-    }
-
-    pub fn haustiere(&self) -> &dyn HaustierRepository {
-        self.as_impl().haustiere()
-    }
-
-    pub fn produkte(&self) -> &dyn ProduktRepository {
-        self.as_impl().produkte()
-    }
-
-    pub fn behandlungen(&self) -> &dyn BehandlungRepository {
-        self.as_impl().behandlungen()
-    }
-
-    pub fn leistungen(&self) -> &dyn LeistungRepository {
-        self.as_impl().leistungen()
-    }
-
-    pub fn rechnungen(&self) -> &dyn RechnungRepository {
-        self.as_impl().rechnungen()
-    }
-
-    pub fn seminare(&self) -> &dyn SeminarRepository {
-        self.as_impl().seminare()
-    }
-
-    pub fn seminar_termine(&self) -> &dyn SeminarTerminRepository {
-        self.as_impl().seminar_termine()
-    }
 }
 
 impl Drop for UnitOfWork<'_> {
@@ -147,6 +111,7 @@ impl Drop for UnitOfWork<'_> {
 }
 
 struct LockedUnitOfWorkImpl<'a> {
+    #[allow(dead_code)]
     inner: &'a dyn UnitOfWorkImpl,
 }
 
@@ -159,38 +124,6 @@ impl UnitOfWorkImpl for LockedUnitOfWorkImpl<'_> {
     async fn rollback(self: Box<Self>) -> RepositoryResult<()> {
         Ok(())
     }
-
-    fn klienten(&self) -> &dyn KlientRepository {
-        self.inner.klienten()
-    }
-
-    fn haustiere(&self) -> &dyn HaustierRepository {
-        self.inner.haustiere()
-    }
-
-    fn produkte(&self) -> &dyn ProduktRepository {
-        self.inner.produkte()
-    }
-
-    fn behandlungen(&self) -> &dyn BehandlungRepository {
-        self.inner.behandlungen()
-    }
-
-    fn leistungen(&self) -> &dyn LeistungRepository {
-        self.inner.leistungen()
-    }
-
-    fn rechnungen(&self) -> &dyn RechnungRepository {
-        self.inner.rechnungen()
-    }
-
-    fn seminare(&self) -> &dyn SeminarRepository {
-        self.inner.seminare()
-    }
-
-    fn seminar_termine(&self) -> &dyn SeminarTerminRepository {
-        self.inner.seminar_termine()
-    }
 }
 
 /// UoW Provider
@@ -198,15 +131,6 @@ impl UnitOfWorkImpl for LockedUnitOfWorkImpl<'_> {
 pub trait UnitOfWorkImpl: Send + Sync {
     async fn commit(self: Box<Self>) -> RepositoryResult<()>;
     async fn rollback(self: Box<Self>) -> RepositoryResult<()>;
-
-    fn klienten(&self) -> &dyn KlientRepository;
-    fn haustiere(&self) -> &dyn HaustierRepository;
-    fn produkte(&self) -> &dyn ProduktRepository;
-    fn behandlungen(&self) -> &dyn BehandlungRepository;
-    fn leistungen(&self) -> &dyn LeistungRepository;
-    fn rechnungen(&self) -> &dyn RechnungRepository;
-    fn seminare(&self) -> &dyn SeminarRepository;
-    fn seminar_termine(&self) -> &dyn SeminarTerminRepository;
 }
 
 #[async_trait]

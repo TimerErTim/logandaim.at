@@ -4,7 +4,6 @@ cargo-features = ["profile-rustflags", "trim-paths"]
 members = [
     "crates/*",
     "backend/server",
-    "backend/scheduler",
 ]
 resolver = "2"
 

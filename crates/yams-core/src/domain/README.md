@@ -65,7 +65,7 @@ free-form `String` or integer code.
 ### Variant data in enums
 
 When fields only make sense together, model the alternatives as enum variants that carry their
-fields (`Quelle::Produkt { menge, einzelpreis }` vs `Quelle::Manuell { preis }`). No
+fields (`Herkunft::Katalog { menge, einzelpreis }` vs `Herkunft::Manuell { preis }`). No
 `Option` fields that are only valid in combination.
 
 ### Type-state aggregates

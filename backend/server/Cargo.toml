@@ -10,9 +10,6 @@ repository.workspace = true
 yams-core = { path = "../../crates/yams-core" }
 yams-sqlite = { path = "../../crates/yams-sqlite" }
 yams-api = { path = "../../crates/yams-api" }
-yams-filesystemstore = { path = "../../crates/yams-filesystemstore" }
-yams-typstreports = { path = "../../crates/yams-typstreports" }
-yams-scheduler = { path = "../scheduler", default-features = false }
 
 thiserror = { workspace = true }
 error-stack = { workspace = true }
@@ -22,7 +19,6 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 toml = { workspace = true }
 
-chrono-tz = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde"] }
 
 poem = { workspace = true, features = ["compression", "requestid"] }

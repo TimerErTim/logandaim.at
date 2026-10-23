@@ -1,6 +1,6 @@
 [package]
 name = "yams-api"
-description = "API for the YAMS project"
+description = "API for the logandaim.at project"
 version.workspace = true
 authors.workspace = true
 license-file.workspace = true
@@ -18,33 +18,21 @@ async-trait = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 http = { workspace = true }
-rust_decimal = { workspace = true }
 
-poem-openapi = { workspace = true, features = ["uuid", "chrono", "rust_decimal", "swagger-ui", "redoc"], optional = true }
+poem-openapi = { workspace = true, features = ["uuid", "chrono", "swagger-ui", "redoc"], optional = true }
 poem = { workspace = true, optional = true }
-futures = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 
 [features]
 default = ["serde", "openapi"]
-openapi = ["dep:poem-openapi", "dep:poem", "dep:futures"]
-serde = [
-    "dep:serde",
-    "uuid/serde",
-    "chrono/serde",
-    "error-stack/serde",
-    "rust_decimal/serde",
-]
+openapi = ["dep:poem-openapi", "dep:poem"]
+serde = ["dep:serde", "uuid/serde", "chrono/serde", "error-stack/serde"]
 
 [dev-dependencies]
 pollster = { version = "0.4.0", features = ["macro"] }
 poem = { workspace = true, features = ["test"] }
-rust_decimal = { workspace = true }
 serde_json = { workspace = true }
-yams-sqlite = { path = "../yams-sqlite" }
 yams-fakes = { path = "../yams-fakes" }
-yams-filesystemstore = { path = "../yams-filesystemstore" }
-yams-typstreports = { path = "../yams-typstreports" }
 test-log = { workspace = true }
 tracing-subscriber = { workspace = true }
 

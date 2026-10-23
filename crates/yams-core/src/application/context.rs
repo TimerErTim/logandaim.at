@@ -1,11 +1,9 @@
 use std::sync::Arc;
 
 use crate::{
-    application::instrumented::{
-        InstrumentedObjectStore, InstrumentedPdfRenderer, InstrumentedUnitOfWork,
-    },
+    application::instrumented::InstrumentedUnitOfWork,
     application::uow::{UnitOfWork, UnitOfWorkImpl, UnitOfWorkProvider},
-    ports::{Clock, ObjectStore, PdfRenderer, RepositoryResult},
+    ports::{Clock, RepositoryResult},
 };
 use tracing::instrument;
 
@@ -20,36 +18,20 @@ enum ExecutionSource<'a> {
 pub struct ExecutionContext<'a> {
     source: ExecutionSource<'a>,
     clock: Arc<dyn Clock>,
-    object_store: Arc<dyn ObjectStore>,
-    pdf_renderer: Arc<dyn PdfRenderer>,
 }
 
 impl<'a> ExecutionContext<'a> {
-    pub(super) fn root(
-        provider: &'a dyn UnitOfWorkProvider,
-        clock: Arc<dyn Clock>,
-        object_store: Arc<dyn ObjectStore>,
-        pdf_renderer: Arc<dyn PdfRenderer>,
-    ) -> Self {
+    pub(super) fn root(provider: &'a dyn UnitOfWorkProvider, clock: Arc<dyn Clock>) -> Self {
         Self {
             source: ExecutionSource::Root(provider),
             clock,
-            object_store: InstrumentedObjectStore::new(object_store),
-            pdf_renderer: InstrumentedPdfRenderer::new(pdf_renderer),
         }
     }
 
-    pub(super) fn nested(
-        uow: &'a dyn UnitOfWorkImpl,
-        clock: Arc<dyn Clock>,
-        object_store: Arc<dyn ObjectStore>,
-        pdf_renderer: Arc<dyn PdfRenderer>,
-    ) -> Self {
+    pub(super) fn nested(uow: &'a dyn UnitOfWorkImpl, clock: Arc<dyn Clock>) -> Self {
         Self {
             source: ExecutionSource::Nested(uow),
             clock,
-            object_store: InstrumentedObjectStore::new(object_store),
-            pdf_renderer: InstrumentedPdfRenderer::new(pdf_renderer),
         }
     }
 
@@ -57,23 +39,10 @@ impl<'a> ExecutionContext<'a> {
         self.clock.as_ref()
     }
 
-    pub fn object_store(&self) -> &dyn ObjectStore {
-        self.object_store.as_ref()
-    }
-
-    pub fn pdf_renderer(&self) -> &dyn PdfRenderer {
-        self.pdf_renderer.as_ref()
-    }
-
     /// Nested context that joins `uow`'s transaction and copies this context's ports.
     /// Nested `enter` returns a locked UoW; `commit` / `rollback` are no-ops.
     pub fn sub<'u>(&self, uow: &'u UnitOfWork<'_>) -> ExecutionContext<'u> {
-        ExecutionContext::nested(
-            uow.as_impl(),
-            Arc::clone(&self.clock),
-            Arc::clone(&self.object_store),
-            Arc::clone(&self.pdf_renderer),
-        )
+        ExecutionContext::nested(uow.as_impl(), Arc::clone(&self.clock))
     }
 
     /// Start a unit of work. Returned UoW borrows `self`, so this context cannot be

@@ -1,10 +1,6 @@
-pub mod api;
-pub mod schema;
+pub mod errors;
 
 #[cfg(feature = "openapi")]
 mod spec;
 #[cfg(feature = "openapi")]
 pub use spec::*;
-pub mod errors;
-
-pub use api::{YamsAppApi, requests};

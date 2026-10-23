@@ -7,19 +7,12 @@ use molting::{AppliableMigration, MigrationRegistry, MigrationTarget, UpMigratio
 
 use crate::SQLiteConnection;
 
-mod v0001_initial;
-mod v0002_deutsches_schema;
-mod v0003_seminar;
-mod v0004_leistungen_quelle_mwst;
-
 type Registry = MigrationRegistry<dyn UpMigration<libsql::Transaction, libsql::Error>>;
 
+/// Empty baseline. Pre-deploy there is no data to migrate, so the schema starts
+/// empty and feature migrations are added on top.
 pub static MIGRATIONS: LazyLock<Registry> = LazyLock::new(|| {
-    let mut registry: Registry = MigrationRegistry::new();
-    registry.add(v0001_initial::Migration);
-    registry.add(v0002_deutsches_schema::Migration);
-    registry.add(v0003_seminar::Migration);
-    registry.add(v0004_leistungen_quelle_mwst::Migration);
+    let registry: Registry = MigrationRegistry::new();
     registry
 });
 
