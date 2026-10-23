@@ -9,10 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Draft spec [`specs/product/stammdaten.md`](specs/product/stammdaten.md) for master data
-  (`Anlage`, `Parcours`, `Ziel`, `Pflock`) with admin-UI seeding and the version-snapshot rules:
-  every `Runde` freezes the `Parcours` layout at log time while shot history follows `Ziel`
-  identity across `Runden` and layout changes.
 - Draft spec [`specs/product/konto.md`](specs/product/konto.md) for accounts and login
   (registration, login, password reset, account deletion, admin role) and proposed
   [ADR-0002](specs/decisions/0002-session-cookie-auth.md) for session-cookie auth with
