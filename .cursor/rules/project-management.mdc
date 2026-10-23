@@ -23,4 +23,8 @@ Follow [.github/CONTRIBUTING.md](../../.github/CONTRIBUTING.md) and [specs/READM
     that produced a change; log the change the user experiences.
   - Phrase entries from the user's perspective ("Scores now persist after a reload"), not the
     implementation's ("refactored the scoring repository").
+- Pre-release: logandaim.at is a new project seeded from another project's architecture. Until the
+  first release, `Unreleased` may be empty and that is correct. Removing or reshaping inherited base
+  material (e.g. the Tauri shell, inherited domain code) is not an end-user change — no user ever
+  ran it. Log those in the issue/PR, not the changelog.
 - Do not add YAMS names, assets, or veterinary domain terms. Do not reintroduce Tauri without an ADR.

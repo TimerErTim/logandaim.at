@@ -35,6 +35,25 @@ When unsure, ask: *if this shipped alone, would a user notice?* If not, leave it
 
 Entries are phrased from the user's perspective — describe the effect, not the implementation.
 
+### Before the first release
+
+logandaim.at is a new project being built on top of the architecture of a previous one (see the
+rebrand and domain-removal work in `M0 Rebrand`). Until the first release ships, there is no
+released product and therefore no user who could notice a difference: everything in the tree is
+either inherited base architecture, a placeholder, or work in progress. `Unreleased` may be empty
+during that phase, and an empty `Unreleased` is not a missing entry.
+
+Consequences:
+
+- A change that only removes or reshapes inherited base material is **not** an end-user change.
+  Example: dropping the Tauri desktop shell. No user ever ran logandaim.at as a desktop app, so it
+  is not a removal they can notice — it is a fact about how the project was seeded, and it belongs
+  in the issue/PR/spec history instead.
+- The same holds for anything a user cannot run yet: scaffolding, ports adapted from the base
+  project, placeholder screens, and behavior that exists only in specs.
+- Write the first real entries when users can actually use the feature or the release. "First
+  release" means the first build a person outside the team can run and compare against nothing.
+
 ## Labels and priority
 
 Labels are defined in [`labels.yml`](labels.yml) and synced by a workflow. Edit the file, not the UI.
