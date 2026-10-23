@@ -111,7 +111,7 @@ behind.
 | `pr/base` | Every pull request, every push to `dev`, and the release gate on `main` | The full gate: `mise run ci`. |
 | `pr/dev` | Pull requests into `dev` | Conventional title and a `Closes #N` link. |
 | `pr/main` | Pull requests into `main` | Conventional title, `dev` or `hotfix/*` source, issue references, and a `## Release description` section. |
-| `release-check` | Pull requests into `main`, called by the push to `main` | Version bumped past the last release tag, dated changelog section, versions agree. |
+| `release-check` | Pull requests into `main`, called by the push to `main` | Versions agree, version bumped past the last release tag, dated changelog section with entries. |
 | `deploy/pages` | Push to `main` | Deploys `frontend/out` to GitHub Pages. |
 | `deploy/release` | Push to `main` | Creates the source-only GitHub release. |
 | `deploy/backend` | Push to `main` | Reserved for #15 and #24. |
@@ -133,6 +133,10 @@ they would never report on a pull request.
 version agreement), `test`, `build`, and `verify` (daemon-based smoke tests of the built frontend
 and backend). CI runs the same task, so a green local run means a green pipeline unless the
 environment differs.
+
+The Pages deployment builds with `NEXT_PUBLIC_LOGANDAIM_API_URL` (repo variable
+`LOGANDAIM_API_URL`) and a base path taken from `actions/configure-pages`. The export is deployed
+as built; `pr/base` already smoke-tested the same code before the merge.
 
 Useful tasks:
 

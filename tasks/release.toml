@@ -67,8 +67,32 @@ repo="${LOGANDAIM_REPO:-$(git remote get-url github 2>/dev/null | sed -e 's|^git
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
-# 1. Release description: the body of the merged release pull request.
-"$GH" pr view "$pr" --repo "$repo" --json body --jq '.body' > "$tmp/pr.md"
+# 1. Release description: the `## Release description` section of the release pull
+# request, not the whole body. The template's checklists are for reviewers and
+# must not open the release page.
+"$GH" pr view "$pr" --repo "$repo" --json body --jq '.body' > "$tmp/pr-full.md"
+awk '
+  /^## Release description/ { capture = 1; next }
+  capture && /^## / { exit }
+  capture { print }
+' "$tmp/pr-full.md" > "$tmp/pr-section.md"
+
+if ! grep -q '[^[:space:]]' "$tmp/pr-section.md"; then
+  echo "release:notes: pull request #$pr has no non-empty '## Release description' section" >&2
+  exit 1
+fi
+
+# Trim leading and trailing blank lines.
+awk '
+  { line[NR] = $0 }
+  END {
+    first = 1
+    last = NR
+    while (first <= last && line[first] ~ /^[[:space:]]*$/) first++
+    while (last >= first && line[last] ~ /^[[:space:]]*$/) last--
+    for (i = first; i <= last; i++) print line[i]
+  }
+' "$tmp/pr-section.md" > "$tmp/pr.md"
 
 # 2. Changelog section for this version. A section ends at the next heading or at
 # the link-reference block at the bottom of the file.

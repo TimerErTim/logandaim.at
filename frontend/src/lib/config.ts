@@ -11,8 +11,10 @@ import standaloneConfig from "@/standalone-config.json";
  * Deciding where the API lives belongs to configuration, not to this module.
  */
 export const config = {
+  // `||`, not `??`: CI passes an empty string when the variable is unset, and an
+  // empty base URL would silently point the frontend at its own origin.
   apiBaseUrl: (
-    process.env.NEXT_PUBLIC_LOGANDAIM_API_URL ?? standaloneConfig.remoteApiUrl
+    process.env.NEXT_PUBLIC_LOGANDAIM_API_URL || standaloneConfig.remoteApiUrl
   ).replace(/\/+$/, ""),
   dev: process.env.NEXT_PUBLIC_LOGANDAIM_DEV
     ? process.env.NEXT_PUBLIC_LOGANDAIM_DEV === "true"

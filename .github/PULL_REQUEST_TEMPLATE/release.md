@@ -25,7 +25,7 @@ List the pull requests and issues that reach users with this release:
 
 - [ ] `mise run ci` passes (check, test, build, smoke-test)
 - [ ] `mise run check:release` passes
-- [ ] The static export was smoke-tested against the production API URL (see the Pages job variables)
+- [ ] Repository variable `LOGANDAIM_API_URL` points at the production API (the Pages build fails without it)
 
 ## Checklist
 

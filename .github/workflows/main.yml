@@ -48,18 +48,25 @@ jobs:
       - name: Set up tooling
         uses: ./.github/actions/setup
 
+      # `configure-pages` reports the real base path: `/logandaim.at` for a project
+      # site, `""` once a custom domain serves at the root. Never hardcode it.
       - name: Configure Pages
+        id: pages
         uses: actions/configure-pages@v6
 
       - name: Build the static export
         env:
           NEXT_PUBLIC_LOGANDAIM_API_URL: ${{ vars.LOGANDAIM_API_URL }}
-          # Empty once `logandaim.at` is the Pages custom domain, which serves at
-          # the root. Until then the project site lives under `/logandaim.at/`.
-          NEXT_PUBLIC_LOGANDAIM_BASE_PATH: ${{ vars.LOGANDAIM_BASE_PATH }}
+          NEXT_PUBLIC_LOGANDAIM_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         # `--force`: the task cache keys on files, not on environment, so a cached
         # export built for another base path or API URL must not be reused.
-        run: mise run --force build:frontend
+        run: |
+          set -eu
+          if [ -z "${NEXT_PUBLIC_LOGANDAIM_API_URL:-}" ]; then
+            echo "::error::Repository variable LOGANDAIM_API_URL is not set. The deployed frontend would call the API on its own origin."
+            exit 1
+          fi
+          mise run --force build:frontend
 
       - name: Upload the export
         uses: actions/upload-pages-artifact@v5

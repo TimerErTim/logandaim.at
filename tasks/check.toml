@@ -6,7 +6,9 @@ depends = ["LOGANDAIM_FMT_CHECK=true fmt:?*"]
 
 ["check:lint"]
 description = "Check the linting of the code"
-depends = ["lint:?*"]
+# Explicit list: the `lint:?*` glob does not cross the extra colon in
+# `lint:check:ts`, which would silently drop `tsc --noEmit` from the gate.
+depends = ["lint:crates", "lint:frontend", "lint:check:ts"]
 
 ["check:openapi"]
 description = "Fail when the generated OpenAPI client differs from the exported spec"
@@ -43,6 +45,9 @@ echo "check:version: $cargo_version ok"
 
 ["check:release"]
 description = "Verify that this branch is a valid release for the current version"
+# Version agreement is part of being a valid release; declare it so the release
+# check does not depend on `ci` having run first in the same job.
+depends = ["check:version"]
 run = """
 #!/usr/bin/env bash
 set -eu
@@ -60,7 +65,7 @@ grep -q "^## \\[$version\\] - [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$" CHANG
 # empty release body as the changelog part.
 section_entries=$(
   sed -n "/^## \\[$version\\]/,/^## \\[/p" CHANGELOG.md \\
-    | grep -E '^(### |[-*] )' \\
+    | grep -E '^[-*] ' \\
     | wc -l
 )
 [ "$section_entries" -gt 0 ] \\

@@ -12,14 +12,17 @@
 # start daemons. Daemons outlive the task, so stop them with
 # `mise daemons stop frontend server`.
 #
-# Ports mirror [vars] FRONTEND_PORT / API_PORT in mise.toml. The daemons use literal
-# ports because mise only renders templates inside `run`.
+# Ports: the daemons use literal ports because mise only renders templates inside
+# `run`, and `smoke:*` probes `[vars]` FRONTEND_PORT / API_PORT. Overriding one
+# without the other in `mise.local.toml` makes the smoke tests probe the wrong
+# server, so change the `[daemons]` port and the matching variable together.
 
 ["run:frontend"]
 description = "Serve the built static frontend export"
 dir = "{{ vars.REPO_ROOT }}/frontend"
 depends = ["build:frontend"]
-run = "exec serve out --listen tcp://127.0.0.1:$PORT --no-clipboard --no-port-switching"
+# `$PORT` exists only under the daemon supervisor; fall back for a direct run.
+run = "exec serve out --listen tcp://127.0.0.1:${PORT:-{{ vars.FRONTEND_PORT }}} --no-clipboard --no-port-switching"
 
 ["smoke:frontend"]
 description = "Health-check an already running frontend"
@@ -55,11 +58,23 @@ description = "Run the backend server with a throwaway database"
 usage = """
 flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build and run the release profile"
 """
+# The build happens here rather than in `depends`: a flag is not forwarded to a
+# dependency, so `depends = ["build:server"]` would build the debug profile while
+# this task exec'd the release binary (missing, or stale from an earlier run).
 run = """
 #!/usr/bin/env bash
 set -eu
 DATA_DIR="${LOGANDAIM_SMOKE_DATA_DIR:-$(mktemp -d)}"
 mkdir -p "$DATA_DIR/storage"
+
+PROFILE="debug"
+PROFILE_ARGS=""
+if [ "${usage_release:-}" = "true" ]; then
+  PROFILE="release"
+  PROFILE_ARGS="--release"
+fi
+
+cargo build -p logandaim-server $PROFILE_ARGS
 
 export LOGANDAIM_BIND_ADDRESS=127.0.0.1
 export LOGANDAIM_BIND_PORT="${PORT:-{{ vars.API_PORT }}}"
@@ -67,12 +82,8 @@ export LOGANDAIM_DATABASE_URL="$DATA_DIR/smoke.db"
 export LOGANDAIM_OBJECT_STORE_DIR="$DATA_DIR/storage"
 unset LOGANDAIM_LOG_DIR || true
 
-BINARY="target/debug/logandaim-server"
-[ "${usage_release:-}" = "true" ] && BINARY="target/release/logandaim-server"
-
-exec "$BINARY"
+exec "target/$PROFILE/logandaim-server"
 """
-depends = ["build:server"]
 
 ["smoke:server"]
 description = "Health-check an already running backend"
