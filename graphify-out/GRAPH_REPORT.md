@@ -1,16 +1,16 @@
-# Graph Report - logandaim.at  (2026-10-23)
+# Graph Report - logandaim.at  (2026-10-24)
 
 ## Corpus Check
-- 157 files · ~48,141 words
+- 157 files · ~48,165 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1561 nodes · 2757 edges · 90 communities (73 shown, 10 thin omitted)
+- 1562 nodes · 2758 edges · 96 communities (78 shown, 11 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 47 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9e10018a`
+- Built from commit: `e782b800`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -59,14 +59,20 @@
 - Vertical slices
 - domain/schuss.rs
 - common.rs
+- provider.tsx
 - instrumented.rs
 - LogandaimApiTestClient
 - InstrumentedUnitOfWork
 - .rendern
+- devDependencies
 - workflow-steps.tsx
 - logandaim.at — Product Charter
+- scripts
+- dependencies
 - charter.md
 - App
+- ApiError
+- Wertungszone
 - Product Requirements Document (PRD) & Konzeptbericht
 - logandaim-core
 - cn
@@ -75,7 +81,7 @@
 - postcss.config.mjs
 - Contributing and project management
 - ADR-0001: Baseline architecture
-- provider.tsx
+- http-client.ts
 - File Icon
 - Globe Icon
 - Next.js Logo
@@ -131,7 +137,7 @@
 - **diffx Code Review Workflow** — agents_skills_diffx_start_review_skill, agents_skills_diffx_server, agents_skills_diffx_finish_review_skill [EXTRACTED 1.00]
 - **YAMS Hexagonal Backend Layers** — cursor_agents_md_driving_adapters, cursor_agents_md_yams_api, cursor_agents_md_yams_core, cursor_agents_md_yams_persistence [EXTRACTED 1.00]
 
-## Communities (90 total, 10 thin omitted)
+## Communities (96 total, 11 thin omitted)
 
 ### Community 0 - "FakePdfRenderer"
 Cohesion: 0.15
@@ -142,8 +148,8 @@ Cohesion: 0.06
 Nodes (42): AppliedLog, Cell, arc_down(), arc_up(), FakeDownMigration, FakeMigrationTarget, FakeUpMigration, Arc (+34 more)
 
 ### Community 2 - "Release pull request"
-Cohesion: 0.40
-Nodes (5): Checklist, Release description, Release pull request, Test evidence, Version
+Cohesion: 0.29
+Nodes (6): Checklist, Release description, Release pull request, Ships, Test evidence, Version
 
 ### Community 3 - "biome.json"
 Cohesion: 0.08
@@ -242,7 +248,7 @@ Cohesion: 0.13
 Nodes (13): ExecutionContext, ExecutionContext<'a>, ExecutionSource, Arc, RepositoryResult, Self, Clock, NaiveDate (+5 more)
 
 ### Community 28 - "Wertung — Classic 3-arrow scoring"
-Cohesion: 0.15
+Cohesion: 0.17
 Nodes (12): Acceptance criteria, Decision log, Domain terms and business rules, Outcome, Problem, Requirements, Revision history, Risks and open questions (+4 more)
 
 ### Community 29 - "application/uow.rs"
@@ -301,6 +307,10 @@ Nodes (52): RepositoryResult, Schuss, Send, Sync, Vec, SchussRepository, from_pa
 Cohesion: 0.11
 Nodes (15): format_datetime(), format_naive_date(), parse_datetime(), parse_decimal(), parse_menge(), parse_naive_date(), parse_uuid(), DateTime (+7 more)
 
+### Community 50 - "provider.tsx"
+Cohesion: 0.23
+Nodes (7): createLogandaimApi(), LogandaimApi, LogandaimApiContext, LogandaimApiContextValue, LogandaimApiProvider(), config, @tanstack/react-query-devtools
+
 ### Community 51 - "instrumented.rs"
 Cohesion: 0.28
 Nodes (7): InstrumentedObjectStore, InstrumentedPdfRenderer, Arc, ObjectStoreError, ObjectStream, Option, ResultReport
@@ -317,6 +327,10 @@ Nodes (5): InstrumentedUnitOfWork, Box, Pin, RepositoryResult, Self
 Cohesion: 0.38
 Nodes (4): blank_renderer_returns_pdf_prefix(), BlankPdfRenderer, ResultReport, Vec
 
+### Community 55 - "devDependencies"
+Cohesion: 0.20
+Nodes (10): devDependencies, babel-plugin-react-compiler, @biomejs/biome, openapi-typescript, tailwindcss, @tailwindcss/postcss, @types/node, @types/react (+2 more)
+
 ### Community 56 - "workflow-steps.tsx"
 Cohesion: 0.50
 Nodes (3): Step, WorkflowSteps(), WorkflowStepsProps
@@ -325,6 +339,14 @@ Nodes (3): Step, WorkflowSteps(), WorkflowStepsProps
 Cohesion: 0.13
 Nodes (15): Accessibility, Decision log, Domain terms, Import, Language and copy, logandaim.at — Product Charter, Milestones, MVP scope (+7 more)
 
+### Community 58 - "scripts"
+Cohesion: 0.22
+Nodes (9): scripts, build, check:format, check:lint, check:ts, dev, fix:format, fix:lint (+1 more)
+
+### Community 59 - "dependencies"
+Cohesion: 0.25
+Nodes (8): dependencies, lucide-react, next, openapi-fetch, react, react-dom, @tanstack/react-query, @tanstack/react-query-devtools
+
 ### Community 60 - "charter.md"
 Cohesion: 0.23
 Nodes (3): Changelog, [Unreleased], Legacy specs (YAMS proof of concept)
@@ -332,6 +354,10 @@ Nodes (3): Changelog, [Unreleased], Legacy specs (YAMS proof of concept)
 ### Community 61 - "App"
 Cohesion: 0.05
 Nodes (50): BackendServerError, catch_panic(), main(), Report, Result, init_tracing(), Option, Path (+42 more)
+
+### Community 63 - "Wertungszone"
+Cohesion: 0.40
+Nodes (5): Wertungszone, Body, Kill, Miss, Spot
 
 ### Community 68 - "Product Requirements Document (PRD) & Konzeptbericht"
 Cohesion: 0.12
@@ -357,9 +383,9 @@ Nodes (15): Agents, Before the first release, Branches, CHANGELOG scope, Checks,
 Cohesion: 0.50
 Nodes (4): ADR-0001: Baseline architecture, Consequences, Context, Decision
 
-### Community 84 - "provider.tsx"
-Cohesion: 0.09
-Nodes (24): ApiError, HttpLogandaimApi, JsonClient, unwrap(), createLogandaimApi(), LogandaimApi, Schuss, SchussErstellungInput (+16 more)
+### Community 84 - "http-client.ts"
+Cohesion: 0.19
+Nodes (11): HttpLogandaimApi, JsonClient, unwrap(), Schuss, SchussErstellungInput, Wertung, components, $defs (+3 more)
 
 ### Community 99 - "Specifications"
 Cohesion: 0.29
@@ -418,17 +444,17 @@ Cohesion: 0.33
 Nodes (5): address-review, fix-ci, implement, merge-base, Modes
 
 ### Community 157 - "package.json"
-Cohesion: 0.04
-Nodes (44): nextConfig, dependencies, lucide-react, next, openapi-fetch, react, react-dom, @tanstack/react-query (+36 more)
+Cohesion: 0.11
+Nodes (16): nextConfig, name, private, version, babel-plugin-react-compiler, @biomejs/biome, next, openapi-fetch (+8 more)
 
 ### Community 160 - "m1-reviewer.md"
 Cohesion: 0.40
 Nodes (4): Do not touch the working copy, Mode re-review, Mode review, Reply (caveman, ≤3 lines)
 
 ## Knowledge Gaps
-- **331 isolated node(s):** `ValidationError`, `SchussRegistrierenFehler`, `WertungFehler`, `logandaim-fakes`, `molting` (+326 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 581 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **10 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **332 isolated node(s):** `ValidationError`, `SchussRegistrierenFehler`, `WertungFehler`, `logandaim-fakes`, `molting` (+327 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 582 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -440,7 +466,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `ObjectStore` connect `ObjectStore` to `logandaim-filesystemstore/src/lib.rs`, `in_memory_object_store.rs`, `String`, `instrumented.rs`, `Clock`, `App`?**
   _High betweenness centrality (0.068) - this node is a cross-community bridge._
 - **What connects `ValidationError`, `SchussRegistrierenFehler`, `WertungFehler` to the rest of the system?**
-  _331 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _332 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `arc_up` be split into smaller, more focused modules?**
   _Cohesion score 0.05827505827505827 - nodes in this community are weakly interconnected._
 - **Should `biome.json` be split into smaller, more focused modules?**

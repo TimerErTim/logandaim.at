@@ -165,6 +165,32 @@
       "source_location": "L12"
     },
     {
+      "id": "frontend_src_api_logandaim_api_logandaimapi",
+      "label": "LogandaimApi",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "logandaimapi",
+      "source_file": "frontend/src/api/logandaim-api.ts",
+      "source_location": "L10"
+    },
+    {
+      "id": "frontend_src_api_provider_logandaimapicontextvalue",
+      "label": "LogandaimApiContextValue",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "logandaimapicontextvalue",
+      "source_file": "frontend/src/api/provider.tsx",
+      "source_location": "L10"
+    },
+    {
       "id": "frontend_src_components_workflow_workflow_steps_step",
       "label": "Step",
       "_callable": true,
@@ -282,6 +308,45 @@
       "source_location": "L6"
     },
     {
+      "id": "frontend_src_api_errors_apierror",
+      "label": "ApiError",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 62,
+      "community_name": "ApiError",
+      "file_type": "code",
+      "norm_label": "apierror",
+      "source_file": "frontend/src/api/errors.ts",
+      "source_location": "L3"
+    },
+    {
+      "id": "frontend_src_api_types_structurederror",
+      "label": "StructuredError",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 62,
+      "community_name": "ApiError",
+      "file_type": "code",
+      "norm_label": "structurederror",
+      "source_file": "frontend/src/api/types.ts",
+      "source_location": "L8"
+    },
+    {
+      "id": "frontend_src_api_schema_wertungszone",
+      "label": "Wertungszone",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 63,
+      "community_name": "Wertungszone",
+      "file_type": "code",
+      "norm_label": "wertungszone",
+      "source_file": "frontend/src/api/schema.ts",
+      "source_location": "L220"
+    },
+    {
       "id": "frontend_src_components_ui_input_inputprops",
       "label": "InputProps",
       "_callable": true,
@@ -308,26 +373,13 @@
       "source_location": "L5"
     },
     {
-      "id": "frontend_src_api_errors_apierror",
-      "label": "ApiError",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "apierror",
-      "source_file": "frontend/src/api/errors.ts",
-      "source_location": "L3"
-    },
-    {
       "id": "frontend_src_api_http_client_httplogandaimapi",
       "label": "HttpLogandaimApi",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "httplogandaimapi",
       "source_file": "frontend/src/api/http-client.ts",
@@ -340,24 +392,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "jsonclient",
       "source_file": "frontend/src/api/http-client.ts",
       "source_location": "L12"
-    },
-    {
-      "id": "frontend_src_api_logandaim_api_logandaimapi",
-      "label": "LogandaimApi",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "logandaimapi",
-      "source_file": "frontend/src/api/logandaim-api.ts",
-      "source_location": "L10"
     },
     {
       "id": "frontend_src_api_logandaim_api_schuss",
@@ -366,7 +405,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "schuss",
       "source_file": "frontend/src/api/logandaim-api.ts",
@@ -379,7 +418,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "schusserstellunginput",
       "source_file": "frontend/src/api/logandaim-api.ts",
@@ -392,24 +431,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "wertung",
       "source_file": "frontend/src/api/logandaim-api.ts",
       "source_location": "L19"
-    },
-    {
-      "id": "frontend_src_api_provider_logandaimapicontextvalue",
-      "label": "LogandaimApiContextValue",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "logandaimapicontextvalue",
-      "source_file": "frontend/src/api/provider.tsx",
-      "source_location": "L10"
     },
     {
       "id": "frontend_src_api_schema_components",
@@ -418,7 +444,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "components",
       "source_file": "frontend/src/api/schema.ts",
@@ -431,7 +457,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "$defs",
       "source_file": "frontend/src/api/schema.ts",
@@ -444,7 +470,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "operations",
       "source_file": "frontend/src/api/schema.ts",
@@ -457,7 +483,7 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "paths",
       "source_file": "frontend/src/api/schema.ts",
@@ -470,37 +496,11 @@
       "_callable_class": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "webhooks",
       "source_file": "frontend/src/api/schema.ts",
       "source_location": "L150"
-    },
-    {
-      "id": "frontend_src_api_schema_wertungszone",
-      "label": "Wertungszone",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "wertungszone",
-      "source_file": "frontend/src/api/schema.ts",
-      "source_location": "L220"
-    },
-    {
-      "id": "frontend_src_api_types_structurederror",
-      "label": "StructuredError",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "structurederror",
-      "source_file": "frontend/src/api/types.ts",
-      "source_location": "L8"
     },
     {
       "id": "frontend_src_api_hooks_mutations_useschussregistrierenmutation",
@@ -1019,6 +1019,66 @@
       "source_location": "L3"
     },
     {
+      "id": "frontend_src_api_index_createlogandaimapi",
+      "label": "createLogandaimApi()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "createlogandaimapi()",
+      "source_file": "frontend/src/api/index.ts",
+      "source_location": "L11"
+    },
+    {
+      "id": "frontend_src_api_logandaim_api_logandaimapi_health",
+      "label": ".health()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": ".health()",
+      "source_file": "frontend/src/api/logandaim-api.ts",
+      "source_location": "L11"
+    },
+    {
+      "id": "frontend_src_api_logandaim_api_logandaimapi_schussregistrieren",
+      "label": ".schussRegistrieren()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": ".schussregistrieren()",
+      "source_file": "frontend/src/api/logandaim-api.ts",
+      "source_location": "L13"
+    },
+    {
+      "id": "frontend_src_api_logandaim_api_logandaimapi_wertungberechnen",
+      "label": ".wertungBerechnen()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": ".wertungberechnen()",
+      "source_file": "frontend/src/api/logandaim-api.ts",
+      "source_location": "L15"
+    },
+    {
+      "id": "frontend_src_api_provider_logandaimapiprovider",
+      "label": "LogandaimApiProvider()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "logandaimapiprovider()",
+      "source_file": "frontend/src/api/provider.tsx",
+      "source_location": "L24"
+    },
+    {
       "id": "frontend_src_components_workflow_workflow_steps_workflowsteps",
       "label": "WorkflowSteps()",
       "_callable": true,
@@ -1077,6 +1137,30 @@
       "norm_label": "searchinput()",
       "source_file": "frontend/src/components/ui/search-input.tsx",
       "source_location": "L8"
+    },
+    {
+      "id": "frontend_src_api_errors_apierror_constructor",
+      "label": ".constructor()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 62,
+      "community_name": "ApiError",
+      "file_type": "code",
+      "norm_label": ".constructor()",
+      "source_file": "frontend/src/api/errors.ts",
+      "source_location": "L6"
+    },
+    {
+      "id": "frontend_src_api_errors_apierror_fromunknown",
+      "label": ".fromUnknown()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 62,
+      "community_name": "ApiError",
+      "file_type": "code",
+      "norm_label": ".fromunknown()",
+      "source_file": "frontend/src/api/errors.ts",
+      "source_location": "L12"
     },
     {
       "id": "frontend_src_components_ui_alert_alert",
@@ -1223,36 +1307,12 @@
       "source_location": "L1"
     },
     {
-      "id": "frontend_src_api_errors_apierror_constructor",
-      "label": ".constructor()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": ".constructor()",
-      "source_file": "frontend/src/api/errors.ts",
-      "source_location": "L6"
-    },
-    {
-      "id": "frontend_src_api_errors_apierror_fromunknown",
-      "label": ".fromUnknown()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": ".fromunknown()",
-      "source_file": "frontend/src/api/errors.ts",
-      "source_location": "L12"
-    },
-    {
       "id": "frontend_src_api_http_client_httplogandaimapi_constructor",
       "label": ".constructor()",
       "_callable": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": ".constructor()",
       "source_file": "frontend/src/api/http-client.ts",
@@ -1264,7 +1324,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": ".health()",
       "source_file": "frontend/src/api/http-client.ts",
@@ -1276,7 +1336,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": ".schussregistrieren()",
       "source_file": "frontend/src/api/http-client.ts",
@@ -1288,7 +1348,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": ".wertungberechnen()",
       "source_file": "frontend/src/api/http-client.ts",
@@ -1300,71 +1360,11 @@
       "_callable": true,
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "unwrap()",
       "source_file": "frontend/src/api/http-client.ts",
       "source_location": "L14"
-    },
-    {
-      "id": "frontend_src_api_index_createlogandaimapi",
-      "label": "createLogandaimApi()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "createlogandaimapi()",
-      "source_file": "frontend/src/api/index.ts",
-      "source_location": "L11"
-    },
-    {
-      "id": "frontend_src_api_logandaim_api_logandaimapi_health",
-      "label": ".health()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": ".health()",
-      "source_file": "frontend/src/api/logandaim-api.ts",
-      "source_location": "L11"
-    },
-    {
-      "id": "frontend_src_api_logandaim_api_logandaimapi_schussregistrieren",
-      "label": ".schussRegistrieren()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": ".schussregistrieren()",
-      "source_file": "frontend/src/api/logandaim-api.ts",
-      "source_location": "L13"
-    },
-    {
-      "id": "frontend_src_api_logandaim_api_logandaimapi_wertungberechnen",
-      "label": ".wertungBerechnen()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": ".wertungberechnen()",
-      "source_file": "frontend/src/api/logandaim-api.ts",
-      "source_location": "L15"
-    },
-    {
-      "id": "frontend_src_api_provider_logandaimapiprovider",
-      "label": "LogandaimApiProvider()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "logandaimapiprovider()",
-      "source_file": "frontend/src/api/provider.tsx",
-      "source_location": "L24"
     },
     {
       "id": "crates_logandaim_core_src_application_instrumented_instrumentedpdfrenderer_rendern",
@@ -6039,204 +6039,6 @@
       "source_location": "L1"
     },
     {
-      "id": "frontend_package_dependencies",
-      "label": "dependencies",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "dependencies",
-      "source_file": "frontend/package.json",
-      "source_location": "L15"
-    },
-    {
-      "id": "frontend_package_dependencies_lucide_react",
-      "label": "lucide-react",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "lucide-react",
-      "source_file": "frontend/package.json",
-      "source_location": "L18"
-    },
-    {
-      "id": "frontend_package_dependencies_next",
-      "label": "next",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "next",
-      "source_file": "frontend/package.json",
-      "source_location": "L19"
-    },
-    {
-      "id": "frontend_package_dependencies_openapi_fetch",
-      "label": "openapi-fetch",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "openapi-fetch",
-      "source_file": "frontend/package.json",
-      "source_location": "L20"
-    },
-    {
-      "id": "frontend_package_dependencies_react",
-      "label": "react",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "react",
-      "source_file": "frontend/package.json",
-      "source_location": "L21"
-    },
-    {
-      "id": "frontend_package_dependencies_react_dom",
-      "label": "react-dom",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "react-dom",
-      "source_file": "frontend/package.json",
-      "source_location": "L22"
-    },
-    {
-      "id": "frontend_package_dependencies_tanstack_react_query",
-      "label": "@tanstack/react-query",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@tanstack/react-query",
-      "source_file": "frontend/package.json",
-      "source_location": "L16"
-    },
-    {
-      "id": "frontend_package_dependencies_tanstack_react_query_devtools",
-      "label": "@tanstack/react-query-devtools",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@tanstack/react-query-devtools",
-      "source_file": "frontend/package.json",
-      "source_location": "L17"
-    },
-    {
-      "id": "frontend_package_devdependencies",
-      "label": "devDependencies",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "devdependencies",
-      "source_file": "frontend/package.json",
-      "source_location": "L24"
-    },
-    {
-      "id": "frontend_package_devdependencies_babel_plugin_react_compiler",
-      "label": "babel-plugin-react-compiler",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "babel-plugin-react-compiler",
-      "source_file": "frontend/package.json",
-      "source_location": "L30"
-    },
-    {
-      "id": "frontend_package_devdependencies_biomejs_biome",
-      "label": "@biomejs/biome",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@biomejs/biome",
-      "source_file": "frontend/package.json",
-      "source_location": "L25"
-    },
-    {
-      "id": "frontend_package_devdependencies_openapi_typescript",
-      "label": "openapi-typescript",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "openapi-typescript",
-      "source_file": "frontend/package.json",
-      "source_location": "L31"
-    },
-    {
-      "id": "frontend_package_devdependencies_tailwindcss",
-      "label": "tailwindcss",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "tailwindcss",
-      "source_file": "frontend/package.json",
-      "source_location": "L32"
-    },
-    {
-      "id": "frontend_package_devdependencies_tailwindcss_postcss",
-      "label": "@tailwindcss/postcss",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@tailwindcss/postcss",
-      "source_file": "frontend/package.json",
-      "source_location": "L26"
-    },
-    {
-      "id": "frontend_package_devdependencies_types_node",
-      "label": "@types/node",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@types/node",
-      "source_file": "frontend/package.json",
-      "source_location": "L27"
-    },
-    {
-      "id": "frontend_package_devdependencies_types_react",
-      "label": "@types/react",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@types/react",
-      "source_file": "frontend/package.json",
-      "source_location": "L28"
-    },
-    {
-      "id": "frontend_package_devdependencies_types_react_dom",
-      "label": "@types/react-dom",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "@types/react-dom",
-      "source_file": "frontend/package.json",
-      "source_location": "L29"
-    },
-    {
-      "id": "frontend_package_devdependencies_typescript",
-      "label": "typescript",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "typescript",
-      "source_file": "frontend/package.json",
-      "source_location": "L33"
-    },
-    {
       "id": "frontend_package_name",
       "label": "name",
       "_origin": "ast",
@@ -6257,105 +6059,6 @@
       "norm_label": "private",
       "source_file": "frontend/package.json",
       "source_location": "L4"
-    },
-    {
-      "id": "frontend_package_scripts",
-      "label": "scripts",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "scripts",
-      "source_file": "frontend/package.json",
-      "source_location": "L5"
-    },
-    {
-      "id": "frontend_package_scripts_build",
-      "label": "build",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "frontend/package.json",
-      "source_location": "L7"
-    },
-    {
-      "id": "frontend_package_scripts_check_format",
-      "label": "check:format",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "check:format",
-      "source_file": "frontend/package.json",
-      "source_location": "L12"
-    },
-    {
-      "id": "frontend_package_scripts_check_lint",
-      "label": "check:lint",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "check:lint",
-      "source_file": "frontend/package.json",
-      "source_location": "L10"
-    },
-    {
-      "id": "frontend_package_scripts_check_ts",
-      "label": "check:ts",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "check:ts",
-      "source_file": "frontend/package.json",
-      "source_location": "L13"
-    },
-    {
-      "id": "frontend_package_scripts_dev",
-      "label": "dev",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "dev",
-      "source_file": "frontend/package.json",
-      "source_location": "L6"
-    },
-    {
-      "id": "frontend_package_scripts_fix_format",
-      "label": "fix:format",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "fix:format",
-      "source_file": "frontend/package.json",
-      "source_location": "L11"
-    },
-    {
-      "id": "frontend_package_scripts_fix_lint",
-      "label": "fix:lint",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "fix:lint",
-      "source_file": "frontend/package.json",
-      "source_location": "L9"
-    },
-    {
-      "id": "frontend_package_scripts_start",
-      "label": "start",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "start",
-      "source_file": "frontend/package.json",
-      "source_location": "L8"
     },
     {
       "id": "frontend_package_version",
@@ -6455,17 +6158,6 @@
       "norm_label": "@tailwindcss/postcss",
       "source_file": "frontend/package.json",
       "source_location": "L26"
-    },
-    {
-      "id": "ref_tanstack_react_query_devtools",
-      "label": "@tanstack/react-query-devtools",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "concept",
-      "norm_label": "@tanstack/react-query-devtools",
-      "source_file": "frontend/package.json",
-      "source_location": "L17"
     },
     {
       "id": "ref_types_node",
@@ -8510,6 +8202,18 @@
       "source_location": ""
     },
     {
+      "id": "github_pull_request_template_release",
+      "label": "release.md",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Release pull request",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "release.md",
+      "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
+      "source_location": "L1"
+    },
+    {
       "id": "github_pull_request_template_release_checklist",
       "label": "Checklist",
       "_origin": "ast",
@@ -8519,7 +8223,7 @@
       "node_kind": "heading",
       "norm_label": "checklist",
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L26"
+      "source_location": "L34"
     },
     {
       "id": "github_pull_request_template_release_release_description",
@@ -8546,6 +8250,18 @@
       "source_location": "L1"
     },
     {
+      "id": "github_pull_request_template_release_ships",
+      "label": "Ships",
+      "_origin": "ast",
+      "community": 2,
+      "community_name": "Release pull request",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "ships",
+      "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
+      "source_location": "L14"
+    },
+    {
       "id": "github_pull_request_template_release_test_evidence",
       "label": "Test evidence",
       "_origin": "ast",
@@ -8555,7 +8271,7 @@
       "node_kind": "heading",
       "norm_label": "test evidence",
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L21"
+      "source_location": "L29"
     },
     {
       "id": "github_pull_request_template_release_version",
@@ -8567,7 +8283,7 @@
       "node_kind": "heading",
       "norm_label": "version",
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L14"
+      "source_location": "L22"
     },
     {
       "id": "crates_logandaim_core_src_adapters_system_clock",
@@ -10118,26 +9834,6 @@
       "norm_label": "sync",
       "source_file": "",
       "source_location": ""
-    },
-    {
-      "id": "specs_product_wertung",
-      "label": "wertung.md",
-      "_origin": "ast",
-      "community": 28,
-      "community_name": "Wertung \u2014 Classic 3-arrow scoring",
-      "file_type": "document",
-      "frontmatter": {
-        "id": "SPEC-wertung",
-        "title": "Classic 3-arrow scoring (first-hit and multi-shot)",
-        "status": "PO-approved",
-        "owner": "TimerErTim",
-        "issues": "[]",
-        "superseded_by": "null"
-      },
-      "node_kind": "page",
-      "norm_label": "wertung.md",
-      "source_file": "specs/product/wertung.md",
-      "source_location": "L1"
     },
     {
       "id": "specs_product_wertung_acceptance_criteria",
@@ -13788,6 +13484,72 @@
       "source_location": "L38"
     },
     {
+      "id": "frontend_src_api_index",
+      "label": "api/index.ts",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "api/index.ts",
+      "source_file": "frontend/src/api/index.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_api_provider",
+      "label": "provider.tsx",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "provider.tsx",
+      "source_file": "frontend/src/api/provider.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_api_provider_logandaimapicontext",
+      "label": "LogandaimApiContext",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "logandaimapicontext",
+      "source_file": "frontend/src/api/provider.tsx",
+      "source_location": "L16"
+    },
+    {
+      "id": "frontend_src_lib_config",
+      "label": "config.ts",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "config.ts",
+      "source_file": "frontend/src/lib/config.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_lib_config_config",
+      "label": "config",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "config",
+      "source_file": "frontend/src/lib/config.ts",
+      "source_location": "L13"
+    },
+    {
+      "id": "ref_tanstack_react_query_devtools",
+      "label": "@tanstack/react-query-devtools",
+      "_origin": "ast",
+      "community": 50,
+      "community_name": "provider.tsx",
+      "file_type": "concept",
+      "norm_label": "@tanstack/react-query-devtools",
+      "source_file": "frontend/package.json",
+      "source_location": "L17"
+    },
+    {
       "id": "crates_logandaim_core_src_application_instrumented",
       "label": "instrumented.rs",
       "_origin": "ast",
@@ -14393,6 +14155,116 @@
       "source_location": "L1"
     },
     {
+      "id": "frontend_package_devdependencies",
+      "label": "devDependencies",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "devdependencies",
+      "source_file": "frontend/package.json",
+      "source_location": "L24"
+    },
+    {
+      "id": "frontend_package_devdependencies_babel_plugin_react_compiler",
+      "label": "babel-plugin-react-compiler",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "babel-plugin-react-compiler",
+      "source_file": "frontend/package.json",
+      "source_location": "L30"
+    },
+    {
+      "id": "frontend_package_devdependencies_biomejs_biome",
+      "label": "@biomejs/biome",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "@biomejs/biome",
+      "source_file": "frontend/package.json",
+      "source_location": "L25"
+    },
+    {
+      "id": "frontend_package_devdependencies_openapi_typescript",
+      "label": "openapi-typescript",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "openapi-typescript",
+      "source_file": "frontend/package.json",
+      "source_location": "L31"
+    },
+    {
+      "id": "frontend_package_devdependencies_tailwindcss",
+      "label": "tailwindcss",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "tailwindcss",
+      "source_file": "frontend/package.json",
+      "source_location": "L32"
+    },
+    {
+      "id": "frontend_package_devdependencies_tailwindcss_postcss",
+      "label": "@tailwindcss/postcss",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "@tailwindcss/postcss",
+      "source_file": "frontend/package.json",
+      "source_location": "L26"
+    },
+    {
+      "id": "frontend_package_devdependencies_types_node",
+      "label": "@types/node",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "@types/node",
+      "source_file": "frontend/package.json",
+      "source_location": "L27"
+    },
+    {
+      "id": "frontend_package_devdependencies_types_react",
+      "label": "@types/react",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "@types/react",
+      "source_file": "frontend/package.json",
+      "source_location": "L28"
+    },
+    {
+      "id": "frontend_package_devdependencies_types_react_dom",
+      "label": "@types/react-dom",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "@types/react-dom",
+      "source_file": "frontend/package.json",
+      "source_location": "L29"
+    },
+    {
+      "id": "frontend_package_devdependencies_typescript",
+      "label": "typescript",
+      "_origin": "ast",
+      "community": 55,
+      "community_name": "devDependencies",
+      "file_type": "code",
+      "norm_label": "typescript",
+      "source_file": "frontend/package.json",
+      "source_location": "L33"
+    },
+    {
       "id": "frontend_src_components_workflow_workflow_steps",
       "label": "workflow-steps.tsx",
       "_origin": "ast",
@@ -14582,6 +14454,193 @@
       "norm_label": "vision",
       "source_file": "specs/product/charter.md",
       "source_location": "L12"
+    },
+    {
+      "id": "frontend_package_scripts",
+      "label": "scripts",
+      "_origin": "ast",
+      "community": 58,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "scripts",
+      "source_file": "frontend/package.json",
+      "source_location": "L5"
+    },
+    {
+      "id": "frontend_package_scripts_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 58,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "frontend/package.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "frontend_package_scripts_check_format",
+      "label": "check:format",
+      "_origin": "ast",
+      "community": 58,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "check:format",
+      "source_file": "frontend/package.json",
+      "source_location": "L12"
+    },
+    {
+      "id": "frontend_package_scripts_check_lint",
+      "label": "check:lint",
+      "_origin": "ast",
+      "community": 58,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "check:lint",
+      "source_file": "frontend/package.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "frontend_package_scripts_check_ts",
+      "label": "check:ts",
+      "_origin": "ast",
+      "community": 58,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "check:ts",
+      "source_file": "frontend/package.json",
+      "source_location": "L13"
+    },
+    {
+      "id": "frontend_package_scripts_dev",
+      "label": "dev",
+      "_origin": "ast",
+      "community": 58,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "dev",
+      "source_file": "frontend/package.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "frontend_package_scripts_fix_format",
+      "label": "fix:format",
+      "_origin": "ast",
+      "community": 58,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "fix:format",
+      "source_file": "frontend/package.json",
+      "source_location": "L11"
+    },
+    {
+      "id": "frontend_package_scripts_fix_lint",
+      "label": "fix:lint",
+      "_origin": "ast",
+      "community": 58,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "fix:lint",
+      "source_file": "frontend/package.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "frontend_package_scripts_start",
+      "label": "start",
+      "_origin": "ast",
+      "community": 58,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "start",
+      "source_file": "frontend/package.json",
+      "source_location": "L8"
+    },
+    {
+      "id": "frontend_package_dependencies",
+      "label": "dependencies",
+      "_origin": "ast",
+      "community": 59,
+      "community_name": "dependencies",
+      "file_type": "code",
+      "norm_label": "dependencies",
+      "source_file": "frontend/package.json",
+      "source_location": "L15"
+    },
+    {
+      "id": "frontend_package_dependencies_lucide_react",
+      "label": "lucide-react",
+      "_origin": "ast",
+      "community": 59,
+      "community_name": "dependencies",
+      "file_type": "code",
+      "norm_label": "lucide-react",
+      "source_file": "frontend/package.json",
+      "source_location": "L18"
+    },
+    {
+      "id": "frontend_package_dependencies_next",
+      "label": "next",
+      "_origin": "ast",
+      "community": 59,
+      "community_name": "dependencies",
+      "file_type": "code",
+      "norm_label": "next",
+      "source_file": "frontend/package.json",
+      "source_location": "L19"
+    },
+    {
+      "id": "frontend_package_dependencies_openapi_fetch",
+      "label": "openapi-fetch",
+      "_origin": "ast",
+      "community": 59,
+      "community_name": "dependencies",
+      "file_type": "code",
+      "norm_label": "openapi-fetch",
+      "source_file": "frontend/package.json",
+      "source_location": "L20"
+    },
+    {
+      "id": "frontend_package_dependencies_react",
+      "label": "react",
+      "_origin": "ast",
+      "community": 59,
+      "community_name": "dependencies",
+      "file_type": "code",
+      "norm_label": "react",
+      "source_file": "frontend/package.json",
+      "source_location": "L21"
+    },
+    {
+      "id": "frontend_package_dependencies_react_dom",
+      "label": "react-dom",
+      "_origin": "ast",
+      "community": 59,
+      "community_name": "dependencies",
+      "file_type": "code",
+      "norm_label": "react-dom",
+      "source_file": "frontend/package.json",
+      "source_location": "L22"
+    },
+    {
+      "id": "frontend_package_dependencies_tanstack_react_query",
+      "label": "@tanstack/react-query",
+      "_origin": "ast",
+      "community": 59,
+      "community_name": "dependencies",
+      "file_type": "code",
+      "norm_label": "@tanstack/react-query",
+      "source_file": "frontend/package.json",
+      "source_location": "L16"
+    },
+    {
+      "id": "frontend_package_dependencies_tanstack_react_query_devtools",
+      "label": "@tanstack/react-query-devtools",
+      "_origin": "ast",
+      "community": 59,
+      "community_name": "dependencies",
+      "file_type": "code",
+      "norm_label": "@tanstack/react-query-devtools",
+      "source_file": "frontend/package.json",
+      "source_location": "L17"
     },
     {
       "id": "frontend_src_components_ui_alert",
@@ -14824,6 +14883,26 @@
       "source_location": "L1"
     },
     {
+      "id": "specs_product_wertung",
+      "label": "wertung.md",
+      "_origin": "ast",
+      "community": 60,
+      "community_name": "charter.md",
+      "file_type": "document",
+      "frontmatter": {
+        "id": "SPEC-wertung",
+        "title": "Classic 3-arrow scoring (first-hit and multi-shot)",
+        "status": "PO-approved",
+        "owner": "TimerErTim",
+        "issues": "[]",
+        "superseded_by": "null"
+      },
+      "node_kind": "page",
+      "norm_label": "wertung.md",
+      "source_file": "specs/product/wertung.md",
+      "source_location": "L1"
+    },
+    {
       "id": "changelog",
       "label": "CHANGELOG.md",
       "_origin": "ast",
@@ -14869,18 +14948,6 @@
       "node_kind": "page",
       "norm_label": "contributing.md",
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L1"
-    },
-    {
-      "id": "github_pull_request_template_release",
-      "label": "release.md",
-      "_origin": "ast",
-      "community": 60,
-      "community_name": "charter.md",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "release.md",
-      "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
       "source_location": "L1"
     },
     {
@@ -15721,6 +15788,72 @@
       "norm_label": "u",
       "source_file": "",
       "source_location": ""
+    },
+    {
+      "id": "frontend_src_api_errors",
+      "label": "errors.ts",
+      "_origin": "ast",
+      "community": 62,
+      "community_name": "ApiError",
+      "file_type": "code",
+      "norm_label": "errors.ts",
+      "source_file": "frontend/src/api/errors.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_api_types",
+      "label": "types.ts",
+      "_origin": "ast",
+      "community": 62,
+      "community_name": "ApiError",
+      "file_type": "code",
+      "norm_label": "types.ts",
+      "source_file": "frontend/src/api/types.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_api_schema_wertungszone_body",
+      "label": "Body",
+      "_origin": "ast",
+      "community": 63,
+      "community_name": "Wertungszone",
+      "file_type": "code",
+      "norm_label": "body",
+      "source_file": "frontend/src/api/schema.ts",
+      "source_location": "L223"
+    },
+    {
+      "id": "frontend_src_api_schema_wertungszone_kill",
+      "label": "Kill",
+      "_origin": "ast",
+      "community": 63,
+      "community_name": "Wertungszone",
+      "file_type": "code",
+      "norm_label": "kill",
+      "source_file": "frontend/src/api/schema.ts",
+      "source_location": "L222"
+    },
+    {
+      "id": "frontend_src_api_schema_wertungszone_miss",
+      "label": "Miss",
+      "_origin": "ast",
+      "community": 63,
+      "community_name": "Wertungszone",
+      "file_type": "code",
+      "norm_label": "miss",
+      "source_file": "frontend/src/api/schema.ts",
+      "source_location": "L224"
+    },
+    {
+      "id": "frontend_src_api_schema_wertungszone_spot",
+      "label": "Spot",
+      "_origin": "ast",
+      "community": 63,
+      "community_name": "Wertungszone",
+      "file_type": "code",
+      "norm_label": "spot",
+      "source_file": "frontend/src/api/schema.ts",
+      "source_location": "L221"
     },
     {
       "id": "specs_3d_archery_tracking_austria_product_requirements_document",
@@ -16983,36 +17116,14 @@
       "source_location": "L24"
     },
     {
-      "id": "frontend_src_api_errors",
-      "label": "errors.ts",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "errors.ts",
-      "source_file": "frontend/src/api/errors.ts",
-      "source_location": "L1"
-    },
-    {
       "id": "frontend_src_api_http_client",
       "label": "http-client.ts",
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "http-client.ts",
       "source_file": "frontend/src/api/http-client.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_api_index",
-      "label": "api/index.ts",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "api/index.ts",
-      "source_file": "frontend/src/api/index.ts",
       "source_location": "L1"
     },
     {
@@ -17020,121 +17131,22 @@
       "label": "logandaim-api.ts",
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "logandaim-api.ts",
       "source_file": "frontend/src/api/logandaim-api.ts",
       "source_location": "L1"
     },
     {
-      "id": "frontend_src_api_provider",
-      "label": "provider.tsx",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "provider.tsx",
-      "source_file": "frontend/src/api/provider.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_api_provider_logandaimapicontext",
-      "label": "LogandaimApiContext",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "logandaimapicontext",
-      "source_file": "frontend/src/api/provider.tsx",
-      "source_location": "L16"
-    },
-    {
       "id": "frontend_src_api_schema",
       "label": "schema.ts",
       "_origin": "ast",
       "community": 84,
-      "community_name": "provider.tsx",
+      "community_name": "http-client.ts",
       "file_type": "code",
       "norm_label": "schema.ts",
       "source_file": "frontend/src/api/schema.ts",
       "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_api_schema_wertungszone_body",
-      "label": "Body",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "body",
-      "source_file": "frontend/src/api/schema.ts",
-      "source_location": "L223"
-    },
-    {
-      "id": "frontend_src_api_schema_wertungszone_kill",
-      "label": "Kill",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "kill",
-      "source_file": "frontend/src/api/schema.ts",
-      "source_location": "L222"
-    },
-    {
-      "id": "frontend_src_api_schema_wertungszone_miss",
-      "label": "Miss",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "miss",
-      "source_file": "frontend/src/api/schema.ts",
-      "source_location": "L224"
-    },
-    {
-      "id": "frontend_src_api_schema_wertungszone_spot",
-      "label": "Spot",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "spot",
-      "source_file": "frontend/src/api/schema.ts",
-      "source_location": "L221"
-    },
-    {
-      "id": "frontend_src_api_types",
-      "label": "types.ts",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "types.ts",
-      "source_file": "frontend/src/api/types.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_lib_config",
-      "label": "config.ts",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "config.ts",
-      "source_file": "frontend/src/lib/config.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_lib_config_config",
-      "label": "config",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "provider.tsx",
-      "file_type": "code",
-      "norm_label": "config",
-      "source_file": "frontend/src/lib/config.ts",
-      "source_location": "L13"
     },
     {
       "id": "crates_molting_src_tests_mod",
@@ -42678,7 +42690,7 @@
     },
     {
       "source": "github_pull_request_template_release_release_pull_request",
-      "target": "github_pull_request_template_release_version",
+      "target": "github_pull_request_template_release_ships",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
@@ -42689,13 +42701,24 @@
     },
     {
       "source": "github_pull_request_template_release_release_pull_request",
+      "target": "github_pull_request_template_release_version",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "github_pull_request_template_release_release_pull_request",
       "target": "github_pull_request_template_release_test_evidence",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L21",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -42706,7 +42729,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L26",
+      "source_location": "L34",
       "weight": 1.0
     },
     {
@@ -49740,5 +49763,5 @@
       "source_file": ".cursor/AGENTS.md"
     }
   ],
-  "built_at_commit": "9e10018a451e2df4b8bfa13aebad96332e0a49cb"
+  "built_at_commit": "e782b8004a8266324e0e44aadf807d00ce98f5be"
 }

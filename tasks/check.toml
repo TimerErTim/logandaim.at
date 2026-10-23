@@ -95,8 +95,14 @@ fi
 
 # A release body that cannot be assembled would deploy the site and then fail to
 # publish, so the whole body is generated here and discarded. gh needs network and
-# authentication; skip the remote parts when it has neither.
-if gh auth status >/dev/null 2>&1; then
+# authentication. A developer machine without them skips the remote parts so the
+# gate stays usable offline; in CI the same failure fails the gate, before the
+# deploy and before the tag.
+ci=${GITHUB_ACTIONS:-${CI:-}}
+if ! gh auth status >/dev/null 2>&1; then
+  [ -z "$ci" ] || fail "gh is not authenticated; the release body cannot be assembled"
+  echo "check:release: gh is not authenticated; skipped the release body check" >&2
+else
   if gh release view "v$version" --repo "$repo" >/dev/null 2>&1; then
     fail "release v$version already exists on $repo; bump the version"
   fi
@@ -110,6 +116,7 @@ if gh auth status >/dev/null 2>&1; then
     pr="$merged"
     [ -n "$pr" ] || fail "no pull request is associated with HEAD; the release has no description"
   else
+    [ -z "$ci" ] || fail "cannot reach $repo; the release body cannot be assembled"
     echo "check:release: cannot reach $repo; skipped the release body check" >&2
   fi
 
@@ -117,8 +124,6 @@ if gh auth status >/dev/null 2>&1; then
     mise run --no-deps release:notes "$version" --pr "$pr" -o /dev/null \\
       || fail "the release body cannot be generated from pull request #$pr"
   fi
-else
-  echo "check:release: gh is not authenticated; skipped the release body check" >&2
 fi
 
 echo "check:release: $version ok"

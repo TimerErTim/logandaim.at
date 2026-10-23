@@ -97,7 +97,7 @@ Add more views only when a real coordination question needs one.
 | `main` | Releases. A merge here deploys. | Only `dev` and `hotfix/*`. Uses the release template. |
 
 A release pull request (`dev` -> `main`) bumps the version, writes the dated changelog section, and
-whose description becomes the release body. Merging it deploys the static frontend to GitHub Pages
+its description becomes the release body. Merging it deploys the static frontend to GitHub Pages
 and creates a source-only GitHub release tagged `v<version>`. See the
 [release template](PULL_REQUEST_TEMPLATE/release.md).
 

@@ -39,6 +39,10 @@ sed -i "0,/^version = \\".*\\"/s//version = \\"$next\\"/" Cargo.toml
 jq --indent 2 --arg v "$next" '.version = $v' frontend/package.json > frontend/package.json.tmp
 mv frontend/package.json.tmp frontend/package.json
 
+# `Cargo.lock` pins every workspace crate version, so it must agree with the
+# manifest in the same commit. `cargo metadata` rewrites the lock without building.
+cargo metadata --format-version 1 > /dev/null
+
 echo "release:version: $current -> $next"
 echo "Now move the Unreleased changelog entries into '## [$next] - $(date +%F)'."
 """
@@ -62,11 +66,58 @@ out="${usage_out:-}"
 
 [ -n "$pr" ] || { echo "release:notes: --pr <number> is required" >&2; exit 1; }
 
-repo="${LOGANDAIM_REPO:-$(git remote get-url github 2>/dev/null | sed -e 's|^git@github.com:||' -e 's|\\.git$||')}"
-[ -n "$repo" ] || repo="${GITHUB_REPOSITORY:-TimerErTim/logandaim.at}"
+repo="${LOGANDAIM_REPO:-${GITHUB_REPOSITORY:-}}"
+if [ -z "$repo" ]; then
+  # Derive from the remote; CI checks out `origin`, a jj workspace may name it
+  # `github`. Never guess a repository: publishing to the wrong one is silent.
+  remote_url=$(git remote get-url origin 2>/dev/null || git remote get-url github 2>/dev/null || true)
+  repo=$(printf '%s\\n' "$remote_url" \\
+    | sed -e 's|^git@github.com:||' -e 's|^https://github.com/||' -e 's|\\.git$||')
+fi
+[ -n "$repo" ] || {
+  echo "release:notes: cannot determine the GitHub repository; set LOGANDAIM_REPO" >&2
+  exit 1
+}
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
+
+# Drop HTML comments, which templates use as guidance for the author. Handles
+# multi-line blocks and comments that open or close mid-line. Reads stdin.
+strip_comments() {
+  awk '
+    {
+      line = $0
+      out = ""
+      while (length(line) > 0) {
+        if (in_comment) {
+          i = index(line, "-->")
+          if (i == 0) { line = ""; break }
+          line = substr(line, i + 3); in_comment = 0
+        } else {
+          i = index(line, "<!--")
+          if (i == 0) { out = out line; line = ""; break }
+          out = out substr(line, 1, i - 1); line = substr(line, i + 4); in_comment = 1
+        }
+      }
+      print out
+    }
+  '
+}
+
+# Trim leading and trailing blank lines. Reads stdin.
+trim_blank() {
+  awk '
+    { line[NR] = $0 }
+    END {
+      first = 1
+      last = NR
+      while (first <= last && line[first] ~ /^[[:space:]]*$/) first++
+      while (last >= first && line[last] ~ /^[[:space:]]*$/) last--
+      for (i = first; i <= last; i++) print line[i]
+    }
+  '
+}
 
 # 1. Release description: the `## Release description` section of the release pull
 # request, not the whole body. The template's checklists are for reviewers and
@@ -76,24 +127,16 @@ awk '
   /^## Release description/ { capture = 1; next }
   capture && /^## / { exit }
   capture { print }
-' "$tmp/pr-full.md" > "$tmp/pr-section.md"
+' "$tmp/pr-full.md" | strip_comments > "$tmp/pr-stripped.md"
 
-if ! grep -q '[^[:space:]]' "$tmp/pr-section.md"; then
+# Check after stripping: a section holding only the template's guidance comment
+# would publish an empty description.
+if ! grep -q '[^[:space:]]' "$tmp/pr-stripped.md"; then
   echo "release:notes: pull request #$pr has no non-empty '## Release description' section" >&2
   exit 1
 fi
 
-# Trim leading and trailing blank lines.
-awk '
-  { line[NR] = $0 }
-  END {
-    first = 1
-    last = NR
-    while (first <= last && line[first] ~ /^[[:space:]]*$/) first++
-    while (last >= first && line[last] ~ /^[[:space:]]*$/) last--
-    for (i = first; i <= last; i++) print line[i]
-  }
-' "$tmp/pr-section.md" > "$tmp/pr.md"
+trim_blank < "$tmp/pr-stripped.md" > "$tmp/pr.md"
 
 # 2. Changelog section for this version. A section ends at the next heading or at
 # the link-reference block at the bottom of the file.
@@ -102,19 +145,7 @@ awk -v v="$version" '
   capture && (/^## / || (substr($0, 1, 1) == "[" && index($0, "]: ") > 1)) { exit }
   capture { print }
 ' CHANGELOG.md > "$tmp/changelog.raw"
-# Trim leading and trailing blank lines.
-awk '
-  /^[[:space:]]*<!--/ { in_comment = 1 }
-  { if (in_comment) { if (/-->/) in_comment = 0; next } }
-  { line[NR] = $0 }
-  END {
-    first = 1
-    last = NR
-    while (first <= last && line[first] ~ /^[[:space:]]*$/) first++
-    while (last >= first && line[last] ~ /^[[:space:]]*$/) last--
-    for (i = first; i <= last; i++) print line[i]
-  }
-' "$tmp/changelog.raw" > "$tmp/changelog.md"
+strip_comments < "$tmp/changelog.raw" | trim_blank > "$tmp/changelog.md"
 
 # 3. First-time contributors from GitHub's generated notes.
 previous_tag=$("$GH" release list --repo "$repo" --limit 1 --json tagName --jq '.[0].tagName // ""')
