@@ -57,7 +57,8 @@ Personal data belongs to exactly one `Konto` and is visible only to its owner.
 4. **Reset password.** The `Schütze` who forgot the password requests a reset, receives an email
    link, sets a new password, and logs in; older logins on other devices end.
 5. **Delete account.** In account settings the `Schütze` re-enters the password and confirms; the
-   `Konto` and all personal data are gone and the session ends.
+   `Konto` and all personal data are gone, its `Runden` stay anonymized for aggregate statistics,
+   and the session ends.
 6. **Admin.** The `System-Administrator` logs in and maintains the pilot Anlagen, Parcours, Ziele,
    and Pflöcke (master-data spec).
 
@@ -71,7 +72,8 @@ Personal data belongs to exactly one `Konto` and is visible only to its owner.
 | `Rolle` | Exactly one of `Schütze`, `System-Administrator` per `Konto`. |
 | `Anmelde-Sitzung` | One logged-in state of a `Konto` on one device. Revocable at any time. |
 | `Passwort-Wiederherstellung` | Single-use, time-limited token sent by email to set a new `Passwort`. |
-| `Konto-Löschung` | Irreversible self-service removal of the `Konto` and its personal data. |
+| `Konto-Löschung` | Irreversible self-service removal of the `Konto` and its personal data; its `Runden` stay anonymized. |
+| `Anonymisierte Runde` | A `Runde` (with its `Schüsse`) whose link to a `Konto` and whose personal attributes are stripped. Kept for aggregate statistics; no longer personal data. |
 
 Rules:
 
@@ -79,19 +81,32 @@ Rules:
 2. A `Passwort` has at least 8 characters. No composition rules and no periodic rotation.
 3. Registration creates a `Konto` with `Rolle` `Schütze` and logs the user in immediately.
    No email verification happens (MVP).
-4. Login failure gives one generic error, whether the email is unknown or the `Passwort` is wrong.
-   Registration and recovery never reveal to third parties whether a `Konto` exists.
-5. Failed logins and recovery requests are throttled per `Konto` and per client.
+4. Registration, login, and recovery never reveal to third parties whether a `Konto` exists.
+   Login failure gives one generic error, whether the email is unknown or the `Passwort` is wrong.
+   Registration answers with one identical response whether or not the `E-Mail-Adresse` is taken:
+   a taken address creates no `Konto` and no `Anmelde-Sitzung`, and the existing `Konto` receives
+   a notice email about the attempted registration instead. The difference shows up only in the
+   follow-up (a login succeeds only for the freshly created `Konto`; the notice email goes only to
+   an existing one) — never in the registration response itself.
+5. Throttles are fixed exactly (Q-4; configurability tracked in issue #26). Per `E-Mail-Adresse`:
+   5 consecutive failed logins lock further attempts for 15 minutes (a successful login resets the
+   counter); 3 `Passwort-Wiederherstellung` requests per hour. Per client: 20 failed logins per
+   15 minutes; 5 recovery requests per hour; 5 registration attempts per hour. Exceeding a
+   throttle fails with 429 until the window passes.
 6. A `Konto` may hold several `Anmelde-Sitzungen` (multiple devices). Logout ends the current
    `Anmelde-Sitzung`. A completed `Passwort-Wiederherstellung` ends all `Anmelde-Sitzungen`.
 7. A `Passwort-Wiederherstellung` token is single-use, bound to one `Konto`, and expires 60 minutes
    after it was requested. Requesting again invalidates the previous token.
 8. `Konto-Löschung` requires re-entering the `Passwort` and explicit confirmation. It removes the
-   `Konto`, all its `Anmelde-Sitzungen`, and all personal data (Runden, Schüsse). It is
+   `Konto`, its credentials, all its `Anmelde-Sitzungen`, and every personal attribute — including
+   the link from its `Runden` and `Schüsse` to the `Konto` (Q-1). The `Runden` and `Schüsse` stay
+   as `Anonymisierte Runde` records for aggregate statistics. Anonymization contract: kept are the
+   sporting results, dates, and master-data references; stripped are the `Konto` reference and
+   every personal attribute, so nobody can attribute a kept `Runde` to a person. It is
    irreversible. Master data (Anlage, Parcours, Ziel, Pflock) is untouched. The freed
    `E-Mail-Adresse` can register again.
 9. Role elevation never happens through self-service. `System-Administrator` accounts are
-   provisioned out of band (see open question Q-2).
+   provisioned out of band (decision log, Q-2; tracked in issue #34).
 10. Personal data is visible only to the owning `Konto`; no user-to-user visibility in MVP
     (charter Q-3 default).
 11. Every request for personal data or a personal action requires a logged-in `Konto`. Only
@@ -101,20 +116,25 @@ Rules:
 
 **Functional**
 
-- FR-1: Register a `Konto` from email + `Passwort` and start an `Anmelde-Sitzung`, without email
-  verification.
-- FR-2: Reject registration with an already-used `E-Mail-Adresse` or a `Passwort` shorter than
-  8 characters, without creating a `Konto`.
+- FR-1: Register a `Konto` from email + `Passwort` and get the user logged in immediately, without
+  email verification. The registration response itself is generic (rule 4); the `Anmelde-Sitzung`
+  starts with the login step that immediately follows registration.
+- FR-2: Reject a `Passwort` shorter than 8 characters with 400 — identically whether or not the
+  `E-Mail-Adresse` already has a `Konto` — without creating a `Konto`. An already-used
+  `E-Mail-Adresse` creates nothing and gets the generic registration response of rule 4; the
+  existing `Konto` receives a notice email.
 - FR-3: Log in with email + `Passwort`, with a generic failure for wrong credentials.
 - FR-4: Log out by revoking the current `Anmelde-Sitzung` server-side.
 - FR-5: Reset a forgotten `Passwort`: request with an `E-Mail-Adresse` always returns the same
   response; an existing `Konto` receives a `Passwort-Wiederherstellung` email; completing it sets
   the new `Passwort` and ends all `Anmelde-Sitzungen`.
-- FR-6: Delete the own `Konto` with `Passwort` re-entry and confirmation, removing all personal
-  data and sessions.
+- FR-6: Delete the own `Konto` with `Passwort` re-entry and confirmation, removing the `Konto`,
+  its credentials, and all sessions and personal data; its `Runden` and `Schüsse` stay anonymized
+  per rule 8.
 - FR-7: Enforce `Rolle`-based access: a `Schütze` accesses only the own data, a
   `System-Administrator` additionally the admin endpoints. No self-service elevation.
-- FR-8: Throttle failed logins and recovery requests per `Konto` and per client.
+- FR-8: Enforce the throttle thresholds of rule 5 for failed logins, recovery requests, and
+  registration bursts, per `E-Mail-Adresse` and per client.
 
 **Non-functional**
 
@@ -125,46 +145,26 @@ Rules:
   (see [`../decisions/0002-session-cookie-auth.md`](../decisions/0002-session-cookie-auth.md)).
 - NFR-4: Auth endpoints respond within 500 ms p95, excluding email delivery.
 
-## Data model (sketch)
+## Implementation sketches
 
-Non-normative; the implementing issue and ADR-0002 refine it.
-
-| Store | Fields |
-|-------|--------|
-| `konten` | `id`, `email` (unique, normalized), `passwort_hash`, `rolle` (`Schütze` \| `System-Administrator`), `erstellt_am` |
-| `anmelde_sitzungen` | `id`, `konto_id`, `token_hash`, `erstellt_am`, `läuft_ab_am`, `zuletzt_verwendet_am` |
-| `passwort_wiederherstellungen` | `id`, `konto_id`, `token_hash`, `läuft_ab_am`, `verbraucht_am` |
-
-Session and recovery tokens are stored hashed; the raw token exists only in the cookie resp. the
-recovery link. Personal data (Runden, Schüsse) references `konten.id` and is deleted with the
-`Konto`.
-
-## API surface (sketch)
-
-Non-normative; German domain paths as in ADR-0001, JSON keys `camelCase` UTF-8.
-
-| Endpoint | Purpose |
-|----------|---------|
-| `POST /api/konto/registrierung` | Register (`email`, `passwort`) → creates `Konto`, starts `Anmelde-Sitzung`. |
-| `POST /api/konto/anmeldung` | Log in (`email`, `passwort`) → starts `Anmelde-Sitzung`. |
-| `POST /api/konto/abmeldung` | Log out → revokes the current `Anmelde-Sitzung`. |
-| `POST /api/konto/passwort-vergessen` | Request `Passwort-Wiederherstellung` email (`email`). Same response for unknown emails. |
-| `POST /api/konto/passwort-wiederherstellen` | Set new `Passwort` (`token`, `neuesPasswort`) → ends all sessions. |
-| `GET /api/konto` | The logged-in `Konto` (`id`, `email`, `rolle`). |
-| `DELETE /api/konto` | `Konto-Löschung` (`passwort` re-entry + confirmation). |
-
-Error shape follows the existing structured errors (400 validation, 401 not logged in,
-403 wrong `Rolle`, 409 duplicate `E-Mail-Adresse`, 429 throttled).
+Non-normative implementation sketches (data model, API surface) are technical design and live in
+[ADR-0002's appendix](../decisions/0002-session-cookie-auth.md#appendix-implementation-sketch-non-normative),
+not in this spec. They guide implementation and are not part of the contract; the contract lives
+in the rules and acceptance criteria above.
 
 ## Acceptance criteria
 
 - AC-1: Given no `Konto` for an email, when registering with that email and an 8-character
-  `Passwort`, then a `Konto` with `Rolle` `Schütze` exists and the user is logged in without any
-  verification step.
-- AC-2: When registering with an `E-Mail-Adresse` that already has a `Konto`, then registration
-  fails with 409 and no `Konto` is created.
+  `Passwort`, then the registration response is the generic response of rule 4, a `Konto` with
+  `Rolle` `Schütze` exists, and the user is logged in without any verification step.
+- AC-2: When registering with an `E-Mail-Adresse` that already has a `Konto`, then the response
+  (status and body) is identical to AC-1's registration response, no `Konto` and no
+  `Anmelde-Sitzung` are created, the existing `Konto` receives a notice email about the attempted
+  registration, and a follow-up login with the submitted `Passwort` fails with the one generic
+  login error of rule 4.
 - AC-3: When registering or resetting with a `Passwort` shorter than 8 characters, then the request
-  fails with 400 and the stored `Passwort` is unchanged.
+  fails with 400 and the stored `Passwort` is unchanged — identically whether or not the
+  `E-Mail-Adresse` has a `Konto`.
 - AC-4: Given a `Konto`, when logging in with the correct `E-Mail-Adresse` and `Passwort`, then an
   `Anmelde-Sitzung` is established and protected requests succeed.
 - AC-5: When logging in with a wrong `Passwort`, then the response equals the response for an
@@ -177,34 +177,40 @@ Error shape follows the existing structured errors (400 validation, 401 not logg
   `Passwort` with the token, then the `Passwort` changes, all `Anmelde-Sitzungen` end, and the
   token cannot be used a second time; an expired or unknown token fails with 400.
 - AC-9: When deleting the account with the correct `Passwort` and confirmation, then the `Konto`,
-  its sessions, and its Runden and Schüsse are gone, login with the old credentials fails, and the
-  `E-Mail-Adresse` can register again.
+  its credentials, its `Anmelde-Sitzungen`, and all personal data are gone; its `Runden` and
+  `Schüsse` remain as anonymized records that still count in aggregate statistics but no longer
+  reference the deleted `Konto`; login with the old credentials fails; and the `E-Mail-Adresse` can
+  register again.
 - AC-10: When an unauthenticated request hits any protected endpoint, then it fails with 401.
 - AC-11: When a `Schütze` requests an admin-only endpoint, then it fails with 403; the same
   request with a `System-Administrator` `Konto` succeeds.
-- AC-12: After a configured number of consecutive failed logins for one `Konto`, further attempts
-  fail with 429 until the throttle window passes.
+- AC-12: After 5 consecutive failed logins for one `E-Mail-Adresse`, further attempts for it fail
+  with 429 for 15 minutes, and after 20 failed logins per client within 15 minutes further attempts
+  from that client fail with 429 until the window passes; a successful login resets the
+  `E-Mail-Adresse` counter.
 - AC-13: The session credential is not readable from JavaScript in the browser and is only
   transmitted over HTTPS.
+- AC-14: When `Passwort-Wiederherstellung` requests exceed 3 per `E-Mail-Adresse` per hour or 5 per
+  client per hour, the excess requests fail with 429 until the window passes.
+- AC-15: When registration attempts exceed 5 per client per hour, the excess requests fail with 429
+  until the window passes.
 
 ## Risks and open questions
 
-- [ ] Q-1: `Konto-Löschung` semantics. Draft: hard delete of all personal data. Keep anonymized
-  Runden for future statistics instead? (Charter puts global benchmarks behind a privacy design,
-  which favors full delete.)
-- [ ] Q-2: How are `System-Administrator` accounts provisioned in MVP — deployment config, CLI
-  command, or manual database step? Draft assumes out-of-band provisioning.
 - [ ] Q-3: Password recovery needs an outbound email channel even though registration needs no
-  verification. Which email delivery for MVP (provider, sender domain)?
-- [ ] Q-4: Throttle thresholds (failed logins, recovery emails per hour): fixed by this spec or
-  operations configuration? Draft assumes operations configuration with a tested minimum.
+  verification. Which email delivery for MVP (provider, sender domain)? (PO 2026-10-23: decide
+  later; tracked in issue #27.)
+
+Resolved (PO 2026-10-23): Q-1 (`Konto-Löschung` keeps anonymized `Runden`), Q-2 (out-of-band
+`System-Administrator` provisioning), Q-4 (exact throttle thresholds in rule 5). See the decision
+log.
 
 ## Verification
 
-API e2e tests in the backend API test suite (`tests/e2e/`), one case per AC (AC-1 to AC-12 at the
-API level; throttle thresholds configured low in tests). AC-13 additionally as a manual browser
-check on the deployed frontend origin. Domain rules (normalization, token lifecycle) get domain
-unit tests in the backend core.
+API e2e tests in the backend API test suite (`tests/e2e/`), one case per AC (AC-1 to AC-15 at the
+API level, using the throttle thresholds of rule 5). AC-13 additionally as a manual browser
+check on the deployed frontend origin. Domain rules (normalization, token lifecycle, anonymization)
+get domain unit tests in the backend core.
 
 ## Decision log
 
@@ -213,9 +219,14 @@ unit tests in the backend core.
 | 2026-10-23 | Login method: email + password. | TimerErTim |
 | 2026-10-23 | Email verification not required for MVP. | TimerErTim |
 | 2026-10-23 | GDPR: self-service account deletion only; no data export in MVP. | TimerErTim |
+| 2026-10-23 | Q-1: `Konto-Löschung` deletes the `Konto`, credentials, and PII but keeps `Runden` and `Schüsse` anonymized so aggregate statistics survive (reverses the draft's hard-delete default). | TimerErTim (PO) |
+| 2026-10-23 | Q-2: `System-Administrator` accounts are provisioned out of band; no self-service elevation (tracked in issue #34). | TimerErTim (PO) |
+| 2026-10-23 | Q-4: Throttle thresholds fixed exactly in rule 5; configurability tracked in issue #26. | TimerErTim (PO) |
+| 2026-10-23 | Registration answers generically (rule 4, review finding 1): duplicate registration notifies the existing `Konto` instead of failing with 409. | Agent (MiMo) |
 
 ## Revision history
 
 | Date | Change | By |
 |------|--------|----|
 | 2026-10-23 | Initial draft from issue #9 and PO decisions. | Agent (MiMo) |
+| 2026-10-23 | PO decisions Q-1/Q-2/Q-4 (anonymized `Runden` on deletion, out-of-band admins, exact throttle thresholds); registration enumeration oracle closed; data-model and API sketches moved to ADR-0002; review fixes. | Agent (MiMo) |

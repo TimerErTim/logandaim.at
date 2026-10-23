@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- SPEC-konto draft: `Konto-Löschung` now anonymizes `Runden`/`Schüsse` instead of deleting them
+  (aggregate statistics survive; PO decision Q-1), auth throttle thresholds are fixed exactly
+  (PO decision Q-4), and registration answers generically so it cannot be used as an
+  account-enumeration oracle.
 - Remove the Tauri desktop shell; the app now runs as a web frontend with an HTTP backend.
 
 [Unreleased]: https://github.com/TimerErTim/logandaim.at/commits/main

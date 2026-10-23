@@ -69,8 +69,11 @@ explicitly allows.
 - Login is broken on `*.github.io` previews in browsers that block third-party cookies. Known and
   accepted for previews; production on `logandaim.at` is unaffected.
 - Deployment must configure the TLS certificate for `api.logandaim.at` and the CORS origin
-  allowlist per environment. Development on `http://localhost` needs a dev-only exception for the
-  `Secure` attribute or a localhost HTTPS setup.
+  allowlist per environment. Development runs on `http://localhost`, which browsers treat as a
+  trustworthy origin that may set `Secure` cookies, so the production cookie shape — including
+  `Secure` and the `__Host-` prefix — applies unchanged in development; no dev-only exception is
+  needed. Plain-HTTP development on any other host is unsupported; use localhost HTTPS (tunnel or
+  local certificate) if that ever is required.
 - The database gains a session table and cleanup for expired sessions.
 - M2 (offline) will likely need short-lived tokens for sync workers; that gets its own ADR and can
   build on the same session store.
@@ -78,9 +81,12 @@ explicitly allows.
 ## Alternatives considered
 
 1. **Bearer tokens (access + refresh) in `Authorization`.** Origin-independent — works from
-   `*.github.io` and any future shell. Rejected for MVP: the refresh token must live in
-   web-accessible storage (`localStorage`), which is an XSS target; and revocation needs a
-   server-side store anyway, which erodes the stateless advantage. Revisit for M2.
+   `*.github.io` and any future shell. Rejected for MVP, deciding reason: revocation (logout,
+   recovery, deletion) needs a server-side store anyway, which erodes the stateless advantage.
+   Weighing against it as well: the usual SPA trade-off keeps the refresh token in web-accessible
+   storage (`localStorage`), an XSS target, while the `HttpOnly`-cookie refresh variant trades the
+   origin-independence back to the third-party-cookie constraints this ADR already rejects.
+   Revisit for M2.
 2. **Third-party cookies with `SameSite=None; Secure`.** Works today only in browsers that still
    accept third-party cookies. Rejected: Safari and Firefox block it, Chrome deprecates it;
    login must work on phones in the field.
@@ -90,3 +96,41 @@ explicitly allows.
    if cross-site hosting becomes mandatory.
 4. **JWT as session credential.** Rejected: revocation on logout/deletion needs a server-side
    denylist, which turns JWT back into a stateful session with extra complexity.
+
+## Appendix: implementation sketch (non-normative)
+
+Moved here from [`../product/konto.md`](../product/konto.md) on review (2026-10-23): technical
+design stays out of product specs (`specs/README.md`). This sketch guides implementation and is
+not part of the contract; the contract lives in SPEC-konto's rules and acceptance criteria.
+
+### Data model (sketch)
+
+| Store | Fields |
+|-------|--------|
+| `konten` | `id`, `e_mail_adresse` (unique, normalized), `passwort_hash`, `rolle` (`Schütze` \| `System-Administrator`), `erstellt_am` |
+| `anmelde_sitzungen` | `id`, `konto_id`, `token_hash`, `erstellt_am`, `läuft_ab_am`, `zuletzt_verwendet_am` |
+| `passwort_wiederherstellungen` | `id`, `konto_id`, `token_hash`, `läuft_ab_am`, `verbraucht_am` |
+
+Session and recovery tokens are stored hashed; the raw token exists only in the cookie resp. the
+recovery link. `Runden` and `Schüsse` reference `konten.id` optionally. On `Konto-Löschung`
+(SPEC-konto rule 8) the reference and every personal attribute are stripped, and the rows stay as
+anonymized records for aggregate statistics; the `Konto` row itself is deleted.
+
+### API surface (sketch)
+
+German domain paths as in ADR-0001, JSON keys `camelCase` UTF-8.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/konto/registrierung` | Register (`eMailAdresse`, `passwort`) → one generic response whether or not the address is taken (SPEC-konto rule 4). |
+| `POST /api/konto/anmeldung` | Log in (`eMailAdresse`, `passwort`) → starts `Anmelde-Sitzung`. |
+| `POST /api/konto/abmeldung` | Log out → revokes the current `Anmelde-Sitzung`. |
+| `POST /api/konto/passwort-vergessen` | Request `Passwort-Wiederherstellung` email (`eMailAdresse`). Same response for unknown emails. |
+| `POST /api/konto/passwort-wiederherstellen` | Set new `Passwort` (`token`, `neuesPasswort`) → ends all sessions. |
+| `GET /api/konto` | The logged-in `Konto` (`id`, `eMailAdresse`, `rolle`). |
+| `POST /api/konto/loeschung` | `Konto-Löschung` (`passwort` re-entry + confirmation). |
+
+Registration answers with the same generic response in both branches and starts no
+`Anmelde-Sitzung`; the immediate login step (SPEC-konto journey 1) establishes the session for a
+freshly created `Konto`. Error shape follows the existing structured errors (400 validation,
+401 not logged in, 403 wrong `Rolle`, 429 throttled) — no `409` for duplicate registration.
