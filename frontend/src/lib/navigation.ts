@@ -35,7 +35,7 @@ export const paths = {
   home: "/",
 } as const;
 
-/** Empty until the first navigation entries land with their feature slices. */
+/** Empty until the first product slice adds routes. */
 export const sidebarCategories: NavCategory[] = [];
 
 export const homeNavItem: NavItem = {
@@ -59,7 +59,7 @@ export function breadcrumbsForPathname(
 ): BreadcrumbSegment[] {
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length === 0) {
-    return [{ label: "Home" }];
+    return [{ label: "Home", href: paths.home }];
   }
 
   const crumbs: BreadcrumbSegment[] = [];
@@ -69,10 +69,16 @@ export function breadcrumbsForPathname(
     const segment = segments[index] ?? "";
     href += `/${segment}`;
     const isLast = index === segments.length - 1;
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        segment,
+      );
 
     let label = routeLabels[segment] ?? segment;
-    if (dynamicLabel && isLast) {
+    if (isUuid && dynamicLabel) {
       label = dynamicLabel;
+    } else if (isUuid) {
+      label = "Detail";
     }
 
     crumbs.push({

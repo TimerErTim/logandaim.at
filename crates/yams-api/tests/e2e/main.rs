@@ -1,12 +1,20 @@
+use std::str::FromStr;
+use std::sync::Arc;
+
 use poem::{Route, http::StatusCode, test::TestClient};
+use rust_decimal::Decimal;
 use serde_json::Value;
 use yams_api::openapi_service;
 use yams_core::App;
-use yams_fakes::FakeUnitOfWorkProvider;
+use yams_filesystemstore::FileSystemObjectStore;
+use yams_sqlite::SQLiteInstance;
 
-pub fn base_app() -> App {
+pub async fn base_app_builder() -> App {
+    let sqlite = SQLiteInstance::in_temp_dir().await.unwrap();
+    sqlite.migrate_repos_to_latest().await.unwrap();
     App::builder()
-        .uow_provider(Box::new(FakeUnitOfWorkProvider::empty()))
+        .uow_provider(Box::new(sqlite))
+        .object_store(Arc::new(FileSystemObjectStore::in_temp_dir().unwrap()))
         .build()
 }
 
@@ -27,26 +35,77 @@ impl YamsApiTestClient {
         &self.client
     }
 
+    pub async fn post(&self, path: &str) -> (StatusCode, Value) {
+        json_response(self.client.post(path).send().await).await
+    }
+
+    pub async fn post_json(&self, path: &str, body: Value) -> (StatusCode, Value) {
+        json_response(self.client.post(path).body_json(&body).send().await).await
+    }
+
     pub async fn get_json(&self, path: &str) -> (StatusCode, Value) {
         json_response(self.client.get(path).send().await).await
+    }
+
+    pub async fn get_bytes(&self, path: &str) -> (StatusCode, Vec<u8>, String) {
+        let resp = self.client.get(path).send().await;
+        let status = resp.0.status();
+        let content_type = resp
+            .0
+            .headers()
+            .get("content-type")
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("")
+            .to_string();
+        let body = resp.0.into_body().into_vec().await.unwrap_or_default();
+        (status, body, content_type)
+    }
+
+    pub async fn put_json(&self, path: &str, body: Value) -> (StatusCode, Value) {
+        json_response(self.client.put(path).body_json(&body).send().await).await
     }
 }
 
 async fn json_response(resp: poem::test::TestResponse) -> (StatusCode, Value) {
     let status = resp.0.status();
+    let content_type = resp
+        .0
+        .headers()
+        .get("content-type")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("")
+        .to_string();
     let body = resp.0.into_body().into_string().await.unwrap_or_default();
-    let value: Value = serde_json::from_str(&body)
-        .unwrap_or_else(|err| panic!("invalid JSON for {status}: {err}; body={body}"));
-    (status, value)
+    if status.is_success() {
+        assert!(
+            content_type.contains("application/json"),
+            "expected JSON content type, got {content_type:?} for {status}"
+        );
+        let value: Value = serde_json::from_str(&body)
+            .unwrap_or_else(|err| panic!("invalid JSON for {status}: {err}; body={body}"));
+        (status, value)
+    } else if let Ok(value) = serde_json::from_str(&body) {
+        (status, value)
+    } else {
+        (status, Value::String(body))
+    }
 }
 
 pub fn assert_status_ok(status: StatusCode) {
     assert_eq!(status, StatusCode::OK, "expected 200 OK, got {status}");
 }
 
+pub fn json_decimal(value: &Value) -> Decimal {
+    match value {
+        Value::String(text) => Decimal::from_str(text).expect("decimal string"),
+        Value::Number(number) => Decimal::from_str(&number.to_string()).expect("decimal number"),
+        other => panic!("expected decimal JSON, got {other}"),
+    }
+}
+
 #[test_log::test(pollster::test)]
 async fn health_returns_ok() {
-    let client = YamsApiTestClient::new(base_app());
+    let client = YamsApiTestClient::new(base_app_builder().await);
     let (status, body) = client.get_json("/api/health").await;
     assert_status_ok(status);
     assert_eq!(body, Value::String("OK".into()));

@@ -8,7 +8,7 @@ use yams_core::ports::RepositoryError;
 use yams_sqlite::SQLiteInstance;
 
 async fn app() -> Arc<App> {
-    let sqlite = SQLiteInstance::in_temp_dir().await.unwrap();
+    let mut sqlite = SQLiteInstance::in_temp_dir().await.unwrap();
     sqlite.migrate_repos_to_latest().await.unwrap();
     Arc::new(App::builder().uow_provider(Box::new(sqlite)).build())
 }
@@ -22,7 +22,7 @@ async fn parallel_execute_fn_survives_wal_connection_init() {
     // `PRAGMA journal_mode=WAL` and flaked with "database is locked".
     // Keep the loop modest: enough overlap to stress locks, not dominate CI time.
     let mut handles = Vec::with_capacity(128);
-    for _round in 0..64u64 {
+    for _ in 0..64u64 {
         let writer_app = Arc::clone(&app);
         let opener_app = Arc::clone(&app);
         handles.push(std::thread::spawn(move || {
@@ -30,11 +30,7 @@ async fn parallel_execute_fn_survives_wal_connection_init() {
                 writer_app
                     .execute_fn::<_, _, RepositoryError>(async |ctx| {
                         let uow = ctx.enter().await?;
-                        uow.finish(
-                            Ok::<_, error_stack::Report<RepositoryError>>(()),
-                            RepositoryError::OperationFailed,
-                        )
-                        .await
+                        uow.commit().await
                     })
                     .await
                     .expect("writer execute_fn must not fail with database locked");
@@ -45,11 +41,7 @@ async fn parallel_execute_fn_survives_wal_connection_init() {
                 opener_app
                     .execute_fn::<_, _, RepositoryError>(async |ctx| {
                         let uow = ctx.enter().await?;
-                        uow.finish(
-                            Ok::<_, error_stack::Report<RepositoryError>>(()),
-                            RepositoryError::OperationFailed,
-                        )
-                        .await
+                        uow.rollback().await
                     })
                     .await
                     .expect("opener execute_fn must not fail with database locked / WAL init");

@@ -9,12 +9,8 @@ use crate::SQLiteConnection;
 
 type Registry = MigrationRegistry<dyn UpMigration<libsql::Transaction, libsql::Error>>;
 
-/// Empty baseline. Pre-deploy there is no data to migrate, so the schema starts
-/// empty and feature migrations are added on top.
-pub static MIGRATIONS: LazyLock<Registry> = LazyLock::new(|| {
-    let registry: Registry = MigrationRegistry::new();
-    registry
-});
+/// Empty baseline. Feature slices add their own migrations here.
+pub static MIGRATIONS: LazyLock<Registry> = LazyLock::new(Registry::new);
 
 #[async_trait]
 impl MigrationTarget<libsql::Transaction, libsql::Error> for SQLiteConnection {

@@ -1,14 +1,15 @@
 use error_stack::Report;
 use http::StatusCode;
 use yams_core::ThreadSafeError;
-use yams_core::ports::RepositoryError;
+use yams_core::domain::zeitraum::ZeitraumFehler;
+use yams_core::ports::{ObjectStoreError, RepositoryError};
 
 use super::ValidationError;
 
 /// Maps a typed error context to an HTTP status.
 ///
 /// `None` means "not this layer" — [`status_from_report`] then walks nested
-/// contexts (repository) before defaulting to 500.
+/// contexts (domain, repository) before defaulting to 500.
 pub trait HttpStatusMapping {
     fn http_status(&self) -> Option<StatusCode> {
         None
@@ -34,7 +35,10 @@ fn mapped<C: ThreadSafeError, T: ThreadSafeError + HttpStatusMapping>(
 }
 
 fn nested_http_status<C: ThreadSafeError>(error: &Report<C>) -> Option<StatusCode> {
-    mapped::<C, RepositoryError>(error).or_else(|| mapped::<C, ValidationError>(error))
+    mapped::<C, ZeitraumFehler>(error)
+        .or_else(|| mapped::<C, RepositoryError>(error))
+        .or_else(|| mapped::<C, ObjectStoreError>(error))
+        .or_else(|| mapped::<C, ValidationError>(error))
 }
 
 impl HttpStatusMapping for ValidationError {
@@ -60,22 +64,27 @@ impl HttpStatusMapping for RepositoryError {
     }
 }
 
+impl HttpStatusMapping for ObjectStoreError {
+    fn http_status(&self) -> Option<StatusCode> {
+        match self {
+            ObjectStoreError::Operation => Some(StatusCode::INTERNAL_SERVER_ERROR),
+            ObjectStoreError::AlreadyDeleted => Some(StatusCode::NOT_FOUND),
+        }
+    }
+}
+
+impl HttpStatusMapping for ZeitraumFehler {
+    fn http_status(&self) -> Option<StatusCode> {
+        Some(StatusCode::BAD_REQUEST)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn status<C: ThreadSafeError + HttpStatusMapping>(ctx: C) -> StatusCode {
         status_from_report(&Report::new(ctx))
-    }
-
-    fn wrapped<
-        Inner: ThreadSafeError + HttpStatusMapping,
-        Outer: ThreadSafeError + HttpStatusMapping,
-    >(
-        inner: Inner,
-        outer: Outer,
-    ) -> StatusCode {
-        status_from_report(&Report::new(inner).change_context(outer))
     }
 
     #[test_log::test]
@@ -112,9 +121,21 @@ mod tests {
     }
 
     #[test_log::test]
-    fn repository_status_is_preserved_through_layers() {
+    fn object_store_variants() {
         assert_eq!(
-            wrapped(RepositoryError::NotFound, ValidationError),
+            status(ObjectStoreError::AlreadyDeleted),
+            StatusCode::NOT_FOUND
+        );
+        assert_eq!(
+            status(ObjectStoreError::Operation),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+
+    #[test_log::test]
+    fn domain_construction_is_bad_request() {
+        assert_eq!(
+            status(ZeitraumFehler::EndeNichtNachBeginn),
             StatusCode::BAD_REQUEST
         );
     }

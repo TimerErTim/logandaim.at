@@ -1,43 +1,28 @@
+import createClient from "openapi-fetch";
+
 import { ApiError } from "./errors";
-import type { StructuredError } from "./types";
+import type { paths } from "./schema";
 import type { YamsApi } from "./yams-api";
 
-export class HttpYamsApi implements YamsApi {
-  constructor(private readonly baseUrl: string) {}
+type JsonClient = ReturnType<typeof createClient<paths>>;
 
-  async health(): Promise<string> {
-    return this.request<string>("/health");
+async function unwrap<T>(result: { data?: T; error?: unknown }): Promise<T> {
+  if (result.error !== undefined) {
+    throw ApiError.fromUnknown(result.error);
+  }
+  return result.data as T;
+}
+
+export class HttpYamsApi implements YamsApi {
+  private readonly client: JsonClient;
+  private readonly baseUrl: string;
+
+  constructor(baseUrl: string) {
+    this.baseUrl = baseUrl.replace(/\/$/, "");
+    this.client = createClient<paths>({ baseUrl: this.baseUrl });
   }
 
-  private async request<T>(path: string, init?: RequestInit): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      headers: { Accept: "application/json" },
-      ...init,
-    });
-
-    const text = await response.text();
-
-    if (!response.ok) {
-      let structured: StructuredError | undefined;
-      try {
-        structured = JSON.parse(text) as StructuredError;
-      } catch {
-        structured = undefined;
-      }
-      throw new ApiError(
-        structured?.message ?? `Request failed with ${response.status}`,
-        structured,
-      );
-    }
-
-    if (!text) {
-      return undefined as T;
-    }
-
-    try {
-      return JSON.parse(text) as T;
-    } catch {
-      return text as T;
-    }
+  async health(): Promise<string> {
+    return unwrap(await this.client.GET("/health"));
   }
 }

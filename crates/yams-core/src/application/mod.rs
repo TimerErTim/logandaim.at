@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::adapters::SystemClock;
-use crate::ports::Clock;
+use crate::adapters::{BlankPdfRenderer, InMemoryObjectStore, SystemClock};
+use crate::ports::{Clock, ObjectStore, PdfRenderer};
 use crate::service::UseCase;
 use crate::uow::UnitOfWorkProvider;
 use error_stack::IntoReport;
@@ -26,6 +26,10 @@ pub struct App {
     pub uow_provider: Box<dyn UnitOfWorkProvider>,
     #[builder(default = Arc::new(SystemClock))]
     pub clock: Arc<dyn Clock>,
+    #[builder(default = Arc::new(InMemoryObjectStore::new()))]
+    pub object_store: Arc<dyn ObjectStore>,
+    #[builder(default = Arc::new(BlankPdfRenderer))]
+    pub pdf_renderer: Arc<dyn PdfRenderer>,
 }
 
 pub use app_builder::{SetClock, SetUowProvider};
@@ -53,6 +57,11 @@ impl App {
     }
 
     fn new_execution_context(&self) -> ExecutionContext<'_> {
-        ExecutionContext::root(self.uow_provider.as_ref(), Arc::clone(&self.clock))
+        ExecutionContext::root(
+            self.uow_provider.as_ref(),
+            Arc::clone(&self.clock),
+            Arc::clone(&self.object_store),
+            Arc::clone(&self.pdf_renderer),
+        )
     }
 }

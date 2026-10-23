@@ -13,7 +13,7 @@ use crate::{SQLiteConnection, SQLiteInstance, errors::libsql_error_to_persistenc
 
 pub struct SQLiteUnitOfWork {
     /// Held for the whole UoW so the connection outlives the transaction.
-    /// Dropped after `tx` (field order).
+    /// Dropped after repos/tx (field order). Unused after `checkpoint` was removed.
     #[allow(dead_code)]
     connection: SQLiteConnection,
     pub(crate) tx: Arc<Mutex<Option<Transaction>>>,

@@ -26,6 +26,7 @@ pub struct ServerConfig {
     pub bind_port: u16,
     pub subpath: String,
     pub database_url: String,
+    pub object_store_dir: PathBuf,
     pub log_dir: Option<PathBuf>,
 }
 
@@ -36,6 +37,7 @@ impl Default for ServerConfig {
             bind_port: 3000,
             subpath: "/".into(),
             database_url: "yams.db".into(),
+            object_store_dir: PathBuf::from("storage/"),
             log_dir: None,
         }
     }
@@ -63,6 +65,10 @@ pub struct Cli {
     /// Database URL
     #[arg(long, env = "YAMS_DATABASE_URL")]
     pub database_url: Option<String>,
+
+    /// Directory for object store
+    #[arg(long, env = "YAMS_OBJECT_STORE_DIR")]
+    pub object_store_dir: Option<PathBuf>,
 
     /// Directory for rotated JSON log files (omit to disable logging)
     #[arg(long, env = "YAMS_LOG_DIR")]
@@ -135,6 +141,9 @@ fn overlay(mut config: ServerConfig, cli: &Cli) -> ServerConfig {
     }
     if let Some(database_url) = &cli.database_url {
         config.database_url = database_url.clone();
+    }
+    if let Some(object_store_dir) = &cli.object_store_dir {
+        config.object_store_dir = object_store_dir.clone();
     }
     if let Some(log_dir) = &cli.log_dir {
         config.log_dir = Some(log_dir.clone());
@@ -219,7 +228,13 @@ mod tests {
         ));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("config.json");
-        std::fs::write(&path, r#"{ "logDir": "server-logs/" }"#).unwrap();
+        std::fs::write(
+            &path,
+            r#"{
+                "logDir": "server-logs/"
+            }"#,
+        )
+        .unwrap();
 
         let loaded = load_file(&path, true).unwrap();
         assert_eq!(loaded.log_dir, Some(PathBuf::from("server-logs/")));
@@ -238,7 +253,13 @@ mod tests {
         ));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("config.toml");
-        std::fs::write(&path, "logDir = \"server-logs/\"").unwrap();
+        std::fs::write(
+            &path,
+            r#"
+logDir = "server-logs/"
+"#,
+        )
+        .unwrap();
 
         let loaded = load_file(&path, true).unwrap();
         assert_eq!(loaded.log_dir, Some(PathBuf::from("server-logs/")));
@@ -275,6 +296,7 @@ mod tests {
             &path,
             r#"{
                 "databaseUrl": "file.db",
+                "objectStoreDir": "objects/",
                 "bindAddress": "10.0.0.1",
                 "bindPort": 1234,
                 "subpath": "/yams/"
@@ -284,6 +306,7 @@ mod tests {
 
         let loaded = load_file(&path, true).unwrap();
         assert_eq!(loaded.database_url, "file.db");
+        assert_eq!(loaded.object_store_dir, PathBuf::from("objects/"));
         assert_eq!(loaded.bind_address, "10.0.0.1");
         assert_eq!(loaded.bind_port, 1234);
         assert_eq!(loaded.subpath, "/yams/");

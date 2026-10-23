@@ -68,7 +68,7 @@ impl UnitOfWork<'_> {
             }
             Err(mut error) => {
                 if let Err(_rollback_error) = self.rollback().await {
-                    // Attach the rollback report to the outer error
+                    // Atach the rollback report to the outer error
                     let _ = error.frames_mut(|frame| {
                         let FrameKind::Context(_) = frame.kind() else {
                             return ControlFlow::Continue(());
@@ -111,6 +111,8 @@ impl Drop for UnitOfWork<'_> {
 }
 
 struct LockedUnitOfWorkImpl<'a> {
+    /// Retained so nested contexts can delegate repository accessors once
+    /// feature slices add them.
     #[allow(dead_code)]
     inner: &'a dyn UnitOfWorkImpl,
 }

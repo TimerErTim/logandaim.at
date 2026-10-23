@@ -57,6 +57,8 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
             </div>
           ))}
         </div>
+
+        <BrandFooter />
       </div>
     </aside>
   );
@@ -79,5 +81,23 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
       <Icon className="size-5" />
       {item.label}
     </Link>
+  );
+}
+
+function BrandFooter() {
+  return (
+    <div className="mt-auto border-t border-zinc-200 pt-6 dark:border-zinc-800">
+      <div className="px-2">
+        <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-emerald-600 text-lg font-bold text-white">
+          EP
+        </div>
+        <div className="text-xs leading-tight text-zinc-500">
+          <p className="font-semibold text-zinc-800 dark:text-zinc-200">
+            Energetik Sabine Petschl
+          </p>
+          <p>Wohlfühlen für Mensch und Tier</p>
+        </div>
+      </div>
+    </div>
   );
 }

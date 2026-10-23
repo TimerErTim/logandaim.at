@@ -25,10 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Remove the veterinary domain (Klient, Haustier, Behandlung, Leistung, Produkt, Rechnung,
-  Seminar, Tagesabschluss, Katalog, Objekte) from core, API, SQLite, and the frontend. The
-  repository now holds the architecture skeleton plus the Wertung domain; SQLite migrations reset
-  to a single empty baseline. The frontend shows a placeholder home page with an API health check.
+- Removed the entire veterinary practice-management domain (clients, pets, treatments, products,
+  services, invoices, seminars, day-close, catalog, objects) from the domain, use cases, ports,
+  repositories, migrations, API, and frontend. The hexagonal skeleton, generic infrastructure
+  (object store, PDF renderer, repository/UoW plumbing, test harnesses), and the `Wertung` scoring
+  domain remain; SQLite migrations are reset to an empty baseline.
 - SPEC-konto draft: `Konto-Löschung` now anonymizes `Runden`/`Schüsse` instead of deleting them
   (aggregate statistics survive; PO decision Q-1), auth throttle thresholds are fixed exactly
   (PO decision Q-4), and registration answers generically so it cannot be used as an

@@ -1,8 +1,22 @@
 #![doc = include_str!("README.md")]
 
+pub mod adresse;
+pub mod kontakt;
+pub mod menge;
+pub mod preis;
+pub mod ratio;
 pub mod wertung;
+pub mod zeitraum;
 
+pub use adresse::Adresse;
+pub use adresse::Ländercode;
+pub use kontakt::EmailAdresse;
+pub use kontakt::Mobilnummer;
+pub use menge::Menge;
+pub use preis::Preis;
+pub use ratio::Ratio;
 pub use wertung::Punkte;
 pub use wertung::Rundenergebnis;
 pub use wertung::Wertungszone;
 pub use wertung::Zielwertung;
+pub use zeitraum::Zeitraum;

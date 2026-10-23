@@ -12,6 +12,7 @@ use thiserror::Error;
 use tracing_setup::init_tracing;
 use yams_api::{errors::InternalServerError, openapi_service};
 use yams_core::App;
+use yams_filesystemstore::FileSystemObjectStore;
 use yams_sqlite::SQLiteInstance;
 
 #[derive(Debug, Error)]
@@ -44,8 +45,12 @@ async fn main() -> Result<(), Report<BackendServerError>> {
         .await
         .change_context(BackendServerError)?;
 
+    let object_store =
+        FileSystemObjectStore::new(config.object_store_dir).change_context(BackendServerError)?;
+
     let app = App::builder()
         .uow_provider(Box::new(sqlite.clone()))
+        .object_store(Arc::new(object_store))
         .build();
 
     let base_path = config.subpath.trim_matches('/');
@@ -98,5 +103,7 @@ async fn main() -> Result<(), Report<BackendServerError>> {
     )))
     .run(app)
     .await
-    .change_context(BackendServerError)
+    .change_context(BackendServerError)?;
+
+    Ok(())
 }
