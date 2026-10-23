@@ -52,10 +52,6 @@ impl Punkte {
     }
 }
 
-fn nonzero(value: usize) -> NonZeroUsize {
-    NonZeroUsize::new(value).expect("Pfeil-Positionen sind 1-basiert")
-}
-
 impl Add for Punkte {
     type Output = Self;
 
@@ -70,27 +66,37 @@ impl Sum for Punkte {
     }
 }
 
-/// Schüsse at one Ziel in shooting order. Non-empty by construction: a Ziel without
+/// Schüsse at one Ziel, ordered by Pfeil. Non-empty by construction: a Ziel without
 /// Schüsse has no result yet.
+///
+/// Each entry keeps the Pfeil it was shot as, so the 1-based contract is carried by the
+/// data instead of being re-derived from a vector index.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Zielwertung {
-    schüsse: Vec<Wertungszone>,
+    schüsse: Vec<(NonZeroUsize, Wertungszone)>,
 }
 
 impl Zielwertung {
-    pub fn aus_schüssen(schüsse: Vec<Wertungszone>) -> Option<Self> {
-        (!schüsse.is_empty()).then_some(Self { schüsse })
+    /// Order the given Schüsse by Pfeil. Returns `None` for an empty Ziel.
+    pub fn aus_schüssen(
+        schüsse: impl IntoIterator<Item = (NonZeroUsize, Wertungszone)>,
+    ) -> Option<Self> {
+        let mut schüsse: Vec<_> = schüsse.into_iter().collect();
+        if schüsse.is_empty() {
+            return None;
+        }
+        schüsse.sort_by_key(|(pfeil, _)| *pfeil);
+        Some(Self { schüsse })
     }
 
-    pub fn schüsse(&self) -> &[Wertungszone] {
+    pub fn schüsse(&self) -> &[(NonZeroUsize, Wertungszone)] {
         &self.schüsse
     }
 
     fn punkte_je_schuss(&self) -> impl Iterator<Item = (Wertungszone, Punkte)> + '_ {
         self.schüsse
             .iter()
-            .enumerate()
-            .map(|(index, &zone)| (zone, Punkte::für_schuss(nonzero(index + 1), zone)))
+            .map(|&(pfeil, zone)| (zone, Punkte::für_schuss(pfeil, zone)))
     }
 
     /// Only the first Treffer counts.
@@ -105,8 +111,11 @@ impl Zielwertung {
         self.punkte_je_schuss().map(|(_, punkte)| punkte).sum()
     }
 
+    /// Whether Pfeil 1 hit the target.
     pub fn erster_pfeil_getroffen(&self) -> bool {
-        self.schüsse[0].ist_treffer()
+        self.schüsse
+            .iter()
+            .any(|&(pfeil, zone)| pfeil.get() == 1 && zone.ist_treffer())
     }
 }
 
@@ -134,8 +143,17 @@ mod tests {
     use super::Wertungszone::{Body, Kill, Miss, Spot};
     use super::*;
 
-    fn ziel(schüsse: &[Wertungszone]) -> Zielwertung {
-        Zielwertung::aus_schüssen(schüsse.to_vec()).unwrap()
+    fn pfeil(n: usize) -> NonZeroUsize {
+        NonZeroUsize::new(n).expect("test fixture uses 1-based Pfeile")
+    }
+
+    fn ziel(schüsse: &[(usize, Wertungszone)]) -> Zielwertung {
+        Zielwertung::aus_schüssen(
+            schüsse
+                .iter()
+                .map(|&(pfeil, zone)| (self::pfeil(pfeil), zone)),
+        )
+        .expect("test fixture passes at least one Schuss")
     }
 
     #[test_log::test]
@@ -145,13 +163,12 @@ mod tests {
             (2, [14, 12, 10, 0]),
             (3, [8, 6, 4, 0]),
         ];
-        for (pfeil, erwartet) in tabelle {
-            let pfeil = nonzero(pfeil);
+        for (nummer, erwartet) in tabelle {
             for (zone, punkte) in [Spot, Kill, Body, Miss].into_iter().zip(erwartet) {
                 assert_eq!(
-                    Punkte::für_schuss(pfeil, zone).value(),
+                    Punkte::für_schuss(pfeil(nummer), zone).value(),
                     punkte,
-                    "Pfeil {pfeil} {zone:?}"
+                    "Pfeil {nummer} {zone:?}"
                 );
             }
         }
@@ -159,56 +176,82 @@ mod tests {
 
     #[test_log::test]
     fn ac2_drei_fehlschüsse_null() {
-        let z = ziel(&[Miss, Miss, Miss]);
+        let z = ziel(&[(1, Miss), (2, Miss), (3, Miss)]);
         assert_eq!(z.erster_treffer(), Punkte::NULL);
         assert_eq!(z.mehrschuss(), Punkte::NULL);
     }
 
     #[test_log::test]
     fn ac3_erster_treffer() {
-        assert_eq!(ziel(&[Kill]).erster_treffer().value(), 18);
-        assert_eq!(ziel(&[Miss, Spot]).erster_treffer().value(), 14);
-        assert_eq!(ziel(&[Miss, Miss, Body]).erster_treffer().value(), 4);
-        assert_eq!(ziel(&[Body, Kill]).erster_treffer().value(), 16);
+        assert_eq!(ziel(&[(1, Kill)]).erster_treffer().value(), 18);
+        assert_eq!(ziel(&[(1, Miss), (2, Spot)]).erster_treffer().value(), 14);
+        assert_eq!(
+            ziel(&[(1, Miss), (2, Miss), (3, Body)])
+                .erster_treffer()
+                .value(),
+            4
+        );
+        assert_eq!(ziel(&[(1, Body), (2, Kill)]).erster_treffer().value(), 16);
     }
 
     #[test_log::test]
     fn ac4_mehrschuss() {
-        assert_eq!(ziel(&[Kill, Kill, Spot]).mehrschuss().value(), 38);
-        assert_eq!(ziel(&[Body, Kill]).mehrschuss().value(), 28);
-        assert_eq!(ziel(&[Miss, Spot]).mehrschuss().value(), 14);
+        assert_eq!(
+            ziel(&[(1, Kill), (2, Kill), (3, Spot)])
+                .mehrschuss()
+                .value(),
+            38
+        );
+        assert_eq!(ziel(&[(1, Body), (2, Kill)]).mehrschuss().value(), 28);
+        assert_eq!(ziel(&[(1, Miss), (2, Spot)]).mehrschuss().value(), 14);
     }
 
     #[test_log::test]
     fn ac5_ab_viertem_pfeil_null() {
-        let z = ziel(&[Miss, Miss, Miss, Kill]);
+        let z = ziel(&[(1, Miss), (2, Miss), (3, Miss), (4, Kill)]);
         assert_eq!(z.erster_treffer(), Punkte::NULL);
         assert_eq!(z.mehrschuss(), Punkte::NULL);
     }
 
     #[test_log::test]
     fn ac6_leer_ohne_ergebnis_sonst_beliebig_lang() {
-        assert!(Zielwertung::aus_schüssen(vec![]).is_none());
-        let lang = vec![Miss; 12];
+        assert!(Zielwertung::aus_schüssen([]).is_none());
+        let lang: Vec<_> = (1..=12).map(|nummer| (pfeil(nummer), Miss)).collect();
         assert_eq!(Zielwertung::aus_schüssen(lang).unwrap().schüsse().len(), 12);
     }
 
     #[test_log::test]
     fn ac7_erster_pfeil_getroffen() {
-        assert!(ziel(&[Body]).erster_pfeil_getroffen());
-        assert!(ziel(&[Spot, Miss]).erster_pfeil_getroffen());
-        assert!(!ziel(&[Miss, Spot]).erster_pfeil_getroffen());
+        assert!(ziel(&[(1, Body)]).erster_pfeil_getroffen());
+        assert!(ziel(&[(1, Spot), (2, Miss)]).erster_pfeil_getroffen());
+        assert!(!ziel(&[(1, Miss), (2, Spot)]).erster_pfeil_getroffen());
     }
 
     #[test_log::test]
     fn ac8_rundenergebnis_summiert_und_überspringt_ziele_ohne_ergebnis() {
         let ziele = [
-            Zielwertung::aus_schüssen(vec![Kill, Kill, Spot]),
-            Zielwertung::aus_schüssen(vec![]),
-            Zielwertung::aus_schüssen(vec![Miss, Spot]),
+            Zielwertung::aus_schüssen(vec![(pfeil(1), Kill), (pfeil(2), Kill), (pfeil(3), Spot)]),
+            Zielwertung::aus_schüssen([]),
+            Zielwertung::aus_schüssen(vec![(pfeil(1), Miss), (pfeil(2), Spot)]),
         ];
         let ergebnis = Rundenergebnis::aus_zielen(ziele.iter().map(Option::as_ref));
         assert_eq!(ergebnis.erster_treffer.value(), 18 + 14);
         assert_eq!(ergebnis.mehrschuss.value(), 38 + 14);
+    }
+
+    #[test_log::test]
+    fn aus_schüssen_sortiert_nach_pfeil() {
+        let unsortiert =
+            Zielwertung::aus_schüssen(vec![(pfeil(3), Body), (pfeil(1), Kill), (pfeil(2), Spot)])
+                .unwrap();
+        let pfeile: Vec<_> = unsortiert
+            .schüsse()
+            .iter()
+            .map(|(pfeil, _)| pfeil.get())
+            .collect();
+        assert_eq!(pfeile, [1, 2, 3]);
+        // Erster Treffer = Pfeil 1 Kill (18), Mehrschuss = 18 + 14 + 4.
+        assert_eq!(unsortiert.erster_treffer().value(), 18);
+        assert_eq!(unsortiert.mehrschuss().value(), 36);
     }
 }

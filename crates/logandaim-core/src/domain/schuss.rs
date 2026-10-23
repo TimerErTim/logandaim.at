@@ -124,26 +124,24 @@ pub struct Wertungsergebnis {
 
 /// Domain service: summarize a selection of Schüsse.
 ///
-/// Groups the Schüsse per Ziel, orders each group by `pfeil`, summarizes every Ziel with
-/// [`Zielwertung`], and folds the results with [`Rundenergebnis`].
+/// Groups the Schüsse per Ziel, summarizes every Ziel with [`Zielwertung`] (which keeps
+/// the Pfeil of each Schuss), and folds the results with [`Rundenergebnis`].
 ///
 /// TODO(wertung): the scoring rules and [`Zielwertung`] are a provisional reference
 /// implementation, not a final domain model; see `domain/wertung.rs`.
 pub fn wertung_aus_schüssen(schüsse: &[Schuss]) -> Wertungsergebnis {
-    let mut je_ziel: FxHashMap<ZielId, Vec<(usize, Wertungszone)>> = FxHashMap::default();
+    let mut je_ziel: FxHashMap<ZielId, Vec<(NonZeroUsize, Wertungszone)>> = FxHashMap::default();
     for schuss in schüsse {
         je_ziel
             .entry(schuss.ziel_id())
             .or_default()
-            .push((schuss.pfeil().get(), schuss.wertungszone()));
+            .push((schuss.pfeil(), schuss.wertungszone()));
     }
 
-    let mut zielwertungen = Vec::with_capacity(je_ziel.len());
-    for (_, mut schüsse) in je_ziel {
-        schüsse.sort_by_key(|(pfeil, _)| *pfeil);
-        let zonen: Vec<Wertungszone> = schüsse.into_iter().map(|(_, zone)| zone).collect();
-        zielwertungen.push(Zielwertung::aus_schüssen(zonen));
-    }
+    let zielwertungen: Vec<_> = je_ziel
+        .into_values()
+        .map(Zielwertung::aus_schüssen)
+        .collect();
 
     let gesamt = Rundenergebnis::aus_zielen(zielwertungen.iter().map(Option::as_ref));
 
