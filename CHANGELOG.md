@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Draft spec [`specs/product/stammdaten.md`](specs/product/stammdaten.md) for master data
+  (`Anlage`, `Parcours`, `Ziel`, `Pflock`) with admin-UI seeding and the version-snapshot rules:
+  every `Runde` freezes the `Parcours` layout at log time while shot history follows `Ziel`
+  identity across `Runden` and layout changes.
+
 ### Changed
 
 - Remove the Tauri desktop shell; the app now runs as a web frontend with an HTTP backend.
