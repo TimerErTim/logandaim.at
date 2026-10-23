@@ -7,10 +7,17 @@ use molting::{AppliableMigration, MigrationRegistry, MigrationTarget, UpMigratio
 
 use crate::SQLiteConnection;
 
+mod v0001_schuss;
+
 type Registry = MigrationRegistry<dyn UpMigration<libsql::Transaction, libsql::Error>>;
 
-/// Empty baseline. Feature slices add their own migrations here.
-pub static MIGRATIONS: LazyLock<Registry> = LazyLock::new(Registry::new);
+/// Baseline plus one migration per feature slice. Feature slices bump the last version
+/// and add their file here; `docs/vertical-slice.md` shows a worked example.
+pub static MIGRATIONS: LazyLock<Registry> = LazyLock::new(|| {
+    let mut registry: Registry = MigrationRegistry::new();
+    registry.add(v0001_schuss::Migration);
+    registry
+});
 
 #[async_trait]
 impl MigrationTarget<libsql::Transaction, libsql::Error> for SQLiteConnection {

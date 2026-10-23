@@ -5,11 +5,14 @@ use async_trait::async_trait;
 use libsql::Transaction;
 use logandaim_core::{
     ErrorReportExt, ResultReport,
-    ports::{RepositoryError, RepositoryResult},
+    ports::{RepositoryError, RepositoryResult, SchussRepository},
     uow::{UnitOfWorkImpl, UnitOfWorkProvider},
 };
 
-use crate::{SQLiteConnection, SQLiteInstance, errors::libsql_error_to_persistence_error};
+use crate::{
+    SQLiteConnection, SQLiteInstance, errors::libsql_error_to_persistence_error,
+    repos::SQLiteSchussRepository,
+};
 
 pub struct SQLiteUnitOfWork {
     /// Held for the whole UoW so the connection outlives the transaction.
@@ -17,6 +20,7 @@ pub struct SQLiteUnitOfWork {
     #[allow(dead_code)]
     connection: SQLiteConnection,
     pub(crate) tx: Arc<Mutex<Option<Transaction>>>,
+    schuss_repo: SQLiteSchussRepository,
 }
 
 #[async_trait]
@@ -28,7 +32,12 @@ impl UnitOfWorkProvider for SQLiteInstance {
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;
         let tx = Arc::new(Mutex::new(Some(tx)));
-        Ok(Box::new(SQLiteUnitOfWork { connection, tx }))
+        let schuss_repo = SQLiteSchussRepository { tx: tx.clone() };
+        Ok(Box::new(SQLiteUnitOfWork {
+            connection,
+            tx,
+            schuss_repo,
+        }))
     }
 }
 
@@ -51,5 +60,9 @@ impl UnitOfWorkImpl for SQLiteUnitOfWork {
         tx.rollback()
             .await
             .contextualize_with(libsql_error_to_persistence_error)
+    }
+
+    fn schüsse(&self) -> &dyn SchussRepository {
+        &self.schuss_repo
     }
 }

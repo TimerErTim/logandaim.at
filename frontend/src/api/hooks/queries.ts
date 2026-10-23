@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+
+import { useLogandaimApi } from "../provider";
 import { logandaimKeys } from "../query-keys";
-import { useLogandaimApiReady } from "./use-logandaim-api-ready";
 
 export function useHealthQuery() {
-  const { api, isReady } = useLogandaimApiReady();
+  const { api } = useLogandaimApi();
 
   return useQuery({
     queryKey: logandaimKeys.health(),
-    queryFn: () => api?.health(),
-    enabled: isReady,
+    queryFn: () => api.health(),
   });
 }

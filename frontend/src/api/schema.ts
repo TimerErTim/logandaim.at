@@ -38,10 +38,178 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/schuss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["SchussErstellung"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Schuss"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/wertung": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["WertungsAnfrage"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Wertung"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
+    schemas: {
+        /**
+         * Schuss
+         * @description One logged arrow, translated from the domain.
+         */
+        Schuss: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            zielId: string;
+            /** Format: uint64 */
+            pfeil: number;
+            wertungszone: components["schemas"]["Wertungszone"];
+        };
+        /**
+         * SchussErstellung
+         * @description Inbound request for registering one Schuss at a Ziel.
+         *
+         *     Pure transport DTO: `TryFrom` into the use case validates, the domain enforces the
+         *     rest. `pfeil` is validated by [`domain::Schuss`] so the rule stays in one place.
+         */
+        SchussErstellung: {
+            /** Format: uuid */
+            zielId: string;
+            /** Format: uint64 */
+            pfeil: number;
+            wertungszone: components["schemas"]["Wertungszone"];
+        };
+        /** StructuredError */
+        StructuredError: {
+            message: string;
+            attachments: string[];
+            sources: components["schemas"]["StructuredError"][];
+        };
+        /**
+         * Wertung
+         * @description Result of a Wertung calculation: the two Wertungen plus first-arrow hit info.
+         */
+        Wertung: {
+            /** Format: uint32 */
+            ersterTreffer: number;
+            /** Format: uint32 */
+            mehrschuss: number;
+            ersterPfeilGetroffen: boolean;
+            /** Format: uint64 */
+            "anzahlSch\u00FCsse": number;
+        };
+        /**
+         * WertungsAnfrage
+         * @description Inbound request for summarizing a selection of Schüsse.
+         */
+        WertungsAnfrage: {
+            schussIds: string[];
+        };
+        /**
+         * @description API mirror of [`domain::Wertungszone`]. Kept separate so the domain never learns
+         *     about OpenAPI, serde, or HTTP.
+         * @enum {string}
+         */
+        Wertungszone: Wertungszone;
+    };
     responses: never;
     parameters: never;
     requestBodies: never;
@@ -49,4 +217,10 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
+export enum Wertungszone {
+    Spot = "Spot",
+    Kill = "Kill",
+    Body = "Body",
+    Miss = "Miss"
+}
 export type operations = Record<string, never>;

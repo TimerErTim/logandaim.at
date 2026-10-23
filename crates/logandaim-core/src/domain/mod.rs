@@ -5,6 +5,7 @@ pub mod kontakt;
 pub mod menge;
 pub mod preis;
 pub mod ratio;
+pub mod schuss;
 pub mod wertung;
 pub mod zeitraum;
 
@@ -15,6 +16,10 @@ pub use kontakt::Mobilnummer;
 pub use menge::Menge;
 pub use preis::Preis;
 pub use ratio::Ratio;
+pub use schuss::Schuss;
+pub use schuss::SchussFehler;
+pub use schuss::SchussId;
+pub use schuss::ZielId;
 pub use wertung::Punkte;
 pub use wertung::Rundenergebnis;
 pub use wertung::Wertungszone;

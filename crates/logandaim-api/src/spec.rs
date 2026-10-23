@@ -11,8 +11,12 @@ use poem_openapi::{
 };
 
 use crate::{
-    api::LogandaimAppApi,
+    api::{
+        LogandaimAppApi,
+        requests::{SchussErstellung, WertungsAnfrage},
+    },
     errors::{HttpStatusMapping, InternalServerError, StructuredError, status_from_report},
+    schema::{Schuss, Wertung},
 };
 
 pub struct LogandaimApiSpec {
@@ -135,6 +139,19 @@ impl LogandaimApiSpec {
     async fn health(&self) -> Json<String> {
         let _ = &self.app_api;
         Json("OK".to_string())
+    }
+
+    #[oai(path = "/schuss", method = "post")]
+    async fn schuss_registrieren(
+        &self,
+        body: Json<SchussErstellung>,
+    ) -> TypicalJsonResponse<Schuss> {
+        self.app_api.schuss_registrieren(body.0).await.into()
+    }
+
+    #[oai(path = "/wertung", method = "post")]
+    async fn wertung_berechnen(&self, body: Json<WertungsAnfrage>) -> TypicalJsonResponse<Wertung> {
+        self.app_api.wertung_berechnen(body.0).await.into()
     }
 }
 

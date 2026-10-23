@@ -9,7 +9,7 @@ use crate::application::instrumented_repos::RepoStorage;
 use crate::application::uow::UnitOfWorkImpl;
 use crate::ports::{
     ObjectStore, ObjectStoreError, ObjectStream, PdfDokument, PdfRenderError, PdfRenderer,
-    RepositoryResult,
+    RepositoryResult, SchussRepository,
 };
 
 #[derive(Clone)]
@@ -76,13 +76,17 @@ impl InstrumentedUnitOfWork {
 impl UnitOfWorkImpl for InstrumentedUnitOfWork {
     #[instrument(skip(self), level = "debug", err(Debug))]
     async fn commit(self: Box<Self>) -> RepositoryResult<()> {
-        let RepoStorage { uow } = *Pin::into_inner(self.storage);
+        let RepoStorage { uow, .. } = *Pin::into_inner(self.storage);
         uow.commit().await
     }
 
     #[instrument(skip(self), level = "debug", err(Debug))]
     async fn rollback(self: Box<Self>) -> RepositoryResult<()> {
-        let RepoStorage { uow } = *Pin::into_inner(self.storage);
+        let RepoStorage { uow, .. } = *Pin::into_inner(self.storage);
         uow.rollback().await
+    }
+
+    fn schüsse(&self) -> &dyn SchussRepository {
+        &self.storage.schüsse
     }
 }

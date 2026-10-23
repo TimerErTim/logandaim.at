@@ -7,7 +7,7 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 
 use crate::application::ThreadSafeError;
-use crate::ports::{RepositoryError, RepositoryResult};
+use crate::ports::{RepositoryError, RepositoryResult, SchussRepository};
 
 /// Active unit of work. `commit` / `rollback` consume it.
 ///
@@ -95,6 +95,12 @@ impl UnitOfWork<'_> {
         self.finish_with(result, |_| context)
     }
 
+    /// Repository accessor. Feature slices add one line per repository here and on
+    /// [`UnitOfWorkImpl`]; see `docs/vertical-slice.md`.
+    pub fn schüsse(&self) -> &dyn SchussRepository {
+        self.as_impl().schüsse()
+    }
+
     fn take_impl(&mut self) -> Box<dyn UnitOfWorkImpl + '_> {
         self.implementation
             .take()
@@ -111,9 +117,6 @@ impl Drop for UnitOfWork<'_> {
 }
 
 struct LockedUnitOfWorkImpl<'a> {
-    /// Retained so nested contexts can delegate repository accessors once
-    /// feature slices add them.
-    #[allow(dead_code)]
     inner: &'a dyn UnitOfWorkImpl,
 }
 
@@ -126,6 +129,10 @@ impl UnitOfWorkImpl for LockedUnitOfWorkImpl<'_> {
     async fn rollback(self: Box<Self>) -> RepositoryResult<()> {
         Ok(())
     }
+
+    fn schüsse(&self) -> &dyn SchussRepository {
+        self.inner.schüsse()
+    }
 }
 
 /// UoW Provider
@@ -133,6 +140,9 @@ impl UnitOfWorkImpl for LockedUnitOfWorkImpl<'_> {
 pub trait UnitOfWorkImpl: Send + Sync {
     async fn commit(self: Box<Self>) -> RepositoryResult<()>;
     async fn rollback(self: Box<Self>) -> RepositoryResult<()>;
+
+    /// One accessor per repository. Each feature slice adds exactly one.
+    fn schüsse(&self) -> &dyn SchussRepository;
 }
 
 #[async_trait]

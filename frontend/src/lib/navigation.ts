@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Home } from "lucide-react";
+import { Home, Target } from "lucide-react";
 
 export type NavAction = {
   label: string;
@@ -33,10 +33,24 @@ export function isExactPath(pathname: string, href: string): boolean {
 
 export const paths = {
   home: "/",
+  schuss: "/schuss",
 } as const;
 
-/** Empty until the first product slice adds routes. */
-export const sidebarCategories: NavCategory[] = [];
+/** Add one item per product slice; `docs/vertical-slice.md` shows a worked example. */
+export const sidebarCategories: NavCategory[] = [
+  {
+    label: "Logbuch",
+    items: [
+      {
+        id: "schuss",
+        label: "Schuss",
+        href: paths.schuss,
+        icon: Target,
+        recursive: false,
+      },
+    ],
+  },
+];
 
 export const homeNavItem: NavItem = {
   id: "home",
@@ -51,7 +65,9 @@ type BreadcrumbSegment = {
   href?: string;
 };
 
-const routeLabels: Record<string, string> = {};
+const routeLabels: Record<string, string> = {
+  schuss: "Schuss",
+};
 
 export function breadcrumbsForPathname(
   pathname: string,

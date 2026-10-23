@@ -1,8 +1,10 @@
 use error_stack::Report;
 use http::StatusCode;
 use logandaim_core::ThreadSafeError;
+use logandaim_core::domain::schuss::SchussFehler;
 use logandaim_core::domain::zeitraum::ZeitraumFehler;
 use logandaim_core::ports::{ObjectStoreError, RepositoryError};
+use logandaim_core::service::{SchussRegistrierenFehler, WertungFehler};
 
 use super::ValidationError;
 
@@ -35,7 +37,10 @@ fn mapped<C: ThreadSafeError, T: ThreadSafeError + HttpStatusMapping>(
 }
 
 fn nested_http_status<C: ThreadSafeError>(error: &Report<C>) -> Option<StatusCode> {
-    mapped::<C, ZeitraumFehler>(error)
+    mapped::<C, SchussFehler>(error)
+        .or_else(|| mapped::<C, SchussRegistrierenFehler>(error))
+        .or_else(|| mapped::<C, WertungFehler>(error))
+        .or_else(|| mapped::<C, ZeitraumFehler>(error))
         .or_else(|| mapped::<C, RepositoryError>(error))
         .or_else(|| mapped::<C, ObjectStoreError>(error))
         .or_else(|| mapped::<C, ValidationError>(error))
@@ -76,6 +81,30 @@ impl HttpStatusMapping for ObjectStoreError {
 impl HttpStatusMapping for ZeitraumFehler {
     fn http_status(&self) -> Option<StatusCode> {
         Some(StatusCode::BAD_REQUEST)
+    }
+}
+
+impl HttpStatusMapping for SchussFehler {
+    fn http_status(&self) -> Option<StatusCode> {
+        Some(StatusCode::BAD_REQUEST)
+    }
+}
+
+impl HttpStatusMapping for SchussRegistrierenFehler {
+    fn http_status(&self) -> Option<StatusCode> {
+        match self {
+            SchussRegistrierenFehler::Erstellung => None,
+        }
+    }
+}
+
+impl HttpStatusMapping for WertungFehler {
+    fn http_status(&self) -> Option<StatusCode> {
+        match self {
+            WertungFehler::KeineSchüsse => Some(StatusCode::BAD_REQUEST),
+            WertungFehler::NichtGefunden => Some(StatusCode::NOT_FOUND),
+            WertungFehler::Laden => None,
+        }
     }
 }
 
