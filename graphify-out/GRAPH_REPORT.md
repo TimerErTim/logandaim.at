@@ -1,16 +1,16 @@
 # Graph Report - logandaim.at  (2026-10-23)
 
 ## Corpus Check
-- 146 files · ~40,574 words
+- 157 files · ~45,684 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1370 nodes · 2344 edges · 95 communities (74 shown, 11 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 33 edges (avg confidence: 0.86)
+- 1548 nodes · 2726 edges · 99 communities (79 shown, 13 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 46 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `047a9c37`
+- Built from commit: `1a9d2c68`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -22,17 +22,18 @@
 - yams-persistence
 - Seminar — Domain-Spezifikation
 - button.tsx
-- alert.tsx
+- SchussErstellung
 - http_status.rs
-- workflow-steps.tsx
+- badge.tsx
 - logandaim-filesystemstore/src/lib.rs
 - compilerOptions
+- SchussId
 - in_memory_object_store.rs
-- FakeUnitOfWorkProvider
+- FakeDatastore
 - Zeitraum
 - E
 - Datenschutz — Data protection, privacy, and legal obligations
-- String
+- FakeObjectStore
 - Clock
 - wertung.rs
 - ObjectStore
@@ -40,29 +41,37 @@
 - Make invalid state unrepresentable
 - Betrieb — Operations and launch readiness
 - layout.tsx
-- PdfRenderer
-- Wertung — Classic 3-arrow scoring
 - ExecutionContext
+- Wertung — Classic 3-arrow scoring
+- UseCase
 - Konto — Accounts and login
 - .finish
 - .begin
 - RepoStorage
 - base_app_builder
-- .begin
+- UnitOfWorkImpl
 - base_app_builder
 - wal_connection_race.rs
 - validation_error.rs
 - FixedClock
 - SQLiteUnitOfWork
 - .contextualize_with
+- use_cases/schuss.rs
+- SQLiteSchussRepository
 - common.rs
+- SchussRepository
+- instrumented.rs
 - LogandaimApiTestClient
+- InstrumentedUnitOfWork
+- .rendern
+- ApiError
 - http-client.ts
 - logandaim.at — Product Charter
 - StructuredError
+- Wertungszone
 - charter.md
 - App
-- search-input.tsx
+- .partial_cmp
 - Release Workflow
 - Product Requirements Document (PRD) & Konzeptbericht
 - logandaim-core
@@ -80,13 +89,12 @@
 - Window Icon
 - Specifications
 - SQLiteInstance
-- config.rs
-- deployment-status.tsx
+- String
+- card.tsx
 - navigation.ts
-- UnitOfWorkImpl
+- UnitOfWork
 - pull_request_template.md
 - YAMS Frontend Migration Specification
-- Debug
 - dependencies
 - scripts
 - dates.ts
@@ -98,32 +106,31 @@
 - package.json
 - m1-reviewer.md
 - [Unreleased]
-- app-shell.tsx
 - mise
 
 ## God Nodes (most connected - your core abstractions)
 1. `cn()` - 37 edges
 2. `E` - 36 edges
-3. `UnitOfWorkImpl` - 26 edges
-4. `App` - 20 edges
+3. `UnitOfWorkImpl` - 27 edges
+4. `SchussId` - 20 edges
 5. `arc_up()` - 20 edges
-6. `Versioned<T>` - 19 edges
-7. `Datenschutz — Data protection, privacy, and legal obligations` - 19 edges
-8. `ObjectStore` - 17 edges
-9. `UpMigration` - 16 edges
-10. `apply_up_migrations()` - 16 edges
+6. `App` - 19 edges
+7. `Versioned<T>` - 19 edges
+8. `Datenschutz — Data protection, privacy, and legal obligations` - 19 edges
+9. `UpMigration` - 18 edges
+10. `ObjectStore` - 17 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `ConfigError` --references--> `String`  [EXTRACTED]
-  backend/server/src/config.rs → crates/logandaim-api/src/errors/internal_error.rs
-- `ServerConfig` --references--> `String`  [EXTRACTED]
-  backend/server/src/config.rs → crates/logandaim-api/src/errors/internal_error.rs
-- `Cli` --references--> `String`  [EXTRACTED]
-  backend/server/src/config.rs → crates/logandaim-api/src/errors/internal_error.rs
-- `parse_config_file()` --references--> `String`  [EXTRACTED]
-  backend/server/src/config.rs → crates/logandaim-api/src/errors/internal_error.rs
 - `main()` --calls--> `openapi_service()`  [INFERRED]
   backend/server/src/main.rs → crates/logandaim-api/src/spec.rs
+- `main()` --calls--> `openapi_service()`  [INFERRED]
+  crates/logandaim-api/src/bin/export_spec.rs → crates/logandaim-api/src/spec.rs
+- `Next.js` --same_as--> `Next.js`  [INFERRED]
+  frontend/README.md → .cursor/AGENTS.md
+- `logandaim-server` --depends_on--> `logandaim-api`  [EXTRACTED]
+  backend/server/Cargo.toml → crates/logandaim-api/Cargo.toml
+- `logandaim-server` --depends_on--> `logandaim-core`  [EXTRACTED]
+  backend/server/Cargo.toml → crates/logandaim-core/Cargo.toml
 
 ## Import Cycles
 - None detected.
@@ -133,11 +140,11 @@
 - **diffx Code Review Workflow** — agents_skills_diffx_start_review_skill, agents_skills_diffx_server, agents_skills_diffx_finish_review_skill [EXTRACTED 1.00]
 - **YAMS Hexagonal Backend Layers** — cursor_agents_md_driving_adapters, cursor_agents_md_yams_api, cursor_agents_md_yams_core, cursor_agents_md_yams_persistence [EXTRACTED 1.00]
 
-## Communities (95 total, 11 thin omitted)
+## Communities (99 total, 13 thin omitted)
 
 ### Community 0 - "FakePdfRenderer"
-Cohesion: 0.07
-Nodes (27): blank_renderer_returns_pdf_prefix(), BlankPdfRenderer, ResultReport, Vec, InstrumentedObjectStore, InstrumentedPdfRenderer, InstrumentedUnitOfWork, Arc (+19 more)
+Cohesion: 0.15
+Nodes (11): Vec, PdfDokument, PdfRenderError, ResultReport, Vec, FakePdfRenderer, Arc, Mutex (+3 more)
 
 ### Community 1 - "arc_up"
 Cohesion: 0.06
@@ -160,20 +167,20 @@ Cohesion: 0.07
 Nodes (25): Abrechnung — Domain-Spezifikation, Aggregates (Type-State), Geplant (nicht in diesem Slice), Invarianten, Stub-Umfang, Tagesabschluss-Ablauf, Use Cases, Wertobjekte (+17 more)
 
 ### Community 6 - "button.tsx"
-Cohesion: 0.29
-Nodes (6): Button(), ButtonProps, ButtonSize, ButtonVariant, sizeClasses, variantClasses
+Cohesion: 0.33
+Nodes (5): ButtonProps, ButtonSize, ButtonVariant, sizeClasses, variantClasses
 
-### Community 7 - "alert.tsx"
-Cohesion: 0.40
-Nodes (4): Alert(), AlertProps, AlertVariant, variantClasses
+### Community 7 - "SchussErstellung"
+Cohesion: 0.10
+Nodes (23): ResultReport, Schuss, Wertung, From, Self, Uuid, Vec, Wertungszone (+15 more)
 
 ### Community 8 - "http_status.rs"
-Cohesion: 0.17
-Nodes (13): HttpStatusMapping, mapped(), nested_http_status(), ObjectStoreError, RepositoryError, C, Option, Report (+5 more)
+Cohesion: 0.14
+Nodes (16): HttpStatusMapping, mapped(), nested_http_status(), ObjectStoreError, RepositoryError, C, Option, Report (+8 more)
 
-### Community 9 - "workflow-steps.tsx"
-Cohesion: 0.50
-Nodes (3): Step, WorkflowSteps(), WorkflowStepsProps
+### Community 9 - "badge.tsx"
+Cohesion: 0.19
+Nodes (7): Badge(), BadgeProps, BadgeVariant, variantClasses, Step, WorkflowSteps(), WorkflowStepsProps
 
 ### Community 10 - "logandaim-filesystemstore/src/lib.rs"
 Cohesion: 0.13
@@ -183,32 +190,36 @@ Nodes (27): delete_missing_is_already_deleted(), delete_removes_object(), ensure
 Cohesion: 0.11
 Nodes (18): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+10 more)
 
-### Community 14 - "in_memory_object_store.rs"
-Cohesion: 0.21
-Nodes (15): delete_missing_is_already_deleted(), delete_removes_object(), ensure_deleted_swallows_already_deleted(), get_missing_is_none(), InMemoryObjectStore, put_overwrites(), put_then_get_roundtrip(), FxHashMap (+7 more)
+### Community 13 - "SchussId"
+Cohesion: 0.27
+Nodes (12): pfeil_ist_eins_basiert(), pfeil_null_wird_abgelehnt(), pfeil_vier_und_später_sind_erlaubt(), Result, Self, Uuid, Wertungszone, Schuss (+4 more)
 
-### Community 15 - "FakeUnitOfWorkProvider"
-Cohesion: 0.25
-Nodes (10): FakeUnitOfWork, FakeUnitOfWorkProvider, Arc, Box, Default, Mutex, RepositoryResult, Self (+2 more)
+### Community 14 - "in_memory_object_store.rs"
+Cohesion: 0.15
+Nodes (18): delete_missing_is_already_deleted(), delete_removes_object(), ensure_deleted_swallows_already_deleted(), get_missing_is_none(), InMemoryObjectStore, put_overwrites(), put_then_get_roundtrip(), FxHashMap (+10 more)
+
+### Community 15 - "FakeDatastore"
+Cohesion: 0.11
+Nodes (22): FakeDatastore, FakeSchussRepository, Arc, Clone, Default, FxHashMap, Mutex, RepositoryResult (+14 more)
 
 ### Community 16 - "Zeitraum"
 Cohesion: 0.21
 Nodes (11): DateTime, Display, Formatter, Result, Self, Utc, utc(), Zeitraum (+3 more)
 
 ### Community 17 - "E"
-Cohesion: 0.08
-Nodes (43): E, libsql_error_to_persistence_error(), migration_error_to_persistence_error(), Error, RepositoryError, AppliableMigration, apply_down_migrations(), apply_up_migrations() (+35 more)
+Cohesion: 0.07
+Nodes (48): E, libsql_error_to_persistence_error(), migration_error_to_persistence_error(), Error, RepositoryError, Migration, Error, Option (+40 more)
 
 ### Community 18 - "Datenschutz — Data protection, privacy, and legal obligations"
 Cohesion: 0.11
 Nodes (19): Analytics, Benchmarks, Consent, Data export, Datenschutz — Data protection, privacy, and legal obligations, Decision log, Domain terms and business rules, Incident response (+11 more)
 
-### Community 19 - "String"
-Cohesion: 0.08
-Nodes (26): From, Self, String, email_accepts_valid_address(), EmailAdresse, EmailAdresseValidierungsfehler, Mobilnummer, mobilnummer_accepts_digits() (+18 more)
+### Community 19 - "FakeObjectStore"
+Cohesion: 0.18
+Nodes (10): FakeObjectStore, Arc, FxHashMap, Mutex, ObjectStoreError, ObjectStream, Option, ResultReport (+2 more)
 
 ### Community 20 - "Clock"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (10): DateTime, NaiveDate, Utc, SystemClock, Clock, DateTime, NaiveDate, Send (+2 more)
 
 ### Community 21 - "wertung.rs"
@@ -235,17 +246,17 @@ Nodes (14): Abuse, Backups, Betrieb — Operations and launch readiness, Decisio
 Cohesion: 0.21
 Nodes (8): nextConfig, geistMono, geistSans, metadata, Providers(), createQueryClient(), next, @tanstack/react-query
 
-### Community 27 - "PdfRenderer"
-Cohesion: 0.21
-Nodes (6): ExecutionContext<'a>, RepositoryResult, Self, PdfRenderer, Send, Sync
+### Community 27 - "ExecutionContext"
+Cohesion: 0.20
+Nodes (9): ExecutionContext, ExecutionContext<'a>, ExecutionSource, Arc, RepositoryResult, Self, PdfRenderer, Send (+1 more)
 
 ### Community 28 - "Wertung — Classic 3-arrow scoring"
-Cohesion: 0.17
-Nodes (12): Acceptance criteria, Decision log, Domain terms and business rules, Outcome, Problem, Requirements, Revision history, Risks and open questions (+4 more)
+Cohesion: 0.09
+Nodes (20): File map, leaf to root, Frontend API seam, Frontend state rules, Order to work in, Reference vertical slice — Schuss and Wertung, The two operations, Where things belong, Why `RepoStorage` has that pointer wiring (+12 more)
 
-### Community 29 - "ExecutionContext"
-Cohesion: 0.29
-Nodes (7): ExecutionContext, ExecutionSource, Arc, Context, Output, ResultReport, UseCase
+### Community 29 - "UseCase"
+Cohesion: 0.40
+Nodes (4): Context, Output, ResultReport, UseCase
 
 ### Community 30 - "Konto — Accounts and login"
 Cohesion: 0.08
@@ -260,16 +271,16 @@ Cohesion: 0.33
 Nodes (4): main(), Box, RepositoryResult, Unimplemented
 
 ### Community 33 - "RepoStorage"
-Cohesion: 0.47
-Nodes (4): RepoStorage, Box, Pin, Self
+Cohesion: 0.38
+Nodes (5): RepoStorage, Box, Pin, Self, InstrumentedSchussRepository
 
 ### Community 34 - "base_app_builder"
-Cohesion: 0.50
-Nodes (3): base_app_builder(), AppBuilder, SetUowProvider
+Cohesion: 0.31
+Nodes (8): base_app_builder(), AppBuilder, SetUowProvider, schuss_registrieren_persists_and_can_be_loaded(), wertung_leere_liste_ist_fehler(), wertung_summiert_nach_pfeil_innerhalb_eines_ziels(), wertung_unbekannte_id_ist_fehler(), ziel_id()
 
-### Community 35 - ".begin"
-Cohesion: 0.50
-Nodes (3): RepositoryError, ResultReport, SQLiteInstance
+### Community 35 - "UnitOfWorkImpl"
+Cohesion: 0.18
+Nodes (9): Arc<T>, LockedUnitOfWorkImpl, Send, Sync, UnitOfWorkImpl, UnitOfWorkProvider, RepositoryError, ResultReport (+1 more)
 
 ### Community 36 - "base_app_builder"
 Cohesion: 0.50
@@ -291,17 +302,41 @@ Nodes (19): Box, Error, Future, Option, Output, Pin, Result, Send (+11 more)
 Cohesion: 0.24
 Nodes (11): ErrorReportExt, Result<T, E>, C, Error, Report, Result, Send, Sync (+3 more)
 
+### Community 47 - "use_cases/schuss.rs"
+Cohesion: 0.18
+Nodes (16): ab_pfeil_vier_zaehlt_null(), ordnet_auch_bei_unsortierter_eingabe(), Error, Result, Schuss, Vec, Wertungszone, schuss() (+8 more)
+
+### Community 48 - "SQLiteSchussRepository"
+Cohesion: 0.17
+Nodes (15): Arc, Mutex, Option, RepositoryError, RepositoryResult, Result, Schuss, Transaction (+7 more)
+
 ### Community 49 - "common.rs"
 Cohesion: 0.11
 Nodes (15): format_datetime(), format_naive_date(), parse_datetime(), parse_decimal(), parse_menge(), parse_naive_date(), parse_uuid(), DateTime (+7 more)
 
+### Community 50 - "SchussRepository"
+Cohesion: 0.18
+Nodes (8): NeuerSchuss, RepositoryResult, Schuss, Send, Sync, Vec, Wertungszone, SchussRepository
+
+### Community 51 - "instrumented.rs"
+Cohesion: 0.28
+Nodes (7): InstrumentedObjectStore, InstrumentedPdfRenderer, Arc, ObjectStoreError, ObjectStream, Option, ResultReport
+
 ### Community 52 - "LogandaimApiTestClient"
-Cohesion: 0.20
-Nodes (14): assert_status_ok(), base_app_builder(), health_returns_ok(), json_decimal(), json_response(), LogandaimApiTestClient, Decimal, Self (+6 more)
+Cohesion: 0.16
+Nodes (17): assert_status_ok(), base_app_builder(), health_returns_ok(), json_decimal(), json_response(), LogandaimApiTestClient, Decimal, Self (+9 more)
+
+### Community 53 - "InstrumentedUnitOfWork"
+Cohesion: 0.43
+Nodes (5): InstrumentedUnitOfWork, Box, Pin, RepositoryResult, Self
+
+### Community 54 - ".rendern"
+Cohesion: 0.38
+Nodes (4): blank_renderer_returns_pdf_prefix(), BlankPdfRenderer, ResultReport, Vec
 
 ### Community 56 - "http-client.ts"
-Cohesion: 0.16
-Nodes (10): ApiError, JsonClient, unwrap(), components, $defs, operations, paths, webhooks (+2 more)
+Cohesion: 0.18
+Nodes (11): HttpLogandaimApi, JsonClient, unwrap(), Schuss, SchussErstellungInput, Wertung, components, $defs (+3 more)
 
 ### Community 57 - "logandaim.at — Product Charter"
 Cohesion: 0.13
@@ -311,13 +346,13 @@ Nodes (15): Accessibility, Decision log, Domain terms, Import, Language and copy
 Cohesion: 0.33
 Nodes (7): into_structured_error_from_frame(), From, Report, Self, Vec, StructuredError, Frame
 
+### Community 59 - "Wertungszone"
+Cohesion: 0.40
+Nodes (5): Wertungszone, Body, Kill, Miss, Spot
+
 ### Community 61 - "App"
 Cohesion: 0.05
-Nodes (48): BackendServerError, catch_panic(), main(), Report, Result, init_tracing(), Option, Path (+40 more)
-
-### Community 65 - "search-input.tsx"
-Cohesion: 0.50
-Nodes (3): SearchInput(), SearchInputProps, lucide-react
+Nodes (50): BackendServerError, catch_panic(), main(), Report, Result, init_tracing(), Option, Path (+42 more)
 
 ### Community 68 - "Product Requirements Document (PRD) & Konzeptbericht"
 Cohesion: 0.12
@@ -328,8 +363,8 @@ Cohesion: 0.43
 Nodes (7): logandaim-api, logandaim-core, logandaim-fakes, logandaim-filesystemstore, logandaim-server, logandaim-sqlite, molting
 
 ### Community 70 - "cn"
-Cohesion: 0.14
-Nodes (21): Badge(), BadgeProps, BadgeVariant, variantClasses, Checkbox(), CheckboxProps, Field(), FieldProps (+13 more)
+Cohesion: 0.13
+Nodes (25): zonen, Alert(), AlertProps, AlertVariant, variantClasses, Button(), Checkbox(), CheckboxProps (+17 more)
 
 ### Community 75 - "diffx-finish-review"
 Cohesion: 1.00
@@ -344,32 +379,32 @@ Cohesion: 0.50
 Nodes (4): ADR-0001: Baseline architecture, Consequences, Context, Decision
 
 ### Community 84 - "provider.tsx"
-Cohesion: 0.19
-Nodes (14): HttpLogandaimApi, createLogandaimApi(), getLogandaimApi(), normalizeApiBaseUrl(), resetLogandaimApiCache(), LogandaimApi, LogandaimApiContext, LogandaimApiContextValue (+6 more)
+Cohesion: 0.21
+Nodes (7): createLogandaimApi(), LogandaimApi, LogandaimApiContext, LogandaimApiContextValue, LogandaimApiProvider(), config, @tanstack/react-query-devtools
 
 ### Community 99 - "Specifications"
 Cohesion: 0.29
 Nodes (7): Language, Layout, Legacy, Lifecycle, Specifications, Traceability, Writing a feature spec
 
 ### Community 100 - "SQLiteInstance"
-Cohesion: 0.16
+Cohesion: 0.17
 Nodes (17): AtomicBool, Connection, InstanceType, Arc, AsRef, Deref, Mutex, Path (+9 more)
 
-### Community 102 - "config.rs"
-Cohesion: 0.15
-Nodes (26): Cli, cli_overlay(), ConfigError, env_or_cli_overlay_beats_file(), file_values_used_when_no_overlay(), load(), load_file(), loads_json_file() (+18 more)
+### Community 102 - "String"
+Cohesion: 0.07
+Nodes (42): Cli, cli_overlay(), ConfigError, env_or_cli_overlay_beats_file(), file_values_used_when_no_overlay(), load(), load_file(), loads_json_file() (+34 more)
 
-### Community 103 - "deployment-status.tsx"
-Cohesion: 0.26
-Nodes (11): useHealthQuery(), useLogandaimApiReady(), useLogandaimApi(), logandaimKeys, HomePage(), Card(), CardContent(), CardDescription() (+3 more)
+### Community 103 - "card.tsx"
+Cohesion: 0.21
+Nodes (13): useSchussRegistrierenMutation(), useWertungMutation(), useHealthQuery(), useLogandaimApi(), logandaimKeys, HomePage(), SchussPage(), Card() (+5 more)
 
 ### Community 114 - "navigation.ts"
-Cohesion: 0.18
-Nodes (13): Sidebar(), SidebarLink(), SidebarProps, BreadcrumbSegment, isExactPath(), isNavItemActive(), NavAction, NavCategory (+5 more)
+Cohesion: 0.12
+Nodes (24): AppChrome(), AppShell(), PageChromeContext, PageChromeContextValue, PageChromeProvider(), SetBreadcrumbLabel(), usePageChrome(), Sidebar() (+16 more)
 
-### Community 117 - "UnitOfWorkImpl"
-Cohesion: 0.19
-Nodes (11): Arc<T>, LockedUnitOfWorkImpl, Box, RepositoryResult, Send, Sync, UnitOfWork, UnitOfWork<'a> (+3 more)
+### Community 117 - "UnitOfWork"
+Cohesion: 0.32
+Nodes (4): Box, RepositoryResult, UnitOfWork, Drop
 
 ### Community 118 - "pull_request_template.md"
 Cohesion: 0.33
@@ -378,10 +413,6 @@ Nodes (5): Acceptance criteria, Behavior, Checklist, Notes, Test evidence
 ### Community 124 - "YAMS Frontend Migration Specification"
 Cohesion: 0.33
 Nodes (5): Backend Abstraction, Developer Experience, State Management Transition, UI Framework Upgrade, YAMS Frontend Migration Specification
-
-### Community 135 - "Debug"
-Cohesion: 0.40
-Nodes (3): RepositoryError, Option, Debug
 
 ### Community 137 - "dependencies"
 Cohesion: 0.25
@@ -400,8 +431,8 @@ Cohesion: 0.05
 Nodes (30): Adresse, Ländercode, LändercodeValidierungsfehler, Result, Self, Menge, MengeFehler, Decimal (+22 more)
 
 ### Community 151 - "Versioned<T>"
-Cohesion: 0.12
-Nodes (12): Clone, Deref, Option, Self, T, Target, Versioned, Versioned<T> (+4 more)
+Cohesion: 0.13
+Nodes (11): Clone, Deref, Self, T, Target, UnitOfWork<'a>, Versioned, Versioned<T> (+3 more)
 
 ### Community 153 - "ADR-0002: Session cookie auth across frontend and API origins"
 Cohesion: 0.25
@@ -416,8 +447,8 @@ Cohesion: 0.33
 Nodes (5): address-review, fix-ci, implement, merge-base, Modes
 
 ### Community 157 - "package.json"
-Cohesion: 0.14
-Nodes (13): name, private, version, babel-plugin-react-compiler, @biomejs/biome, openapi-typescript, react-dom, tailwindcss (+5 more)
+Cohesion: 0.13
+Nodes (14): name, private, version, babel-plugin-react-compiler, @biomejs/biome, openapi-fetch, openapi-typescript, react-dom (+6 more)
 
 ### Community 160 - "m1-reviewer.md"
 Cohesion: 0.40
@@ -427,29 +458,25 @@ Nodes (4): Do not touch the working copy, Mode re-review, Mode review, Reply (ca
 Cohesion: 0.50
 Nodes (4): Added, Changed, Changelog, [Unreleased]
 
-### Community 164 - "app-shell.tsx"
-Cohesion: 0.26
-Nodes (10): AppChrome(), AppShell(), PageChromeContext, PageChromeContextValue, PageChromeProvider(), SetBreadcrumbLabel(), usePageChrome(), breadcrumbsForPathname() (+2 more)
-
 ## Knowledge Gaps
-- **315 isolated node(s):** `ValidationError`, `logandaim-fakes`, `molting`, `$schema`, `enabled` (+310 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 536 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **327 isolated node(s):** `ValidationError`, `SchussRegistrierenFehler`, `WertungFehler`, `logandaim-fakes`, `molting` (+322 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 579 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `String` connect `String` to `arc_up`, `config.rs`, `in_memory_object_store.rs`, `FakeUnitOfWorkProvider`, `common.rs`, `LogandaimApiTestClient`, `preis.rs`, `StructuredError`, `App`?**
-  _High betweenness centrality (0.156) - this node is a cross-community bridge._
-- **Why does `App` connect `App` to `LogandaimApiTestClient`, `UnitOfWorkImpl`, `Clock`, `ObjectStore`, `PdfRenderer`?**
-  _High betweenness centrality (0.085) - this node is a cross-community bridge._
-- **Why does `ObjectStore` connect `ObjectStore` to `FakePdfRenderer`, `logandaim-filesystemstore/src/lib.rs`, `in_memory_object_store.rs`, `ExecutionContext`, `String`, `PdfRenderer`, `App`?**
-  _High betweenness centrality (0.072) - this node is a cross-community bridge._
-- **What connects `ValidationError`, `logandaim-fakes`, `molting` to the rest of the system?**
-  _315 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `FakePdfRenderer` be split into smaller, more focused modules?**
-  _Cohesion score 0.06938020351526364 - nodes in this community are weakly interconnected._
+- **Why does `String` connect `String` to `arc_up`, `in_memory_object_store.rs`, `FakeDatastore`, `common.rs`, `FakeObjectStore`, `LogandaimApiTestClient`, `preis.rs`, `StructuredError`, `App`?**
+  _High betweenness centrality (0.174) - this node is a cross-community bridge._
+- **Why does `App` connect `App` to `UnitOfWorkImpl`, `LogandaimApiTestClient`, `Clock`, `ObjectStore`, `ExecutionContext`?**
+  _High betweenness centrality (0.084) - this node is a cross-community bridge._
+- **Why does `ObjectStore` connect `ObjectStore` to `logandaim-filesystemstore/src/lib.rs`, `in_memory_object_store.rs`, `FakeObjectStore`, `instrumented.rs`, `ExecutionContext`, `App`?**
+  _High betweenness centrality (0.071) - this node is a cross-community bridge._
+- **What connects `ValidationError`, `SchussRegistrierenFehler`, `WertungFehler` to the rest of the system?**
+  _327 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `arc_up` be split into smaller, more focused modules?**
   _Cohesion score 0.05827505827505827 - nodes in this community are weakly interconnected._
 - **Should `biome.json` be split into smaller, more focused modules?**
   _Cohesion score 0.07692307692307693 - nodes in this community are weakly interconnected._
+- **Should `yams-persistence` be split into smaller, more focused modules?**
+  _Cohesion score 0.08307692307692308 - nodes in this community are weakly interconnected._
