@@ -25,7 +25,7 @@ import type {
   TagesabschlussErstellung,
 } from "./types";
 
-/** Framework-agnostic YAMS API — implemented via OpenAPI HTTP or Tauri invoke. */
+/** Framework-agnostic YAMS API — implemented via OpenAPI HTTP. */
 export interface YamsApi {
   health(): Promise<string>;
   klientErstellen(body: KlientErstellung): Promise<Klient>;

@@ -1,6 +1,6 @@
 # YAMS — Repository Context
 
-YAMS is a Rust backend for veterinary practice management (Rust edition **2024**, **async** throughout). The codebase follows **Domain-Driven Design** and **hexagonal architecture**. Business crates are prefixed `yams-`. The frontend (Next.js App Router + Tauri) is documented under **Frontend** below.
+YAMS is a Rust backend for veterinary practice management (Rust edition **2024**, **async** throughout). The codebase follows **Domain-Driven Design** and **hexagonal architecture**. Business crates are prefixed `yams-`. The frontend (Next.js App Router) is documented under **Frontend** below.
 
 ## Workspace Layout
 
@@ -14,8 +14,7 @@ yams/
 │   └── molting/            # Generic async migration framework
 ├── backend/server/         # Standalone HTTP server (yams-server)
 ├── frontend/
-│   ├── src-tauri/          # Tauri shell (embedded deployment)
-│   └── src/                # Next.js UI (App Router, TanStack Query, Tauri shell)
+│   └── src/                # Next.js UI (App Router, TanStack Query)
 ├── tasks/                  # mise task definitions
 ├── specs/                  # Architecture specs — may lag code; trust implementation
 └── mise.toml               # Tool, env, and task orchestration
@@ -26,7 +25,7 @@ yams/
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Driving adapters                                       │
-│  backend/server (Poem OpenAPI)  ·  src-tauri (IPC)      │
+│  backend/server (Poem OpenAPI)                           │
 └────────────────────────┬────────────────────────────────┘
                          ▼
 ┌─────────────────────────────────────────────────────────┐
@@ -42,7 +41,7 @@ yams/
 └─────────────────────────────────────────────────────────┘
 ```
 
-Dependency rule: **inward only**. Core knows nothing about HTTP, SQLite, or Tauri.
+Dependency rule: **inward only**. Core knows nothing about HTTP or SQLite.
 
 ## Language & Naming
 
@@ -94,28 +93,20 @@ Ports are `async_trait` traits; all repository and use-case I/O is async.
 
 ### Design Principles
 
-**Make invalid state unrepresentable.** Guiding principle for domain modeling:
+**Domain modeling rules** (make invalid state unrepresentable: ID newtypes, validated value objects, type-state aggregates, `Neues*` / `neu` / `from_parts` construction, domain errors, domain unit tests) live in [`crates/yams-core/src/domain/README.md`](../crates/yams-core/src/domain/README.md), rendered as the `domain` module docs. Read it before touching `domain/`. It is domain-agnostic: keep it when replacing the domain types.
 
-- **Newtypes for identity** — `KlientId(Uuid)`, `HaustierId(Uuid)` prevent ID mix-ups at compile time.
-- **Validated value objects** — `EmailAdresse`, `Mobilnummer`, `Preis`, `Ratio` (`0..=1`; 100% = `1`), `Menge` (non-negative, unitless) via `new()` / `TryFrom`. Invalid values cannot exist in the type system.
-- **Closed enums where closed** — `Ländercode` is an enum (`AT`, `DE`, `CH`), not a free-form string.
-- **Type-state aggregates** — `LeistungIn<Offen>` / `LeistungIn<Abgerechnet>` (aliases `LeistungOffen`, `LeistungAbgerechnet`), `RechnungIn<…>` likewise. Enum `Leistung` / `Rechnung` sums all valid states when compile-time state unknown.
-- **Separate creation types** — `NeuerKlient` / `NeuesHaustier` (and the other `Neue*` builders) have no ID and do **not** validate; they are input records. Repositories call `Haustier::neu` / `Klient::neu` (and `from_parts` when loading), which own empty-name and construction invariants.
-- **Encapsulation over `pub`** — aggregate fields private; expose accessors and mutation through domain methods (`neu`, `mark_abgerechnet`, `aus_leistungen`). Request DTOs and `Neue*` builders never assemble a valid aggregate. Repositories invoke `::neu` on create and `from_parts` on load. Construction `Report`s `.attach("while constructing klient")` (and the analogous haustier/produkt/behandlung/leistung strings) so the site is visible in the report.
-- **Derived values as getters** — `Leistung::betrag()` from `LeistungQuelle`; `Rechnung::gesamtbetrag_brutto()` from `Rechnungspositionen`. No stored duplicates that can drift.
-- **Price snapshots on Leistung** — `LeistungQuelle` stores booked prices (`einzelpreis`, `menge`, `preis`) so Tagesabschluss uses historical values, not current catalog prices.
+Application-level principles:
+
 - **Versioned concurrency** — `Versioned<T>` bundles entity + optimistic-lock version.
 - **UoW** — use cases call `ctx.enter()` for an owned UoW (borrows ctx). Nested work uses `ctx.sub(&uow)` (ports stay on the context). Nested `enter` joins the outer TX; nested `commit`/`rollback` are no-ops. Collect work without `?` across the UoW, then `uow.finish(result, commit_context)` (commit on `Ok`, rollback on `Err`). Drop panics if neither `commit` nor `rollback` ran. `#[must_use]` on `UnitOfWork`.
-- **Single linkage** — `Haustier.klient_id` is source of truth; no `haustier_ids` on `Klient`.
 
 **Repositories are dumb.** Ports persist and load domain types — no business logic (no `mark_abgerechnet` on repository). State transitions happen in domain/use cases; repos `update` the mutated entity.
 
 **Error handling conventions:**
 - **`Report<E>` everywhere** — use cases, domain services (`RechnungOffen::aus_leistungen`), orchestration. Use `.change_context()` directly; avoid redundant `IntoReport::into_report`.
-- **Exception: newtype validation** — `EmailAdresse::new`, `Preis::new`, `Ländercode::from_str` return plain `Result<T, ValidationError>` — nothing cross-cutting can fail at construction.
-- **Preis arithmetic** — implement `Add`; addition of two `Preis` values cannot fail. Scaling is infallible `Mul`: `&Preis * &Menge` and `&Preis * &Ratio` (MwSt is a ratio, so `netto * 0.19`, never `/100`).
+- **Exception: value-object validation** returns plain `Result` (see domain README).
 
-Domain may depend on ports directly (e.g. `Clock`). Use cases receive an `ExecutionContext` (ports + UoW provider). They `enter` / `finish` the UoW themselves.
+Use cases receive an `ExecutionContext` (ports + UoW provider). They `enter` / `finish` the UoW themselves.
 
 ### App & Orchestration
 
@@ -202,9 +193,8 @@ Framework-agnostic API layer between driving adapters and core.
 | `serde`   | yes     | Serde derives on DTOs                |
 | `openapi` | yes     | poem-openapi types, `spec.rs`, `export_spec` bin |
 
-Consumers:
+Consumer:
 - **yams-server** — full features (OpenAPI HTTP + Swagger/ReDoc)
-- **src-tauri** — `default-features = false, features = ["serde"]` (IPC only, no poem)
 
 After schema or route changes, run `mise run sync:openapi` to refresh `frontend/src/api/schema.ts`.
 
@@ -222,28 +212,16 @@ Single repository adapter (SQLite via libsql). Name may become more specific whe
 
 Generic async migration framework used by yams-sqlite. Provides `UpMigration`, `DownMigration`, `MigrationRegistry`, `MigrationTarget` traits. Persistence implements `MigrationTarget` for `SQLiteConnection`.
 
-## Deployment Modes
+## Deployment
 
-| Mode | Entry point | How core is reached |
-|------|-------------|---------------------|
-| Server | `backend/server/` | Poem routes → `YamsAppApi` |
-| Tauri + embedded | `frontend/src-tauri/` with `mode: embedded` | Tauri commands → `YamsAppApi` |
-| Tauri + server | `frontend/src-tauri/` with `mode: remote` | Next.js HTTP client → `yams-server` (no in-process DB) |
-| Standalone frontend | Next.js only | HTTP client → `yams-server` |
-
-Embedded server and `yams-server` both wire the same `App` + `SQLiteInstance` + migrations. Remote Tauri skips backend setup.
-
-### Config resolution
-
-Same order everywhere: **config path → file → env (→ CLI on server)**. `YAMS_DEV` is a boolean UX flag (TanStack Query devtools); it does **not** rewrite paths.
+The Next.js frontend calls `yams-server` over HTTP. Server configuration uses **config path → file → env → CLI**. `YAMS_DEV` enables TanStack Query devtools; it does **not** rewrite paths.
 
 | Runtime | Path | File | Overlay |
 |---------|------|------|---------|
 | `yams-server` | `YAMS_CONFIG_PATH` / `--config-path`, default `yams-server.json` in cwd | `backend/config.dev.json` in mise | env then CLI (`YAMS_DATABASE_URL`, `YAMS_OBJECT_STORE_DIR`, `BIND_ADDRESS`, `PORT`, `SUBPATH`) |
-| Tauri | `YAMS_CONFIG_PATH`, default `{ProjectDirs}/yams.json` | tagged `mode` enum (`embedded` needs `databaseUrl`+`objectStoreDir`; `remote` needs `remoteApiUrl`) | env (`YAMS_MODE`, matching path/URL vars, `YAMS_DEV`) |
-| Browser | — | `src/yams-config.json` (static import) | `NEXT_PUBLIC_YAMS_API_URL`, `NEXT_PUBLIC_YAMS_DEV` |
+| Browser | — | `src/standalone-config.json` (static import) | `NEXT_PUBLIC_YAMS_API_URL`, `NEXT_PUBLIC_YAMS_DEV` |
 
-In Tauri, Next.js reads config **only** from the `frontend_config` invoke. Browser env vars are ignored there.
+The browser uses static API URL configuration. `NEXT_PUBLIC_YAMS_API_URL` overrides API URL; `NEXT_PUBLIC_YAMS_DEV` enables devtools outside development.
 
 ## Error Handling
 
@@ -273,18 +251,18 @@ Persistence proves adapter conformance by running the same case suite against re
 - **mise** (`mise.toml`) — Rust toolchain, Node 22, env vars (`FRONTEND_DIR`, `OPENAPI_SPEC`), task includes from `tasks/`
 - **Rust nightly pinned** — `rust-toolchain.toml` uses `nightly-2026-07-02`; do not bump without testing (newer nightlies break poem-openapi lifetime capturing across await)
 - **cargo-nextest** — `cargo nextest` for running tests
-- **Key tasks**: `test:backend` (`cargo test`), `sync:openapi` (export spec → `openapi-typescript` → `frontend/src/api/schema.ts`), `dev:server`, `dev:tauri` (embedded), `dev:tauri+server`, `dev:frontend+server`
+- **Key tasks**: `test:backend` (`cargo test`), `sync:openapi` (export spec → `openapi-typescript` → `frontend/src/api/schema.ts`), `dev:server`, `dev:frontend+server`
 - **Formatting/linting**: `fmt:rust`, `lint:crates` (clippy), `fmt:biome` (frontend)
 
 ## Frontend
 
-Next.js in `frontend/`, Tauri shell in `frontend/src-tauri/`. Static export (`output: "export"`) → `frontend/out/` for Tauri. OpenAPI types at `frontend/src/api/schema.ts` (`mise run sync:openapi`).
+Next.js in `frontend/`. OpenAPI types at `frontend/src/api/schema.ts` (`mise run sync:openapi`).
 
 ### API layer
 
 - **`YamsApi`** (`src/api/yams-api.ts`) — framework-agnostic interface mirroring `YamsAppApi`.
-- **Adapters** — `HttpYamsApi` (openapi-fetch + schema paths) for remote mode; `TauriYamsApi` (invoke) for embedded mode. In Tauri, mode comes only from `frontend_config` (tagged `{ mode: "embedded" | "remote" }`). In the browser, static `src/yams-config.json` plus `NEXT_PUBLIC_YAMS_API_URL` / `NEXT_PUBLIC_YAMS_DEV`.
-- **Bootstrap** — `YamsApiProvider` resolves adapter once; components never choose HTTP vs Tauri themselves.
+- **Adapter** — `HttpYamsApi` (openapi-fetch + schema paths) calls `yams-server`. In the browser, static `src/standalone-config.json` plus `NEXT_PUBLIC_YAMS_API_URL` / `NEXT_PUBLIC_YAMS_DEV`.
+- **Bootstrap** — `YamsApiProvider` creates the HTTP adapter; components never choose transport themselves.
 
 ### TanStack Query (server state)
 
@@ -292,7 +270,7 @@ Next.js in `frontend/`, Tauri shell in `frontend/src-tauri/`. Static export (`ou
 
 | Layer | Responsibility |
 |-------|----------------|
-| `YamsApi` + adapters | Transport only (HTTP or Tauri) |
+| `YamsApi` + HTTP adapter | Transport only |
 | `api/hooks/queries.ts` | `useQuery` for reads (`useAlleHaustiereQuery`, …) |
 | `api/hooks/mutations.ts` | `useMutation` for writes; invalidate or update `query-keys` on success |
 | `api/query-keys.ts` | Hierarchical keys for targeted invalidation |
@@ -303,16 +281,16 @@ Next.js in `frontend/`, Tauri shell in `frontend/src-tauri/`. Static export (`ou
 1. **Queries** — `enabled: isReady` from `useYamsApiReady()` so nothing runs before the adapter exists.
 2. **Mutations** — call `YamsApi` inside `mutationFn`; on success invalidate the smallest matching key prefix (e.g. `yamsKeys.haustiere.all()` after create).
 3. **No duplicate server state** — do not copy query results into local `useState`; use `queryClient.setQueryData` when optimistically updating cache.
-4. **New endpoint** — add method to `YamsApi`, both adapters, a key in `query-keys.ts`, and a hook in `queries.ts` or `mutations.ts`; use the hook in UI.
+4. **New endpoint** — add method to `YamsApi` and `HttpYamsApi`, a key in `query-keys.ts`, and a hook in `queries.ts` or `mutations.ts`; use the hook in UI.
 5. **Defaults** — `createQueryClient()` (`src/lib/query-client.ts`): 30s `staleTime`, refetch on window focus, mutations do not retry.
 
 `QueryClientProvider` wraps `YamsApiProvider` in `src/app/providers.tsx`.
 
-**Remote dev (browser + `yams-server`)** — Next and the API must use different ports (`mise run dev:frontend+server`: API `:3000`, Next `:3001`). Cross-origin fetch requires CORS on `yams-server` (localhost / 127.0.0.1). Set `NEXT_PUBLIC_YAMS_API_URL` (or edit `src/yams-config.json`) when the API is not at `http://127.0.0.1:3000/api`. Use matching hostnames (`localhost` vs `127.0.0.1`) in the browser URL and API URL.
+**Remote dev (browser + `yams-server`)** — Next and the API must use different ports (`mise run dev:frontend+server`: API `:3000`, Next `:3001`). Cross-origin fetch requires CORS on `yams-server` (localhost / 127.0.0.1). Set `NEXT_PUBLIC_YAMS_API_URL` (or edit `src/standalone-config.json`) when the API is not at `http://127.0.0.1:3000/api`. Use matching hostnames (`localhost` vs `127.0.0.1`) in the browser URL and API URL.
 
 ### UI design (legacy parity)
 
-Recreate **workflow and visual language** from `frontend-legacy/`, not its stack (MobX, HeroUI, Pages Router).
+Recreate **workflow and visual language** from the legacy frontend, not its stack (MobX, HeroUI, Pages Router).
 
 | Legacy pattern | New frontend |
 |----------------|--------------|
@@ -339,13 +317,19 @@ Recreate **workflow and visual language** from `frontend-legacy/`, not its stack
 - Navigation config: `frontend/src/lib/navigation.ts`
 - Klient management: `frontend/src/app/klient/**`, `frontend/src/components/klient/**`
 
+## Version Control
+
+- **Merge, don't rebase, to integrate upstream.** When a branch conflicts with or falls behind its base, create a merge commit (`jj new <branch> <base>@github`, resolve, commit). Conflict resolutions must stay visible in history; never rewrite pushed commits to hide them.
+- Rebase only in special cases: unpushed local work, or explicit maintainer instruction.
+- Never force-push a shared or reviewed branch.
+
 ## Conventions for Contributors
 
 1. **New feature?** Walk the vertical slice in order, German feature names (`seminar.rs`, not `model.rs`):
    `domain/` (unit tests in the same file) → `application/ports/` → `service/use_cases/` → `yams-api` (`requests/`, `schema/`, `YamsAppApi` method, `spec.rs` route if HTTP) → `yams-sqlite/repos/` → migration in `migrations/` (if schema change) → use-case case in `yams-core/tests/cases/` → API e2e in `yams-api/tests/e2e/` when the public surface changed → `mise run sync:openapi` (if API surface changed).
 2. **Domain changes stay in core.** API DTOs are a separate translation layer; never leak serde/openapi concerns into core.
 3. **All mutations through `App::execute`.** No direct repo calls from adapters.
-4. **Prefer types over runtime checks.** If a value can be invalid, make it impossible to construct without validation.
+4. **Domain modeling** — follow [`crates/yams-core/src/domain/README.md`](../crates/yams-core/src/domain/README.md).
 5. **Errors: `thiserror` in domain/use cases, `Report` at boundaries.** Use `.contextualize()` / `.change_context()` when crossing layers. English for technical messages; German only in domain/user-facing UL strings where appropriate.
 6. **Language** — English docs/comments/technical code; German UL for domain names; UTF-8 identifiers, no `ae`/`oe`/`ue` transliteration (see Language & Naming).
 7. **Tests:** domain units live in a `#[cfg(test)]` module in the source file; use-case flows go in `yams-core/tests/cases/` (persistence conformance follows automatically); API e2e uses Poem `YamsApiTestClient` in `yams-api/tests/e2e/` (`main.rs` holds the client, `base_app_builder()`, and JSON helpers).

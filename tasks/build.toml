@@ -14,12 +14,6 @@ dir = "{{ vars.REPO_ROOT }}/frontend"
 depends = ["sync:openapi"]
 run = "npm run build"
 
-["build:tauri"]
-description = "Build Tauri app"
-dir = "{{ vars.REPO_ROOT }}/frontend"
-depends = ["build:frontend"]
-run = "npm run tauri build"
-
 [build]
 description = "Builds whole project"
-depends = ["build:{server,scheduler,tauri}"]
+depends = ["build:{server,scheduler,frontend}"]
