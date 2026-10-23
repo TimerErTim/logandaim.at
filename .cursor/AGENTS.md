@@ -317,6 +317,12 @@ Recreate **workflow and visual language** from the legacy frontend, not its stac
 - Navigation config: `frontend/src/lib/navigation.ts`
 - Klient management: `frontend/src/app/klient/**`, `frontend/src/components/klient/**`
 
+## Version Control
+
+- **Merge, don't rebase, to integrate upstream.** When a branch conflicts with or falls behind its base, create a merge commit (`jj new <branch> <base>@github`, resolve, commit). Conflict resolutions must stay visible in history; never rewrite pushed commits to hide them.
+- Rebase only in special cases: unpushed local work, or explicit maintainer instruction.
+- Never force-push a shared or reviewed branch.
+
 ## Conventions for Contributors
 
 1. **New feature?** Walk the vertical slice in order, German feature names (`seminar.rs`, not `model.rs`):
