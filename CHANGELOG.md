@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (registration, login, password reset, account deletion, admin role) and proposed
   [ADR-0002](specs/decisions/0002-session-cookie-auth.md) for session-cookie auth with
   explicit-origin CORS.
+- Draft spec [`specs/product/datenschutz.md`](specs/product/datenschutz.md) covering GDPR duties:
+  export, retention, consent, legal pages, rights process, processors, analytics, incident
+  response, and future benchmarks.
+- Draft spec [`specs/product/betrieb.md`](specs/product/betrieb.md) covering security hardening,
+  backups and restore drills, abuse handling, and support.
+- `konto.md`: Deferred capabilities part (email delivery, verification, email change, account
+  security, MFA, external identity providers, passkeys, administration, auth audit, notifications),
+  each linked to its delivery issue.
+- `charter.md`: Draft "Quality bars" (accessibility, language and copy) and "Import" sections.
 
 ### Changed
 

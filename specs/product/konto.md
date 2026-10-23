@@ -3,7 +3,7 @@ id: SPEC-konto
 title: Accounts and login (registration, login, recovery, deletion, roles)
 status: Draft
 owner: TimerErTim
-issues: [9]
+issues: [9, 27, 28, 29, 30, 31, 32, 33, 34, 35, 50]
 superseded_by: null
 ---
 
@@ -39,13 +39,21 @@ Personal data belongs to exactly one `Konto` and is visible only to its owner.
 - Self-service account deletion.
 - The `Rolle` attribute (`Schütze`, `System-Administrator`) and role-based access.
 
-**Out of scope**
+**Out of scope for MVP**
 
-- Email verification at registration (PO decision 2026-10-23; later milestone).
-- OAuth or other login providers (later milestone).
-- GDPR data export (PO decision 2026-10-23; no export in MVP).
-- Changing the password while logged in (the reset flow covers it).
-- Password strength meter UI, 2FA, passkeys, "remember me" options.
+Everything below is deferred by PO decision, not rejected. Each item has its own Draft section
+further down and a delivery issue; nothing here is implementable until that section is
+`PO-approved`.
+
+- Email verification at registration (PO decision 2026-10-23; [later](#email-verification), #28).
+- Changing the account email ([later](#email-change), #29).
+- Changing the password while logged in and session management ([later](#account-security), #30).
+- OAuth or other login providers (PO decision 2026-10-23; [later](#external-identity-providers), #32).
+- 2FA / TOTP ([later](#mfa), #31) and passkeys ([later](#passkeys), #33).
+- Authentication audit log and new-device notices ([later](#auth-audit), #35).
+- Notification preferences ([later](#notifications), #50).
+- GDPR data export (PO decision 2026-10-23; see `datenschutz.md`, #36).
+- Password strength meter UI and "remember me" options.
 - Operator accounts (`Anlagenbetreiber`) and tournament roles.
 
 ## User journeys
@@ -195,6 +203,206 @@ in the rules and acceptance criteria above.
 - AC-15: When registration attempts exceed 5 per client per hour, the excess requests fail with 429
   until the window passes.
 
+## Deferred capabilities
+
+The capabilities in this part are **Draft** and not part of the MVP contract above. Each one has a
+delivery issue referenced in its heading. They are written now so the deferred requirements are
+specified somewhere and do not get relitigated from scratch. Open questions block approval of the
+individual section only, not of the MVP part.
+
+### Email delivery
+
+Issue: #27. Resolves Q-3.
+
+Every deferred capability except passkeys depends on an outbound mail channel: verification,
+change notices, MFA and device notices, unsubscribe. The MVP reset flow already needs it.
+
+Rules:
+
+1. Outbound mail goes through exactly one configured provider; the sender domain has SPF, DKIM,
+   and DMARC records that pass.
+2. A message body containing a token is never retained longer than the token lifetime, in the
+   provider or in application logs.
+3. Hard bounces and complaints land on a suppression list that blocks further sends to that
+   address.
+4. Development and tests send only to a local mail catcher; no test path can reach a real address.
+5. Provider region, data processing agreement, and mail-log retention are recorded in
+   `datenschutz.md#processors`.
+
+Open questions:
+
+- [ ] Q-5: Provider and sending domain.
+- [ ] Q-6: Is the mail channel a launch gate, or only required before password reset ships?
+
+### Email verification
+
+Issue: #28. Depends on email delivery.
+
+Rules:
+
+1. Registration sends a `E-Mail-Adresse-Bestätigung` with a single-use token, valid 24 hours,
+   stored hashed.
+2. Confirming a token marks the address verified. It does not create a second `Anmelde-Sitzung` and
+   does not change the current one.
+3. An unverified `Konto` may read but may not create or modify `Runden`.
+4. A resend is throttled per `Konto` and per client; confirming an already-verified address is
+   idempotent and sends no mail.
+5. `Konten` that exist before this ships follow the transition rule of Q-7.
+
+Open questions:
+
+- [ ] Q-7: Enforcement (hard block on writing) and the fate of pre-existing accounts.
+
+### Email change
+
+Issue: #29. Depends on email verification.
+
+Rules:
+
+1. A change requires the current `Passwort` (or a step-up per [MFA](#mfa)) and sends a verification
+   token to the new address.
+2. The new address becomes the login identifier only after its token is confirmed; until then the
+   old address still works.
+3. Both addresses receive a notice after a completed change.
+4. Uniqueness of the normalized `E-Mail-Adresse` is enforced at request and again at confirmation;
+   a concurrent confirmation cannot produce two `Konto` with one address.
+5. A completed change ends all `Anmelde-Sitzungen` except the current one.
+6. A change to an address that already has a `Konto` answers generically and never reveals that the
+   address is taken.
+
+### Account security
+
+Issue: #30. Prerequisite for MFA.
+
+Rules:
+
+1. `Passwort` change while logged in requires the current `Passwort`; the new one follows rule 2 of
+   the MVP rules (at least 8 characters, no composition rules).
+2. A completed change ends all `Anmelde-Sitzungen` except the current one.
+3. The `Anmelde-Sitzung` list shows creation time, last use, and coarse device/browser, newest
+   first, with the current session marked. It never exposes a raw token or its hash.
+4. Revocation is immediate: the revoked session fails with 401 on its next request.
+5. "Alle Geräte abmelden" revokes every session including the current one.
+6. Password change and session revocation are audited without secrets.
+
+### MFA
+
+Issue: #31. Depends on email delivery and account security.
+
+Rules:
+
+1. MFA is TOTP. Enrollment requires `Passwort` re-entry and completes only after a valid code from
+   the newly generated secret.
+2. Enrollment issues ten single-use recovery codes, shown once, stored hashed, regenerable; the
+   previous set is invalidated on regeneration.
+3. With MFA enabled, a correct `Passwort` login yields an MFA challenge, not a usable
+   `Anmelde-Sitzung`; no protected endpoint accepts the pre-challenge state.
+4. A code is accepted inside a documented clock-skew window; replay of the same code inside that
+   window is refused.
+5. Step-up re-authentication is required for `Konto-Löschung`, email change, MFA disable, and
+   recovery-code regeneration.
+6. A `System-Administrator` may reset MFA for a `Konto` after identity verification off-system; the
+   reset is audited and notifies the owner by email.
+7. Disabling MFA requires the current factor or a recovery code and notifies the owner by email.
+
+Open questions:
+
+- [ ] Q-8: Is MFA optional forever, or mandatory for `System-Administrator`?
+- [ ] Q-9: May an administrator reset MFA at all, or is the recovery-code path the only one?
+
+### External identity providers
+
+Issue: #32. Depends on email verification.
+
+Rules:
+
+1. Login uses OpenID Connect authorization code flow with PKCE. Client secrets stay server-side;
+   the static frontend never receives them.
+2. A first sign-in creates a `Konto` with the provider's verified address and no local `Passwort`,
+   and starts a normal `Anmelde-Sitzung` per [ADR-0002](../decisions/0002-session-cookie-auth.md).
+3. Linking a provider identity to an existing `Konto` requires proving the local credential first.
+   A provider login whose address already has a `Konto` never links silently.
+4. `email_verified` is trusted only when the provider asserts it; otherwise the address follows the
+   [email verification](#email-verification) rules.
+5. Apple private-relay addresses are accepted, count as unverified for linking, and never merge two
+   `Konto`.
+6. Unlinking is refused when it would leave the `Konto` without any login method.
+7. A provider outage returns a clear error and does not lock the account; the password path keeps
+   working.
+8. Linking and unlinking are audited with provider and subject identifier, never with tokens.
+
+Open questions:
+
+- [ ] Q-10: Which providers at launch, and is Apple mandatory?
+- [ ] Q-11: May an existing password `Konto` add a provider, or is that new-account only?
+
+### Passkeys
+
+Issue: #33. Depends on account security and external identity providers.
+
+Rules:
+
+1. A logged-in `Konto` registers a passkey; the server verifies the attestation and rejects a
+   challenge it did not issue.
+2. A `Konto` may hold several passkeys with labels; each is independently removable.
+3. Login with a discoverable credential works without typing an address and creates a normal
+   `Anmelde-Sitzung`.
+4. Removing the last credential is refused when no `Passwort` and no provider login remains.
+5. Challenge expiry and signature counters are checked; a replayed assertion is refused.
+
+### Administration
+
+Issue: #34. Resolves Q-2.
+
+Rules:
+
+1. An idempotent bootstrap (command or deployment configuration) creates or promotes exactly the
+   configured `System-Administrator` address; running it twice changes nothing.
+2. No API path lets a `Konto` elevate its own `Rolle`.
+3. Role changes are audited with actor, target, previous and new role, timestamp.
+4. Demoting or deleting the last `System-Administrator` is refused.
+5. Bootstrap never writes a plaintext password into configuration, logs, or the repository.
+
+Open questions:
+
+- [ ] Q-12: Bootstrap mechanism (CLI subcommand, environment variable, or migration seed).
+
+### Auth audit
+
+Issue: #35. Depends on email delivery.
+
+Rules:
+
+1. Login success, login failure, MFA outcome, `Passwort` change, email change, session revocation,
+   and `Konto-Löschung` are recorded with time, `Konto` id, truncated IP, and user agent.
+2. A `Konto` reads only its own history.
+3. A login from a device not seen before sends a notice to the verified address.
+4. No `Passwort`, token, cookie value, or recovery code appears in the audit store or logs.
+5. Retention is documented and enforced by a cleanup job.
+6. Audit entries survive `Konto-Löschung` only in the anonymized form the retention policy defines.
+
+Open questions:
+
+- [ ] Q-13: Retention period, and whether IP addresses are stored at all.
+
+### Notifications
+
+Issue: #50. Depends on email delivery.
+
+Rules:
+
+1. Transactional and security mail (reset, verification, new device, MFA change) cannot be disabled.
+2. Each optional mail type is a separate opt-in, off by default where consent is required, settable
+   in account settings and revocable there.
+3. An unsubscribe link works without login via a signed, expiring token, and stops that mail type
+   immediately. The token cannot change another `Konto`'s preferences.
+4. Preferences are recorded with a timestamp and honoured across all senders; a manual unsubscribe
+   is never silently re-enabled.
+
+Open questions:
+
+- [ ] Q-14: Which optional mail types exist at launch.
+
 ## Risks and open questions
 
 - [ ] Q-3: Password recovery needs an outbound email channel even though registration needs no
@@ -223,6 +431,7 @@ get domain unit tests in the backend core.
 | 2026-10-23 | Q-2: `System-Administrator` accounts are provisioned out of band; no self-service elevation (tracked in issue #34). | TimerErTim (PO) |
 | 2026-10-23 | Q-4: Throttle thresholds fixed exactly in rule 5; configurability tracked in issue #26. | TimerErTim (PO) |
 | 2026-10-23 | Registration answers generically (rule 4, review finding 1): duplicate registration notifies the existing `Konto` instead of failing with 409. | Agent (MiMo) |
+| 2026-10-23 | Deferred capabilities (email delivery, verification, email change, account security, MFA, external identity providers, passkeys, administration, auth audit, notifications) written as Draft sections with their delivery issues; MVP scope unchanged. | Agent (Cursor) |
 
 ## Revision history
 
@@ -230,3 +439,4 @@ get domain unit tests in the backend core.
 |------|--------|----|
 | 2026-10-23 | Initial draft from issue #9 and PO decisions. | Agent (MiMo) |
 | 2026-10-23 | PO decisions Q-1/Q-2/Q-4 (anonymized `Runden` on deletion, out-of-band admins, exact throttle thresholds); registration enumeration oracle closed; data-model and API sketches moved to ADR-0002; review fixes. | Agent (MiMo) |
+| 2026-10-23 | Added the "Deferred capabilities" part with one Draft section per deferred requirement, each anchored to its delivery issue; former out-of-scope bullets now link here. MVP contract text unchanged. | Agent (Cursor) |
