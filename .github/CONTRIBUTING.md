@@ -12,9 +12,28 @@ how work flows. GitHub is the hub: issues, project board, milestones, pull reque
 | Roadmap and status | GitHub Project "logandaim.at" | Priority order and workflow state. |
 | Milestone gates | [Milestones](https://github.com/TimerErTim/logandaim.at/milestones) | `M0 Rebrand`, `M1 MVP`, `M2 Offline`. No dates unless committed. |
 | Delivery | Pull requests | Code, tests, evidence. |
-| User-visible changes | [`CHANGELOG.md`](../CHANGELOG.md) | Keep a Changelog format. |
+| User-visible changes | [`CHANGELOG.md`](../CHANGELOG.md) | Keep a Changelog format. End-user facing only. |
 
 No backlog lives in local files. `tasks/` holds `mise` task definitions only.
+
+## CHANGELOG scope
+
+`CHANGELOG.md` is written **for end users**, not for the team. It answers one question: *what is
+different for someone using the product?* Only record changes a user can observe:
+
+- new or changed user-facing behavior, fixes to broken behavior, removed features
+- user-visible performance, reliability, or compatibility changes
+- breaking changes users must react to
+
+Do **not** record work that has no observable effect for users. This includes spec refinements,
+spec and ADR drafting or approval, issue triage, label and milestone changes, refactors that keep
+behavior identical, internal architecture or documentation changes, CI, tooling, dependency
+updates, and test-only changes. The changelog is not a project-management or PO record; that is
+what issues, PRs, specs, and the project board are for.
+
+When unsure, ask: *if this shipped alone, would a user notice?* If not, leave it out.
+
+Entries are phrased from the user's perspective — describe the effect, not the implementation.
 
 ## Labels and priority
 
