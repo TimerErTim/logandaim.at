@@ -56,6 +56,16 @@ fail() {
 grep -q "^## \\[$version\\] - [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$" CHANGELOG.md \\
   || fail "CHANGELOG.md has no dated '## [$version] - YYYY-MM-DD' section"
 
+# The section must say something: a dated heading with no entries would publish an
+# empty release body as the changelog part.
+section_entries=$(
+  sed -n "/^## \\[$version\\]/,/^## \\[/p" CHANGELOG.md \\
+    | grep -E '^(### |[-*] )' \\
+    | wc -l
+)
+[ "$section_entries" -gt 0 ] \\
+  || fail "CHANGELOG.md has no entries under '## [$version]'"
+
 # Compare against the most recent release tag rather than `main`, so the check
 # behaves the same in a release pull request and in the push-to-main run that
 # follows it. Tags are created by the `main` workflow only.
