@@ -1,0 +1,13 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+
+# The only command CI runs for quality assurance. Local runs use the same task,
+# so the pipelines cannot drift from a developer machine.
+
+["ci"]
+description = "Full gate: check, test, build, smoke-test"
+depends = ["check", "test", "build", "verify"]
+
+["ci:release"]
+description = "Full gate plus release validation for a dev -> main pull request"
+depends = ["ci"]
+run = "mise run check:release"

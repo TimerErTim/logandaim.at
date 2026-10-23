@@ -1,0 +1,129 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+
+# Release helpers.
+#
+# The release body has three parts, in this order:
+#   1. the description (body) of the `dev` -> `main` pull request that ships the release
+#   2. the `## [X.Y.Z]` section of CHANGELOG.md
+#   3. the `New Contributors` block from GitHub's generated release notes
+#
+# GitHub attaches the source archives to the release itself; no assets are uploaded.
+
+["release:version"]
+description = "Bump the workspace and frontend versions for a release PR"
+usage = """
+arg "<kind>" help="patch, minor, major, or an explicit X.Y.Z version"
+"""
+run = """
+#!/usr/bin/env bash
+set -eu
+
+current=$(sed -n '/^\\[workspace.package\\]/,/^\\[/p' Cargo.toml | sed -n 's/^version = "\\(.*\\)"/\\1/p' | head -n1)
+IFS=. read -r major minor patch <<EOF
+$current
+EOF
+
+case "${usage_kind}" in
+  patch) next="$major.$minor.$((patch + 1))" ;;
+  minor) next="$major.$((minor + 1)).0" ;;
+  major) next="$((major + 1)).0.0" ;;
+  *) next="${usage_kind}" ;;
+esac
+
+echo "$next" | grep -Eq '^[0-9]+\\.[0-9]+\\.[0-9]+$' || {
+  echo "release:version: '$next' is not a semantic version" >&2
+  exit 1
+}
+
+sed -i "0,/^version = \\".*\\"/s//version = \\"$next\\"/" Cargo.toml
+jq --indent 2 --arg v "$next" '.version = $v' frontend/package.json > frontend/package.json.tmp
+mv frontend/package.json.tmp frontend/package.json
+
+echo "release:version: $current -> $next"
+echo "Now move the Unreleased changelog entries into '## [$next] - $(date +%F)'."
+"""
+
+["release:notes"]
+description = "Write the release body for a version to stdout or a file"
+usage = """
+arg "<version>" help="Version without the v prefix, for example 0.2.0"
+flag "--pr <pr>" help="Pull request number of the dev -> main release PR"
+flag "-o --out <path>" help="Write to this file instead of stdout"
+"""
+run = """
+#!/usr/bin/env bash
+set -eu
+
+GH=${LOGANDAIM_GH:-gh}
+version="${usage_version}"
+pr="${usage_pr:-}"
+out="${usage_out:-}"
+
+[ -n "$pr" ] || { echo "release:notes: --pr <number> is required" >&2; exit 1; }
+
+repo="${LOGANDAIM_REPO:-$(git remote get-url github 2>/dev/null | sed -e 's|^git@github.com:||' -e 's|\\.git$||')}"
+[ -n "$repo" ] || repo="${GITHUB_REPOSITORY:-TimerErTim/logandaim.at}"
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+# 1. Release description: the body of the merged release pull request.
+"$GH" pr view "$pr" --repo "$repo" --json body --jq '.body' > "$tmp/pr.md"
+
+# 2. Changelog section for this version. A section ends at the next heading or at
+# the link-reference block at the bottom of the file.
+awk -v v="$version" '
+  $0 == "## [" v "]" || index($0, "## [" v "] ") == 1 { capture = 1; next }
+  capture && (/^## / || (substr($0, 1, 1) == "[" && index($0, "]: ") > 1)) { exit }
+  capture { print }
+' CHANGELOG.md > "$tmp/changelog.raw"
+# Trim leading and trailing blank lines.
+awk '
+  /^[[:space:]]*<!--/ { in_comment = 1 }
+  { if (in_comment) { if (/-->/) in_comment = 0; next } }
+  { line[NR] = $0 }
+  END {
+    first = 1
+    last = NR
+    while (first <= last && line[first] ~ /^[[:space:]]*$/) first++
+    while (last >= first && line[last] ~ /^[[:space:]]*$/) last--
+    for (i = first; i <= last; i++) print line[i]
+  }
+' "$tmp/changelog.raw" > "$tmp/changelog.md"
+
+# 3. First-time contributors from GitHub's generated notes.
+previous_tag=$("$GH" release list --repo "$repo" --limit 1 --json tagName --jq '.[0].tagName // ""')
+if [ -n "$previous_tag" ]; then
+  "$GH" api "repos/$repo/releases/generate-notes" \\
+    -f tag_name="v$version" \\
+    -f previous_tag_name="$previous_tag" \\
+    --jq '.body' > "$tmp/generated.md"
+else
+  "$GH" api "repos/$repo/releases/generate-notes" \\
+    -f tag_name="v$version" \\
+    --jq '.body' > "$tmp/generated.md"
+fi
+awk '
+  /^## New Contributors/ { capture = 1 }
+  capture && /^## / && !/^## New Contributors/ { exit }
+  capture { print }
+' "$tmp/generated.md" > "$tmp/contributors.md"
+
+{
+  cat "$tmp/pr.md"
+  printf '\\n\\n'
+  printf '## Changelog\\n\\n'
+  cat "$tmp/changelog.md"
+  if [ -s "$tmp/contributors.md" ]; then
+    printf '\\n\\n'
+    cat "$tmp/contributors.md"
+  fi
+} > "$tmp/notes.md"
+
+if [ -n "$out" ]; then
+  cp "$tmp/notes.md" "$out"
+  echo "release:notes: wrote $out" >&2
+else
+  cat "$tmp/notes.md"
+fi
+"""

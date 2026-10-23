@@ -8,6 +8,73 @@ depends = ["LOGANDAIM_FMT_CHECK=true fmt:?*"]
 description = "Check the linting of the code"
 depends = ["lint:?*"]
 
+["check:openapi"]
+description = "Fail when the generated OpenAPI client differs from the exported spec"
+# `depends` instead of a nested `mise run`: mise runs the shared dependency once per
+# invocation, so the schema file is written once even when `build:frontend` and
+# `lint:check:ts` need it in the same run.
+depends = ["sync:openapi"]
+run = "git diff --exit-code -- frontend/src/api/schema.ts"
+
+["check:version"]
+description = "Fail when the workspace, frontend, and changelog versions disagree"
+run = """
+#!/usr/bin/env bash
+set -eu
+
+cargo_version=$(sed -n '/^\\[workspace.package\\]/,/^\\[/p' Cargo.toml | sed -n 's/^version = "\\(.*\\)"/\\1/p' | head -n1)
+frontend_version=$(jq -r '.version' frontend/package.json)
+latest_changelog=$(sed -n 's/^## \\[\\([0-9][^]]*\\)\\].*/\\1/p' CHANGELOG.md | head -n1)
+
+fail() {
+  echo "check:version: $1" >&2
+  exit 1
+}
+
+[ -n "$cargo_version" ] || fail "no version in [workspace.package] of Cargo.toml"
+[ "$cargo_version" = "$frontend_version" ] || fail "Cargo.toml version '$cargo_version' != frontend/package.json version '$frontend_version'"
+if [ -n "$latest_changelog" ]; then
+  [ "$cargo_version" = "$latest_changelog" ] || fail "Cargo.toml version '$cargo_version' != newest CHANGELOG.md release '$latest_changelog'"
+fi
+grep -q '^## \\[Unreleased\\]' CHANGELOG.md || fail "CHANGELOG.md has no ## [Unreleased] section"
+
+echo "check:version: $cargo_version ok"
+"""
+
+["check:release"]
+description = "Verify that this branch is a valid release for the current version"
+run = """
+#!/usr/bin/env bash
+set -eu
+
+version=$(sed -n '/^\\[workspace.package\\]/,/^\\[/p' Cargo.toml | sed -n 's/^version = "\\(.*\\)"/\\1/p' | head -n1)
+fail() {
+  echo "check:release: $1" >&2
+  exit 1
+}
+
+grep -q "^## \\[$version\\] - [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$" CHANGELOG.md \\
+  || fail "CHANGELOG.md has no dated '## [$version] - YYYY-MM-DD' section"
+
+# Compare against the most recent release tag rather than `main`, so the check
+# behaves the same in a release pull request and in the push-to-main run that
+# follows it. Tags are created by the `main` workflow only.
+previous_tag=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+if [ -n "$previous_tag" ]; then
+  released_version=$(
+    git show "$previous_tag:Cargo.toml" 2>/dev/null \\
+      | sed -n '/^\\[workspace.package\\]/,/^\\[/p' \\
+      | sed -n 's/^version = "\\(.*\\)"/\\1/p' \\
+      | head -n1
+  )
+  if [ -n "$released_version" ] && [ "$released_version" = "$version" ]; then
+    fail "version '$version' was already released as $previous_tag; bump it before opening the release pull request"
+  fi
+fi
+
+echo "check:release: $version ok"
+"""
+
 ["check"]
 description = "Check the code"
-depends = ["check:format", "check:lint"]
+depends = ["check:format", "check:lint", "check:openapi", "check:version"]

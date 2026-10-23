@@ -1,0 +1,39 @@
+name: Setup
+description: Check out the repository and install every tool and dependency through mise.
+
+inputs:
+  checkout:
+    description: Check out the repository. Disable when the caller already checked out.
+    default: "true"
+  fetch-depth:
+    description: History depth. Use 0 for tasks that diff against `origin/main`, such as `check:release`.
+    default: "1"
+
+runs:
+  using: composite
+  steps:
+    - name: Check out repository
+      if: inputs.checkout == 'true'
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: ${{ inputs.fetch-depth }}
+
+    # Installs the tools declared in mise.toml, including the Rust toolchain from
+    # rust-toolchain.toml. mise-action caches the tool downloads, so the manual
+    # actions/cache blocks the old workflows carried are no longer needed.
+    - name: Install mise
+      uses: jdx/mise-action@v5
+      with:
+        install: true
+        cache: true
+
+    - name: Install project dependencies
+      shell: bash
+      run: mise deps install
+
+    # Rust compilation artefacts. This is the only cache besides mise's own tool cache.
+    - name: Cache Rust build artefacts
+      uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: ci
+        cache-on-failure: true

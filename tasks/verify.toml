@@ -1,0 +1,113 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+
+# Smoke tests.
+#
+# Each service is split in three:
+#   run:*     long-running process, always starts with `exec` so stop signals reach it
+#   smoke:*   assumes the service already runs, only health-checks it
+#   verify:*  `daemons = [...]` starts the service and waits for readiness,
+#             `depends = ["smoke:*"]` then runs the checks
+#
+# `depends` is required: a task started through `run = [{ task = "..." }]` does not
+# start daemons. Daemons outlive the task, so stop them with
+# `mise daemons stop frontend server`.
+#
+# Ports mirror [vars] FRONTEND_PORT / API_PORT in mise.toml. The daemons use literal
+# ports because mise only renders templates inside `run`.
+
+["run:frontend"]
+description = "Serve the built static frontend export"
+dir = "{{ vars.REPO_ROOT }}/frontend"
+depends = ["build:frontend"]
+run = "exec serve out --listen tcp://127.0.0.1:$PORT --no-clipboard --no-port-switching"
+
+["smoke:frontend"]
+description = "Health-check an already running frontend"
+run = """
+#!/usr/bin/env bash
+set -eu
+BASE_URL="${LOGANDAIM_FRONTEND_URL:-http://127.0.0.1:{{ vars.FRONTEND_PORT }}}"
+
+fail() {
+  echo "smoke:frontend: $1" >&2
+  exit 1
+}
+
+status=$(curl -fsS -o /dev/null -w '%{http_code}' "$BASE_URL/" || true)
+[ "$status" = "200" ] || fail "$BASE_URL/ returned '$status', expected 200"
+
+curl -fsS "$BASE_URL/" | grep -q '<html' || fail "$BASE_URL/ is not an HTML document"
+
+# The export uses trailing slashes, so the server redirects `/404.html` to `/404`.
+# Follow redirects: what matters is that a static 404 page is reachable.
+curl -fsSL "$BASE_URL/404.html" | grep -q '<html' || fail "$BASE_URL/404.html is not reachable as HTML"
+
+echo "smoke:frontend: ok ($BASE_URL)"
+"""
+
+["verify:frontend"]
+description = "Start the frontend daemon and smoke-test it"
+daemons = ["frontend"]
+depends = ["smoke:frontend"]
+
+["run:server"]
+description = "Run the backend server with a throwaway database"
+usage = """
+flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build and run the release profile"
+"""
+run = """
+#!/usr/bin/env bash
+set -eu
+DATA_DIR="${LOGANDAIM_SMOKE_DATA_DIR:-$(mktemp -d)}"
+mkdir -p "$DATA_DIR/storage"
+
+export LOGANDAIM_BIND_ADDRESS=127.0.0.1
+export LOGANDAIM_BIND_PORT="${PORT:-{{ vars.API_PORT }}}"
+export LOGANDAIM_DATABASE_URL="$DATA_DIR/smoke.db"
+export LOGANDAIM_OBJECT_STORE_DIR="$DATA_DIR/storage"
+unset LOGANDAIM_LOG_DIR || true
+
+BINARY="target/debug/logandaim-server"
+[ "${usage_release:-}" = "true" ] && BINARY="target/release/logandaim-server"
+
+exec "$BINARY"
+"""
+depends = ["build:server"]
+
+["smoke:server"]
+description = "Health-check an already running backend"
+run = """
+#!/usr/bin/env bash
+set -eu
+BASE_URL="${LOGANDAIM_API_URL:-http://127.0.0.1:{{ vars.API_PORT }}}"
+
+fail() {
+  echo "smoke:server: $1" >&2
+  exit 1
+}
+
+# The endpoint returns the JSON string "OK", so drop the quotes before comparing.
+body=$(curl -fsS "$BASE_URL/api/health" | tr -d '"' || true)
+[ "$body" = "OK" ] || fail "/api/health returned '$body', expected OK"
+
+curl -fsS "$BASE_URL/spec.json" | jq -e . >/dev/null || fail "/spec.json is not valid JSON"
+curl -fsS -o /dev/null "$BASE_URL/spec.yaml" || fail "/spec.yaml did not return 200"
+curl -fsS -o /dev/null "$BASE_URL/swagger" || fail "/swagger did not return 200"
+
+status=$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL/api/does-not-exist")
+case "$status" in
+  404|405) ;;
+  *) fail "/api/does-not-exist returned '$status', expected 404 or 405" ;;
+esac
+
+echo "smoke:server: ok ($BASE_URL)"
+"""
+
+["verify:server"]
+description = "Start the backend daemon and smoke-test it"
+daemons = ["server"]
+depends = ["smoke:server"]
+
+["verify"]
+description = "Smoke-test the built frontend and backend"
+depends = ["verify:frontend", "verify:server"]

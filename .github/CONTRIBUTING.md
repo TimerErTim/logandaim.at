@@ -87,10 +87,70 @@ UI-only settings (no API exists), set once by a maintainer:
 
 Add more views only when a real coordination question needs one.
 
+## Branches
+
+`dev` is the integration branch and the default branch. `main` is the release branch.
+
+| Branch | Purpose | Pull requests into it |
+|--------|---------|------------------------|
+| `dev` | Integration. Everything merges here first. | Feature, fix, chore, and spec branches. Uses the default pull request template. |
+| `main` | Releases. A merge here deploys. | Only `dev` and `hotfix/*`. Uses the release template. |
+
+A release pull request (`dev` -> `main`) bumps the version, writes the dated changelog section, and
+whose description becomes the release body. Merging it deploys the static frontend to GitHub Pages
+and creates a source-only GitHub release tagged `v<version>`. See the
+[release template](PULL_REQUEST_TEMPLATE/release.md).
+
+Tags are created by the workflow, never pushed by hand, so a failing gate cannot leave a tag
+behind.
+
+## Checks
+
+| Check | Runs on | Meaning |
+|-------|---------|---------|
+| `pr/base` | Every pull request, every push to `dev`, and the release gate on `main` | The full gate: `mise run ci`. |
+| `pr/dev` | Pull requests into `dev` | Conventional title and a `Closes #N` link. |
+| `pr/main` | Pull requests into `main` | Conventional title, `dev` or `hotfix/*` source, issue references, and a `## Release description` section. |
+| `release-check` | Pull requests into `main`, called by the push to `main` | Version bumped past the last release tag, dated changelog section, versions agree. |
+| `deploy/pages` | Push to `main` | Deploys `frontend/out` to GitHub Pages. |
+| `deploy/release` | Push to `main` | Creates the source-only GitHub release. |
+| `deploy/backend` | Push to `main` | Reserved for #15 and #24. |
+
+`pr/dev` and `pr/main` both always run and pass when they do not apply, so their names exist on
+every pull request and can be required on either branch.
+
+`release-check` lives in its own workflow because `pr.yml` only triggers on pull requests. Being a
+reusable workflow, `main.yml` also calls it as a job before `deploy/pages`, so a release that
+bypassed its pull request still fails before any deployment or tag.
+
+Required checks: `pr/base` and `pr/dev` on `dev`; `pr/base`, `pr/main`, and `release-check` on
+`main`. Deployment jobs are deliberately not required checks: they only run on push to `main`, so
+they would never report on a pull request.
+
+## Local gate
+
+`mise run ci` is the whole delivery gate: `check` (formatting, clippy, biome, `tsc`, OpenAPI drift,
+version agreement), `test`, `build`, and `verify` (daemon-based smoke tests of the built frontend
+and backend). CI runs the same task, so a green local run means a green pipeline unless the
+environment differs.
+
+Useful tasks:
+
+| Task | Purpose |
+|------|---------|
+| `mise run ci` | Full gate. |
+| `mise run verify:frontend`, `mise run verify:server` | Start one service as a daemon and smoke-test it. |
+| `mise run check:release` | Validate a release pull request. |
+| `mise run release:version <kind>` | Bump the workspace and frontend versions. |
+| `mise run release:notes <version> --pr <n>` | Preview the release body. |
+| `mise daemons stop` | Stop the verify daemons after a local run. |
+
 ## Workflow
 
 ```
-Draft spec ──PO approves──▶ issues (Inbox) ──Ready gate──▶ Ready ──▶ In progress ──▶ PR ──▶ In review ──merge──▶ Done
+Draft spec ──PO approves──▶ issues (Inbox) ──Ready gate──▶ Ready ──▶ In progress ──▶ PR to dev ──▶ In review ──merge──▶ dev
+                                                                                                          │
+                                                                                          release PR dev -> main ──merge──▶ main (deploy + release)
 ```
 
 ### Ready gate
@@ -112,9 +172,14 @@ A PR may merge only when:
 
 1. It links the issue (`Closes #N`) and the spec section.
 2. Every covered AC is checked off with evidence.
-3. `mise run check` and `mise run test` pass in CI; affected builds pass.
+3. `pr/base` passes in CI, on the same runner image. Release pull requests also pass
+   `release-check`.
 4. `CHANGELOG.md` has an `Unreleased` entry for user-visible changes.
 5. A human reviewed product behavior and architecture.
+
+Release pull requests additionally pass `release-check` and `pr/main`: the version differs from the
+last release, the changelog has a dated section for it, and the pull request carries a
+`## Release description`.
 
 ## Agents
 
@@ -135,10 +200,11 @@ Agent session loop:
 
 1. Pick the highest-priority open issue labeled `ready` and `agent-ok` in the current milestone.
 2. Read the linked spec section and [`.cursor/AGENTS.md`](../.cursor/AGENTS.md).
-3. Implement the vertical slice in the order `.cursor/AGENTS.md` prescribes. Add tests at each affected layer.
-4. Run `mise run check` and `mise run test`. Run `mise run sync:openapi` if the API changed.
-5. Update `CHANGELOG.md` and the spec's `issues:` list.
-6. Open a PR from the template. Report commands and results.
+3. Branch from `dev` and implement one issue per branch and pull request.
+4. Implement the vertical slice in the order `.cursor/AGENTS.md` prescribes. Add tests at each affected layer.
+5. Run `mise run ci`. Run `mise run sync:openapi` if the API changed (the gate also detects drift).
+6. Update `CHANGELOG.md` and the spec's `issues:` list.
+7. Open a pull request from the template, targeting `dev`. Report commands and results.
 
 ## Commits
 
