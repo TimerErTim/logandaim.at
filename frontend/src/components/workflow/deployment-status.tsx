@@ -1,8 +1,7 @@
 "use client";
 
 import { useHealthQuery } from "@/api/hooks";
-import { useYamsApi } from "@/api/provider";
-import { Alert } from "@/components/ui/alert";
+import { useLogandaimApi } from "@/api/provider";
 import {
   Card,
   CardContent,
@@ -12,11 +11,7 @@ import {
 } from "@/components/ui/card";
 
 export function DeploymentStatus() {
-  const {
-    remoteApiBaseUrl,
-    loading: apiBootstrapping,
-    error: apiBootstrapError,
-  } = useYamsApi();
+  const { apiBaseUrl } = useLogandaimApi();
   const health = useHealthQuery();
 
   return (
@@ -28,26 +23,18 @@ export function DeploymentStatus() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {apiBootstrapping ? (
-          <p className="text-sm text-zinc-500">Resolving adapter…</p>
-        ) : apiBootstrapError ? (
-          <Alert variant="error">{apiBootstrapError}</Alert>
-        ) : (
-          <dl className="grid gap-3 text-sm sm:grid-cols-2">
-            {remoteApiBaseUrl ? (
-              <div>
-                <dt className="font-medium text-zinc-500">API base</dt>
-                <dd className="mt-0.5 font-mono text-xs">{remoteApiBaseUrl}</dd>
-              </div>
-            ) : null}
-            <div>
-              <dt className="font-medium text-zinc-500">Health</dt>
-              <dd className="mt-0.5">
-                {health.isPending ? "…" : (health.data ?? "—")}
-              </dd>
-            </div>
-          </dl>
-        )}
+        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="font-medium text-zinc-500">API base</dt>
+            <dd className="mt-0.5 font-mono text-xs">{apiBaseUrl}</dd>
+          </div>
+          <div>
+            <dt className="font-medium text-zinc-500">Health</dt>
+            <dd className="mt-0.5">
+              {health.isPending ? "…" : (health.data ?? "—")}
+            </dd>
+          </div>
+        </dl>
       </CardContent>
     </Card>
   );

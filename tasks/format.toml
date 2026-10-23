@@ -4,7 +4,7 @@
 description = "Format the frontend code with biome"
 dir = "{{ vars.REPO_ROOT }}/frontend"
 usage = """
-flag "--check" env="YAMS_FMT_CHECK" help="Only performs a check of the formatting"
+flag "--check" env="LOGANDAIM_FMT_CHECK" help="Only performs a check of the formatting"
 """
 run = """
 #!/usr/bin/env bash
@@ -18,7 +18,7 @@ fi
 ["fmt:rust"]
 description = "Format the rust code"
 usage = """
-flag "--check" env="YAMS_FMT_CHECK" help="Only performs a check of the formatting"
+flag "--check" env="LOGANDAIM_FMT_CHECK" help="Only performs a check of the formatting"
 """
 run = """
 #!/usr/bin/env bash
@@ -29,7 +29,7 @@ cargo fmt --all $FMT_CMD
 ["fmt:typst"]
 description = "Format the typst code"
 usage = """
-flag "--check" env="YAMS_FMT_CHECK" help="Only performs a check of the formatting"
+flag "--check" env="LOGANDAIM_FMT_CHECK" help="Only performs a check of the formatting"
 """
 tools = { typstyle = "latest" }
 run = """
@@ -40,7 +40,7 @@ typstyle . --wrap-text $([ "${usage_check:-}" = "true" ] && echo "--diff" || ech
 ["fmt:newline"]
 description = "Ensures every non-binary file ends with a newline"
 usage = """
-flag "--check" env="YAMS_FMT_CHECK" help="Only performs a check of the formatting"
+flag "--check" env="LOGANDAIM_FMT_CHECK" help="Only performs a check of the formatting"
 """
 tools."cargo:lineguard" = { version = "0.2.1" }
 run = """

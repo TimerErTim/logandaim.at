@@ -1,8 +1,8 @@
 ["lint:crates"]
 description = "Check all rust crates"
 usage = """
-flag "--fix" env="YAMS_LINT_FIX" help="Apply all lint suggestions"
-flag "--allow-dirty" env="YAMS_LINT_FIX_DIRTY" help="Allow dirty working directory"
+flag "--fix" env="LOGANDAIM_LINT_FIX" help="Apply all lint suggestions"
+flag "--allow-dirty" env="LOGANDAIM_LINT_FIX_DIRTY" help="Allow dirty working directory"
 """
 run = '''
 #!/usr/bin/env bash
@@ -23,8 +23,8 @@ run = "npm run check:ts"
 description = "Lint frontend"
 dir = "{{ vars.REPO_ROOT }}/frontend"
 usage = """
-flag "--fix" env="YAMS_LINT_FIX" help="Apply all lint suggestions"
-flag "--allow-unsafe" env="YAMS_LINT_FIX_UNSAFE" help="Allow unsafe lint suggestions"
+flag "--fix" env="LOGANDAIM_LINT_FIX" help="Apply all lint suggestions"
+flag "--allow-unsafe" env="LOGANDAIM_LINT_FIX_UNSAFE" help="Allow unsafe lint suggestions"
 """
 run = """
 #!/usr/bin/env bash

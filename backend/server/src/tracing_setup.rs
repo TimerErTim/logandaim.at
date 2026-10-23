@@ -10,7 +10,7 @@ static LOG_GUARD: OnceLock<tracing_appender::non_blocking::WorkerGuard> = OnceLo
 pub fn init_tracing(log_dir: Option<&Path>) {
     let filter = EnvFilter::builder()
         .with_default_directive(LevelFilter::INFO.into())
-        .with_env_var("YAMS_LOG_LEVEL")
+        .with_env_var("LOGANDAIM_LOG_LEVEL")
         .from_env_lossy();
 
     let stdout_layer = fmt::layer()
@@ -24,7 +24,7 @@ pub fn init_tracing(log_dir: Option<&Path>) {
 
     std::fs::create_dir_all(log_dir).expect("failed to create log directory");
 
-    let file_appender = tracing_appender::rolling::daily(log_dir, "yams-server.json");
+    let file_appender = tracing_appender::rolling::daily(log_dir, "logandaim-server.json");
     let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
     LOG_GUARD.set(guard).ok();
 

@@ -2,13 +2,13 @@
 ["export:openapi"]
 description = "Export OpenAPI spec to stdout"
 raw = true
-run = "cargo run -p yams-api --bin export_spec --features openapi"
+run = "cargo run -p logandaim-api --bin export_spec --features openapi"
 
 ["sync:openapi"]
 description = "Sync OpenAPI spec from backend to frontend"
 dir = "{{ vars.REPO_ROOT }}/frontend"
 usage = """
-flag "--release" env="YAMS_SYNC_OPENAPI_RELEASE" help="Build the OpenAPI spec in release mode"
+flag "--release" env="LOGANDAIM_SYNC_OPENAPI_RELEASE" help="Build the OpenAPI spec in release mode"
 """
 run = """
 #!/usr/bin/env bash

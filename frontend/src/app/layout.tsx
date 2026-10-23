@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "YAMS",
+  title: "logandaim.at",
   description: "Yet Another Management Software",
 };
 
