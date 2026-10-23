@@ -104,6 +104,14 @@ and creates a source-only GitHub release tagged `v<version>`. See the
 Tags are created by the workflow, never pushed by hand, so a failing gate cannot leave a tag
 behind.
 
+### Merge method
+
+Pull requests **merge**; they are never squashed or rebased. Release pull requests carry `dev`'s
+merge commits into `main`, which is inherently non-linear, and rewriting history would contradict
+`.cursor/AGENTS.md` ("merge, don't rebase, to integrate upstream"). The branch rulesets allow only
+merge commits, and `main` keeps no linear-history rule. Conflict resolutions stay visible in
+history.
+
 ## Checks
 
 | Check | Runs on | Meaning |
