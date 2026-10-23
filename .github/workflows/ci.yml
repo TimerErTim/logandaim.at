@@ -28,7 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Set up repository
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up tooling
         uses: ./.github/actions/setup
 
       - name: Run the full gate

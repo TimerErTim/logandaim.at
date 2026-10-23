@@ -22,11 +22,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Set up repository
-        uses: ./.github/actions/setup
+      - name: Check out repository
+        uses: actions/checkout@v5
         with:
           # Tags are needed to compare against the previous release.
           fetch-depth: 0
+
+      - name: Set up tooling
+        uses: ./.github/actions/setup
 
       - name: Verify the release
         run: mise run check:release

@@ -42,7 +42,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Set up repository
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up tooling
         uses: ./.github/actions/setup
 
       - name: Configure Pages
@@ -78,10 +81,13 @@ jobs:
       contents: write
       pull-requests: read
     steps:
-      - name: Set up repository
-        uses: ./.github/actions/setup
+      - name: Check out repository
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Set up tooling
+        uses: ./.github/actions/setup
 
       - name: Read the version
         id: version
