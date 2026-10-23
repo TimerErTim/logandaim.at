@@ -50,6 +50,7 @@ arg "<version>" help="Version without the v prefix, for example 0.2.0"
 flag "--pr <pr>" help="Pull request number of the dev -> main release PR"
 flag "-o --out <path>" help="Write to this file instead of stdout"
 """
+tools.gh = "latest"
 run = """
 #!/usr/bin/env bash
 set -eu
@@ -150,4 +151,52 @@ if [ -n "$out" ]; then
 else
   cat "$tmp/notes.md"
 fi
+"""
+
+["release:publish"]
+description = "Create the source-only GitHub release for the current commit"
+usage = """
+arg "[version]" help="Version without the v prefix; read from Cargo.toml when omitted"
+flag "--pr <pr>" help="Merged release pull request; derived from HEAD when omitted"
+"""
+tools.gh = "latest"
+run = """
+#!/usr/bin/env bash
+set -eu
+
+version="${usage_version:-}"
+if [ -z "$version" ]; then
+  version=$(sed -n '/^\\[workspace.package\\]/,/^\\[/p' Cargo.toml | sed -n 's/^version = "\\(.*\\)"/\\1/p' | head -n1)
+fi
+[ -n "$version" ] || { echo "release:publish: no version in Cargo.toml" >&2; exit 1; }
+
+repo="${LOGANDAIM_REPO:-${GITHUB_REPOSITORY:-TimerErTim/logandaim.at}}"
+sha="${GITHUB_SHA:-$(git rev-parse HEAD)}"
+fail() {
+  echo "release:publish: $1" >&2
+  exit 1
+}
+
+GH=${LOGANDAIM_GH:-gh}
+
+"$GH" release view "v$version" --repo "$repo" >/dev/null 2>&1 \\
+  && fail "release v$version already exists; bump the version"
+
+pr="${usage_pr:-}"
+if [ -z "$pr" ]; then
+  pr=$("$GH" api "repos/$repo/commits/$sha/pulls" --jq '.[0].number // ""')
+fi
+[ -n "$pr" ] || fail "no pull request found for $sha"
+
+notes=$(mktemp)
+trap 'rm -f "$notes"' EXIT
+mise run --no-deps release:notes "$version" --pr "$pr" -o "$notes"
+
+"$GH" release create "v$version" \\
+  --repo "$repo" \\
+  --target "$sha" \\
+  --title "v$version" \\
+  --notes-file "$notes"
+
+echo "release:publish: created v$version from $sha"
 """

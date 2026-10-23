@@ -3765,7 +3765,7 @@
       "node_kind": "heading",
       "norm_label": "behavior",
       "source_file": ".github/pull_request_template.md",
-      "source_location": "L8"
+      "source_location": "L10"
     },
     {
       "id": "github_pull_request_template_checklist",
@@ -3777,7 +3777,7 @@
       "node_kind": "heading",
       "norm_label": "checklist",
       "source_file": ".github/pull_request_template.md",
-      "source_location": "L25"
+      "source_location": "L20"
     },
     {
       "id": "github_pull_request_template_notes",
@@ -3789,7 +3789,7 @@
       "node_kind": "heading",
       "norm_label": "notes",
       "source_file": ".github/pull_request_template.md",
-      "source_location": "L32"
+      "source_location": "L26"
     },
     {
       "id": "github_pull_request_template_test_evidence",
@@ -8510,18 +8510,6 @@
       "source_location": ""
     },
     {
-      "id": "github_pull_request_template_release",
-      "label": "release.md",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "Release pull request",
-      "file_type": "document",
-      "node_kind": "page",
-      "norm_label": "release.md",
-      "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L1"
-    },
-    {
       "id": "github_pull_request_template_release_checklist",
       "label": "Checklist",
       "_origin": "ast",
@@ -8531,7 +8519,7 @@
       "node_kind": "heading",
       "norm_label": "checklist",
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L30"
+      "source_location": "L26"
     },
     {
       "id": "github_pull_request_template_release_release_description",
@@ -8543,7 +8531,7 @@
       "node_kind": "heading",
       "norm_label": "release description",
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L6"
+      "source_location": "L8"
     },
     {
       "id": "github_pull_request_template_release_release_pull_request",
@@ -8558,18 +8546,6 @@
       "source_location": "L1"
     },
     {
-      "id": "github_pull_request_template_release_ships",
-      "label": "Ships",
-      "_origin": "ast",
-      "community": 2,
-      "community_name": "Release pull request",
-      "file_type": "document",
-      "node_kind": "heading",
-      "norm_label": "ships",
-      "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L11"
-    },
-    {
       "id": "github_pull_request_template_release_test_evidence",
       "label": "Test evidence",
       "_origin": "ast",
@@ -8579,7 +8555,7 @@
       "node_kind": "heading",
       "norm_label": "test evidence",
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L24"
+      "source_location": "L21"
     },
     {
       "id": "github_pull_request_template_release_version",
@@ -8591,7 +8567,7 @@
       "node_kind": "heading",
       "norm_label": "version",
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L17"
+      "source_location": "L14"
     },
     {
       "id": "crates_logandaim_core_src_adapters_system_clock",
@@ -10142,6 +10118,26 @@
       "norm_label": "sync",
       "source_file": "",
       "source_location": ""
+    },
+    {
+      "id": "specs_product_wertung",
+      "label": "wertung.md",
+      "_origin": "ast",
+      "community": 28,
+      "community_name": "Wertung \u2014 Classic 3-arrow scoring",
+      "file_type": "document",
+      "frontmatter": {
+        "id": "SPEC-wertung",
+        "title": "Classic 3-arrow scoring (first-hit and multi-shot)",
+        "status": "PO-approved",
+        "owner": "TimerErTim",
+        "issues": "[]",
+        "superseded_by": "null"
+      },
+      "node_kind": "page",
+      "norm_label": "wertung.md",
+      "source_file": "specs/product/wertung.md",
+      "source_location": "L1"
     },
     {
       "id": "specs_product_wertung_acceptance_criteria",
@@ -14828,26 +14824,6 @@
       "source_location": "L1"
     },
     {
-      "id": "specs_product_wertung",
-      "label": "wertung.md",
-      "_origin": "ast",
-      "community": 60,
-      "community_name": "charter.md",
-      "file_type": "document",
-      "frontmatter": {
-        "id": "SPEC-wertung",
-        "title": "Classic 3-arrow scoring (first-hit and multi-shot)",
-        "status": "PO-approved",
-        "owner": "TimerErTim",
-        "issues": "[]",
-        "superseded_by": "null"
-      },
-      "node_kind": "page",
-      "norm_label": "wertung.md",
-      "source_file": "specs/product/wertung.md",
-      "source_location": "L1"
-    },
-    {
       "id": "changelog",
       "label": "CHANGELOG.md",
       "_origin": "ast",
@@ -14893,6 +14869,18 @@
       "node_kind": "page",
       "norm_label": "contributing.md",
       "source_file": ".github/CONTRIBUTING.md",
+      "source_location": "L1"
+    },
+    {
+      "id": "github_pull_request_template_release",
+      "label": "release.md",
+      "_origin": "ast",
+      "community": 60,
+      "community_name": "charter.md",
+      "file_type": "document",
+      "node_kind": "page",
+      "norm_label": "release.md",
+      "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
       "source_location": "L1"
     },
     {
@@ -16776,7 +16764,7 @@
       "node_kind": "heading",
       "norm_label": "agents",
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L188"
+      "source_location": "L200"
     },
     {
       "id": "github_contributing_before_the_first_release",
@@ -16824,7 +16812,7 @@
       "node_kind": "heading",
       "norm_label": "checks",
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L107"
+      "source_location": "L115"
     },
     {
       "id": "github_contributing_commits",
@@ -16836,7 +16824,7 @@
       "node_kind": "heading",
       "norm_label": "commits",
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L213"
+      "source_location": "L225"
     },
     {
       "id": "github_contributing_contributing_and_project_management",
@@ -16860,7 +16848,7 @@
       "node_kind": "heading",
       "norm_label": "delivery gate",
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L173"
+      "source_location": "L185"
     },
     {
       "id": "github_contributing_github_project",
@@ -16896,7 +16884,19 @@
       "node_kind": "heading",
       "norm_label": "local gate",
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L130"
+      "source_location": "L141"
+    },
+    {
+      "id": "github_contributing_merge_method",
+      "label": "Merge method",
+      "_origin": "ast",
+      "community": 82,
+      "community_name": "Contributing and project management",
+      "file_type": "document",
+      "node_kind": "heading",
+      "norm_label": "merge method",
+      "source_file": ".github/CONTRIBUTING.md",
+      "source_location": "L107"
     },
     {
       "id": "github_contributing_ready_gate",
@@ -16908,7 +16908,7 @@
       "node_kind": "heading",
       "norm_label": "ready gate",
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L160"
+      "source_location": "L172"
     },
     {
       "id": "github_contributing_records",
@@ -16932,7 +16932,7 @@
       "node_kind": "heading",
       "norm_label": "workflow",
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L152"
+      "source_location": "L164"
     },
     {
       "id": "specs_decisions_0001_baseline_architecture_adr_0001_baseline_architecture",
@@ -42457,6 +42457,17 @@
       "weight": 1.0
     },
     {
+      "source": "github_contributing_branches",
+      "target": "github_contributing_merge_method",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/CONTRIBUTING.md",
+      "source_location": "L107",
+      "weight": 1.0
+    },
+    {
       "source": "github_contributing_changelog_scope",
       "target": "github_contributing_before_the_first_release",
       "relation": "contains",
@@ -42475,7 +42486,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L107",
+      "source_location": "L115",
       "weight": 1.0
     },
     {
@@ -42486,7 +42497,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L130",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -42497,18 +42508,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L152",
-      "weight": 1.0
-    },
-    {
-      "source": "github_contributing_contributing_and_project_management",
-      "target": "github_contributing_agents",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L188",
+      "source_location": "L164",
       "weight": 1.0
     },
     {
@@ -42524,13 +42524,24 @@
     },
     {
       "source": "github_contributing_contributing_and_project_management",
+      "target": "github_contributing_agents",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/CONTRIBUTING.md",
+      "source_location": "L200",
+      "weight": 1.0
+    },
+    {
+      "source": "github_contributing_contributing_and_project_management",
       "target": "github_contributing_commits",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L213",
+      "source_location": "L225",
       "weight": 1.0
     },
     {
@@ -42585,7 +42596,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L160",
+      "source_location": "L172",
       "weight": 1.0
     },
     {
@@ -42596,7 +42607,18 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/CONTRIBUTING.md",
-      "source_location": "L173",
+      "source_location": "L185",
+      "weight": 1.0
+    },
+    {
+      "source": "github_pull_request_template",
+      "target": "github_pull_request_template_behavior",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": ".github/pull_request_template.md",
+      "source_location": "L10",
       "weight": 1.0
     },
     {
@@ -42629,7 +42651,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/pull_request_template.md",
-      "source_location": "L25",
+      "source_location": "L20",
       "weight": 1.0
     },
     {
@@ -42640,18 +42662,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/pull_request_template.md",
-      "source_location": "L32",
-      "weight": 1.0
-    },
-    {
-      "source": "github_pull_request_template",
-      "target": "github_pull_request_template_behavior",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/pull_request_template.md",
-      "source_location": "L8",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -42667,24 +42678,13 @@
     },
     {
       "source": "github_pull_request_template_release_release_pull_request",
-      "target": "github_pull_request_template_release_ships",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L11",
-      "weight": 1.0
-    },
-    {
-      "source": "github_pull_request_template_release_release_pull_request",
       "target": "github_pull_request_template_release_version",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L17",
+      "source_location": "L14",
       "weight": 1.0
     },
     {
@@ -42695,7 +42695,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L24",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -42706,7 +42706,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L30",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -42717,7 +42717,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": ".github/PULL_REQUEST_TEMPLATE/release.md",
-      "source_location": "L6",
+      "source_location": "L8",
       "weight": 1.0
     },
     {
@@ -49740,5 +49740,5 @@
       "source_file": ".cursor/AGENTS.md"
     }
   ],
-  "built_at_commit": "280f00ddfc1119532a3c06402ff01384b41fe28e"
+  "built_at_commit": "9e10018a451e2df4b8bfa13aebad96332e0a49cb"
 }

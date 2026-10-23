@@ -21,8 +21,9 @@
 description = "Serve the built static frontend export"
 dir = "{{ vars.REPO_ROOT }}/frontend"
 depends = ["build:frontend"]
+tools."npm:serve" = "latest"
 # `$PORT` exists only under the daemon supervisor; fall back for a direct run.
-run = "exec serve out --listen tcp://127.0.0.1:${PORT:-{{ vars.FRONTEND_PORT }}} --no-clipboard --no-port-switching"
+run = 'exec serve out --listen tcp://127.0.0.1:${PORT:-{{ vars.FRONTEND_PORT }}} --no-clipboard --no-port-switching'
 
 ["smoke:frontend"]
 description = "Health-check an already running frontend"
@@ -67,14 +68,7 @@ set -eu
 DATA_DIR="${LOGANDAIM_SMOKE_DATA_DIR:-$(mktemp -d)}"
 mkdir -p "$DATA_DIR/storage"
 
-PROFILE="debug"
-PROFILE_ARGS=""
-if [ "${usage_release:-}" = "true" ]; then
-  PROFILE="release"
-  PROFILE_ARGS="--release"
-fi
-
-cargo build -p logandaim-server $PROFILE_ARGS
+cargo build -p logandaim-server{% if usage.release %} --release{% endif %}
 
 export LOGANDAIM_BIND_ADDRESS=127.0.0.1
 export LOGANDAIM_BIND_PORT="${PORT:-{{ vars.API_PORT }}}"
@@ -82,7 +76,7 @@ export LOGANDAIM_DATABASE_URL="$DATA_DIR/smoke.db"
 export LOGANDAIM_OBJECT_STORE_DIR="$DATA_DIR/storage"
 unset LOGANDAIM_LOG_DIR || true
 
-exec "target/$PROFILE/logandaim-server"
+exec target/{% if usage.release %}release{% else %}debug{% endif %}/logandaim-server
 """
 
 ["smoke:server"]

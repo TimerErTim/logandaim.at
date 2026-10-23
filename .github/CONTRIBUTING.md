@@ -119,7 +119,7 @@ history.
 | `pr/base` | Every pull request, every push to `dev`, and the release gate on `main` | The full gate: `mise run ci`. |
 | `pr/dev` | Pull requests into `dev` | Conventional title and a `Closes #N` link. |
 | `pr/main` | Pull requests into `main` | Conventional title, `dev` or `hotfix/*` source, issue references, and a `## Release description` section. |
-| `release-check` | Pull requests into `main`, called by the push to `main` | Versions agree, version bumped past the last release tag, dated changelog section with entries. |
+| `release-check` | Pull requests into `main`, called by the push to `main` | Versions agree, version bumped past the last release tag, dated changelog section with entries, the release does not exist yet, and the release body can be assembled. |
 | `deploy/pages` | Push to `main` | Deploys `frontend/out` to GitHub Pages. |
 | `deploy/release` | Push to `main` | Creates the source-only GitHub release. |
 | `deploy/backend` | Push to `main` | Reserved for #15 and #24. |
@@ -129,7 +129,10 @@ every pull request and can be required on either branch.
 
 `release-check` lives in its own workflow because `pr.yml` only triggers on pull requests. Being a
 reusable workflow, `main.yml` also calls it as a job before `deploy/pages`, so a release that
-bypassed its pull request still fails before any deployment or tag.
+bypassed its pull request still fails before any deployment or tag. It is the single release gate:
+the version, the changelog, the absence of an earlier release, and the ability to assemble the
+release body are all validated there, so `deploy/release` only publishes what the gate already
+proved.
 
 Required checks: `pr/base` and `pr/dev` on `dev`; `pr/base`, `pr/main`, and `release-check` on
 `main`. Deployment jobs are deliberately not required checks: they only run on push to `main`, so
@@ -155,6 +158,7 @@ Useful tasks:
 | `mise run check:release` | Validate a release pull request. |
 | `mise run release:version <kind>` | Bump the workspace and frontend versions. |
 | `mise run release:notes <version> --pr <n>` | Preview the release body. |
+| `mise run release:publish` | Create the release for the current commit (the workflow runs it). |
 | `mise daemons stop` | Stop the verify daemons after a local run. |
 
 ## Workflow

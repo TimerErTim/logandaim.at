@@ -48,11 +48,17 @@ description = "Verify that this branch is a valid release for the current versio
 # Version agreement is part of being a valid release; declare it so the release
 # check does not depend on `ci` having run first in the same job.
 depends = ["check:version"]
+tools.gh = "latest"
+usage = """
+flag "--pr <pr>" help="Release pull request number; derived from HEAD when omitted"
+"""
 run = """
 #!/usr/bin/env bash
 set -eu
 
 version=$(sed -n '/^\\[workspace.package\\]/,/^\\[/p' Cargo.toml | sed -n 's/^version = "\\(.*\\)"/\\1/p' | head -n1)
+pr="${usage_pr:-}"
+repo="${LOGANDAIM_REPO:-${GITHUB_REPOSITORY:-TimerErTim/logandaim.at}}"
 fail() {
   echo "check:release: $1" >&2
   exit 1
@@ -85,6 +91,34 @@ if [ -n "$previous_tag" ]; then
   if [ -n "$released_version" ] && [ "$released_version" = "$version" ]; then
     fail "version '$version' was already released as $previous_tag; bump it before opening the release pull request"
   fi
+fi
+
+# A release body that cannot be assembled would deploy the site and then fail to
+# publish, so the whole body is generated here and discarded. gh needs network and
+# authentication; skip the remote parts when it has neither.
+if gh auth status >/dev/null 2>&1; then
+  if gh release view "v$version" --repo "$repo" >/dev/null 2>&1; then
+    fail "release v$version already exists on $repo; bump the version"
+  fi
+
+  if [ -n "$pr" ]; then
+    case "$pr" in
+      ''|*[!0-9]*) fail "--pr '$pr' is not a pull request number" ;;
+    esac
+  elif merged=$(gh api "repos/$repo/commits/$(git rev-parse HEAD)/pulls" \\
+      --jq 'if type == "array" and length > 0 then (.[0].number | tostring) else "" end' 2>/dev/null); then
+    pr="$merged"
+    [ -n "$pr" ] || fail "no pull request is associated with HEAD; the release has no description"
+  else
+    echo "check:release: cannot reach $repo; skipped the release body check" >&2
+  fi
+
+  if [ -n "$pr" ]; then
+    mise run --no-deps release:notes "$version" --pr "$pr" -o /dev/null \\
+      || fail "the release body cannot be generated from pull request #$pr"
+  fi
+else
+  echo "check:release: gh is not authenticated; skipped the release body check" >&2
 fi
 
 echo "check:release: $version ok"

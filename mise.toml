@@ -5,7 +5,8 @@ jobs = 1
 
 [vars]
 REPO_ROOT = "{{config_root}}"
-# Single source of truth for the smoke-test ports. Keep the [daemons] ports in sync.
+# TODO(manual investigation): `[daemons]` cannot read these, so the ports repeat
+# there as literal integers.
 FRONTEND_PORT = "4173"
 API_PORT = "3311"
 
@@ -14,12 +15,7 @@ node = "lts"
 "cargo:cargo-nextest" = "latest"
 # Supervises the verify:* daemons.
 pitchfork = "2.32.1"
-# Serves the static frontend export for smoke tests.
-"npm:serve" = "latest"
-# Needed by check:version and smoke:server.
 jq = "latest"
-# Needed by release:notes; CI authenticates it through GH_TOKEN.
-gh = "latest"
 
 [deps.npm]
 # Would love to have this auto, but it's not working on windows
@@ -43,9 +39,9 @@ includes = [
 
 # Local services used by `mise run verify:*`.
 #
-# `ready_http` must use a literal port: mise only renders templates inside `run`,
-# a `{{ url }}` in `ready_cmd`/`ready_http` reaches pitchfork unrendered.
-# Ports mirror [vars] above.
+# TODO(manual investigation): `ready_http` needs the literal port below because
+# `{{ url }}` renders the pitchfork proxy URL, not the listener the task binds.
+# Consequence: the ports repeat `[vars]` above.
 [daemons.frontend]
 task = "run:frontend"
 port = 4173

@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: main-${{ github.ref }}
@@ -27,6 +28,9 @@ jobs:
   # bypassed its pull request still fails before Pages deploys and before the tag.
   release-check:
     name: release-check
+    permissions:
+      contents: read
+      pull-requests: read
     uses: ./.github/workflows/release-check.yml
 
   pages:
@@ -87,6 +91,12 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
+    env:
+      # `release:publish` owns the tag and the body: the release check already
+      # verified that both can be produced.
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
@@ -96,54 +106,8 @@ jobs:
       - name: Set up tooling
         uses: ./.github/actions/setup
 
-      - name: Read the version
-        id: version
-        run: |
-          set -eu
-          version=$(sed -n '/^\[workspace.package\]/,/^\[/p' Cargo.toml \
-            | sed -n 's/^version = "\(.*\)"/\1/p' | head -n1)
-          [ -n "$version" ] || { echo "::error::No version in Cargo.toml"; exit 1; }
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "Releasing v$version"
-
-      - name: Verify the version is unreleased
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          set -eu
-          if gh release view "v$VERSION" >/dev/null 2>&1; then
-            echo "::error::Release v$VERSION already exists. Bump the version before merging into main."
-            exit 1
-          fi
-
-      - name: Find the merged release pull request
-        id: pr
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SHA: ${{ github.sha }}
-        run: |
-          set -eu
-          pr=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/pulls" --jq '.[0].number // ""')
-          [ -n "$pr" ] || { echo "::error::No pull request found for $SHA"; exit 1; }
-          echo "number=$pr" >> "$GITHUB_OUTPUT"
-
-      - name: Write the release body
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
-          PR: ${{ steps.pr.outputs.number }}
-        run: mise run release:notes "$VERSION" --pr "$PR" -o release-notes.md
-
       - name: Create the release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          gh release create "v$VERSION" \
-            --target "$GITHUB_SHA" \
-            --title "v$VERSION" \
-            --notes-file release-notes.md
+        run: mise run release:publish
 
   # Reserved for #15 and #24:
   #
