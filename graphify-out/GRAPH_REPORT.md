@@ -1,16 +1,16 @@
 # Graph Report - logandaim.at  (2026-10-23)
 
 ## Corpus Check
-- 156 files · ~46,005 words
+- 156 files · ~46,172 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1552 nodes · 2745 edges · 99 communities (79 shown, 13 thin omitted)
+- 1553 nodes · 2752 edges · 96 communities (75 shown, 14 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 47 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `527ed7f0`
+- Built from commit: `a5845c12`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -24,10 +24,9 @@
 - button.tsx
 - SchussErstellung
 - http_status.rs
-- badge.tsx
+- search-input.tsx
 - logandaim-filesystemstore/src/lib.rs
 - compilerOptions
-- card.tsx
 - in_memory_object_store.rs
 - FakeDatastore
 - Zeitraum
@@ -40,7 +39,7 @@
 - <Title>
 - Make invalid state unrepresentable
 - Betrieb — Operations and launch readiness
-- layout.tsx
+- provider.tsx
 - ExecutionContext
 - Wertung — Classic 3-arrow scoring
 - UseCase
@@ -59,16 +58,14 @@
 - Vertical slices
 - domain/schuss.rs
 - common.rs
-- workflow-steps.tsx
 - instrumented.rs
 - LogandaimApiTestClient
 - InstrumentedUnitOfWork
 - .rendern
 - ApiError
-- http-client.ts
+- schema.ts
 - logandaim.at — Product Charter
 - StructuredError
-- Wertungszone
 - charter.md
 - App
 - .partial_cmp
@@ -81,7 +78,7 @@
 - postcss.config.mjs
 - Contributing and project management
 - ADR-0001: Baseline architecture
-- HttpLogandaimApi
+- http-client.ts
 - File Icon
 - Globe Icon
 - Next.js Logo
@@ -90,7 +87,7 @@
 - Specifications
 - SQLiteInstance
 - String
-- provider.tsx
+- card.tsx
 - navigation.ts
 - UnitOfWork
 - pull_request_template.md
@@ -140,7 +137,7 @@
 - **diffx Code Review Workflow** — agents_skills_diffx_start_review_skill, agents_skills_diffx_server, agents_skills_diffx_finish_review_skill [EXTRACTED 1.00]
 - **YAMS Hexagonal Backend Layers** — cursor_agents_md_driving_adapters, cursor_agents_md_yams_api, cursor_agents_md_yams_core, cursor_agents_md_yams_persistence [EXTRACTED 1.00]
 
-## Communities (99 total, 13 thin omitted)
+## Communities (96 total, 14 thin omitted)
 
 ### Community 0 - "FakePdfRenderer"
 Cohesion: 0.15
@@ -178,10 +175,6 @@ Nodes (23): ResultReport, Schuss, Wertung, From, Self, Uuid, Vec, Wertungszone (
 Cohesion: 0.14
 Nodes (16): HttpStatusMapping, mapped(), nested_http_status(), ObjectStoreError, RepositoryError, C, Option, Report (+8 more)
 
-### Community 9 - "badge.tsx"
-Cohesion: 0.40
-Nodes (4): Badge(), BadgeProps, BadgeVariant, variantClasses
-
 ### Community 10 - "logandaim-filesystemstore/src/lib.rs"
 Cohesion: 0.13
 Nodes (27): delete_missing_is_already_deleted(), delete_removes_object(), ensure_deleted_swallows_already_deleted(), FileStream, FileSystemObjectStore, key_to_path(), missing_is_none(), overwrites_existing() (+19 more)
@@ -189,10 +182,6 @@ Nodes (27): delete_missing_is_already_deleted(), delete_removes_object(), ensure
 ### Community 12 - "compilerOptions"
 Cohesion: 0.11
 Nodes (18): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+10 more)
-
-### Community 13 - "card.tsx"
-Cohesion: 0.47
-Nodes (6): HomePage(), Card(), CardContent(), CardDescription(), CardHeader(), CardTitle()
 
 ### Community 14 - "in_memory_object_store.rs"
 Cohesion: 0.15
@@ -224,7 +213,7 @@ Nodes (10): DateTime, NaiveDate, Utc, SystemClock, Clock, DateTime, NaiveDate, S
 
 ### Community 21 - "wertung.rs"
 Cohesion: 0.11
-Nodes (20): ac1_punktetabelle(), ac2_drei_fehlschüsse_null(), ac5_ab_viertem_pfeil_null(), ac8_rundenergebnis_summiert_und_überspringt_ziele_ohne_ergebnis(), nonzero(), Punkte, Add, I (+12 more)
+Nodes (21): ac2_drei_fehlschüsse_null(), ac5_ab_viertem_pfeil_null(), ac6_leer_ohne_ergebnis_sonst_beliebig_lang(), ac8_rundenergebnis_summiert_und_überspringt_ziele_ohne_ergebnis(), aus_schüssen_sortiert_nach_pfeil(), pfeil(), Punkte, Add (+13 more)
 
 ### Community 22 - "ObjectStore"
 Cohesion: 0.23
@@ -242,9 +231,9 @@ Nodes (15): Closed enums, Creation input and construction, Derived values, Domai
 Cohesion: 0.14
 Nodes (14): Abuse, Backups, Betrieb — Operations and launch readiness, Decision log, Domain terms and business rules, Outcome, Problem, Revision history (+6 more)
 
-### Community 26 - "layout.tsx"
-Cohesion: 0.19
-Nodes (9): geistMono, geistSans, metadata, AppChrome(), PageChromeContext, PageChromeContextValue, PageChromeProvider(), SetBreadcrumbLabel() (+1 more)
+### Community 26 - "provider.tsx"
+Cohesion: 0.12
+Nodes (16): createLogandaimApi(), LogandaimApiContext, LogandaimApiContextValue, LogandaimApiProvider(), geistMono, geistSans, metadata, Providers() (+8 more)
 
 ### Community 27 - "ExecutionContext"
 Cohesion: 0.18
@@ -314,10 +303,6 @@ Nodes (52): RepositoryResult, Schuss, Send, Sync, Vec, SchussRepository, from_pa
 Cohesion: 0.11
 Nodes (15): format_datetime(), format_naive_date(), parse_datetime(), parse_decimal(), parse_menge(), parse_naive_date(), parse_uuid(), DateTime (+7 more)
 
-### Community 50 - "workflow-steps.tsx"
-Cohesion: 0.50
-Nodes (3): Step, WorkflowSteps(), WorkflowStepsProps
-
 ### Community 51 - "instrumented.rs"
 Cohesion: 0.28
 Nodes (7): InstrumentedObjectStore, InstrumentedPdfRenderer, Arc, ObjectStoreError, ObjectStream, Option, ResultReport
@@ -334,9 +319,9 @@ Nodes (5): InstrumentedUnitOfWork, Box, Pin, RepositoryResult, Self
 Cohesion: 0.38
 Nodes (4): blank_renderer_returns_pdf_prefix(), BlankPdfRenderer, ResultReport, Vec
 
-### Community 56 - "http-client.ts"
-Cohesion: 0.24
-Nodes (9): JsonClient, Schuss, SchussErstellungInput, Wertung, components, $defs, operations, paths (+1 more)
+### Community 56 - "schema.ts"
+Cohesion: 0.18
+Nodes (10): components, $defs, operations, paths, webhooks, Wertungszone, Body, Kill (+2 more)
 
 ### Community 57 - "logandaim.at — Product Charter"
 Cohesion: 0.13
@@ -345,10 +330,6 @@ Nodes (15): Accessibility, Decision log, Domain terms, Import, Language and copy
 ### Community 58 - "StructuredError"
 Cohesion: 0.33
 Nodes (7): into_structured_error_from_frame(), From, Report, Self, Vec, StructuredError, Frame
-
-### Community 59 - "Wertungszone"
-Cohesion: 0.40
-Nodes (5): Wertungszone, Body, Kill, Miss, Spot
 
 ### Community 61 - "App"
 Cohesion: 0.05
@@ -363,7 +344,7 @@ Cohesion: 0.43
 Nodes (7): logandaim-api, logandaim-core, logandaim-fakes, logandaim-filesystemstore, logandaim-server, logandaim-sqlite, molting
 
 ### Community 70 - "cn"
-Cohesion: 0.13
+Cohesion: 0.12
 Nodes (25): zonen, Alert(), AlertProps, AlertVariant, variantClasses, Button(), Checkbox(), CheckboxProps (+17 more)
 
 ### Community 75 - "diffx-finish-review"
@@ -378,9 +359,9 @@ Nodes (9): Agents, Commits, Contributing and project management, Delivery gate, 
 Cohesion: 0.50
 Nodes (4): ADR-0001: Baseline architecture, Consequences, Context, Decision
 
-### Community 84 - "HttpLogandaimApi"
+### Community 84 - "http-client.ts"
 Cohesion: 0.19
-Nodes (5): HttpLogandaimApi, unwrap(), createLogandaimApi(), LogandaimApi, config
+Nodes (8): HttpLogandaimApi, JsonClient, unwrap(), LogandaimApi, Schuss, SchussErstellungInput, Wertung, config
 
 ### Community 99 - "Specifications"
 Cohesion: 0.29
@@ -394,13 +375,13 @@ Nodes (17): AtomicBool, Connection, InstanceType, Arc, AsRef, Deref, Mutex, Path
 Cohesion: 0.07
 Nodes (42): Cli, cli_overlay(), ConfigError, env_or_cli_overlay_beats_file(), file_values_used_when_no_overlay(), load(), load_file(), loads_json_file() (+34 more)
 
-### Community 103 - "provider.tsx"
-Cohesion: 0.18
-Nodes (13): useSchussRegistrierenMutation(), useWertungMutation(), useHealthQuery(), LogandaimApiContext, LogandaimApiContextValue, LogandaimApiProvider(), useLogandaimApi(), logandaimKeys (+5 more)
+### Community 103 - "card.tsx"
+Cohesion: 0.21
+Nodes (13): useSchussRegistrierenMutation(), useWertungMutation(), useHealthQuery(), useLogandaimApi(), logandaimKeys, HomePage(), SchussPage(), Card() (+5 more)
 
 ### Community 114 - "navigation.ts"
-Cohesion: 0.16
-Nodes (18): AppShell(), Sidebar(), SidebarLink(), SidebarProps, BreadcrumbSegment, breadcrumbsForPathname(), homeNavItem, isExactPath() (+10 more)
+Cohesion: 0.12
+Nodes (23): AppShell(), PageChromeContext, PageChromeContextValue, PageChromeProvider(), SetBreadcrumbLabel(), usePageChrome(), Sidebar(), SidebarLink() (+15 more)
 
 ### Community 117 - "UnitOfWork"
 Cohesion: 0.32
@@ -461,15 +442,15 @@ Nodes (4): Added, Changed, Changelog, [Unreleased]
 ## Knowledge Gaps
 - **326 isolated node(s):** `ValidationError`, `SchussRegistrierenFehler`, `WertungFehler`, `logandaim-fakes`, `molting` (+321 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 576 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **14 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `String` connect `String` to `arc_up`, `in_memory_object_store.rs`, `FakeDatastore`, `common.rs`, `FakeObjectStore`, `LogandaimApiTestClient`, `preis.rs`, `StructuredError`, `App`?**
-  _High betweenness centrality (0.168) - this node is a cross-community bridge._
+  _High betweenness centrality (0.166) - this node is a cross-community bridge._
 - **Why does `App` connect `App` to `UnitOfWorkImpl`, `LogandaimApiTestClient`, `Clock`, `ObjectStore`, `ExecutionContext`?**
-  _High betweenness centrality (0.084) - this node is a cross-community bridge._
+  _High betweenness centrality (0.083) - this node is a cross-community bridge._
 - **Why does `ObjectStore` connect `ObjectStore` to `logandaim-filesystemstore/src/lib.rs`, `in_memory_object_store.rs`, `FakeObjectStore`, `instrumented.rs`, `ExecutionContext`, `App`?**
   _High betweenness centrality (0.069) - this node is a cross-community bridge._
 - **What connects `ValidationError`, `SchussRegistrierenFehler`, `WertungFehler` to the rest of the system?**

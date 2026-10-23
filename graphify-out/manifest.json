@@ -798,9 +798,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/wertung.rs": {
-    "mtime": 1792768273.5942338,
-    "seen": 1792768451.4052415,
-    "ast_hash": "7c80da35982c6f5c6cca59580255d382",
+    "mtime": 1792769137.0579484,
+    "seen": 1792769152.3881752,
+    "ast_hash": "fdbeab87f565aaec48d90cdfba26e190",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/zeitraum.rs": {
@@ -972,9 +972,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/schuss.rs": {
-    "mtime": 1792768436.2661965,
-    "seen": 1792768451.40524,
-    "ast_hash": "1f9928fdc951a4fc07e8069380bcb91e",
+    "mtime": 1792769121.2059586,
+    "seen": 1792769152.388173,
+    "ast_hash": "ca00fba698ff0ee33473176dd45fdc4a",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/service/use_cases/schuss.rs": {
