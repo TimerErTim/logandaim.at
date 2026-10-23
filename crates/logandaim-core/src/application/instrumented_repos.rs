@@ -1,8 +1,7 @@
 //! Repository tracing wrappers.
 //!
 //! Each wrapper holds a pointer to the parent [`UnitOfWorkImpl`] and delegates through the
-//! matching accessor on every call. Domain repositories are added to [`RepoStorage`] as
-//! feature slices land; `docs/vertical-slice.md` walks through one.
+//! matching accessor on every call.
 
 use std::pin::Pin;
 
@@ -10,8 +9,8 @@ use async_trait::async_trait;
 use tracing::instrument;
 
 use crate::application::uow::UnitOfWorkImpl;
-use crate::domain::{Schuss, SchussId};
-use crate::ports::{NeuerSchuss, RepositoryResult, SchussRepository};
+use crate::domain::{NeuerSchuss, Schuss, SchussId};
+use crate::ports::{RepositoryResult, SchussRepository};
 
 macro_rules! impl_instrumented_repo {
     (

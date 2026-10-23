@@ -19,3 +19,5 @@ npm run build
 ## Configuration
 
 The browser reads the API URL from [`src/standalone-config.json`](src/standalone-config.json). Set `NEXT_PUBLIC_LOGANDAIM_API_URL` to override it and `NEXT_PUBLIC_LOGANDAIM_DEV=true` to enable TanStack Query devtools outside development.
+
+Both values are the complete base URL the client sends requests to, including any path prefix such as `/api` (the server mounts its routes there). Only a trailing slash is normalized away; the frontend never invents a prefix.

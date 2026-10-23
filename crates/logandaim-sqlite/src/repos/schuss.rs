@@ -8,8 +8,8 @@ use uuid::Uuid;
 
 use logandaim_core::{
     ErrorReportExt,
-    domain::{Schuss, SchussId, Wertungszone, ZielId},
-    ports::{NeuerSchuss, RepositoryError, RepositoryResult, SchussRepository},
+    domain::{NeuerSchuss, Schuss, SchussId, Wertungszone, ZielId},
+    ports::{RepositoryError, RepositoryResult, SchussRepository},
 };
 
 use crate::{errors::libsql_error_to_persistence_error, repos::common::parse_uuid};
@@ -57,8 +57,7 @@ pub struct SQLiteSchussRepository {
 impl SchussRepository for SQLiteSchussRepository {
     async fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Schuss> {
         let id = SchussId(Uuid::new_v4());
-        let domain = Schuss::neu(id, schuss.ziel_id, schuss.pfeil, schuss.wertungszone)
-            .change_context(RepositoryError::Data)?;
+        let domain = Schuss::neu(id, schuss.clone());
 
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
@@ -67,9 +66,9 @@ impl SchussRepository for SQLiteSchussRepository {
             r#"INSERT INTO "schüsse" (id, ziel_id, pfeil, "wertungszone", _version) VALUES (?1, ?2, ?3, ?4, 0)"#,
             (
                 id.0.to_string(),
-                schuss.ziel_id.0.to_string(),
-                schuss.pfeil as i64,
-                zone_to_str(schuss.wertungszone),
+                schuss.ziel_id().0.to_string(),
+                schuss.pfeil().get() as i64,
+                zone_to_str(schuss.wertungszone()),
             ),
         )
         .await

@@ -1,4 +1,6 @@
-//! Request DTOs. One module per feature slice, added as slices land.
+//! Request DTOs. Grouped by domain module (`schuss.rs`), not by the increment that
+//! happened to introduce them: later requests about the same concept belong in the same
+//! file.
 
 mod schuss;
 

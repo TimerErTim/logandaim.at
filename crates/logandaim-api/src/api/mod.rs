@@ -44,6 +44,6 @@ impl LogandaimAppApi {
         anfrage: requests::WertungsAnfrage,
     ) -> ResultReport<Wertung, WertungFehler> {
         let ergebnis = self.app.execute(WertungBerechnen::from(anfrage)).await?;
-        Ok(schema_wertung_from_domain(&ergebnis))
+        Ok(schema_wertung_from_domain(ergebnis))
     }
 }

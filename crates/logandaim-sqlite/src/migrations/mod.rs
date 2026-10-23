@@ -11,8 +11,7 @@ mod v0001_schuss;
 
 type Registry = MigrationRegistry<dyn UpMigration<libsql::Transaction, libsql::Error>>;
 
-/// Baseline plus one migration per feature slice. Feature slices bump the last version
-/// and add their file here; `docs/vertical-slice.md` shows a worked example.
+/// Baseline plus one migration per schema change, registered in ascending version order.
 pub static MIGRATIONS: LazyLock<Registry> = LazyLock::new(|| {
     let mut registry: Registry = MigrationRegistry::new();
     registry.add(v0001_schuss::Migration);

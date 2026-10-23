@@ -36,7 +36,7 @@ export const paths = {
   schuss: "/schuss",
 } as const;
 
-/** Add one item per product slice; `docs/vertical-slice.md` shows a worked example. */
+/** Add one item per product area. */
 export const sidebarCategories: NavCategory[] = [
   {
     label: "Logbuch",

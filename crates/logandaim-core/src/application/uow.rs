@@ -95,8 +95,7 @@ impl UnitOfWork<'_> {
         self.finish_with(result, |_| context)
     }
 
-    /// Repository accessor. Feature slices add one line per repository here and on
-    /// [`UnitOfWorkImpl`]; see `docs/vertical-slice.md`.
+    /// Repository accessor.
     pub fn schüsse(&self) -> &dyn SchussRepository {
         self.as_impl().schüsse()
     }

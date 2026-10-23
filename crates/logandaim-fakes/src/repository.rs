@@ -5,8 +5,8 @@ use rustc_hash::FxHashMap;
 use uuid::Uuid;
 
 use logandaim_core::{
-    domain::{Schuss, SchussId, schuss::Schuss as DomainSchuss},
-    ports::{NeuerSchuss, RepositoryError, RepositoryResult, SchussRepository},
+    domain::{NeuerSchuss, Schuss, SchussId},
+    ports::{RepositoryError, RepositoryResult, SchussRepository},
 };
 
 /// In-memory backing store. One map per aggregate; feature slices add a field.
@@ -58,8 +58,7 @@ impl FakeSchussRepository {
 impl SchussRepository for FakeSchussRepository {
     async fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Schuss> {
         let id = SchussId(Uuid::new_v4());
-        let created = DomainSchuss::neu(id, schuss.ziel_id, schuss.pfeil, schuss.wertungszone)
-            .map_err(|_| RepositoryError::Data)?;
+        let created = Schuss::neu(id, schuss);
         self.datastore
             .schüsse
             .lock()

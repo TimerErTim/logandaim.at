@@ -1,5 +1,12 @@
 use std::iter::Sum;
+use std::num::NonZeroUsize;
 use std::ops::Add;
+
+// TODO(wertung): rework pending. This file is inherited from the pre-slice code base and
+// is neither verified against the product spec nor final: the classic 3-arrow table, the
+// `Zielwertung` shape, and the Erster-Treffer / Mehrschuss split are a provisional
+// reference for how a slice is built, exactly like the rest of the reference slice.
+// Treat it as brittle, not as an approved domain model.
 
 /// Scoring zone hit by one Schuss on a 3D target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -27,9 +34,8 @@ impl Punkte {
     }
 
     /// Classic 3-arrow table. `pfeil` is 1-based; Pfeil 4 and later score 0.
-    pub fn für_schuss(pfeil: usize, zone: Wertungszone) -> Self {
-        debug_assert!(pfeil >= 1, "Pfeil ist 1-basiert, war aber {pfeil}");
-        let punkte = match (pfeil, zone) {
+    pub fn für_schuss(pfeil: NonZeroUsize, zone: Wertungszone) -> Self {
+        let punkte = match (pfeil.get(), zone) {
             (_, Wertungszone::Miss) => 0,
             (1, Wertungszone::Spot) => 20,
             (1, Wertungszone::Kill) => 18,
@@ -44,6 +50,10 @@ impl Punkte {
         };
         Self(punkte)
     }
+}
+
+fn nonzero(value: usize) -> NonZeroUsize {
+    NonZeroUsize::new(value).expect("Pfeil-Positionen sind 1-basiert")
 }
 
 impl Add for Punkte {
@@ -80,7 +90,7 @@ impl Zielwertung {
         self.schüsse
             .iter()
             .enumerate()
-            .map(|(index, &zone)| (zone, Punkte::für_schuss(index + 1, zone)))
+            .map(|(index, &zone)| (zone, Punkte::für_schuss(nonzero(index + 1), zone)))
     }
 
     /// Only the first Treffer counts.
@@ -136,6 +146,7 @@ mod tests {
             (3, [8, 6, 4, 0]),
         ];
         for (pfeil, erwartet) in tabelle {
+            let pfeil = nonzero(pfeil);
             for (zone, punkte) in [Spot, Kill, Body, Miss].into_iter().zip(erwartet) {
                 assert_eq!(
                     Punkte::für_schuss(pfeil, zone).value(),

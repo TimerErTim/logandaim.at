@@ -325,12 +325,11 @@ Recreate **workflow and visual language** from the legacy frontend, not its stac
 
 ## Conventions for Contributors
 
-1. **New feature?** Walk the vertical slice in order, German feature names (`seminar.rs`, not `model.rs`):
-   [`docs/vertical-slice.md`](../docs/vertical-slice.md) is a complete worked example of this
-order (domain → port → use case → fakes → migration → SQLite repo → API → frontend) using
-the Schuss slice. Copy its shape for a new slice, not its names.
+1. **New feature?** Walk the vertical slice in order, German feature names (`schuss.rs`, not `model.rs`):
+   [`docs/vertical-slice.md`](../docs/vertical-slice.md) describes the order
+(domain → port → use case → fakes → migration → SQLite repo → API → frontend) and who owns each concern. Copy its shape for a new slice, not the concrete feature names.
 
-`domain/` (unit tests in the same file) → `application/ports/` → `service/use_cases/` → `yams-api` (`requests/`, `schema/`, `YamsAppApi` method, `spec.rs` route if HTTP) → `yams-sqlite/repos/` → migration in `migrations/` (if schema change) → use-case case in `yams-core/tests/cases/` → API e2e in `yams-api/tests/e2e/` when the public surface changed → `mise run sync:openapi` (if API surface changed).
+`domain/` (unit tests in the same file) → `application/ports/` → `service/use_cases/` → `logandaim-api` (`requests/`, `schema/`, `LogandaimAppApi` method, `spec.rs` route if HTTP) → `logandaim-sqlite/repos/` → migration in `migrations/` (if schema change) → use-case case in `logandaim-core/tests/cases/` → API e2e in `logandaim-api/tests/e2e/` when the public surface changed → `mise run sync:openapi` (if API surface changed).
 2. **Domain changes stay in core.** API DTOs are a separate translation layer; never leak serde/openapi concerns into core.
 3. **All mutations through `App::execute`.** No direct repo calls from adapters.
 4. **Domain modeling** — follow [`crates/yams-core/src/domain/README.md`](../crates/yams-core/src/domain/README.md).

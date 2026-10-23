@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use logandaim_core::{domain, service::Wertungsergebnis};
+use logandaim_core::domain::{self, Wertungsergebnis};
 
 /// API mirror of [`domain::Wertungszone`]. Kept separate so the domain never learns
 /// about OpenAPI, serde, or HTTP.
@@ -66,12 +66,12 @@ pub fn schema_schuss_from_domain(schuss: domain::Schuss) -> Schuss {
     Schuss {
         id: schuss.id().0,
         ziel_id: schuss.ziel_id().0,
-        pfeil: schuss.pfeil(),
+        pfeil: schuss.pfeil().get(),
         wertungszone: schuss.wertungszone().into(),
     }
 }
 
-pub fn schema_wertung_from_domain(ergebnis: &Wertungsergebnis) -> Wertung {
+pub fn schema_wertung_from_domain(ergebnis: Wertungsergebnis) -> Wertung {
     Wertung {
         erster_treffer: ergebnis.erster_treffer.value(),
         mehrschuss: ergebnis.mehrschuss.value(),

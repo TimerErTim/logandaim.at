@@ -167,8 +167,8 @@ export interface components {
          * SchussErstellung
          * @description Inbound request for registering one Schuss at a Ziel.
          *
-         *     Pure transport DTO: `TryFrom` into the use case validates, the domain enforces the
-         *     rest. `pfeil` is validated by [`domain::Schuss`] so the rule stays in one place.
+         *     Pure transport DTO. `pfeil` is validated by `domain::NeuerSchuss` when the use case
+         *     builds it, so the rule stays in one place.
          */
         SchussErstellung: {
             /** Format: uuid */
