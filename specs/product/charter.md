@@ -66,7 +66,9 @@ MVP capabilities:
 | Capability | Spec |
 |------------|------|
 | Classic 3-arrow scoring (Erster Treffer, Mehrschuss) | [`wertung.md`](wertung.md) |
-| Account registration and login | to be written |
+| Account registration and login | [`konto.md`](konto.md) |
+| Data protection, consent, and legal obligations | [`datenschutz.md`](datenschutz.md) |
+| Operations, security, and launch readiness | [`betrieb.md`](betrieb.md) |
 | Master data: Anlage, Parcours, Ziel, Pflock (admin seeding) | to be written |
 | Log a Runde target by target, with distance slider between Pflöcke | to be written |
 | Personal history: scores and first-arrow hit rate per Parcours over time | to be written |
@@ -80,6 +82,64 @@ MVP capabilities:
 - Damage reports, lost-arrow board, traffic heatmaps, announcements.
 - WA and IFAA scoring modes.
 - Offline-first capture (next milestone).
+
+## Quality bars
+
+**Draft — pending PO approval.** These are cross-cutting acceptance conditions for every
+user-visible capability, not a separate feature. They are written here because the charter is the
+only spec that covers more than one capability.
+
+- [ ] Q-5: Is the accessibility bar a launch gate for the M1 milestone, or may it ship shortly
+  after launch?
+
+### Accessibility
+
+Issues: #48.
+
+The app is used outdoors, one-handed, often with gloves. The core journeys (registration, login,
+logging a `Runde`, viewing history) meet WCAG 2.2 AA:
+
+1. Interactive targets are at least 44 by 44 pixels on the logging screen.
+2. Core journeys are completable by keyboard alone with a visible focus indicator.
+3. Form fields have programmatic labels; validation errors are announced to assistive technology.
+4. Text and essential controls meet AA contrast and stay legible on a phone in daylight.
+5. `Wertungszone` state is never encoded by colour alone.
+6. An automated accessibility check runs in CI and fails on new serious violations; a manual pass
+   covers the four core journeys.
+
+### Language and copy
+
+Issues: #49.
+
+1. No user-facing string is hardcoded in a component; all text comes from one locale source.
+2. Dates, numbers, and distances render in `de-AT` format.
+3. Domain terms match the glossary of this charter; a lint or test rejects YAMS names, veterinary
+   terms, and stray English UI text.
+4. Validation and error messages come from one source and use the same wording for the same
+   condition everywhere.
+5. The locale setup can add a second locale later without moving strings again.
+
+## Import
+
+**Draft — pending PO approval.** See issue #52.
+
+An archer may bring existing paper or spreadsheet history in, so the first session is not an empty
+profile.
+
+1. A documented CSV schema defines the columns for `Runde`, date, `Parcours`, `Ziel`, `Pfeil`
+   position, and `Wertungszone`.
+2. Validation reports every failing row with a row number and a reason; nothing is written on
+   failure.
+3. A dry-run preview shows what would be imported, including computed `Wertungen`, before
+   committing.
+4. Imported `Runden` are marked as imported and are distinguishable in history.
+5. The import references existing master data only; an unknown `Parcours` or `Ziel` fails with a
+   clear message.
+6. Re-importing the same file does not duplicate `Runden`.
+
+Open questions:
+
+- [ ] Q-6: Does import belong to MVP onboarding or a later milestone?
 
 ## Milestones
 
@@ -115,3 +175,5 @@ MVP capabilities:
 |------|--------|----|
 | 2026-10-21 | Initial charter from PRD and PO decisions. | Agent (Claude) |
 | 2026-10-21 | Approved. | TimerErTim |
+| 2026-10-23 | Linked the konto.md draft for the accounts capability. | Agent (MiMo) |
+| 2026-10-23 | Added Draft "Quality bars" (accessibility, language) and "Import" sections, and linked the `datenschutz.md` and `betrieb.md` drafts. Approved MVP scope text unchanged; the new sections are pending PO approval. | Agent (Cursor) |

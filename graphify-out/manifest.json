@@ -19,7 +19,7 @@
   },
   "backend/server/src/main.rs": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.51556,
+    "seen": 1792750170.876564,
     "ast_hash": "5310457240000df273ba55801ab52705",
     "semantic_hash": ""
   },
@@ -192,8 +192,8 @@
     "semantic_hash": ""
   },
   "crates/yams-core/src/domain/mod.rs": {
-    "mtime": 1792741455.6072154,
-    "seen": 1792741937.32252,
+    "mtime": 1792752843.6393757,
+    "seen": 1792752998.5055616,
     "ast_hash": "c0d08632891ad99275f55fd13794307d",
     "semantic_hash": ""
   },
@@ -253,7 +253,7 @@
   },
   "frontend/package.json": {
     "mtime": 1792731815.1784308,
-    "seen": 1792735926.5202482,
+    "seen": 1792750170.8828716,
     "ast_hash": "acdba7d0f9d32ec04cf1f0bba0e1700c",
     "semantic_hash": ""
   },
@@ -295,31 +295,31 @@
   },
   ".cursor/AGENTS.md": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231352,
+    "seen": 1792750170.8866506,
     "ast_hash": "82378da7cf259df8f2e50b4854c5fec0",
     "semantic_hash": ""
   },
   ".github/workflows/publish.yml": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231552,
+    "seen": 1792750170.8866765,
     "ast_hash": "0ef7d7983190e04bdcbd10c96b82ab32",
     "semantic_hash": ""
   },
   "README.md": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231578,
+    "seen": 1792750170.8866796,
     "ast_hash": "f87ef59c3404ecb9fa1a41fd7c01d0b0",
     "semantic_hash": ""
   },
   "backend/README.md": {
     "mtime": 1792731815.1784308,
-    "seen": 1792735926.523159,
+    "seen": 1792750170.8866808,
     "ast_hash": "188f947ad97e35be69c5d8f936c0114d",
     "semantic_hash": ""
   },
   "frontend/README.md": {
     "mtime": 1792731815.1784308,
-    "seen": 1792735926.5231616,
+    "seen": 1792750170.8866847,
     "ast_hash": "4547cd1c64b06b88e2a3f492f0b795eb",
     "semantic_hash": ""
   },
@@ -541,13 +541,13 @@
   },
   "frontend/src/api/index.ts": {
     "mtime": 1792731815.442764,
-    "seen": 1792735926.520489,
+    "seen": 1792750170.8831184,
     "ast_hash": "0fc53276b78b0b4c6f050781433ec08f",
     "semantic_hash": ""
   },
   "frontend/src/api/provider.tsx": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5204904,
+    "seen": 1792750170.8831196,
     "ast_hash": "9cc004fc4e8741be97208c4f3eb7c30a",
     "semantic_hash": ""
   },
@@ -559,7 +559,7 @@
   },
   "frontend/src/api/yams-api.ts": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.520591,
+    "seen": 1792750170.8832204,
     "ast_hash": "9e7dc636832ef554dbe5b891da0ff9ec",
     "semantic_hash": ""
   },
@@ -649,7 +649,7 @@
   },
   "frontend/src/components/workflow/deployment-status.tsx": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.522357,
+    "seen": 1792750170.8850954,
     "ast_hash": "8268973c5197188fc60b28ca421c16ca",
     "semantic_hash": ""
   },
@@ -1039,7 +1039,7 @@
   },
   "frontend/src/lib/config.ts": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5228171,
+    "seen": 1792750170.8856452,
     "ast_hash": "c9187f0b6603801fd44d7b0c1328e1cb",
     "semantic_hash": ""
   },
@@ -1225,13 +1225,13 @@
   },
   ".github/workflows/dev_ci.yml": {
     "mtime": 1792731815.1784308,
-    "seen": 1792735926.5231516,
+    "seen": 1792750170.8866713,
     "ast_hash": "83859ba1a72ff34af13f651ba3b69ab3",
     "semantic_hash": ""
   },
   ".github/workflows/main_ci.yml": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.523154,
+    "seen": 1792750170.886675,
     "ast_hash": "ca9d74e0e1586ac0f36e189c1ca84c76",
     "semantic_hash": ""
   },
@@ -1447,61 +1447,61 @@
   },
   ".github/CONTRIBUTING.md": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231426,
+    "seen": 1792750170.8866603,
     "ast_hash": "a01b4d028d48c1570454211803db791d",
     "semantic_hash": ""
   },
   ".github/ISSUE_TEMPLATE/bug.yml": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.523144,
+    "seen": 1792750170.8866622,
     "ast_hash": "6d12fb14aa149a3fdd894e6cf631d0c1",
     "semantic_hash": ""
   },
   ".github/ISSUE_TEMPLATE/config.yml": {
     "mtime": 1792731815.442764,
-    "seen": 1792735926.5231452,
+    "seen": 1792750170.8866637,
     "ast_hash": "a4869770b57a9d1629bda026cf8a85a7",
     "semantic_hash": ""
   },
   ".github/ISSUE_TEMPLATE/feature.yml": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231462,
+    "seen": 1792750170.886665,
     "ast_hash": "bb2c54617c0ac61d25692d04ac0d5f8e",
     "semantic_hash": ""
   },
   ".github/ISSUE_TEMPLATE/spike.yml": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231478,
+    "seen": 1792750170.8866663,
     "ast_hash": "dcabbd20d4718e7f2f4a0aabd50406d0",
     "semantic_hash": ""
   },
   ".github/labels.yml": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231493,
+    "seen": 1792750170.886668,
     "ast_hash": "ff4bcf4f6b976a5c36c38a5754f11645",
     "semantic_hash": ""
   },
   ".github/pull_request_template.md": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231504,
+    "seen": 1792750170.8866696,
     "ast_hash": "99e11875e5f85c3b1eccd329fb793c80",
     "semantic_hash": ""
   },
   ".github/workflows/labels.yml": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231528,
+    "seen": 1792750170.8866735,
     "ast_hash": "d68c5b883fd1c3d09497f589a3aaaa09",
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1792741455.6072154,
-    "seen": 1792741937.3289547,
-    "ast_hash": "ded55a2ac3509e43fb609613a12c0791",
+    "mtime": 1792752780.239396,
+    "seen": 1792752998.5114768,
+    "ast_hash": "ec32c2d2d0c8bb73c080ea707de01493",
     "semantic_hash": ""
   },
   "crates/yams-core/src/domain/README.md": {
     "mtime": 1792731815.442764,
-    "seen": 1792735926.5231602,
+    "seen": 1792750170.8866823,
     "ast_hash": "895c231c99e4f8bbd8298923d33f5cd3",
     "semantic_hash": ""
   },
@@ -1513,31 +1513,31 @@
   },
   "specs/README.md": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5232062,
+    "seen": 1792750170.8867238,
     "ast_hash": "7238557d69a755aea6c64bd7be9a0924",
     "semantic_hash": ""
   },
   "specs/_template.md": {
     "mtime": 1792731815.1784308,
-    "seen": 1792735926.5232077,
+    "seen": 1792750170.8867254,
     "ast_hash": "d080b2acf353b5581dc630e3b525d986",
     "semantic_hash": ""
   },
   "specs/decisions/0001-baseline-architecture.md": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5232089,
+    "seen": 1792750170.886727,
     "ast_hash": "dca616381552453bce8aed0ece60e432",
     "semantic_hash": ""
   },
   "specs/decisions/README.md": {
-    "mtime": 1792741455.6272154,
-    "seen": 1792741937.3293824,
-    "ast_hash": "1d21c12df45ebae768d5732183d991f5",
+    "mtime": 1792749949.6403651,
+    "seen": 1792750170.8867304,
+    "ast_hash": "250d87cd7693c09664406002bd227bd0",
     "semantic_hash": ""
   },
   "specs/legacy/README.md": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5232115,
+    "seen": 1792750170.886732,
     "ast_hash": "59e1c0968d5c08bbd4c7ca5f76ea7518",
     "semantic_hash": ""
   },
@@ -1566,39 +1566,63 @@
     "semantic_hash": ""
   },
   "specs/product/charter.md": {
-    "mtime": 1792741455.6272154,
-    "seen": 1792741937.3295374,
-    "ast_hash": "03b27e4cda36881f77100dc2dd053f19",
+    "mtime": 1792749994.14835,
+    "seen": 1792750170.886865,
+    "ast_hash": "4ba982808b787fa9815ed39878e485f1",
     "semantic_hash": ""
   },
   "specs/product/wertung.md": {
-    "mtime": 1792741455.6312153,
-    "seen": 1792741937.3295386,
+    "mtime": 1792752843.7953758,
+    "seen": 1792752998.5121214,
     "ast_hash": "f3ad4f6ffbdb55892ce63b5ba24d7b0f",
-    "semantic_hash": ""
-  },
-  "crates/yams-core/src/domain/wertung.rs": {
-    "mtime": 1792741715.5991168,
-    "seen": 1792741937.3228014,
-    "ast_hash": "5c14297a628f26687324e370ea64e877",
     "semantic_hash": ""
   },
   ".cursor/agents/m1-implementer.md": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231376,
+    "seen": 1792750170.886654,
     "ast_hash": "6dabf1d1b0b6992541056cc647aab1c2",
     "semantic_hash": ""
   },
   ".cursor/agents/m1-overseer.md": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.523139,
+    "seen": 1792750170.8866563,
     "ast_hash": "1e731ddb0aac3208da1fdf19796e0926",
     "semantic_hash": ""
   },
   ".cursor/agents/m1-reviewer.md": {
     "mtime": 1792731815.182764,
-    "seen": 1792735926.5231407,
+    "seen": 1792750170.8866577,
     "ast_hash": "65397d466ecac21822b8bbf55ca089c5",
+    "semantic_hash": ""
+  },
+  "specs/decisions/0002-session-cookie-auth.md": {
+    "mtime": 1792749949.6403651,
+    "seen": 1792750170.8867288,
+    "ast_hash": "47238a4bc0acbdf84c57f093714ea34a",
+    "semantic_hash": ""
+  },
+  "specs/product/betrieb.md": {
+    "mtime": 1792749981.6203544,
+    "seen": 1792750170.886863,
+    "ast_hash": "ff5af04cf45774865a727122b1a87136",
+    "semantic_hash": ""
+  },
+  "specs/product/datenschutz.md": {
+    "mtime": 1792749981.5763543,
+    "seen": 1792750170.8868663,
+    "ast_hash": "a9895b50b5119acf2447db531f705e3d",
+    "semantic_hash": ""
+  },
+  "specs/product/konto.md": {
+    "mtime": 1792749969.2523584,
+    "seen": 1792750170.886868,
+    "ast_hash": "b3dd0daddcaf8a16b62783a99d6269ea",
+    "semantic_hash": ""
+  },
+  "crates/yams-core/src/domain/wertung.rs": {
+    "mtime": 1792752843.6433759,
+    "seen": 1792752998.5057955,
+    "ast_hash": "5c14297a628f26687324e370ea64e877",
     "semantic_hash": ""
   }
 }
