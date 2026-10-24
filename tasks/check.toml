@@ -12,36 +12,12 @@ depends = ["lint:crates", "lint:frontend", "lint:check:ts"]
 
 ["check:openapi"]
 description = "Fail when the generated OpenAPI client differs from the exported spec"
-# `depends` instead of a nested `mise run`: mise runs the shared dependency once per
-# invocation, so the schema file is written once even when `build:frontend` and
-# `lint:check:ts` need it in the same run.
 depends = ["sync:openapi"]
 run = "git diff --exit-code -- frontend/src/api/schema.ts"
 
 ["check:version"]
 description = "Fail when the workspace, frontend, and changelog versions disagree"
-run = """
-#!/usr/bin/env bash
-set -eu
-
-cargo_version=$(sed -n '/^\\[workspace.package\\]/,/^\\[/p' Cargo.toml | sed -n 's/^version = "\\(.*\\)"/\\1/p' | head -n1)
-frontend_version=$(jq -r '.version' frontend/package.json)
-latest_changelog=$(sed -n 's/^## \\[\\([0-9][^]]*\\)\\].*/\\1/p' CHANGELOG.md | head -n1)
-
-fail() {
-  echo "check:version: $1" >&2
-  exit 1
-}
-
-[ -n "$cargo_version" ] || fail "no version in [workspace.package] of Cargo.toml"
-[ "$cargo_version" = "$frontend_version" ] || fail "Cargo.toml version '$cargo_version' != frontend/package.json version '$frontend_version'"
-if [ -n "$latest_changelog" ]; then
-  [ "$cargo_version" = "$latest_changelog" ] || fail "Cargo.toml version '$cargo_version' != newest CHANGELOG.md release '$latest_changelog'"
-fi
-grep -q '^## \\[Unreleased\\]' CHANGELOG.md || fail "CHANGELOG.md has no ## [Unreleased] section"
-
-echo "check:version: $cargo_version ok"
-"""
+run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-version.mjs"
 
 ["check:release"]
 description = "Verify that this branch is a valid release for the current version"
@@ -52,112 +28,7 @@ tools.gh = "latest"
 usage = """
 flag "--pr <pr>" help="Release pull request number; derived from HEAD when omitted"
 """
-run = """
-#!/usr/bin/env bash
-set -eu
-
-version=$(sed -n '/^\\[workspace.package\\]/,/^\\[/p' Cargo.toml | sed -n 's/^version = "\\(.*\\)"/\\1/p' | head -n1)
-pr="${usage_pr:-}"
-repo="${LOGANDAIM_REPO:-${GITHUB_REPOSITORY:-TimerErTim/logandaim.at}}"
-fail() {
-  echo "check:release: $1" >&2
-  exit 1
-}
-
-grep -q "^## \\[$version\\] - [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$" CHANGELOG.md \\
-  || fail "CHANGELOG.md has no dated '## [$version] - YYYY-MM-DD' section"
-
-# The section must say something: a dated heading with no entries would publish an
-# empty release body as the changelog part.
-section_entries=$(
-  sed -n "/^## \\[$version\\]/,/^## \\[/p" CHANGELOG.md \\
-    | grep -E '^[-*] ' \\
-    | wc -l
-)
-[ "$section_entries" -gt 0 ] \\
-  || fail "CHANGELOG.md has no entries under '## [$version]'"
-
-# A release pull request moves every entry into the dated section above, so
-# `Unreleased` must be empty here. Empty is only acceptable for pull requests into
-# `dev`, where the next release has not been decided yet. HTML comments are
-# guidance for authors, not entries.
-unreleased_entries=$(
-  sed -n '/^## \\[Unreleased\\]/,/^## \\[/p' CHANGELOG.md \\
-    | sed -e '1d' -e '$d' \\
-    | awk '
-      {
-        line = $0
-        out = ""
-        while (length(line) > 0) {
-          if (in_comment) {
-            i = index(line, "-->")
-            if (i == 0) { line = ""; break }
-            line = substr(line, i + 3); in_comment = 0
-          } else {
-            i = index(line, "<!--")
-            if (i == 0) { out = out line; line = ""; break }
-            out = out substr(line, 1, i - 1); line = substr(line, i + 4); in_comment = 1
-          }
-        }
-        if (out ~ /[^[:space:]]/) count++
-      }
-      END { print count + 0 }
-    '
-)
-[ "$unreleased_entries" -eq 0 ] \\
-  || fail "CHANGELOG.md has entries under '## [Unreleased]'; move them into '## [$version]'"
-
-# Compare against the most recent release tag rather than `main`, so the check
-# behaves the same in a release pull request and in the push-to-main run that
-# follows it. Tags are created by the `main` workflow only.
-previous_tag=$(git tag --list 'v*' --sort=-v:refname | head -n1)
-if [ -n "$previous_tag" ]; then
-  released_version=$(
-    git show "$previous_tag:Cargo.toml" 2>/dev/null \\
-      | sed -n '/^\\[workspace.package\\]/,/^\\[/p' \\
-      | sed -n 's/^version = "\\(.*\\)"/\\1/p' \\
-      | head -n1
-  )
-  if [ -n "$released_version" ] && [ "$released_version" = "$version" ]; then
-    fail "version '$version' was already released as $previous_tag; bump it before opening the release pull request"
-  fi
-fi
-
-# A release body that cannot be assembled would deploy the site and then fail to
-# publish, so the whole body is generated here and discarded. gh needs network and
-# authentication. A developer machine without them skips the remote parts so the
-# gate stays usable offline; in CI the same failure fails the gate, before the
-# deploy and before the tag.
-ci=${GITHUB_ACTIONS:-${CI:-}}
-if ! gh auth status >/dev/null 2>&1; then
-  [ -z "$ci" ] || fail "gh is not authenticated; the release body cannot be assembled"
-  echo "check:release: gh is not authenticated; skipped the release body check" >&2
-else
-  if gh release view "v$version" --repo "$repo" >/dev/null 2>&1; then
-    fail "release v$version already exists on $repo; bump the version"
-  fi
-
-  if [ -n "$pr" ]; then
-    case "$pr" in
-      ''|*[!0-9]*) fail "--pr '$pr' is not a pull request number" ;;
-    esac
-  elif merged=$(gh api "repos/$repo/commits/$(git rev-parse HEAD)/pulls" \\
-      --jq 'if type == "array" and length > 0 then (.[0].number | tostring) else "" end' 2>/dev/null); then
-    pr="$merged"
-    [ -n "$pr" ] || fail "no pull request is associated with HEAD; the release has no description"
-  else
-    [ -z "$ci" ] || fail "cannot reach $repo; the release body cannot be assembled"
-    echo "check:release: cannot reach $repo; skipped the release body check" >&2
-  fi
-
-  if [ -n "$pr" ]; then
-    mise run --no-deps release:notes "$version" --pr "$pr" -o /dev/null \\
-      || fail "the release body cannot be generated from pull request #$pr"
-  fi
-fi
-
-echo "check:release: $version ok"
-"""
+run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-release.mjs"
 
 ["check"]
 description = "Check the code"

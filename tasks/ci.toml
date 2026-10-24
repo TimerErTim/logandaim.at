@@ -4,10 +4,11 @@
 # so the pipelines cannot drift from a developer machine.
 
 ["ci"]
-description = "Full gate: check, test, build, smoke-test"
-depends = ["check", "test", "build", "verify"]
+description = "Full gate: check, build, test, smoke-test"
+# `build` precedes `test`: tests then run against a tree that is known to compile,
+# so a compile error is reported by the build rather than as a failed test.
+depends = ["check", "build", "test", "verify"]
 
 ["ci:release"]
 description = "Full gate plus release validation for a dev -> main pull request"
-depends = ["ci"]
-run = "mise run check:release"
+depends = ["ci", "check:release"]
