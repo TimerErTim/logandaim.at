@@ -1,44 +1,41 @@
 #:schema https://mise.jdx.dev/schema/mise-task.json
 
 # Long-running services.
-#
-# Kept as tasks rather than script files so `mise run run:server` works from anywhere
-# in the repo and on a deployment, with the tool it needs resolved by mise.
-#
-# The daemon supervisor sets `$PORT`; the `{{ vars.* }}` fallback makes a direct run
-# work too. Ports must match `[daemons]` in mise.toml.
 
 ["run:frontend"]
 description = "Build and serve the static frontend export"
 dir = "{{ vars.REPO_ROOT }}/frontend"
 depends = ["build:frontend"]
 tools."npm:serve" = "latest"
-# `exec` is load-bearing: the supervisor stops the service by signalling this pid.
-run = 'exec serve out --listen tcp://127.0.0.1:${PORT:-{{ vars.FRONTEND_PORT }}} --no-clipboard --no-port-switching'
+usage = """
+flag "--host <host>" help="Address to listen on" default="127.0.0.1"
+flag "--port <port>" env="PORT" help="Port to listen on" default="{{ vars.FRONTEND_PORT }}"
+"""
+# `exec` lets the daemon supervisor stop the service by signalling its pid.
+run = 'exec serve out --listen tcp://{{ usage.host }}:{{ usage.port }} --no-clipboard --no-port-switching'
 
 ["run:server"]
 description = "Build and run the backend server with a throwaway database"
 usage = """
 flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build and run the release profile"
+flag "--host <host>" help="Address to bind to" default="127.0.0.1"
+flag "--port <port>" env="PORT" help="Port to bind to" default="{{ vars.API_PORT }}"
+flag "--data-dir <dir>" env="LOGANDAIM_SMOKE_DATA_DIR" help="Reuse this data directory instead of a temporary one"
 """
-# The build happens here rather than in `depends`: a flag is not forwarded to a
-# dependency, so `depends = ["build:server"]` would build the debug profile while this
-# task exec'd the release binary (missing, or stale from an earlier run).
+# The flag reaches the build through the dependency's environment.
+depends = ["LOGANDAIM_BUILD_RELEASE={{ usage.release }} build:server"]
 run = """
 #!/usr/bin/env bash
 set -eu
-DATA_DIR="${LOGANDAIM_SMOKE_DATA_DIR:-$(mktemp -d)}"
+DATA_DIR="${usage_data_dir:-$(mktemp -d)}"
 mkdir -p "$DATA_DIR/storage"
 
-cargo build -p logandaim-server{% if usage.release %} --release{% endif %}
-
-export LOGANDAIM_BIND_ADDRESS=127.0.0.1
-export LOGANDAIM_BIND_PORT="${PORT:-{{ vars.API_PORT }}}"
-export LOGANDAIM_DATABASE_URL="$DATA_DIR/smoke.db"
-export LOGANDAIM_OBJECT_STORE_DIR="$DATA_DIR/storage"
-# The server rejects an empty `--log-dir`, so the variable must be absent rather than
-# blank: a value inherited from a dev shell would otherwise leak into this run.
+# The server rejects an empty `--log-dir`, so the variable must be absent, not blank.
 unset LOGANDAIM_LOG_DIR || true
 
-exec target/{% if usage.release %}release{% else %}debug{% endif %}/logandaim-server
+exec target/{% if usage.release %}release{% else %}debug{% endif %}/logandaim-server \
+  --bind-address '{{ usage.host }}' \
+  --bind-port '{{ usage.port }}' \
+  --database-url "$DATA_DIR/smoke.db" \
+  --object-store-dir "$DATA_DIR/storage"
 """

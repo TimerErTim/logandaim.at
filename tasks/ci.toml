@@ -5,16 +5,11 @@
 
 ["ci"]
 description = "Full gate: check, build, test, smoke-test"
-# `build` precedes `test`: tests then run against a tree that is known to compile,
-# so a compile error is reported by the build rather than as a failed test.
+# `build` before `test`, so a compile error fails as a build, not as a test.
 depends = ["check", "build", "test", "verify"]
 
 ["ci:release"]
 description = "Full gate plus release validation, for verifying a release pull request locally"
-# Not called by a workflow: CI runs the two halves as separate jobs on purpose.
-# `pr/base` runs `ci` on every pull request, and `release-check.yml` runs
-# `check:release` only for release pull requests and the push to `main`. Collapsing
-# them here would either make every feature pull request run release validation or
-# force the shared gate to depend on `check:release`'s permissions. This task exists
-# so a maintainer can reproduce both in one command before opening the pull request.
+# No workflow caller: `check:release` needs read-only permissions the shared gate
+# must not inherit. This reproduces both checks in one command.
 depends = ["ci", "check:release"]

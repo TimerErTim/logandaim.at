@@ -2,16 +2,12 @@
 
 # Smoke tests.
 #
-# Each service is split in three:
-#   run:*     the long-running service, defined in tasks/run.toml
-#   smoke:*   assumes the service already runs, only health-checks it; point it at
-#             any deployment with LOGANDAIM_FRONTEND_URL / LOGANDAIM_SERVER_ORIGIN
-#   verify:*  `daemons = [...]` starts the service and waits for readiness,
-#             `depends = ["smoke:*"]` then runs the checks
+#   smoke:*   checks an already running service; point it anywhere with
+#             LOGANDAIM_FRONTEND_URL / LOGANDAIM_SERVER_ORIGIN
+#   verify:*  starts the service as a daemon, then runs its smoke test
 #
-# `depends` is required: a task started through `run = [{ task = "..." }]` does not
-# start daemons. Daemons outlive the task, so stop them with
-# `mise daemons stop frontend server`.
+# `depends` is required: `run = [{ task = "..." }]` starts no daemons. Daemons
+# outlive the task; stop them with `mise daemons stop frontend server`.
 
 ["smoke:frontend"]
 description = "Health-check an already running frontend"
