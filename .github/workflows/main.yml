@@ -22,6 +22,11 @@ concurrency:
 jobs:
   ci:
     name: pr/base
+    # A called workflow can never hold more than its caller grants, so `ci`'s
+    # `checks: write` has to be repeated here or the test report silently no-ops.
+    permissions:
+      contents: read
+      checks: write
     uses: ./.github/workflows/ci.yml
 
   # The same check a release pull request must pass, repeated here so a push that
@@ -49,6 +54,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
+      # Restore the npm download cache before `setup` runs `mise deps install`.
+      # Env-independent: the tarballs are the same whatever the export is built for.
+      - name: Cache the npm downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: npm-${{ runner.os }}-
+
       - name: Set up tooling
         uses: ./.github/actions/setup
 
@@ -57,6 +71,19 @@ jobs:
       - name: Configure Pages
         id: pages
         uses: actions/configure-pages@v6
+
+      # Next's compilation cache. The export itself is always rebuilt: `next build`
+      # bakes `NEXT_PUBLIC_*` into the emitted chunks, so a cache restored across a
+      # base-path or API-URL change could serve chunks built for the other value.
+      # Both values therefore sit in the key *and* in the restore prefix, so the
+      # cache only ever restores within one deployment's configuration.
+      - name: Cache the Next.js build
+        uses: actions/cache@v4
+        with:
+          path: frontend/.next/cache
+          key: next-${{ runner.os }}-${{ steps.pages.outputs.base_path }}-${{ vars.LOGANDAIM_API_URL }}-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/src/**', 'frontend/public/**', 'frontend/next.config.ts') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ steps.pages.outputs.base_path }}-${{ vars.LOGANDAIM_API_URL }}-
 
       - name: Build the static export
         env:
