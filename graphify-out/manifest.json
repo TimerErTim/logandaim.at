@@ -90,9 +90,9 @@
     "semantic_hash": "239f3ebf717465dc636818a1a619398d"
   },
   "frontend/src/app/layout.tsx": {
-    "mtime": 1792867548.3977747,
-    "seen": 1792867749.2897258,
-    "ast_hash": "2c250f13560a6ce0f0bb66759c963efe",
+    "mtime": 1792868136.2455785,
+    "seen": 1792868443.0735626,
+    "ast_hash": "04a7bead481c5b0572f1aadfe9c0be45",
     "semantic_hash": ""
   },
   "frontend/tsconfig.json": {
@@ -378,8 +378,8 @@
     "semantic_hash": ""
   },
   "frontend/src/api/schema.ts": {
-    "mtime": 1792867742.3577018,
-    "seen": 1792867749.289722,
+    "mtime": 1792868439.815828,
+    "seen": 1792868443.0734847,
     "ast_hash": "b280187c1159e8ef8c1bd9a59c55490b",
     "semantic_hash": ""
   },
@@ -1068,9 +1068,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/type-section.tsx": {
-    "mtime": 1792867620.4497392,
-    "seen": 1792867749.2897696,
-    "ast_hash": "c96f0eb49c386db1160c59ec90334b27",
+    "mtime": 1792868150.0174298,
+    "seen": 1792868443.0738277,
+    "ast_hash": "f6d7253086ccb2b4136417366221521e",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/dialog.tsx": {
@@ -1200,9 +1200,9 @@
     "semantic_hash": ""
   },
   "specs/product/visual-identity.md": {
-    "mtime": 1792867679.3544698,
-    "seen": 1792867749.2903562,
-    "ast_hash": "51af7a1ffb95a3d079f9e6a12dbfd28d",
+    "mtime": 1792868425.0534499,
+    "seen": 1792868443.0768394,
+    "ast_hash": "070f839aaf91bd123b32e0b24c0ad56d",
     "semantic_hash": ""
   }
 }

@@ -104,7 +104,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 0.125rem);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-nunito-sans);
   --font-mono: var(--font-geist-mono);
 }
 

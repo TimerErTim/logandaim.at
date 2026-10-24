@@ -139,19 +139,6 @@
       "source_location": "L22"
     },
     {
-      "id": "frontend_src_components_ui_badge_badgeprops",
-      "label": "BadgeProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "type-section.tsx",
-      "file_type": "code",
-      "norm_label": "badgeprops",
-      "source_file": "frontend/src/components/ui/badge.tsx",
-      "source_location": "L29"
-    },
-    {
       "id": "frontend_src_components_ui_button_buttonprops",
       "label": "ButtonProps",
       "_callable": true,
@@ -267,6 +254,19 @@
       "norm_label": "selectprops",
       "source_file": "frontend/src/components/ui/select.tsx",
       "source_location": "L5"
+    },
+    {
+      "id": "frontend_src_components_ui_badge_badgeprops",
+      "label": "BadgeProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "badge.tsx",
+      "file_type": "code",
+      "norm_label": "badgeprops",
+      "source_file": "frontend/src/components/ui/badge.tsx",
+      "source_location": "L29"
     },
     {
       "id": "frontend_src_api_errors_apierror",
@@ -477,186 +477,6 @@
       "source_location": "L6"
     },
     {
-      "id": "frontend_src_api_hooks_mutations_useschussregistrierenmutation",
-      "label": "useSchussRegistrierenMutation()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "useschussregistrierenmutation()",
-      "source_file": "frontend/src/api/hooks/mutations.ts",
-      "source_location": "L7"
-    },
-    {
-      "id": "frontend_src_api_hooks_mutations_usewertungmutation",
-      "label": "useWertungMutation()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "usewertungmutation()",
-      "source_file": "frontend/src/api/hooks/mutations.ts",
-      "source_location": "L22"
-    },
-    {
-      "id": "frontend_src_api_hooks_queries_usehealthquery",
-      "label": "useHealthQuery()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "usehealthquery()",
-      "source_file": "frontend/src/api/hooks/queries.ts",
-      "source_location": "L6"
-    },
-    {
-      "id": "frontend_src_api_provider_uselogandaimapi",
-      "label": "useLogandaimApi()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "uselogandaimapi()",
-      "source_file": "frontend/src/api/provider.tsx",
-      "source_location": "L43"
-    },
-    {
-      "id": "frontend_src_app_page_homepage",
-      "label": "HomePage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "homepage()",
-      "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L6"
-    },
-    {
-      "id": "frontend_src_app_schuss_page_schusspage",
-      "label": "SchussPage()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "schusspage()",
-      "source_file": "frontend/src/app/schuss/page.tsx",
-      "source_location": "L42"
-    },
-    {
-      "id": "frontend_src_app_schuss_page_schusspage_onberechnen",
-      "label": "onBerechnen()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "onberechnen()",
-      "source_file": "frontend/src/app/schuss/page.tsx",
-      "source_location": "L66"
-    },
-    {
-      "id": "frontend_src_app_schuss_page_schusspage_onregistrieren",
-      "label": "onRegistrieren()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "onregistrieren()",
-      "source_file": "frontend/src/app/schuss/page.tsx",
-      "source_location": "L52"
-    },
-    {
-      "id": "frontend_src_components_ui_card_card",
-      "label": "Card()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "card()",
-      "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L5"
-    },
-    {
-      "id": "frontend_src_components_ui_card_cardcontent",
-      "label": "CardContent()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "cardcontent()",
-      "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L42"
-    },
-    {
-      "id": "frontend_src_components_ui_card_carddescription",
-      "label": "CardDescription()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "carddescription()",
-      "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L33"
-    },
-    {
-      "id": "frontend_src_components_ui_card_cardfooter",
-      "label": "CardFooter()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "cardfooter()",
-      "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L49"
-    },
-    {
-      "id": "frontend_src_components_ui_card_cardheader",
-      "label": "CardHeader()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "cardheader()",
-      "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L14"
-    },
-    {
-      "id": "frontend_src_components_ui_card_cardtitle",
-      "label": "CardTitle()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "cardtitle()",
-      "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L21"
-    },
-    {
-      "id": "frontend_src_components_workflow_deployment_status_deploymentstatus",
-      "label": "DeploymentStatus()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "deploymentstatus()",
-      "source_file": "frontend/src/components/workflow/deployment-status.tsx",
-      "source_location": "L13"
-    },
-    {
       "id": "frontend_src_lib_format_formatdate",
       "label": "formatDate()",
       "_callable": true,
@@ -702,19 +522,7 @@
       "file_type": "code",
       "norm_label": "rootlayout()",
       "source_file": "frontend/src/app/layout.tsx",
-      "source_location": "L22"
-    },
-    {
-      "id": "frontend_src_app_providers_providers",
-      "label": "Providers()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 114,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "providers()",
-      "source_file": "frontend/src/app/providers.tsx",
-      "source_location": "L9"
+      "source_location": "L31"
     },
     {
       "id": "frontend_src_components_layout_app_chrome_appchrome",
@@ -873,18 +681,6 @@
       "source_location": "L23"
     },
     {
-      "id": "frontend_src_lib_query_client_createqueryclient",
-      "label": "createQueryClient()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 114,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "createqueryclient()",
-      "source_file": "frontend/src/lib/query-client.ts",
-      "source_location": "L3"
-    },
-    {
       "id": "frontend_src_app_dev_page_dev_devgallerypage",
       "label": "DevGalleryPage()",
       "_callable": true,
@@ -895,6 +691,18 @@
       "norm_label": "devgallerypage()",
       "source_file": "frontend/src/app/dev/page.dev.tsx",
       "source_location": "L23"
+    },
+    {
+      "id": "frontend_src_components_dev_gallery_component_section_example",
+      "label": "Example()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 13,
+      "community_name": "type-section.tsx",
+      "file_type": "code",
+      "norm_label": "example()",
+      "source_file": "frontend/src/components/dev-gallery/component-section.tsx",
+      "source_location": "L71"
     },
     {
       "id": "frontend_src_components_dev_gallery_sections_gallerysections",
@@ -918,7 +726,7 @@
       "file_type": "code",
       "norm_label": "typesection()",
       "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L88"
+      "source_location": "L69"
     },
     {
       "id": "frontend_src_components_ui_alert_alert",
@@ -931,18 +739,6 @@
       "norm_label": "alert()",
       "source_file": "frontend/src/components/ui/alert.tsx",
       "source_location": "L28"
-    },
-    {
-      "id": "frontend_src_components_ui_badge_badge",
-      "label": "Badge()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "type-section.tsx",
-      "file_type": "code",
-      "norm_label": "badge()",
-      "source_file": "frontend/src/components/ui/badge.tsx",
-      "source_location": "L32"
     },
     {
       "id": "frontend_src_components_ui_button_button",
@@ -1317,18 +1113,6 @@
       "source_location": "L14"
     },
     {
-      "id": "frontend_src_components_dev_gallery_component_section_example",
-      "label": "Example()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 56,
-      "community_name": "token-swatches.tsx",
-      "file_type": "code",
-      "norm_label": "example()",
-      "source_file": "frontend/src/components/dev-gallery/component-section.tsx",
-      "source_location": "L71"
-    },
-    {
       "id": "frontend_src_components_dev_gallery_component_section_themeframe",
       "label": "ThemeFrame()",
       "_callable": true,
@@ -1653,6 +1437,78 @@
       "source_location": "L15"
     },
     {
+      "id": "frontend_src_components_ui_card_card",
+      "label": "Card()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "card()",
+      "source_file": "frontend/src/components/ui/card.tsx",
+      "source_location": "L5"
+    },
+    {
+      "id": "frontend_src_components_ui_card_cardcontent",
+      "label": "CardContent()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "cardcontent()",
+      "source_file": "frontend/src/components/ui/card.tsx",
+      "source_location": "L42"
+    },
+    {
+      "id": "frontend_src_components_ui_card_carddescription",
+      "label": "CardDescription()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "carddescription()",
+      "source_file": "frontend/src/components/ui/card.tsx",
+      "source_location": "L33"
+    },
+    {
+      "id": "frontend_src_components_ui_card_cardfooter",
+      "label": "CardFooter()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "cardfooter()",
+      "source_file": "frontend/src/components/ui/card.tsx",
+      "source_location": "L49"
+    },
+    {
+      "id": "frontend_src_components_ui_card_cardheader",
+      "label": "CardHeader()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "cardheader()",
+      "source_file": "frontend/src/components/ui/card.tsx",
+      "source_location": "L14"
+    },
+    {
+      "id": "frontend_src_components_ui_card_cardtitle",
+      "label": "CardTitle()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "cardtitle()",
+      "source_file": "frontend/src/components/ui/card.tsx",
+      "source_location": "L21"
+    },
+    {
       "id": "frontend_src_components_ui_input_input",
       "label": "Input()",
       "_callable": true,
@@ -1785,12 +1641,24 @@
       "source_location": "L14"
     },
     {
+      "id": "frontend_src_components_ui_badge_badge",
+      "label": "Badge()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "badge.tsx",
+      "file_type": "code",
+      "norm_label": "badge()",
+      "source_file": "frontend/src/components/ui/badge.tsx",
+      "source_location": "L32"
+    },
+    {
       "id": "frontend_src_components_ui_toggle_group_togglegroup",
       "label": "ToggleGroup()",
       "_callable": true,
       "_origin": "ast",
       "community": 74,
-      "community_name": "toggle-group.tsx",
+      "community_name": "badge.tsx",
       "file_type": "code",
       "norm_label": "togglegroup()",
       "source_file": "frontend/src/components/ui/toggle-group.tsx",
@@ -1802,7 +1670,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 74,
-      "community_name": "toggle-group.tsx",
+      "community_name": "badge.tsx",
       "file_type": "code",
       "norm_label": "togglegroupitem()",
       "source_file": "frontend/src/components/ui/toggle-group.tsx",
@@ -1831,6 +1699,42 @@
       "norm_label": ".fromunknown()",
       "source_file": "frontend/src/api/errors.ts",
       "source_location": "L12"
+    },
+    {
+      "id": "frontend_src_api_hooks_mutations_useschussregistrierenmutation",
+      "label": "useSchussRegistrierenMutation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "useschussregistrierenmutation()",
+      "source_file": "frontend/src/api/hooks/mutations.ts",
+      "source_location": "L7"
+    },
+    {
+      "id": "frontend_src_api_hooks_mutations_usewertungmutation",
+      "label": "useWertungMutation()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "usewertungmutation()",
+      "source_file": "frontend/src/api/hooks/mutations.ts",
+      "source_location": "L22"
+    },
+    {
+      "id": "frontend_src_api_hooks_queries_usehealthquery",
+      "label": "useHealthQuery()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "usehealthquery()",
+      "source_file": "frontend/src/api/hooks/queries.ts",
+      "source_location": "L6"
     },
     {
       "id": "frontend_src_api_http_client_httplogandaimapi_constructor",
@@ -1951,6 +1855,102 @@
       "norm_label": "logandaimapiprovider()",
       "source_file": "frontend/src/api/provider.tsx",
       "source_location": "L24"
+    },
+    {
+      "id": "frontend_src_api_provider_uselogandaimapi",
+      "label": "useLogandaimApi()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "uselogandaimapi()",
+      "source_file": "frontend/src/api/provider.tsx",
+      "source_location": "L43"
+    },
+    {
+      "id": "frontend_src_app_page_homepage",
+      "label": "HomePage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "homepage()",
+      "source_file": "frontend/src/app/page.tsx",
+      "source_location": "L6"
+    },
+    {
+      "id": "frontend_src_app_providers_providers",
+      "label": "Providers()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "providers()",
+      "source_file": "frontend/src/app/providers.tsx",
+      "source_location": "L9"
+    },
+    {
+      "id": "frontend_src_app_schuss_page_schusspage",
+      "label": "SchussPage()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "schusspage()",
+      "source_file": "frontend/src/app/schuss/page.tsx",
+      "source_location": "L42"
+    },
+    {
+      "id": "frontend_src_app_schuss_page_schusspage_onberechnen",
+      "label": "onBerechnen()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "onberechnen()",
+      "source_file": "frontend/src/app/schuss/page.tsx",
+      "source_location": "L66"
+    },
+    {
+      "id": "frontend_src_app_schuss_page_schusspage_onregistrieren",
+      "label": "onRegistrieren()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "onregistrieren()",
+      "source_file": "frontend/src/app/schuss/page.tsx",
+      "source_location": "L52"
+    },
+    {
+      "id": "frontend_src_components_workflow_deployment_status_deploymentstatus",
+      "label": "DeploymentStatus()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "deploymentstatus()",
+      "source_file": "frontend/src/components/workflow/deployment-status.tsx",
+      "source_location": "L13"
+    },
+    {
+      "id": "frontend_src_lib_query_client_createqueryclient",
+      "label": "createQueryClient()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "createqueryclient()",
+      "source_file": "frontend/src/lib/query-client.ts",
+      "source_location": "L3"
     },
     {
       "id": "frontend_src_components_dev_gallery_sections_alertsection",
@@ -3511,6 +3511,17 @@
       "source_location": ""
     },
     {
+      "id": "crates_logandaim_core_src_application_uow_unitofwork_drop",
+      "label": ".drop()",
+      "_origin": "ast",
+      "community": 100,
+      "community_name": "SQLiteInstance",
+      "file_type": "code",
+      "norm_label": ".drop()",
+      "source_file": "crates/logandaim-core/src/application/uow.rs",
+      "source_location": "L111"
+    },
+    {
       "id": "crates_logandaim_sqlite_src_lib",
       "label": "logandaim-sqlite/src/lib.rs",
       "_origin": "ast",
@@ -4402,94 +4413,6 @@
       "source_location": ""
     },
     {
-      "id": "frontend_src_api_hooks_index",
-      "label": "hooks/index.ts",
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "hooks/index.ts",
-      "source_file": "frontend/src/api/hooks/index.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_api_hooks_mutations",
-      "label": "mutations.ts",
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "mutations.ts",
-      "source_file": "frontend/src/api/hooks/mutations.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_api_hooks_queries",
-      "label": "queries.ts",
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "queries.ts",
-      "source_file": "frontend/src/api/hooks/queries.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_api_query_keys",
-      "label": "query-keys.ts",
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "query-keys.ts",
-      "source_file": "frontend/src/api/query-keys.ts",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_api_query_keys_logandaimkeys",
-      "label": "logandaimKeys",
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "logandaimkeys",
-      "source_file": "frontend/src/api/query-keys.ts",
-      "source_location": "L2"
-    },
-    {
-      "id": "frontend_src_app_page",
-      "label": "app/page.tsx",
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "app/page.tsx",
-      "source_file": "frontend/src/app/page.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_components_ui_card",
-      "label": "card.tsx",
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "card.tsx",
-      "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_components_workflow_deployment_status",
-      "label": "deployment-status.tsx",
-      "_origin": "ast",
-      "community": 103,
-      "community_name": "card.tsx",
-      "file_type": "code",
-      "norm_label": "deployment-status.tsx",
-      "source_file": "frontend/src/components/workflow/deployment-status.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "frontend_src_lib_format",
       "label": "format.ts",
       "_origin": "ast",
@@ -4553,18 +4476,7 @@
       "file_type": "code",
       "norm_label": "geistmono",
       "source_file": "frontend/src/app/layout.tsx",
-      "source_location": "L12"
-    },
-    {
-      "id": "frontend_src_app_layout_geistsans",
-      "label": "geistSans",
-      "_origin": "ast",
-      "community": 114,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "geistsans",
-      "source_file": "frontend/src/app/layout.tsx",
-      "source_location": "L7"
+      "source_location": "L21"
     },
     {
       "id": "frontend_src_app_layout_metadata",
@@ -4575,18 +4487,18 @@
       "file_type": "code",
       "norm_label": "metadata",
       "source_file": "frontend/src/app/layout.tsx",
-      "source_location": "L17"
+      "source_location": "L26"
     },
     {
-      "id": "frontend_src_app_providers",
-      "label": "providers.tsx",
+      "id": "frontend_src_app_layout_nunitosans",
+      "label": "nunitoSans",
       "_origin": "ast",
       "community": 114,
       "community_name": "navigation.ts",
       "file_type": "code",
-      "norm_label": "providers.tsx",
-      "source_file": "frontend/src/app/providers.tsx",
-      "source_location": "L1"
+      "norm_label": "nunitosans",
+      "source_file": "frontend/src/app/layout.tsx",
+      "source_location": "L14"
     },
     {
       "id": "frontend_src_components_layout_app_chrome",
@@ -4699,17 +4611,6 @@
       "source_location": "L40"
     },
     {
-      "id": "frontend_src_lib_query_client",
-      "label": "query-client.ts",
-      "_origin": "ast",
-      "community": 114,
-      "community_name": "navigation.ts",
-      "file_type": "code",
-      "norm_label": "query-client.ts",
-      "source_file": "frontend/src/lib/query-client.ts",
-      "source_location": "L1"
-    },
-    {
       "id": "ref_next",
       "label": "next",
       "_origin": "ast",
@@ -4721,55 +4622,11 @@
       "source_location": "L35"
     },
     {
-      "id": "ref_tanstack_react_query",
-      "label": "@tanstack/react-query",
-      "_origin": "ast",
-      "community": 114,
-      "community_name": "navigation.ts",
-      "file_type": "concept",
-      "norm_label": "@tanstack/react-query",
-      "source_file": "frontend/package.json",
-      "source_location": "L30"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_uow",
-      "label": "application/uow.rs",
-      "_origin": "ast",
-      "community": 117,
-      "community_name": "UnitOfWorkImpl",
-      "file_type": "code",
-      "norm_label": "application/uow.rs",
-      "source_file": "crates/logandaim-core/src/application/uow.rs",
-      "source_location": "L1"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_uow_arc_t",
-      "label": "Arc<T>",
-      "_origin": "ast",
-      "community": 117,
-      "community_name": "UnitOfWorkImpl",
-      "file_type": "code",
-      "norm_label": "arc<t>",
-      "source_file": "crates/logandaim-core/src/application/uow.rs",
-      "source_location": "L153"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_uow_arc_t_begin",
-      "label": ".begin()",
-      "_origin": "ast",
-      "community": 117,
-      "community_name": "UnitOfWorkImpl",
-      "file_type": "code",
-      "norm_label": ".begin()",
-      "source_file": "crates/logandaim-core/src/application/uow.rs",
-      "source_location": "L154"
-    },
-    {
       "id": "crates_logandaim_core_src_application_uow_lockedunitofworkimpl",
       "label": "LockedUnitOfWorkImpl",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": "lockedunitofworkimpl",
       "source_file": "crates/logandaim-core/src/application/uow.rs",
@@ -4780,7 +4637,7 @@
       "label": ".commit()",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": ".commit()",
       "source_file": "crates/logandaim-core/src/application/uow.rs",
@@ -4791,7 +4648,7 @@
       "label": ".rollback()",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": ".rollback()",
       "source_file": "crates/logandaim-core/src/application/uow.rs",
@@ -4802,7 +4659,7 @@
       "label": "Box",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": "box",
       "source_file": "",
@@ -4813,31 +4670,9 @@
       "label": "RepositoryResult",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": "repositoryresult",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_uow_rs_send",
-      "label": "Send",
-      "_origin": "ast",
-      "community": 117,
-      "community_name": "UnitOfWorkImpl",
-      "file_type": "code",
-      "norm_label": "send",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_uow_rs_sync",
-      "label": "Sync",
-      "_origin": "ast",
-      "community": 117,
-      "community_name": "UnitOfWorkImpl",
-      "file_type": "code",
-      "norm_label": "sync",
       "source_file": "",
       "source_location": ""
     },
@@ -4846,7 +4681,7 @@
       "label": "UnitOfWork",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": "unitofwork",
       "source_file": "crates/logandaim-core/src/application/uow.rs",
@@ -4857,29 +4692,18 @@
       "label": ".commit()",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": ".commit()",
       "source_file": "crates/logandaim-core/src/application/uow.rs",
       "source_location": "L42"
     },
     {
-      "id": "crates_logandaim_core_src_application_uow_unitofwork_drop",
-      "label": ".drop()",
-      "_origin": "ast",
-      "community": 117,
-      "community_name": "UnitOfWorkImpl",
-      "file_type": "code",
-      "norm_label": ".drop()",
-      "source_file": "crates/logandaim-core/src/application/uow.rs",
-      "source_location": "L111"
-    },
-    {
       "id": "crates_logandaim_core_src_application_uow_unitofwork_rollback",
       "label": ".rollback()",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": ".rollback()",
       "source_file": "crates/logandaim-core/src/application/uow.rs",
@@ -4890,29 +4714,18 @@
       "label": ".take_impl()",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": ".take_impl()",
       "source_file": "crates/logandaim-core/src/application/uow.rs",
       "source_location": "L103"
     },
     {
-      "id": "crates_logandaim_core_src_application_uow_unitofworkimpl",
-      "label": "UnitOfWorkImpl",
-      "_origin": "ast",
-      "community": 117,
-      "community_name": "UnitOfWorkImpl",
-      "file_type": "code",
-      "norm_label": "unitofworkimpl",
-      "source_file": "crates/logandaim-core/src/application/uow.rs",
-      "source_location": "L139"
-    },
-    {
       "id": "crates_logandaim_core_src_application_uow_unitofworkimpl_commit",
       "label": ".commit()",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": ".commit()",
       "source_file": "crates/logandaim-core/src/application/uow.rs",
@@ -4923,40 +4736,18 @@
       "label": ".rollback()",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": ".rollback()",
       "source_file": "crates/logandaim-core/src/application/uow.rs",
       "source_location": "L141"
     },
     {
-      "id": "crates_logandaim_core_src_application_uow_unitofworkprovider",
-      "label": "UnitOfWorkProvider",
-      "_origin": "ast",
-      "community": 117,
-      "community_name": "UnitOfWorkImpl",
-      "file_type": "code",
-      "norm_label": "unitofworkprovider",
-      "source_file": "crates/logandaim-core/src/application/uow.rs",
-      "source_location": "L148"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_uow_unitofworkprovider_begin",
-      "label": ".begin()",
-      "_origin": "ast",
-      "community": 117,
-      "community_name": "UnitOfWorkImpl",
-      "file_type": "code",
-      "norm_label": ".begin()",
-      "source_file": "crates/logandaim-core/src/application/uow.rs",
-      "source_location": "L149"
-    },
-    {
       "id": "drop",
       "label": "Drop",
       "_origin": "ast",
       "community": 117,
-      "community_name": "UnitOfWorkImpl",
+      "community_name": "UnitOfWork",
       "file_type": "code",
       "norm_label": "drop",
       "source_file": "",
@@ -5346,18 +5137,7 @@
       "file_type": "code",
       "norm_label": "candidates",
       "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L51"
-    },
-    {
-      "id": "frontend_src_components_dev_gallery_type_section_nunito",
-      "label": "nunito",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "type-section.tsx",
-      "file_type": "code",
-      "norm_label": "nunito",
-      "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L32"
+      "source_location": "L39"
     },
     {
       "id": "frontend_src_components_dev_gallery_type_section_plex",
@@ -5368,7 +5148,7 @@
       "file_type": "code",
       "norm_label": "plex",
       "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L18"
+      "source_location": "L15"
     },
     {
       "id": "frontend_src_components_dev_gallery_type_section_sample_rows",
@@ -5379,7 +5159,7 @@
       "file_type": "code",
       "norm_label": "sample_rows",
       "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L82"
+      "source_location": "L63"
     },
     {
       "id": "frontend_src_components_dev_gallery_type_section_source",
@@ -5390,7 +5170,7 @@
       "file_type": "code",
       "norm_label": "source",
       "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L25"
+      "source_location": "L22"
     },
     {
       "id": "frontend_src_components_ui_alert",
@@ -5415,28 +5195,6 @@
       "source_location": "L6"
     },
     {
-      "id": "frontend_src_components_ui_badge",
-      "label": "badge.tsx",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "type-section.tsx",
-      "file_type": "code",
-      "norm_label": "badge.tsx",
-      "source_file": "frontend/src/components/ui/badge.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_components_ui_badge_badgevariants",
-      "label": "badgeVariants",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "type-section.tsx",
-      "file_type": "code",
-      "norm_label": "badgevariants",
-      "source_file": "frontend/src/components/ui/badge.tsx",
-      "source_location": "L11"
-    },
-    {
       "id": "frontend_src_components_ui_button",
       "label": "button.tsx",
       "_origin": "ast",
@@ -5457,17 +5215,6 @@
       "norm_label": "buttonvariants",
       "source_file": "frontend/src/components/ui/button.tsx",
       "source_location": "L15"
-    },
-    {
-      "id": "ref_class_variance_authority",
-      "label": "class-variance-authority",
-      "_origin": "ast",
-      "community": 13,
-      "community_name": "type-section.tsx",
-      "file_type": "concept",
-      "norm_label": "class-variance-authority",
-      "source_file": "frontend/package.json",
-      "source_location": "L32"
     },
     {
       "id": "ref_radix_ui_react_slot",
@@ -7469,6 +7216,17 @@
       "source_location": "L16"
     },
     {
+      "id": "ref_radix_ui_react_dialog",
+      "label": "@radix-ui/react-dialog",
+      "_origin": "ast",
+      "community": 157,
+      "community_name": "package.json",
+      "file_type": "concept",
+      "norm_label": "@radix-ui/react-dialog",
+      "source_file": "frontend/package.json",
+      "source_location": "L17"
+    },
+    {
       "id": "ref_radix_ui_react_select",
       "label": "@radix-ui/react-select",
       "_origin": "ast",
@@ -9337,7 +9095,7 @@
       "label": "system_clock.rs",
       "_origin": "ast",
       "community": 20,
-      "community_name": "Clock",
+      "community_name": "SystemClock",
       "file_type": "code",
       "norm_label": "system_clock.rs",
       "source_file": "crates/logandaim-core/src/adapters/system_clock.rs",
@@ -9348,7 +9106,7 @@
       "label": "DateTime",
       "_origin": "ast",
       "community": 20,
-      "community_name": "Clock",
+      "community_name": "SystemClock",
       "file_type": "code",
       "norm_label": "datetime",
       "source_file": "",
@@ -9359,7 +9117,7 @@
       "label": "NaiveDate",
       "_origin": "ast",
       "community": 20,
-      "community_name": "Clock",
+      "community_name": "SystemClock",
       "file_type": "code",
       "norm_label": "naivedate",
       "source_file": "",
@@ -9370,7 +9128,7 @@
       "label": "Utc",
       "_origin": "ast",
       "community": 20,
-      "community_name": "Clock",
+      "community_name": "SystemClock",
       "file_type": "code",
       "norm_label": "utc",
       "source_file": "",
@@ -9381,7 +9139,7 @@
       "label": "SystemClock",
       "_origin": "ast",
       "community": 20,
-      "community_name": "Clock",
+      "community_name": "SystemClock",
       "file_type": "code",
       "norm_label": "systemclock",
       "source_file": "crates/logandaim-core/src/adapters/system_clock.rs",
@@ -9392,7 +9150,7 @@
       "label": ".now()",
       "_origin": "ast",
       "community": 20,
-      "community_name": "Clock",
+      "community_name": "SystemClock",
       "file_type": "code",
       "norm_label": ".now()",
       "source_file": "crates/logandaim-core/src/adapters/system_clock.rs",
@@ -9403,121 +9161,11 @@
       "label": ".today()",
       "_origin": "ast",
       "community": 20,
-      "community_name": "Clock",
+      "community_name": "SystemClock",
       "file_type": "code",
       "norm_label": ".today()",
       "source_file": "crates/logandaim-core/src/adapters/system_clock.rs",
       "source_location": "L15"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_context_executioncontext_a_clock",
-      "label": ".clock()",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "Clock",
-      "file_type": "code",
-      "norm_label": ".clock()",
-      "source_file": "crates/logandaim-core/src/application/context.rs",
-      "source_location": "L56"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_clock",
-      "label": "ports/clock.rs",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "Clock",
-      "file_type": "code",
-      "norm_label": "ports/clock.rs",
-      "source_file": "crates/logandaim-core/src/application/ports/clock.rs",
-      "source_location": "L1"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_clock_clock",
-      "label": "Clock",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "Clock",
-      "file_type": "code",
-      "norm_label": "clock",
-      "source_file": "crates/logandaim-core/src/application/ports/clock.rs",
-      "source_location": "L3"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_clock_clock_now",
-      "label": ".now()",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "Clock",
-      "file_type": "code",
-      "norm_label": ".now()",
-      "source_file": "crates/logandaim-core/src/application/ports/clock.rs",
-      "source_location": "L5"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_clock_clock_today",
-      "label": ".today()",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "Clock",
-      "file_type": "code",
-      "norm_label": ".today()",
-      "source_file": "crates/logandaim-core/src/application/ports/clock.rs",
-      "source_location": "L8"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_clock_rs_datetime",
-      "label": "DateTime",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "Clock",
-      "file_type": "code",
-      "norm_label": "datetime",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_clock_rs_naivedate",
-      "label": "NaiveDate",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "Clock",
-      "file_type": "code",
-      "norm_label": "naivedate",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_clock_rs_send",
-      "label": "Send",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "Clock",
-      "file_type": "code",
-      "norm_label": "send",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_clock_rs_sync",
-      "label": "Sync",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "Clock",
-      "file_type": "code",
-      "norm_label": "sync",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_clock_rs_utc",
-      "label": "Utc",
-      "_origin": "ast",
-      "community": 20,
-      "community_name": "Clock",
-      "file_type": "code",
-      "norm_label": "utc",
-      "source_file": "",
-      "source_location": ""
     },
     {
       "id": "crates_logandaim_core_src_domain_wertung",
@@ -10799,7 +10447,7 @@
       "label": "context.rs",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": "context.rs",
       "source_file": "crates/logandaim-core/src/application/context.rs",
@@ -10810,7 +10458,7 @@
       "label": "ExecutionContext",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": "executioncontext",
       "source_file": "crates/logandaim-core/src/application/context.rs",
@@ -10821,18 +10469,29 @@
       "label": "ExecutionContext<'a>",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": "executioncontext<'a>",
       "source_file": "crates/logandaim-core/src/application/context.rs",
       "source_location": "L27"
     },
     {
+      "id": "crates_logandaim_core_src_application_context_executioncontext_a_clock",
+      "label": ".clock()",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "Clock",
+      "file_type": "code",
+      "norm_label": ".clock()",
+      "source_file": "crates/logandaim-core/src/application/context.rs",
+      "source_location": "L56"
+    },
+    {
       "id": "crates_logandaim_core_src_application_context_executioncontext_a_enter",
       "label": ".enter()",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": ".enter()",
       "source_file": "crates/logandaim-core/src/application/context.rs",
@@ -10843,7 +10502,7 @@
       "label": ".nested()",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": ".nested()",
       "source_file": "crates/logandaim-core/src/application/context.rs",
@@ -10854,7 +10513,7 @@
       "label": ".object_store()",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": ".object_store()",
       "source_file": "crates/logandaim-core/src/application/context.rs",
@@ -10865,7 +10524,7 @@
       "label": ".pdf_renderer()",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": ".pdf_renderer()",
       "source_file": "crates/logandaim-core/src/application/context.rs",
@@ -10876,7 +10535,7 @@
       "label": ".root()",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": ".root()",
       "source_file": "crates/logandaim-core/src/application/context.rs",
@@ -10887,7 +10546,7 @@
       "label": ".sub()",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": ".sub()",
       "source_file": "crates/logandaim-core/src/application/context.rs",
@@ -10898,7 +10557,7 @@
       "label": "ExecutionSource",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": "executionsource",
       "source_file": "crates/logandaim-core/src/application/context.rs",
@@ -10909,7 +10568,7 @@
       "label": "Arc",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": "arc",
       "source_file": "",
@@ -10920,7 +10579,7 @@
       "label": "RepositoryResult",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": "repositoryresult",
       "source_file": "",
@@ -10931,9 +10590,75 @@
       "label": "Self",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": "self",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_clock",
+      "label": "ports/clock.rs",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "Clock",
+      "file_type": "code",
+      "norm_label": "ports/clock.rs",
+      "source_file": "crates/logandaim-core/src/application/ports/clock.rs",
+      "source_location": "L1"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_clock_clock",
+      "label": "Clock",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "Clock",
+      "file_type": "code",
+      "norm_label": "clock",
+      "source_file": "crates/logandaim-core/src/application/ports/clock.rs",
+      "source_location": "L3"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_clock_clock_today",
+      "label": ".today()",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "Clock",
+      "file_type": "code",
+      "norm_label": ".today()",
+      "source_file": "crates/logandaim-core/src/application/ports/clock.rs",
+      "source_location": "L8"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_clock_rs_naivedate",
+      "label": "NaiveDate",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "Clock",
+      "file_type": "code",
+      "norm_label": "naivedate",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_clock_rs_send",
+      "label": "Send",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "Clock",
+      "file_type": "code",
+      "norm_label": "send",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_clock_rs_sync",
+      "label": "Sync",
+      "_origin": "ast",
+      "community": 27,
+      "community_name": "Clock",
+      "file_type": "code",
+      "norm_label": "sync",
       "source_file": "",
       "source_location": ""
     },
@@ -10942,7 +10667,7 @@
       "label": "PdfRenderer",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": "pdfrenderer",
       "source_file": "crates/logandaim-core/src/application/ports/pdf.rs",
@@ -10953,7 +10678,7 @@
       "label": "Send",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": "send",
       "source_file": "",
@@ -10964,7 +10689,7 @@
       "label": "Sync",
       "_origin": "ast",
       "community": 27,
-      "community_name": "ExecutionContext",
+      "community_name": "Clock",
       "file_type": "code",
       "norm_label": "sync",
       "source_file": "",
@@ -11135,59 +10860,125 @@
       "source_location": "L10"
     },
     {
-      "id": "crates_logandaim_core_src_application_ports_mod",
-      "label": "ports/mod.rs",
+      "id": "crates_logandaim_sqlite_src_uow",
+      "label": "logandaim-sqlite/src/uow.rs",
       "_origin": "ast",
       "community": 29,
-      "community_name": "Debug",
+      "community_name": "SQLiteUnitOfWork",
       "file_type": "code",
-      "norm_label": "ports/mod.rs",
-      "source_file": "crates/logandaim-core/src/application/ports/mod.rs",
+      "norm_label": "logandaim-sqlite/src/uow.rs",
+      "source_file": "crates/logandaim-sqlite/src/uow.rs",
       "source_location": "L1"
     },
     {
-      "id": "crates_logandaim_core_src_application_ports_repos",
-      "label": "repos.rs",
+      "id": "crates_logandaim_sqlite_src_uow_rs_arc",
+      "label": "Arc",
       "_origin": "ast",
       "community": 29,
-      "community_name": "Debug",
+      "community_name": "SQLiteUnitOfWork",
       "file_type": "code",
-      "norm_label": "repos.rs",
-      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
-      "source_location": "L1"
+      "norm_label": "arc",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "crates_logandaim_core_src_application_ports_repos_repositoryerror",
-      "label": "RepositoryError",
+      "id": "crates_logandaim_sqlite_src_uow_rs_box",
+      "label": "Box",
       "_origin": "ast",
       "community": 29,
-      "community_name": "Debug",
+      "community_name": "SQLiteUnitOfWork",
       "file_type": "code",
-      "norm_label": "repositoryerror",
-      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
-      "source_location": "L11"
+      "norm_label": "box",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "crates_logandaim_core_src_application_ports_repos_rs_option",
+      "id": "crates_logandaim_sqlite_src_uow_rs_mutex",
+      "label": "Mutex",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "SQLiteUnitOfWork",
+      "file_type": "code",
+      "norm_label": "mutex",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_uow_rs_option",
       "label": "Option",
       "_origin": "ast",
       "community": 29,
-      "community_name": "Debug",
+      "community_name": "SQLiteUnitOfWork",
       "file_type": "code",
       "norm_label": "option",
       "source_file": "",
       "source_location": ""
     },
     {
-      "id": "debug",
-      "label": "Debug",
+      "id": "crates_logandaim_sqlite_src_uow_rs_repositoryresult",
+      "label": "RepositoryResult",
       "_origin": "ast",
       "community": 29,
-      "community_name": "Debug",
+      "community_name": "SQLiteUnitOfWork",
       "file_type": "code",
-      "norm_label": "debug",
+      "norm_label": "repositoryresult",
       "source_file": "",
       "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_uow_rs_self",
+      "label": "Self",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "SQLiteUnitOfWork",
+      "file_type": "code",
+      "norm_label": "self",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_uow_rs_transaction",
+      "label": "Transaction",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "SQLiteUnitOfWork",
+      "file_type": "code",
+      "norm_label": "transaction",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_uow_sqliteunitofwork",
+      "label": "SQLiteUnitOfWork",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "SQLiteUnitOfWork",
+      "file_type": "code",
+      "norm_label": "sqliteunitofwork",
+      "source_file": "crates/logandaim-sqlite/src/uow.rs",
+      "source_location": "L17"
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_uow_sqliteunitofwork_commit",
+      "label": ".commit()",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "SQLiteUnitOfWork",
+      "file_type": "code",
+      "norm_label": ".commit()",
+      "source_file": "crates/logandaim-sqlite/src/uow.rs",
+      "source_location": "L46"
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_uow_sqliteunitofwork_rollback",
+      "label": ".rollback()",
+      "_origin": "ast",
+      "community": 29,
+      "community_name": "SQLiteUnitOfWork",
+      "file_type": "code",
+      "norm_label": ".rollback()",
+      "source_file": "crates/logandaim-sqlite/src/uow.rs",
+      "source_location": "L57"
     },
     {
       "id": "frontend_biome",
@@ -12627,7 +12418,7 @@
       "label": "migrations/mod.rs",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "migrations/mod.rs",
       "source_file": "crates/logandaim-sqlite/src/migrations/mod.rs",
@@ -12638,7 +12429,7 @@
       "label": "Box",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "box",
       "source_file": "",
@@ -12649,7 +12440,7 @@
       "label": "Error",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "error",
       "source_file": "",
@@ -12660,7 +12451,7 @@
       "label": "Future",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "future",
       "source_file": "",
@@ -12671,7 +12462,7 @@
       "label": "Option",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "option",
       "source_file": "",
@@ -12682,7 +12473,7 @@
       "label": "Output",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "output",
       "source_file": "",
@@ -12693,7 +12484,7 @@
       "label": "Pin",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "pin",
       "source_file": "",
@@ -12704,7 +12495,7 @@
       "label": "Result",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "result",
       "source_file": "",
@@ -12715,7 +12506,7 @@
       "label": "Send",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "send",
       "source_file": "",
@@ -12726,7 +12517,7 @@
       "label": "Transaction",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "transaction",
       "source_file": "",
@@ -12737,7 +12528,7 @@
       "label": "SQLiteConnection",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "sqliteconnection",
       "source_file": "crates/logandaim-sqlite/src/migrations/mod.rs",
@@ -12748,7 +12539,7 @@
       "label": ".apply_migration()",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": ".apply_migration()",
       "source_file": "crates/logandaim-sqlite/src/migrations/mod.rs",
@@ -12759,150 +12550,18 @@
       "label": ".get_current_version()",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": ".get_current_version()",
       "source_file": "crates/logandaim-sqlite/src/migrations/mod.rs",
       "source_location": "L23"
     },
     {
-      "id": "crates_logandaim_sqlite_src_uow",
-      "label": "logandaim-sqlite/src/uow.rs",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": "logandaim-sqlite/src/uow.rs",
-      "source_file": "crates/logandaim-sqlite/src/uow.rs",
-      "source_location": "L1"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_rs_arc",
-      "label": "Arc",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": "arc",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_rs_box",
-      "label": "Box",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": "box",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_rs_mutex",
-      "label": "Mutex",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": "mutex",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_rs_option",
-      "label": "Option",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": "option",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_rs_repositoryresult",
-      "label": "RepositoryResult",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": "repositoryresult",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_rs_self",
-      "label": "Self",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": "self",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_rs_transaction",
-      "label": "Transaction",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": "transaction",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_sqliteunitofwork",
-      "label": "SQLiteUnitOfWork",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": "sqliteunitofwork",
-      "source_file": "crates/logandaim-sqlite/src/uow.rs",
-      "source_location": "L17"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_sqliteunitofwork_commit",
-      "label": ".commit()",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": ".commit()",
-      "source_file": "crates/logandaim-sqlite/src/uow.rs",
-      "source_location": "L46"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_sqliteunitofwork_rollback",
-      "label": ".rollback()",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": ".rollback()",
-      "source_file": "crates/logandaim-sqlite/src/uow.rs",
-      "source_location": "L57"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_sqliteunitofwork_sch\u00fcsse",
-      "label": ".sch\u00fcsse()",
-      "_origin": "ast",
-      "community": 40,
-      "community_name": "SQLiteUnitOfWork",
-      "file_type": "code",
-      "norm_label": ".schusse()",
-      "source_file": "crates/logandaim-sqlite/src/uow.rs",
-      "source_location": "L65"
-    },
-    {
       "id": "sqliteconnection",
       "label": "SQLiteConnection",
       "_origin": "ast",
       "community": 40,
-      "community_name": "SQLiteUnitOfWork",
+      "community_name": ".get_current_version",
       "file_type": "code",
       "norm_label": "sqliteconnection",
       "source_file": "",
@@ -13234,6 +12893,72 @@
       "norm_label": "why `repostorage` has that pointer wiring",
       "source_file": "docs/vertical-slice.md",
       "source_location": "L71"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_rs_repositoryresult",
+      "label": "RepositoryResult",
+      "_origin": "ast",
+      "community": 48,
+      "community_name": "domain/schuss.rs",
+      "file_type": "code",
+      "norm_label": "repositoryresult",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_rs_schuss",
+      "label": "Schuss",
+      "_origin": "ast",
+      "community": 48,
+      "community_name": "domain/schuss.rs",
+      "file_type": "code",
+      "norm_label": "schuss",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_rs_vec",
+      "label": "Vec",
+      "_origin": "ast",
+      "community": 48,
+      "community_name": "domain/schuss.rs",
+      "file_type": "code",
+      "norm_label": "vec",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_create",
+      "label": ".create()",
+      "_origin": "ast",
+      "community": 48,
+      "community_name": "domain/schuss.rs",
+      "file_type": "code",
+      "norm_label": ".create()",
+      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
+      "source_location": "L38"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_find_by_id",
+      "label": ".find_by_id()",
+      "_origin": "ast",
+      "community": 48,
+      "community_name": "domain/schuss.rs",
+      "file_type": "code",
+      "norm_label": ".find_by_id()",
+      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
+      "source_location": "L40"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_find_by_ids",
+      "label": ".find_by_ids()",
+      "_origin": "ast",
+      "community": 48,
+      "community_name": "domain/schuss.rs",
+      "file_type": "code",
+      "norm_label": ".find_by_ids()",
+      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
+      "source_location": "L44"
     },
     {
       "id": "crates_logandaim_core_src_domain_schuss",
@@ -13597,72 +13322,6 @@
       "norm_label": "zielid",
       "source_file": "crates/logandaim-core/src/domain/schuss.rs",
       "source_location": "L10"
-    },
-    {
-      "id": "crates_logandaim_core_src_service_mod",
-      "label": "service/mod.rs",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "service/mod.rs",
-      "source_file": "crates/logandaim-core/src/service/mod.rs",
-      "source_location": "L1"
-    },
-    {
-      "id": "crates_logandaim_core_src_service_mod_rs_context",
-      "label": "Context",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "context",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_service_mod_rs_output",
-      "label": "Output",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "output",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_service_mod_rs_resultreport",
-      "label": "ResultReport",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "resultreport",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_service_mod_usecase",
-      "label": "UseCase",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "usecase",
-      "source_file": "crates/logandaim-core/src/service/mod.rs",
-      "source_location": "L12"
-    },
-    {
-      "id": "crates_logandaim_core_src_service_mod_usecase_perform",
-      "label": ".perform()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".perform()",
-      "source_file": "crates/logandaim-core/src/service/mod.rs",
-      "source_location": "L15"
     },
     {
       "id": "crates_logandaim_core_src_service_use_cases_schuss",
@@ -15233,6 +14892,17 @@
       "source_location": "L84"
     },
     {
+      "id": "crates_logandaim_core_src_application_instrumented_instrumentedunitofwork_sch\u00fcsse",
+      "label": ".sch\u00fcsse()",
+      "_origin": "ast",
+      "community": 53,
+      "community_name": "InstrumentedUnitOfWork",
+      "file_type": "code",
+      "norm_label": ".schusse()",
+      "source_file": "crates/logandaim-core/src/application/instrumented.rs",
+      "source_location": "L89"
+    },
+    {
       "id": "crates_logandaim_core_src_application_instrumented_instrumentedunitofwork_wrap",
       "label": ".wrap()",
       "_origin": "ast",
@@ -16018,134 +15688,46 @@
       "source_location": "L31"
     },
     {
-      "id": "frontend_package_scripts",
-      "label": "scripts",
+      "id": "crates_logandaim_core_src_application_ports_mod",
+      "label": "ports/mod.rs",
       "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
+      "community": 59,
+      "community_name": "SchussRepository",
       "file_type": "code",
-      "norm_label": "scripts",
-      "source_file": "frontend/package.json",
-      "source_location": "L5"
+      "norm_label": "ports/mod.rs",
+      "source_file": "crates/logandaim-core/src/application/ports/mod.rs",
+      "source_location": "L1"
     },
     {
-      "id": "frontend_package_scripts_build",
-      "label": "build",
+      "id": "crates_logandaim_core_src_application_ports_repos",
+      "label": "repos.rs",
       "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
+      "community": 59,
+      "community_name": "SchussRepository",
       "file_type": "code",
-      "norm_label": "build",
-      "source_file": "frontend/package.json",
-      "source_location": "L7"
+      "norm_label": "repos.rs",
+      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
+      "source_location": "L1"
     },
     {
-      "id": "frontend_package_scripts_check_format",
-      "label": "check:format",
+      "id": "crates_logandaim_core_src_application_ports_repos_repositoryerror",
+      "label": "RepositoryError",
       "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
+      "community": 59,
+      "community_name": "SchussRepository",
       "file_type": "code",
-      "norm_label": "check:format",
-      "source_file": "frontend/package.json",
-      "source_location": "L12"
-    },
-    {
-      "id": "frontend_package_scripts_check_lint",
-      "label": "check:lint",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "check:lint",
-      "source_file": "frontend/package.json",
-      "source_location": "L10"
-    },
-    {
-      "id": "frontend_package_scripts_check_ts",
-      "label": "check:ts",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "check:ts",
-      "source_file": "frontend/package.json",
-      "source_location": "L13"
-    },
-    {
-      "id": "frontend_package_scripts_dev",
-      "label": "dev",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "dev",
-      "source_file": "frontend/package.json",
-      "source_location": "L6"
-    },
-    {
-      "id": "frontend_package_scripts_fix_format",
-      "label": "fix:format",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "fix:format",
-      "source_file": "frontend/package.json",
+      "norm_label": "repositoryerror",
+      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
       "source_location": "L11"
     },
     {
-      "id": "frontend_package_scripts_fix_lint",
-      "label": "fix:lint",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "fix:lint",
-      "source_file": "frontend/package.json",
-      "source_location": "L9"
-    },
-    {
-      "id": "frontend_package_scripts_start",
-      "label": "start",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "start",
-      "source_file": "frontend/package.json",
-      "source_location": "L8"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_instrumented_instrumentedunitofwork_sch\u00fcsse",
-      "label": ".sch\u00fcsse()",
+      "id": "crates_logandaim_core_src_application_ports_repos_rs_option",
+      "label": "Option",
       "_origin": "ast",
       "community": 59,
       "community_name": "SchussRepository",
       "file_type": "code",
-      "norm_label": ".schusse()",
-      "source_file": "crates/logandaim-core/src/application/instrumented.rs",
-      "source_location": "L89"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_rs_repositoryresult",
-      "label": "RepositoryResult",
-      "_origin": "ast",
-      "community": 59,
-      "community_name": "SchussRepository",
-      "file_type": "code",
-      "norm_label": "repositoryresult",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_rs_schuss",
-      "label": "Schuss",
-      "_origin": "ast",
-      "community": 59,
-      "community_name": "SchussRepository",
-      "file_type": "code",
-      "norm_label": "schuss",
+      "norm_label": "option",
       "source_file": "",
       "source_location": ""
     },
@@ -16172,17 +15754,6 @@
       "source_location": ""
     },
     {
-      "id": "crates_logandaim_core_src_application_ports_repos_rs_vec",
-      "label": "Vec",
-      "_origin": "ast",
-      "community": 59,
-      "community_name": "SchussRepository",
-      "file_type": "code",
-      "norm_label": "vec",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
       "id": "crates_logandaim_core_src_application_ports_repos_schussrepository",
       "label": "SchussRepository",
       "_origin": "ast",
@@ -16192,39 +15763,6 @@
       "norm_label": "schussrepository",
       "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
       "source_location": "L37"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_create",
-      "label": ".create()",
-      "_origin": "ast",
-      "community": 59,
-      "community_name": "SchussRepository",
-      "file_type": "code",
-      "norm_label": ".create()",
-      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
-      "source_location": "L38"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_find_by_id",
-      "label": ".find_by_id()",
-      "_origin": "ast",
-      "community": 59,
-      "community_name": "SchussRepository",
-      "file_type": "code",
-      "norm_label": ".find_by_id()",
-      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
-      "source_location": "L40"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_find_by_ids",
-      "label": ".find_by_ids()",
-      "_origin": "ast",
-      "community": 59,
-      "community_name": "SchussRepository",
-      "file_type": "code",
-      "norm_label": ".find_by_ids()",
-      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
-      "source_location": "L44"
     },
     {
       "id": "crates_logandaim_core_src_application_uow_lockedunitofworkimpl_sch\u00fcsse",
@@ -16269,6 +15807,28 @@
       "norm_label": ".schusse()",
       "source_file": "crates/logandaim-fakes/src/uow.rs",
       "source_location": "L84"
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_uow_sqliteunitofwork_sch\u00fcsse",
+      "label": ".sch\u00fcsse()",
+      "_origin": "ast",
+      "community": 59,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": ".schusse()",
+      "source_file": "crates/logandaim-sqlite/src/uow.rs",
+      "source_location": "L65"
+    },
+    {
+      "id": "debug",
+      "label": "Debug",
+      "_origin": "ast",
+      "community": 59,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": "debug",
+      "source_file": "",
+      "source_location": ""
     },
     {
       "id": "frontend_src_components_ui_checkbox",
@@ -16951,7 +16511,7 @@
       "node_kind": "heading",
       "norm_label": "decision log",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L134"
+      "source_location": "L131"
     },
     {
       "id": "specs_product_visual_identity_domain_terms_and_business_rules",
@@ -17023,7 +16583,7 @@
       "node_kind": "heading",
       "norm_label": "revision history",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L147"
+      "source_location": "L145"
     },
     {
       "id": "specs_product_visual_identity_roles",
@@ -18172,6 +17732,17 @@
       "source_location": ""
     },
     {
+      "id": "frontend_src_app_page",
+      "label": "app/page.tsx",
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "app/page.tsx",
+      "source_file": "frontend/src/app/page.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "frontend_src_app_schuss_page",
       "label": "schuss/page.tsx",
       "_origin": "ast",
@@ -18192,6 +17763,17 @@
       "norm_label": "zonen",
       "source_file": "frontend/src/app/schuss/page.tsx",
       "source_location": "L28"
+    },
+    {
+      "id": "frontend_src_components_ui_card",
+      "label": "card.tsx",
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "card.tsx",
+      "source_file": "frontend/src/components/ui/card.tsx",
+      "source_location": "L1"
     },
     {
       "id": "frontend_src_components_ui_input",
@@ -18381,11 +17963,33 @@
       "source_location": "L7"
     },
     {
+      "id": "frontend_src_components_ui_badge",
+      "label": "badge.tsx",
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "badge.tsx",
+      "file_type": "code",
+      "norm_label": "badge.tsx",
+      "source_file": "frontend/src/components/ui/badge.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_ui_badge_badgevariants",
+      "label": "badgeVariants",
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "badge.tsx",
+      "file_type": "code",
+      "norm_label": "badgevariants",
+      "source_file": "frontend/src/components/ui/badge.tsx",
+      "source_location": "L11"
+    },
+    {
       "id": "frontend_src_components_ui_toggle_group",
       "label": "toggle-group.tsx",
       "_origin": "ast",
       "community": 74,
-      "community_name": "toggle-group.tsx",
+      "community_name": "badge.tsx",
       "file_type": "code",
       "norm_label": "toggle-group.tsx",
       "source_file": "frontend/src/components/ui/toggle-group.tsx",
@@ -18396,18 +18000,29 @@
       "label": "toggleGroupItemVariants",
       "_origin": "ast",
       "community": 74,
-      "community_name": "toggle-group.tsx",
+      "community_name": "badge.tsx",
       "file_type": "code",
       "norm_label": "togglegroupitemvariants",
       "source_file": "frontend/src/components/ui/toggle-group.tsx",
       "source_location": "L13"
     },
     {
+      "id": "ref_class_variance_authority",
+      "label": "class-variance-authority",
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "badge.tsx",
+      "file_type": "concept",
+      "norm_label": "class-variance-authority",
+      "source_file": "frontend/package.json",
+      "source_location": "L32"
+    },
+    {
       "id": "ref_radix_ui_react_toggle_group",
       "label": "@radix-ui/react-toggle-group",
       "_origin": "ast",
       "community": 74,
-      "community_name": "toggle-group.tsx",
+      "community_name": "badge.tsx",
       "file_type": "concept",
       "norm_label": "@radix-ui/react-toggle-group",
       "source_file": "frontend/package.json",
@@ -18481,11 +18096,132 @@
       "source_location": "L21"
     },
     {
+      "id": "crates_logandaim_core_src_application_uow",
+      "label": "application/uow.rs",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": "application/uow.rs",
+      "source_file": "crates/logandaim-core/src/application/uow.rs",
+      "source_location": "L1"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_uow_arc_t",
+      "label": "Arc<T>",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": "arc<t>",
+      "source_file": "crates/logandaim-core/src/application/uow.rs",
+      "source_location": "L153"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_uow_arc_t_begin",
+      "label": ".begin()",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": ".begin()",
+      "source_file": "crates/logandaim-core/src/application/uow.rs",
+      "source_location": "L154"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_uow_rs_send",
+      "label": "Send",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": "send",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_uow_rs_sync",
+      "label": "Sync",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": "sync",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_uow_unitofwork_a",
+      "label": "UnitOfWork<'a>",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": "unitofwork<'a>",
+      "source_file": "crates/logandaim-core/src/application/uow.rs",
+      "source_location": "L21"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_uow_unitofwork_a_as_impl",
+      "label": ".as_impl()",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": ".as_impl()",
+      "source_file": "crates/logandaim-core/src/application/uow.rs",
+      "source_location": "L34"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_uow_unitofwork_a_owned",
+      "label": ".owned()",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": ".owned()",
+      "source_file": "crates/logandaim-core/src/application/uow.rs",
+      "source_location": "L22"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_uow_unitofworkimpl",
+      "label": "UnitOfWorkImpl",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": "unitofworkimpl",
+      "source_file": "crates/logandaim-core/src/application/uow.rs",
+      "source_location": "L139"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_uow_unitofworkprovider",
+      "label": "UnitOfWorkProvider",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": "unitofworkprovider",
+      "source_file": "crates/logandaim-core/src/application/uow.rs",
+      "source_location": "L148"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_uow_unitofworkprovider_begin",
+      "label": ".begin()",
+      "_origin": "ast",
+      "community": 77,
+      "community_name": "UnitOfWorkImpl",
+      "file_type": "code",
+      "norm_label": ".begin()",
+      "source_file": "crates/logandaim-core/src/application/uow.rs",
+      "source_location": "L149"
+    },
+    {
       "id": "crates_logandaim_sqlite_src_uow_rs_repositoryerror",
       "label": "RepositoryError",
       "_origin": "ast",
       "community": 77,
-      "community_name": ".begin",
+      "community_name": "UnitOfWorkImpl",
       "file_type": "code",
       "norm_label": "repositoryerror",
       "source_file": "",
@@ -18496,7 +18232,7 @@
       "label": "ResultReport",
       "_origin": "ast",
       "community": 77,
-      "community_name": ".begin",
+      "community_name": "UnitOfWorkImpl",
       "file_type": "code",
       "norm_label": "resultreport",
       "source_file": "",
@@ -18507,7 +18243,7 @@
       "label": "SQLiteInstance",
       "_origin": "ast",
       "community": 77,
-      "community_name": ".begin",
+      "community_name": "UnitOfWorkImpl",
       "file_type": "code",
       "norm_label": "sqliteinstance",
       "source_file": "crates/logandaim-sqlite/src/uow.rs",
@@ -18518,7 +18254,7 @@
       "label": ".begin()",
       "_origin": "ast",
       "community": 77,
-      "community_name": ".begin",
+      "community_name": "UnitOfWorkImpl",
       "file_type": "code",
       "norm_label": ".begin()",
       "source_file": "crates/logandaim-sqlite/src/uow.rs",
@@ -18877,37 +18613,169 @@
       "source_location": "L82"
     },
     {
-      "id": "crates_logandaim_core_src_application_uow_unitofwork_a",
-      "label": "UnitOfWork<'a>",
+      "id": "frontend_package_scripts",
+      "label": "scripts",
       "_origin": "ast",
       "community": 80,
-      "community_name": ".owned",
+      "community_name": "scripts",
       "file_type": "code",
-      "norm_label": "unitofwork<'a>",
-      "source_file": "crates/logandaim-core/src/application/uow.rs",
-      "source_location": "L21"
+      "norm_label": "scripts",
+      "source_file": "frontend/package.json",
+      "source_location": "L5"
     },
     {
-      "id": "crates_logandaim_core_src_application_uow_unitofwork_a_as_impl",
-      "label": ".as_impl()",
+      "id": "frontend_package_scripts_build",
+      "label": "build",
       "_origin": "ast",
       "community": 80,
-      "community_name": ".owned",
+      "community_name": "scripts",
       "file_type": "code",
-      "norm_label": ".as_impl()",
-      "source_file": "crates/logandaim-core/src/application/uow.rs",
-      "source_location": "L34"
+      "norm_label": "build",
+      "source_file": "frontend/package.json",
+      "source_location": "L7"
     },
     {
-      "id": "crates_logandaim_core_src_application_uow_unitofwork_a_owned",
-      "label": ".owned()",
+      "id": "frontend_package_scripts_check_format",
+      "label": "check:format",
       "_origin": "ast",
       "community": 80,
-      "community_name": ".owned",
+      "community_name": "scripts",
       "file_type": "code",
-      "norm_label": ".owned()",
-      "source_file": "crates/logandaim-core/src/application/uow.rs",
-      "source_location": "L22"
+      "norm_label": "check:format",
+      "source_file": "frontend/package.json",
+      "source_location": "L12"
+    },
+    {
+      "id": "frontend_package_scripts_check_lint",
+      "label": "check:lint",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "check:lint",
+      "source_file": "frontend/package.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "frontend_package_scripts_check_ts",
+      "label": "check:ts",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "check:ts",
+      "source_file": "frontend/package.json",
+      "source_location": "L13"
+    },
+    {
+      "id": "frontend_package_scripts_dev",
+      "label": "dev",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "dev",
+      "source_file": "frontend/package.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "frontend_package_scripts_fix_format",
+      "label": "fix:format",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "fix:format",
+      "source_file": "frontend/package.json",
+      "source_location": "L11"
+    },
+    {
+      "id": "frontend_package_scripts_fix_lint",
+      "label": "fix:lint",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "fix:lint",
+      "source_file": "frontend/package.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "frontend_package_scripts_start",
+      "label": "start",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "start",
+      "source_file": "frontend/package.json",
+      "source_location": "L8"
+    },
+    {
+      "id": "crates_logandaim_core_src_service_mod",
+      "label": "service/mod.rs",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "UseCase",
+      "file_type": "code",
+      "norm_label": "service/mod.rs",
+      "source_file": "crates/logandaim-core/src/service/mod.rs",
+      "source_location": "L1"
+    },
+    {
+      "id": "crates_logandaim_core_src_service_mod_rs_context",
+      "label": "Context",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "UseCase",
+      "file_type": "code",
+      "norm_label": "context",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_service_mod_rs_output",
+      "label": "Output",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "UseCase",
+      "file_type": "code",
+      "norm_label": "output",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_service_mod_rs_resultreport",
+      "label": "ResultReport",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "UseCase",
+      "file_type": "code",
+      "norm_label": "resultreport",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_service_mod_usecase",
+      "label": "UseCase",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "UseCase",
+      "file_type": "code",
+      "norm_label": "usecase",
+      "source_file": "crates/logandaim-core/src/service/mod.rs",
+      "source_location": "L12"
+    },
+    {
+      "id": "crates_logandaim_core_src_service_mod_usecase_perform",
+      "label": ".perform()",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "UseCase",
+      "file_type": "code",
+      "norm_label": ".perform()",
+      "source_file": "crates/logandaim-core/src/service/mod.rs",
+      "source_location": "L15"
     },
     {
       "id": "github_contributing_agents",
@@ -19149,6 +19017,39 @@
       "source_location": "L1"
     },
     {
+      "id": "frontend_src_api_hooks_index",
+      "label": "hooks/index.ts",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "hooks/index.ts",
+      "source_file": "frontend/src/api/hooks/index.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_api_hooks_mutations",
+      "label": "mutations.ts",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "mutations.ts",
+      "source_file": "frontend/src/api/hooks/mutations.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_api_hooks_queries",
+      "label": "queries.ts",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "queries.ts",
+      "source_file": "frontend/src/api/hooks/queries.ts",
+      "source_location": "L1"
+    },
+    {
       "id": "frontend_src_api_http_client",
       "label": "http-client.ts",
       "_origin": "ast",
@@ -19202,6 +19103,28 @@
       "norm_label": "logandaimapicontext",
       "source_file": "frontend/src/api/provider.tsx",
       "source_location": "L16"
+    },
+    {
+      "id": "frontend_src_api_query_keys",
+      "label": "query-keys.ts",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "query-keys.ts",
+      "source_file": "frontend/src/api/query-keys.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_api_query_keys_logandaimkeys",
+      "label": "logandaimKeys",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "logandaimkeys",
+      "source_file": "frontend/src/api/query-keys.ts",
+      "source_location": "L2"
     },
     {
       "id": "frontend_src_api_schema",
@@ -19270,6 +19193,28 @@
       "source_location": "L1"
     },
     {
+      "id": "frontend_src_app_providers",
+      "label": "providers.tsx",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "providers.tsx",
+      "source_file": "frontend/src/app/providers.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_workflow_deployment_status",
+      "label": "deployment-status.tsx",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "deployment-status.tsx",
+      "source_file": "frontend/src/components/workflow/deployment-status.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "frontend_src_lib_config",
       "label": "config.ts",
       "_origin": "ast",
@@ -19292,6 +19237,28 @@
       "source_location": "L12"
     },
     {
+      "id": "frontend_src_lib_query_client",
+      "label": "query-client.ts",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "code",
+      "norm_label": "query-client.ts",
+      "source_file": "frontend/src/lib/query-client.ts",
+      "source_location": "L1"
+    },
+    {
+      "id": "ref_tanstack_react_query",
+      "label": "@tanstack/react-query",
+      "_origin": "ast",
+      "community": 84,
+      "community_name": "provider.tsx",
+      "file_type": "concept",
+      "norm_label": "@tanstack/react-query",
+      "source_file": "frontend/package.json",
+      "source_location": "L30"
+    },
+    {
       "id": "crates_molting_src_tests_mod",
       "label": "tests/mod.rs",
       "_origin": "ast",
@@ -19301,6 +19268,39 @@
       "norm_label": "tests/mod.rs",
       "source_file": "crates/molting/src/tests/mod.rs",
       "source_location": "L1"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_clock_clock_now",
+      "label": ".now()",
+      "_origin": "ast",
+      "community": 86,
+      "community_name": ".now",
+      "file_type": "code",
+      "norm_label": ".now()",
+      "source_file": "crates/logandaim-core/src/application/ports/clock.rs",
+      "source_location": "L5"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_clock_rs_datetime",
+      "label": "DateTime",
+      "_origin": "ast",
+      "community": 86,
+      "community_name": ".now",
+      "file_type": "code",
+      "norm_label": "datetime",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_clock_rs_utc",
+      "label": "Utc",
+      "_origin": "ast",
+      "community": 86,
+      "community_name": ".now",
+      "file_type": "code",
+      "norm_label": "utc",
+      "source_file": "",
+      "source_location": ""
     },
     {
       "id": "frontend_src_components_dev_gallery_sections",
@@ -19477,17 +19477,6 @@
       "norm_label": "lucide-react",
       "source_file": "frontend/package.json",
       "source_location": "L34"
-    },
-    {
-      "id": "ref_radix_ui_react_dialog",
-      "label": "@radix-ui/react-dialog",
-      "_origin": "ast",
-      "community": 9,
-      "community_name": "sections.tsx",
-      "file_type": "concept",
-      "norm_label": "@radix-ui/react-dialog",
-      "source_file": "frontend/package.json",
-      "source_location": "L17"
     },
     {
       "id": "ref_radix_ui_react_dropdown_menu",
@@ -47059,13 +47048,24 @@
     },
     {
       "source": "frontend_src_app_layout",
+      "target": "frontend_src_app_layout_nunitosans",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "frontend/src/app/layout.tsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_src_app_layout",
       "target": "frontend_src_app_layout_geistmono",
       "relation": "contains",
       "_origin": "ast",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/layout.tsx",
-      "source_location": "L12",
+      "source_location": "L21",
       "weight": 1.0
     },
     {
@@ -47076,7 +47076,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/layout.tsx",
-      "source_location": "L17",
+      "source_location": "L26",
       "weight": 1.0
     },
     {
@@ -47087,18 +47087,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/app/layout.tsx",
-      "source_location": "L22",
-      "weight": 1.0
-    },
-    {
-      "source": "frontend_src_app_layout",
-      "target": "frontend_src_app_layout_geistsans",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "frontend/src/app/layout.tsx",
-      "source_location": "L7",
+      "source_location": "L31",
       "weight": 1.0
     },
     {
@@ -47439,7 +47428,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L18",
+      "source_location": "L15",
       "weight": 1.0
     },
     {
@@ -47450,18 +47439,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L25",
-      "weight": 1.0
-    },
-    {
-      "source": "frontend_src_components_dev_gallery_type_section",
-      "target": "frontend_src_components_dev_gallery_type_section_nunito",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L32",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -47472,7 +47450,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L51",
+      "source_location": "L39",
       "weight": 1.0
     },
     {
@@ -47483,7 +47461,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L82",
+      "source_location": "L63",
       "weight": 1.0
     },
     {
@@ -47494,7 +47472,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/type-section.tsx",
-      "source_location": "L88",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -50739,7 +50717,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L134",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -50750,7 +50728,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L147",
+      "source_location": "L145",
       "weight": 1.0
     },
     {
@@ -56838,5 +56816,5 @@
       "source_file": ".cursor/AGENTS.md"
     }
   ],
-  "built_at_commit": "e1a6761f909f59b2528162fef821b70dab87944c"
+  "built_at_commit": "d20c0447da0d38a322368edc83fc185a3eb0607e"
 }

@@ -126,10 +126,7 @@ Rules:
 
 - [ ] Q-1: Design direction and palette. Answered by looking at the gallery; recorded in the
   decision log below.
-- [ ] Q-2: Typeface. Geist is the inherited seed. The gallery's Schrift section compares it
-  against IBM Plex Sans (sachlich, good in tables), Source Sans 3 (compact, high x-height)
-  and Nunito Sans (warmer, friendlier) on real product copy at UI and table sizes. The PO
-  picks; until then `--font-sans` stays Geist.
+- [x] Q-2: Typeface. Answered: Nunito Sans (see the decision log).
 
 ## Decision log
 
@@ -142,6 +139,7 @@ Rules:
 | 2026-10-24 | **Slider knob reduced** from 44px to 20px on a 6px track, keeping the 44px hit area via a padded `::before`. The touch minimum applies to the target, not the visible control. Gallery trigger buttons moved into a flex row after they rendered flush. | TimerErTim |
 | 2026-10-24 | **Icon button height fixed.** `size="icon"` drew a 44px box next to 40px `md` buttons, so mixed rows were ragged. It now draws at `md` height and takes its 44px target from a `::before` overlay, the same split between drawn size and hit area as the slider knob. | Agent (Cursor) |
 | 2026-10-24 | **Dark palette cooled by one step.** Same warm brown-black family, less orange cast (`--background` `#1a1813` → `#1a1917`). Light mode unchanged. All documented pairs still pass AA. | Agent (Cursor), reviewing with TimerErTim |
+| 2026-10-24 | **Typeface decided: Nunito Sans**, chosen by the PO from the gallery comparison against Geist, IBM Plex Sans and Source Sans 3. Warmer and friendlier without reading as a consumer app; weights 400–700 loaded. Geist is no longer shipped as the UI face; Geist Mono stays for machine values. | TimerErTim |
 | 2026-10-24 | **Geist now actually renders.** The `next/font` variables were declared on `<body>`, where the root-level `--font-sans` mapping cannot see them, so the app silently fell back to `system-ui`. They moved to `<html>`. | Agent (Cursor) |
 
 ## Revision history

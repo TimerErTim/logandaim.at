@@ -48,11 +48,18 @@ light and dark. Add a token only together with an entry here.
 | `--warning` | Attention without failure | Offen/pending badges, touch-target debug outline |
 | `--ring` | Focus indicator | Every `focus-visible` outline |
 | `--radius` | Corner radius | `--radius-sm` through `--radius-xl` are derived from it |
-| `--font-sans` | UI typeface | Set by the `next/font` call in `app/layout.tsx`; never name a family in a component |
+| `--font-sans` | UI typeface: **Nunito Sans** | Set by the `next/font` call in `app/layout.tsx`; never name a family in a component |
+| `--font-mono` | Machine values only | Base URLs, token names, file names. Never for prose or numbers in a table |
 
-Type candidates (`--font-plex`, `--font-source`, `--font-nunito`) exist for the
-`/dev` gallery's Schrift section only. They are declared in
-`components/dev-gallery/type-section.tsx`, which no production route imports.
+Nunito Sans was chosen by the PO from the gallery's Schrift section: warm and friendly
+without reading as a consumer app, and it holds up in tables at `text-sm`. Weights 400,
+500, 600 and 700 are loaded, which covers every `font-medium` / `font-semibold` /
+`font-bold` in the interface — add a weight to `layout.tsx` before using one that is not
+listed, or the browser will synthesise it.
+
+The alternative faces (IBM Plex Sans, Source Sans 3) stay in
+`components/dev-gallery/type-section.tsx` for a later revisit. That module is reachable
+only from `page.dev.tsx`, so a production build never downloads them.
 
 Dark mode is class-based (`@custom-variant dark`), with `prefers-color-scheme` as the default. The
 gallery sets `.light` and `.dark` on wrappers to show both themes side by side.
