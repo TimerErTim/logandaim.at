@@ -25,10 +25,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    // The font variables must live on `<html>`: `@theme` resolves `--font-sans` at
+    // the root, so variables declared on `<body>` would not be visible there and the
+    // whole app would fall back to the system stack.
+    <html lang="de" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="font-sans antialiased">
         <Providers>
           <AppChrome>{children}</AppChrome>
         </Providers>

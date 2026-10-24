@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { GallerySections } from "@/components/dev-gallery/sections";
+import { TypeSection } from "@/components/dev-gallery/type-section";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,10 @@ export default function DevGalleryPage() {
         </Button>
       </div>
 
-      <GallerySections showTouchTargets={showTouchTargets} />
+      <div className="space-y-10">
+        <TypeSection />
+        <GallerySections showTouchTargets={showTouchTargets} />
+      </div>
     </div>
   );
 }

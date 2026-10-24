@@ -42,20 +42,21 @@
 }
 
 /*
- * Dark: warm brown-black, not pure black. Background sits below surface so cards
- * read as raised timber rather than cut-outs, and the primary brightens to keep
- * its contrast instead of turning into a glowing accent.
+ * Dark: warm brown-black, not pure black, pulled a touch cooler than the light
+ * theme's timber so a long session does not feel orange. Background still sits
+ * below surface so cards read as raised panels rather than cut-outs, and the
+ * primary brightens to keep its contrast instead of turning into a glowing accent.
  */
 .dark {
-  --background: #1a1813;
-  --foreground: #ece6d6;
-  --surface: #272319;
-  --surface-muted: #322d22;
-  --border: #473f32;
+  --background: #1a1917;
+  --foreground: #eae7db;
+  --surface: #252320;
+  --surface-muted: #2f2d28;
+  --border: #45423a;
   --primary: #9aba72;
   --primary-foreground: #1a2110;
-  --secondary: #3b342a;
-  --muted-foreground: #aea792;
+  --secondary: #393630;
+  --muted-foreground: #aca892;
   --destructive: #e28f7d;
   --success: #9cc28c;
   --warning: #ddb268;
@@ -66,15 +67,15 @@
 /* System preference is the default; `.light` opts a subtree back out. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --background: #1a1813;
-    --foreground: #ece6d6;
-    --surface: #272319;
-    --surface-muted: #322d22;
-    --border: #473f32;
+    --background: #1a1917;
+    --foreground: #eae7db;
+    --surface: #252320;
+    --surface-muted: #2f2d28;
+    --border: #45423a;
     --primary: #9aba72;
     --primary-foreground: #1a2110;
-    --secondary: #3b342a;
-    --muted-foreground: #aea792;
+    --secondary: #393630;
+    --muted-foreground: #aca892;
     --destructive: #e28f7d;
     --success: #9cc28c;
     --warning: #ddb268;

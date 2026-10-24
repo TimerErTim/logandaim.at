@@ -29,7 +29,9 @@ const buttonVariants = cva(
         md: "h-10 px-4 text-sm",
         // Minimum touch target from the accessibility bar (WCAG 2.2 AA, 44x44).
         lg: "h-11 px-6 text-base",
-        icon: "size-11",
+        // Drawn at `md` height so it lines up with its neighbours; the 44px hit
+        // area comes from `before`, not from a taller box.
+        icon: "relative size-10 before:absolute before:-inset-0.5 before:content-['']",
       },
     },
     defaultVariants: {

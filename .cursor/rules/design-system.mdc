@@ -48,6 +48,11 @@ light and dark. Add a token only together with an entry here.
 | `--warning` | Attention without failure | Offen/pending badges, touch-target debug outline |
 | `--ring` | Focus indicator | Every `focus-visible` outline |
 | `--radius` | Corner radius | `--radius-sm` through `--radius-xl` are derived from it |
+| `--font-sans` | UI typeface | Set by the `next/font` call in `app/layout.tsx`; never name a family in a component |
+
+Type candidates (`--font-plex`, `--font-source`, `--font-nunito`) exist for the
+`/dev` gallery's Schrift section only. They are declared in
+`components/dev-gallery/type-section.tsx`, which no production route imports.
 
 Dark mode is class-based (`@custom-variant dark`), with `prefers-color-scheme` as the default. The
 gallery sets `.light` and `.dark` on wrappers to show both themes side by side.
@@ -63,9 +68,12 @@ gallery sets `.light` and `.dark` on wrappers to show both themes side by side.
 3. **Colour is never the only signal.** `Wertungszone`, status, and validation carry their meaning
    in text or an icon too. Badges and alerts always include the word.
 4. **Touch targets are at least 44 by 44 pixels** on anything an archer uses with gloves: buttons,
-   nav items, checkbox and radio rows, slider thumbs. `Button` sizes `lg` and `icon` exist for this.
-   The target and the control are not the same thing: the slider knob is 20px and its `before`
-   extends the hit area to 44px, so a control stays light without being hard to hit.
+   nav items, checkbox and radio rows, slider thumbs.
+   The target and the drawn control are not the same thing, and only `lg` is 44px tall. A control
+   keeps its neighbour's height and extends its hit area with a `before` overlay: `Button`
+   `size="icon"` draws at `md` height (40px) with a 44px target, so icon and text buttons in one
+   row have a common height. The slider follows the same split (20px knob, 44px target). Never make
+   a control taller than its row to reach 44px.
 5. **Focus is always visible.** Interactive elements use `focus-visible:outline-2` with
    `outline-ring`. Never remove an outline without an equally visible replacement.
 6. **One primary action per screen.** Everything else is `secondary` or `ghost`. Destructive
