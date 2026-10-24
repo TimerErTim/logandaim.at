@@ -11,14 +11,6 @@ See `CONTRIBUTING.md`.
 Becomes the release body. Write for end users: what the release does, not the pull request process.
 -->
 
-## Ships
-
-<!--
-One line per shipped issue or pull request: a dash, a hash, then the number. `pr/main` requires one.
--->
-
-- #
-
 ## Version
 
 - [ ] `mise run release:version <patch|minor|major>` has been run, or the version was set explicitly.

@@ -69,8 +69,10 @@ jobs:
           [ "$HEAD_REF" = "dev" ] || echo "$HEAD_REF" | grep -Eq '^hotfix/' \
             || fail "Pull requests into 'main' must come from 'dev' or 'hotfix/*'."
 
-          echo "$BODY" | grep -Eq '(^|[^0-9])#[0-9]+' \
-            || fail "Reference the shipped issues and pull requests with '#N'."
+          # Every released issue and pull request is already recorded in the dated
+          # CHANGELOG section, which `release-check` validates. A `#N` reference in
+          # the body adds nothing machine-readable here: `release:notes` reads only
+          # `## Release description`, and any `#N` anywhere would satisfy a grep.
 
           echo "$BODY" | grep -Eqi '^## Release description' \
             || fail "Add a '## Release description' section; it becomes the release body."

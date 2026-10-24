@@ -126,7 +126,7 @@ history.
 |-------|---------|---------|
 | `pr/base` | Every pull request, every push to `dev`, and the release gate on `main` | The full gate: `mise run ci`. |
 | `pr/dev` | Pull requests into `dev` | Conventional title and a `Closes #N` link. |
-| `pr/main` | Pull requests into `main` | Conventional title, `dev` or `hotfix/*` source, issue references, and a `## Release description` section. |
+| `pr/main` | Pull requests into `main` | Conventional title, `dev` or `hotfix/*` source, and a `## Release description` section. |
 | `release-check` | Pull requests into `main`, called by the push to `main` | Versions agree, version bumped past the last release tag, dated changelog section with entries, the release does not exist yet, and the release body can be assembled. |
 | `deploy/pages` | Push to `main` | Deploys `frontend/out` to GitHub Pages. |
 | `deploy/release` | Push to `main` | Creates the source-only GitHub release. |
