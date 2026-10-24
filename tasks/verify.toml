@@ -3,10 +3,9 @@
 # Smoke tests.
 #
 # Each service is split in three:
-#   run:*     long-running process, a standalone script usable outside this gate
-#             (for example to serve the export on a VPS)
-#   smoke:*   assumes the service already runs, only health-checks it; standalone
-#             as well, so it can verify a real deployment
+#   run:*     the long-running service, defined in tasks/run.toml
+#   smoke:*   assumes the service already runs, only health-checks it; point it at
+#             any deployment with LOGANDAIM_FRONTEND_URL / LOGANDAIM_API_URL
 #   verify:*  `daemons = [...]` starts the service and waits for readiness,
 #             `depends = ["smoke:*"]` then runs the checks
 #
@@ -14,36 +13,68 @@
 # start daemons. Daemons outlive the task, so stop them with
 # `mise daemons stop frontend server`.
 
-["run:frontend"]
-description = "Build and serve the static frontend export"
-depends = ["build:frontend"]
-tools."npm:serve" = "latest"
-run = "bash {{ vars.REPO_ROOT }}/tasks/scripts/serve-frontend.sh"
-
-["serve:frontend"]
-description = "Serve the built frontend export without building it first"
-tools."npm:serve" = "latest"
-run = "bash {{ vars.REPO_ROOT }}/tasks/scripts/serve-frontend.sh"
-
 ["smoke:frontend"]
 description = "Health-check an already running frontend"
-run = "node {{ vars.REPO_ROOT }}/tasks/scripts/smoke-frontend.mjs"
+run = """
+#!/usr/bin/env bash
+set -eu
+BASE_URL="${LOGANDAIM_FRONTEND_URL:-http://127.0.0.1:{{ vars.FRONTEND_PORT }}}"
+
+fail() {
+  echo "smoke:frontend: $1" >&2
+  exit 1
+}
+
+status=$(curl -fsS -o /dev/null -w '%{http_code}' "$BASE_URL/" || true)
+[ "$status" = "200" ] || fail "$BASE_URL/ returned '$status', expected 200"
+
+curl -fsS "$BASE_URL/" | grep -q '<html' || fail "$BASE_URL/ is not an HTML document"
+
+# The export uses trailing slashes, so the server redirects `/404.html` to `/404`.
+# Follow redirects: what matters is that a static 404 page is reachable.
+curl -fsSL "$BASE_URL/404.html" | grep -q '<html' || fail "$BASE_URL/404.html is not reachable as HTML"
+
+echo "smoke:frontend: ok ($BASE_URL)"
+"""
 
 ["verify:frontend"]
 description = "Start the frontend daemon and smoke-test it"
 daemons = ["frontend"]
 depends = ["smoke:frontend"]
 
-["run:server"]
-description = "Build and run the backend server with a throwaway database"
-usage = """
-flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build and run the release profile"
-"""
-run = "node {{ vars.REPO_ROOT }}/tasks/scripts/run-server.mjs"
-
 ["smoke:server"]
 description = "Health-check an already running backend"
-run = "node {{ vars.REPO_ROOT }}/tasks/scripts/smoke-server.mjs"
+run = """
+#!/usr/bin/env bash
+set -eu
+BASE_URL="${LOGANDAIM_API_URL:-http://127.0.0.1:{{ vars.API_PORT }}}"
+
+fail() {
+  echo "smoke:server: $1" >&2
+  exit 1
+}
+
+# The endpoint returns the JSON string "OK", so compare without the quotes.
+body=$(curl -fsS "$BASE_URL/api/health" || true)
+body=$(printf '%s' "$body" | tr -d '"[:space:]')
+[ "$body" = "OK" ] || fail "/api/health returned '$body', expected OK"
+
+curl -fsS "$BASE_URL/spec.json" | jq -e . >/dev/null || fail "/spec.json is not valid JSON"
+
+for path in /spec.yaml /swagger; do
+  status=$(curl -fsS -o /dev/null -w '%{http_code}' "$BASE_URL$path" || true)
+  [ "$status" = "200" ] || fail "$path returned '$status', expected 200"
+done
+
+# Follow no redirects: a real 404/405 from the router proves the API is mounted here.
+status=$(curl -sS -o /dev/null -w '%{http_code}' "$BASE_URL/api/does-not-exist" || true)
+case "$status" in
+  404 | 405) ;;
+  *) fail "/api/does-not-exist returned '$status', expected 404 or 405" ;;
+esac
+
+echo "smoke:server: ok ($BASE_URL)"
+"""
 
 ["verify:server"]
 description = "Start the backend daemon and smoke-test it"

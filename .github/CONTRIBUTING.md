@@ -154,10 +154,10 @@ and backend). `build` precedes `test` so a compile error is reported by the buil
 failed test. CI runs the same task, so a green local run means a green pipeline unless the
 environment differs.
 
-The task bodies live in `tasks/`; anything longer than a single command is a script in
-`tasks/scripts/`. The smoke tests are split so each piece works on its own: `run:*` starts a
-service, `smoke:*` only health-checks one that already runs (point it at a deployment with
-`LOGANDAIM_API_URL` / `LOGANDAIM_FRONTEND_URL`), and `verify:*` connects the two under a daemon.
+Tasks are defined in `tasks/*.toml`; the release and version checks delegate their logic to
+`tasks/scripts/`. The services are split so each piece works on its own: `run:*` starts a service
+(`tasks/run.toml`), `smoke:*` only health-checks one that already runs (point it at a deployment
+with `LOGANDAIM_API_URL` / `LOGANDAIM_FRONTEND_URL`), and `verify:*` connects the two under a daemon.
 
 The Pages deployment builds with `NEXT_PUBLIC_LOGANDAIM_API_URL` (repo variable
 `LOGANDAIM_API_URL`) and a base path taken from `actions/configure-pages`. The export is deployed
@@ -170,7 +170,7 @@ Useful tasks:
 | `mise run ci` | Full gate. |
 | `mise run verify:frontend`, `mise run verify:server` | Start one service as a daemon and smoke-test it. |
 | `mise run run:frontend`, `mise run run:server` | Start one service in the foreground, without the gate. |
-| `node tasks/scripts/smoke-server.mjs` | Health-check any deployment via `LOGANDAIM_API_URL`. |
+| `LOGANDAIM_API_URL=… mise run smoke:server` | Health-check any deployment. |
 | `mise run check:release` | Validate a release pull request. |
 | `mise run release:version <kind>` | Bump the workspace and frontend versions. |
 | `mise run release:notes <version> --pr <n>` | Preview the release body. |

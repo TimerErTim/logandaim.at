@@ -30,6 +30,7 @@ includes = [
     "tasks/fixes.toml",
     "tasks/tests.toml",
     "tasks/dev.toml",
+    "tasks/run.toml",
     "tasks/misc.toml",
     "tasks/build.toml",
     "tasks/verify.toml",
