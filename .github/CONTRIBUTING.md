@@ -156,9 +156,8 @@ failed test. CI runs the same task, so a green local run means a green pipeline 
 environment differs.
 
 `test` writes `target/nextest/default/junit.xml` (see `.config/nextest.toml`), on failure too. CI
-publishes it as the `Test results` check run, which needs `checks: write`. Fork pull requests get a
-read-only token, so that step is `continue-on-error`: the gate alone decides the run, and an
-unpublishable report never turns a green gate red.
+publishes it as the `Test results` check run (`checks: write`). Fork pull requests get a read-only
+token, so that step is `continue-on-error`: the gate alone decides the run.
 
 Tasks are defined in `tasks/*.toml`; the release and version checks delegate their logic to
 `tasks/scripts/`. The services are split so each piece works on its own: `run:*` starts a service

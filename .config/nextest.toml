@@ -1,7 +1,7 @@
 [profile.default]
 fail-fast = false
 
-# Written on failure too, which is the point: a red gate must still produce a
-# report. `target/` is ignored, and the CI gate publishes this file as a check run.
+# Written on failure too: a red gate must still produce a report. The CI gate
+# publishes it as a check run.
 [profile.default.junit]
 path = "junit.xml"

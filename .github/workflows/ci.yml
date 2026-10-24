@@ -1,11 +1,7 @@
 name: CI
 
-# The shared gate. Every pull request and every push to `dev` runs it, and
-# `main.yml` calls it as the release gate.
-#
-# Every step delegates to a mise task. Nothing here calls cargo, npm, biome, or
-# typstyle directly, so CI cannot drift from a developer machine: the same
-# `mise run ci` produces the same result.
+# The shared gate: pull requests, pushes to `dev`, and `main.yml`'s release gate.
+# Every step delegates to a mise task, so CI cannot drift from a developer machine.
 
 on:
   pull_request:
@@ -16,7 +12,7 @@ on:
 
 permissions:
   contents: read
-  # Publish the JUnit report as a check run on the pull request head.
+  # Publishes the test report as a check run.
   checks: write
 
 concurrency:
@@ -39,28 +35,21 @@ jobs:
       - name: Run the full gate
         run: mise run ci
 
-      # nextest writes this even when tests fail, which is exactly when it matters.
-      # Tests may not have run at all if `check` failed earlier, so a missing file
-      # is not an error: `hashFiles` skips the step instead of failing inside it.
-      #
-      # `continue-on-error`: fork pull requests get a read-only token, so writing a
-      # check run fails there. The gate above already decides the run; a report
-      # that cannot be published must not turn a green gate red.
+      # A missing file means `check` failed before the tests ran.
+      # `continue-on-error`: fork PRs have a read-only token, and the gate already
+      # decides the run.
       - name: Publish the test report
         if: always() && hashFiles('target/nextest/default/junit.xml') != ''
         continue-on-error: true
         uses: mikepenz/action-junit-report@v6
         with:
           report_paths: target/nextest/default/junit.xml
-          # The pull request head, not the merge commit the gate tested, so the
-          # results attach to the pull request the reviewer is reading.
+          # The PR head, not the merge commit, so results attach to the PR.
           commit: ${{ github.event.pull_request.head.sha || github.sha }}
           check_name: Test results
-          # Never fail here: the gate already reported the same failures, and a
-          # second red check on the same run would be noise.
+          # The gate already reports these failures.
           fail_on_failure: false
-          # nextest's JUnit carries no file or line attributes, so there is nothing
-          # to annotate inline. The summary tables are the whole report.
+          # nextest's JUnit has no file or line attributes to annotate inline.
           check_annotations: false
           include_skipped: true
 
