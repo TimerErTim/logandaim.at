@@ -30,11 +30,6 @@ set -eu
 DATA_DIR="${usage_data_dir:-$(mktemp -d)}"
 mkdir -p "$DATA_DIR/storage"
 
-# An exported empty `LOGANDAIM_LOG_DIR` fails clap with "a value is required for
-# '--log-dir'"; the variable must be absent, not blank. A non-empty value is fine and
-# only aims the log files elsewhere.
-unset LOGANDAIM_LOG_DIR || true
-
 exec target/{% if usage.release %}release{% else %}debug{% endif %}/logandaim-server \
   --bind-address '{{ usage.host }}' \
   --bind-port '{{ usage.port }}' \
