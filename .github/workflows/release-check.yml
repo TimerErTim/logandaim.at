@@ -1,0 +1,49 @@
+name: Release check
+
+# Validates that the tree is a valid release: the version differs from the last
+# release tag, `CHANGELOG.md` has a dated section for it, and the versions agree.
+#
+# Runs as a pull request check on release pull requests, and is called by
+# `main.yml` as a job so the push-to-main run gates the tag on the same check.
+# It is kept out of `pr.yml` because that workflow only triggers on pull
+# requests, so it would never run on the push that creates the release.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+  # `check:release` reads releases and the pull request for the commit.
+  pull-requests: read
+
+jobs:
+  check:
+    name: release-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          # Tags are needed to compare against the previous release.
+          fetch-depth: 0
+
+      - name: Set up tooling
+        uses: ./.github/actions/setup
+
+      - name: Verify the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        # `--pr` exists only on a pull request event; the push to `main` derives
+        # the pull request from the merge commit instead.
+        run: |
+          set -eu
+          if [ -n "${PR:-}" ]; then
+            mise run check:release --pr "$PR"
+          else
+            mise run check:release
+          fi

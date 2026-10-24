@@ -219,9 +219,9 @@ The Next.js frontend calls `yams-server` over HTTP. Server configuration uses **
 | Runtime | Path | File | Overlay |
 |---------|------|------|---------|
 | `yams-server` | `YAMS_CONFIG_PATH` / `--config-path`, default `yams-server.json` in cwd | `backend/config.dev.json` in mise | env then CLI (`YAMS_DATABASE_URL`, `YAMS_OBJECT_STORE_DIR`, `BIND_ADDRESS`, `PORT`, `SUBPATH`) |
-| Browser | — | `src/standalone-config.json` (static import) | `NEXT_PUBLIC_YAMS_API_URL`, `NEXT_PUBLIC_YAMS_DEV` |
+| Browser | — | none; `NEXT_PUBLIC_*` only | `NEXT_PUBLIC_LOGANDAIM_API_URL`, `NEXT_PUBLIC_LOGANDAIM_DEV`, `NEXT_PUBLIC_LOGANDAIM_BASE_PATH` |
 
-The browser uses static API URL configuration. `NEXT_PUBLIC_YAMS_API_URL` overrides API URL; `NEXT_PUBLIC_YAMS_DEV` enables devtools outside development.
+The browser has no runtime config file: `NEXT_PUBLIC_LOGANDAIM_API_URL` is baked in at build time (the Pages deploy fails without it, `mise run dev:frontend` sets the local one); `NEXT_PUBLIC_LOGANDAIM_DEV` enables devtools outside development.
 
 ## Error Handling
 
@@ -261,7 +261,7 @@ Next.js in `frontend/`. OpenAPI types at `frontend/src/api/schema.ts` (`mise run
 ### API layer
 
 - **`YamsApi`** (`src/api/yams-api.ts`) — framework-agnostic interface mirroring `YamsAppApi`.
-- **Adapter** — `HttpYamsApi` (openapi-fetch + schema paths) calls `yams-server`. In the browser, static `src/standalone-config.json` plus `NEXT_PUBLIC_YAMS_API_URL` / `NEXT_PUBLIC_YAMS_DEV`.
+- **Adapter** — `HttpYamsApi` (openapi-fetch + schema paths) calls `yams-server`. In the browser the base URL comes from `NEXT_PUBLIC_LOGANDAIM_API_URL`; there is no runtime config file.
 - **Bootstrap** — `YamsApiProvider` creates the HTTP adapter; components never choose transport themselves.
 
 ### TanStack Query (server state)
@@ -286,7 +286,7 @@ Next.js in `frontend/`. OpenAPI types at `frontend/src/api/schema.ts` (`mise run
 
 `QueryClientProvider` wraps `YamsApiProvider` in `src/app/providers.tsx`.
 
-**Remote dev (browser + `yams-server`)** — Next and the API must use different ports (`mise run dev:frontend+server`: API `:3000`, Next `:3001`). Cross-origin fetch requires CORS on `yams-server` (localhost / 127.0.0.1). Set `NEXT_PUBLIC_YAMS_API_URL` (or edit `src/standalone-config.json`) when the API is not at `http://127.0.0.1:3000/api`. Use matching hostnames (`localhost` vs `127.0.0.1`) in the browser URL and API URL.
+**Remote dev (browser + `yams-server`)** — Next and the API must use different ports (`mise run dev:frontend+server`: API `:3000`, Next `:3001`). Cross-origin fetch requires CORS on `yams-server` (localhost / 127.0.0.1). Set `NEXT_PUBLIC_LOGANDAIM_API_URL` when the API is not at `http://127.0.0.1:3000/api` (the value `mise run dev:frontend` sets). Use matching hostnames (`localhost` vs `127.0.0.1`) in the browser URL and API URL.
 
 ### UI design (legacy parity)
 
@@ -322,6 +322,7 @@ Recreate **workflow and visual language** from the legacy frontend, not its stac
 - **Merge, don't rebase, to integrate upstream.** When a branch conflicts with or falls behind its base, create a merge commit (`jj new <branch> <base>@github`, resolve, commit). Conflict resolutions must stay visible in history; never rewrite pushed commits to hide them.
 - Rebase only in special cases: unpushed local work, or explicit maintainer instruction.
 - Never force-push a shared or reviewed branch.
+- Commit identity and signing key come from environment-conditional jj config: with `CURSOR_AGENT` set, jj uses the agent account and its own SSH key. Never override `user.name`, `user.email`, or `signing.key` inline, and never disable signing.
 
 ## Conventions for Contributors
 

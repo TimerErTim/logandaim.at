@@ -6,25 +6,14 @@ dir = "{{ vars.REPO_ROOT }}/frontend"
 usage = """
 flag "--check" env="LOGANDAIM_FMT_CHECK" help="Only performs a check of the formatting"
 """
-run = """
-#!/usr/bin/env bash
-if [ "${usage_check:-}" = "true" ]; then
-  npm run check:format
-else
-  npm run fix:format
-fi
-"""
+run = 'npm run {% if usage.check %}check:format{% else %}fix:format{% endif %}'
 
 ["fmt:rust"]
 description = "Format the rust code"
 usage = """
 flag "--check" env="LOGANDAIM_FMT_CHECK" help="Only performs a check of the formatting"
 """
-run = """
-#!/usr/bin/env bash
-FMT_CMD=$([ "${usage_check:-}" = "true" ] && echo "--check")
-cargo fmt --all $FMT_CMD
-"""
+run = 'cargo fmt --all{% if usage.check %} --check{% endif %}'
 
 ["fmt:typst"]
 description = "Format the typst code"
@@ -32,10 +21,7 @@ usage = """
 flag "--check" env="LOGANDAIM_FMT_CHECK" help="Only performs a check of the formatting"
 """
 tools = { typstyle = "latest" }
-run = """
-#!/usr/bin/env bash
-typstyle . --wrap-text $([ "${usage_check:-}" = "true" ] && echo "--diff" || echo "-i")
-"""
+run = 'typstyle . --wrap-text {% if usage.check %}--diff{% else %}-i{% endif %}'
 
 ["fmt:newline"]
 description = "Ensures every non-binary file ends with a newline"
@@ -43,6 +29,4 @@ usage = """
 flag "--check" env="LOGANDAIM_FMT_CHECK" help="Only performs a check of the formatting"
 """
 tools."cargo:lineguard" = { version = "0.2.1" }
-run = """
-lineguard .{{ " --fix " if not usage.check else " " }}-r --ignore 'graphify-out/**'
-"""
+run = "lineguard .{% if usage.check %} {% else %} --fix {% endif %}-r --ignore 'graphify-out/**'"
