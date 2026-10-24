@@ -7,3 +7,4 @@ One file per decision: `NNNN-<kebab-title>.md`, numbered in order. Status is `Pr
 |-----|-------|--------|
 | [0001](0001-baseline-architecture.md) | Keep Rust backend and static-export Next.js; remove Tauri for now | Accepted |
 | [0002](0002-session-cookie-auth.md) | Session cookies for auth; explicit-origin CORS | Proposed |
+| [0003](0003-design-system-and-dev-gallery.md) | Semantic design tokens, shadcn-style primitives, and a dev-only component gallery | Proposed |

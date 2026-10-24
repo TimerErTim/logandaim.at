@@ -7,7 +7,7 @@ export function Table({
   ...props
 }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+    <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-sm">
       <table
         className={cn("w-full border-collapse text-sm", className)}
         {...props}
@@ -23,7 +23,7 @@ export function TableHead({
   return (
     <thead
       className={cn(
-        "sticky top-0 z-10 bg-zinc-50 text-left text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:bg-zinc-900 dark:text-zinc-400",
+        "sticky top-0 z-10 bg-surface-muted text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase",
         className,
       )}
       {...props}
@@ -36,10 +36,7 @@ export function TableBody({
   ...props
 }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <tbody
-      className={cn("divide-y divide-zinc-200 dark:divide-zinc-800", className)}
-      {...props}
-    />
+    <tbody className={cn("divide-y divide-border", className)} {...props} />
   );
 }
 
@@ -49,10 +46,7 @@ export function TableRow({
 }: HTMLAttributes<HTMLTableRowElement>) {
   return (
     <tr
-      className={cn(
-        "transition-colors hover:bg-zinc-50/80 dark:hover:bg-zinc-900/50",
-        className,
-      )}
+      className={cn("transition-colors hover:bg-surface-muted/60", className)}
       {...props}
     />
   );

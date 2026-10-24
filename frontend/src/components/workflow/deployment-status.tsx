@@ -25,11 +25,11 @@ export function DeploymentStatus() {
       <CardContent>
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           <div>
-            <dt className="font-medium text-zinc-500">API base</dt>
+            <dt className="font-medium text-muted-foreground">API base</dt>
             <dd className="mt-0.5 font-mono text-xs">{apiBaseUrl}</dd>
           </div>
           <div>
-            <dt className="font-medium text-zinc-500">Health</dt>
+            <dt className="font-medium text-muted-foreground">Health</dt>
             <dd className="mt-0.5">
               {health.isPending ? "…" : (health.data ?? "—")}
             </dd>

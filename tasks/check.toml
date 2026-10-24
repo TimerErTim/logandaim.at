@@ -15,6 +15,44 @@ description = "Fail when the generated OpenAPI client differs from the exported 
 depends = ["sync:openapi"]
 run = "git diff --exit-code -- frontend/src/api/schema.ts"
 
+["check:design"]
+description = "Fail when a design token is undocumented or a raw palette class leaks into a component"
+# Two halves of the same rule: every literal token declared in `globals.css` must be
+# named in `.cursor/rules/design-system.mdc`, and components must use semantic
+# utilities only.
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="{{ vars.REPO_ROOT }}"
+CSS="$ROOT/frontend/src/app/globals.css"
+RULE="$ROOT/.cursor/rules/design-system.mdc"
+
+# Tokens are the literal `--name: <value>` declarations. The `@theme inline` block
+# only re-exports them as `var(...)`/`calc(...)` mappings and is skipped by that.
+tokens=$(grep -oE '^  --[a-z0-9-]+: *(#[0-9a-fA-F]{3,8}|[0-9.]+rem)' "$CSS" |
+  sed 's/^  //; s/:.*//' | sort -u)
+missing=$(for token in $tokens; do grep -qF -- "$token" "$RULE" || echo "$token"; done)
+
+if [ -n "$missing" ]; then
+  echo "check:design: tokens missing from .cursor/rules/design-system.mdc:" >&2
+  echo "$missing" | sed 's/^/  /' >&2
+  exit 1
+fi
+
+# `globals.css` names colours on purpose; components must use semantic utilities.
+leaks=$(grep -rnE '(bg|text|border|from|to|via|ring|outline|divide|placeholder|fill|stroke|accent|caret)-(zinc|gray|slate|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}' \\
+  "$ROOT/frontend/src" --include='*.tsx' --include='*.ts' --include='*.css' |
+  grep -vF 'frontend/src/app/globals.css' || true)
+
+if [ -n "$leaks" ]; then
+  echo "check:design: raw palette classes found; use semantic tokens instead:" >&2
+  echo "$leaks" | sed 's/^/  /' >&2
+  exit 1
+fi
+
+echo "check:design: ok"
+"""
+
 ["check:version"]
 description = "Fail when the workspace, frontend, and changelog versions disagree"
 run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-version.mjs"
@@ -32,4 +70,4 @@ run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-release.mjs"
 
 ["check"]
 description = "Check the code"
-depends = ["check:format", "check:lint", "check:openapi", "check:version"]
+depends = ["check:format", "check:lint", "check:openapi", "check:design", "check:version"]

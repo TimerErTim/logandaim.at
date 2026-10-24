@@ -1,30 +1,48 @@
-import type { HTMLAttributes } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import type { HTMLAttributes, ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
 
-type AlertVariant = "info" | "success" | "error";
+const alertVariants = cva(
+  "flex items-start gap-3 rounded-lg border px-4 py-3 text-sm",
+  {
+    variants: {
+      variant: {
+        info: "border-border bg-surface-muted text-foreground",
+        success: "border-success/30 bg-success/10 text-foreground",
+        error: "border-destructive/30 bg-destructive/10 text-foreground",
+      },
+    },
+    defaultVariants: {
+      variant: "info",
+    },
+  },
+);
 
-type AlertProps = HTMLAttributes<HTMLDivElement> & {
-  variant?: AlertVariant;
-};
+type AlertProps = HTMLAttributes<HTMLDivElement> &
+  VariantProps<typeof alertVariants> & {
+    /** Leading icon; gives the variant a second channel besides colour. */
+    icon?: ReactNode;
+  };
 
-const variantClasses: Record<AlertVariant, string> = {
-  info: "border-zinc-200 bg-zinc-50 text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200",
-  success:
-    "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100",
-  error:
-    "border-red-200 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-100",
-};
-
-export function Alert({ className, variant = "info", ...props }: AlertProps) {
+export function Alert({
+  className,
+  variant = "info",
+  icon,
+  children,
+  ...props
+}: AlertProps) {
   return (
     <div
-      className={cn(
-        "rounded-lg border px-4 py-3 text-sm",
-        variantClasses[variant],
-        className,
-      )}
+      // Errors are announced to assistive technology, not only shown.
+      role={variant === "error" ? "alert" : "status"}
+      className={cn(alertVariants({ variant }), className)}
       {...props}
-    />
+    >
+      {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
   );
 }
+
+export { alertVariants };

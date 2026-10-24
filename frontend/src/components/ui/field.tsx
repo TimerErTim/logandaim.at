@@ -5,7 +5,9 @@ import { Label } from "./label";
 
 type FieldProps = HTMLAttributes<HTMLDivElement> & {
   label: string;
+  /** Helper text shown under the control when there is no error. */
   hint?: string;
+  /** Validation message; replaces the hint and is announced. */
   error?: string;
 };
 
@@ -21,10 +23,13 @@ export function Field({
     <div className={cn("space-y-1.5", className)} {...props}>
       <Label>{label}</Label>
       {children}
-      {hint ? (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>
+      {error ? (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      ) : hint ? (
+        <p className="text-xs text-muted-foreground">{hint}</p>
       ) : null}
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>
   );
 }

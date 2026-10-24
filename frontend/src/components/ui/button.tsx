@@ -1,46 +1,67 @@
+import { Slot } from "@radix-ui/react-slot";
+import { cva, type VariantProps } from "class-variance-authority";
 import type { ButtonHTMLAttributes } from "react";
 
 import { cn } from "@/lib/cn";
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
-type ButtonSize = "sm" | "md";
+/**
+ * Button variants.
+ *
+ * `primary` is the single action a screen exists for. `secondary` is a neutral
+ * alternative shown next to it. `ghost` is an inline action inside content (icon
+ * buttons, table row actions). Destructive actions use `destructive` and never
+ * `primary`.
+ */
+const buttonVariants = cva(
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  {
+    variants: {
+      variant: {
+        primary: "bg-primary text-primary-foreground hover:bg-primary/90",
+        secondary:
+          "border border-border bg-surface text-foreground hover:bg-surface-muted",
+        ghost: "text-foreground hover:bg-surface-muted",
+        destructive:
+          "bg-destructive text-white hover:bg-destructive/90 dark:text-background",
+      },
+      size: {
+        sm: "h-8 px-3 text-sm",
+        md: "h-10 px-4 text-sm",
+        // Minimum touch target from the accessibility bar (WCAG 2.2 AA, 44x44).
+        lg: "h-11 px-6 text-base",
+        icon: "size-11",
+      },
+    },
+    defaultVariants: {
+      variant: "primary",
+      size: "md",
+    },
+  },
+);
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: ButtonVariant;
-  size?: ButtonSize;
-};
-
-const variantClasses: Record<ButtonVariant, string> = {
-  primary:
-    "bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-emerald-400",
-  secondary:
-    "border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800",
-  ghost:
-    "text-zinc-700 hover:bg-zinc-100 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-800",
-};
-
-const sizeClasses: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-sm",
-  md: "h-10 px-4 text-sm",
-};
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & {
+    /** Render the variant classes on a child element, for links. */
+    asChild?: boolean;
+  };
 
 export function Button({
   className,
   variant = "primary",
   size = "md",
   type = "button",
+  asChild = false,
   ...props
 }: ButtonProps) {
+  const Component = asChild ? Slot : "button";
+
   return (
-    <button
-      type={type}
-      className={cn(
-        "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed",
-        variantClasses[variant],
-        sizeClasses[size],
-        className,
-      )}
+    <Component
+      {...(asChild ? {} : { type })}
+      className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     />
   );
 }
+
+export { buttonVariants };

@@ -16,6 +16,27 @@ mise run dev:frontend+server
 npm run build
 ```
 
+Dev-only routes are gated by the Next phase in `next.config.ts`: `.dev.tsx` / `.dev.ts` page
+extensions are added only for `next dev`, so a route written as `page.dev.tsx` cannot reach the
+static export. `build:frontend` verifies that afterwards and fails if `out/dev` exists.
+
+## Design system
+
+The visual identity is described in [`.cursor/rules/design-system.mdc`](../.cursor/rules/design-system.mdc)
+and [`specs/product/visual-identity.md`](../specs/product/visual-identity.md). Read the rule before
+changing UI.
+
+- **Tokens**: every colour, radius, and font value lives in `src/app/globals.css`. Components use
+  the semantic utilities it maps (`bg-surface`, `text-muted-foreground`, `border-border`,
+  `bg-primary`); raw palette classes and hex values are rejected by `mise run check:design`.
+- **Primitives**: `src/components/ui/` holds shadcn-style components with variants declared via
+  `class-variance-authority`. Add variants there, not in call sites.
+- **Gallery**: run `mise run dev:frontend` and open `/dev`. Every component, variant, and state
+  renders in a light and a dark frame, with per-token contrast checks and a touch-target overlay.
+  The page needs no backend.
+- **Changing the look**: edit a token in `globals.css`, look at `/dev`, and on acceptance update the
+  design rule and the spec decision log in the same commit.
+
 ## Configuration
 
 There is no runtime configuration file: every value is a `NEXT_PUBLIC_*` variable read at build time.

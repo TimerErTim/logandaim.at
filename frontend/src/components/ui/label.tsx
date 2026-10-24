@@ -8,10 +8,7 @@ export function Label({
 }: HTMLAttributes<HTMLSpanElement>) {
   return (
     <span
-      className={cn(
-        "text-sm font-medium text-zinc-800 dark:text-zinc-200",
-        className,
-      )}
+      className={cn("text-sm font-medium text-foreground", className)}
       {...props}
     />
   );

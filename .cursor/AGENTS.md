@@ -311,10 +311,34 @@ Recreate **workflow and visual language** from the legacy frontend, not its stac
 6. **Server state via TanStack Query only** — pages consume hooks; no MobX/local mirrors of API lists.
 7. **No theme/language pickers** — single default styling; KIS over personalization chrome.
 
+### Design system
+
+The visual identity is described in [`.cursor/rules/design-system.mdc`](rules/design-system.mdc)
+(tokens, component conventions, accessibility rules) and in
+[`specs/product/visual-identity.md`](../specs/product/visual-identity.md) (PO intent and decision
+log). Read the rule before touching UI.
+
+- **Values live in one place**: `frontend/src/app/globals.css`. Components use semantic utilities
+  (`bg-surface`, `text-muted-foreground`, `border-border`, `bg-primary`), never raw palette classes
+  and never hex values. `mise run check:design` fails the gate otherwise.
+- **Review surface**: `/dev` renders every component, variant, and state in light and dark, with
+  live contrast checks and a touch-target overlay. It exists only under `next dev` (the route file is
+  `page.dev.tsx`; `next.config.ts` enables the extension per phase). The static export never
+  contains it, and `build:frontend` asserts that.
+- **Identity is the PO's**: propose palette or component changes by editing tokens and looking at
+  `/dev`. Never invent brand direction.
+- **Same-commit obligation**: a new token, a changed pairing, or a changed convention updates the
+  design rule and the spec decision log in the same commit.
+- **Accessibility bar**: 44x44 minimum targets on logging controls, visible focus, and no
+  colour-only meaning (see the charter's quality bars).
+
 **Key paths**
 
 - Layout shell: `frontend/src/app/layout.tsx`, `frontend/src/components/layout/app-chrome.tsx`
 - Navigation config: `frontend/src/lib/navigation.ts`
+- Design tokens: `frontend/src/app/globals.css`
+- UI primitives: `frontend/src/components/ui/`
+- Component gallery: `frontend/src/app/dev/page.dev.tsx`, `frontend/src/components/dev-gallery/`
 - Klient management: `frontend/src/app/klient/**`, `frontend/src/components/klient/**`
 
 ## Version Control

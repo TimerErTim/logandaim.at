@@ -1,0 +1,112 @@
+---
+description: Visual identity, design tokens, and component conventions for the logandaim.at frontend
+alwaysApply: true
+---
+
+# Design system
+
+This rule is the agent-facing description of the logandaim.at visual identity. It is not a style
+guide for taste; it records decisions so that new UI looks like the existing UI.
+
+Values live in [`frontend/src/app/globals.css`](../../frontend/src/app/globals.css) and nowhere
+else. This rule names tokens and explains intent; it never restates hex codes. The PO-level intent
+and the decision log live in [`specs/product/visual-identity.md`](../../specs/product/visual-identity.md).
+
+## Where the identity comes from
+
+The visual identity is decided by the PO by looking at the running app, not by an agent. The
+surface for that is the component gallery at `/dev` (see below). Agents do not invent palettes,
+logos, typefaces, or brand words.
+
+Until the PO approves an identity, the tokens are the inherited neutral seed: zinc surfaces with a
+green primary. Changing a token value is the normal way to propose a palette; it is never a silent
+side effect of another change.
+
+## Tokens
+
+The single source is the block in `frontend/src/app/globals.css`. Every token below is defined for
+light and dark. Add a token only together with an entry here.
+
+| Token | Meaning | Use for |
+|-------|---------|---------|
+| `--background` | Page background | The app shell and page bodies |
+| `--foreground` | Primary text | Body text, headings, default icon colour |
+| `--surface` | Raised container | Cards, tables, dialogs, header, sidebar |
+| `--surface-muted` | Secondary container | Table headers, hover rows, skeleton blocks, tab strips |
+| `--border` | Separation | Borders, dividers, table rules |
+| `--primary` | Single most important action | One primary button per screen, active nav item, slider range |
+| `--primary-foreground` | Text on primary | Button labels and icons drawn on `--primary` |
+| `--secondary` | Neutral alternative fill | Inactive tracks, muted chips |
+| `--muted-foreground` | Secondary text | Hints, captions, table headers, metadata |
+| `--destructive` | Irreversible action or error | Destructive buttons, inline validation, error badges |
+| `--success` | Confirmed outcome | Success badges and alerts |
+| `--warning` | Attention without failure | Offen/pending badges, touch-target debug outline |
+| `--ring` | Focus indicator | Every `focus-visible` outline |
+| `--radius` | Corner radius | `--radius-sm` through `--radius-xl` are derived from it |
+
+Dark mode is class-based (`@custom-variant dark`), with `prefers-color-scheme` as the default. The
+gallery sets `.light` and `.dark` on wrappers to show both themes side by side.
+
+## Rules
+
+1. **Semantic utilities only.** Use `bg-surface`, `text-muted-foreground`, `border-border`,
+   `bg-primary`, `text-destructive`, and so on. Never write a raw palette class (`bg-zinc-100`,
+   `text-emerald-600`, `border-red-200`) or a hex value in a component. `check:design` fails the
+   build otherwise.
+2. **Contrast is a gate.** Text on a background meets WCAG 2.2 AA (4.5:1 normal text). The gallery
+   measures every documented pair; a change that drops a pair below AA is not accepted.
+3. **Colour is never the only signal.** `Wertungszone`, status, and validation carry their meaning
+   in text or an icon too. Badges and alerts always include the word.
+4. **Touch targets are at least 44 by 44 pixels** on anything an archer uses with gloves: buttons,
+   nav items, checkbox and radio rows, slider thumbs. `Button` sizes `lg` and `icon` exist for this.
+5. **Focus is always visible.** Interactive elements use `focus-visible:outline-2` with
+   `outline-ring`. Never remove an outline without an equally visible replacement.
+6. **One primary action per screen.** Everything else is `secondary` or `ghost`. Destructive
+   actions use `destructive` and are never the primary button.
+7. **German UI copy, English code.** Labels follow the ubiquitous language (`Anlage`, `Parcours`,
+   `Ziel`, `Pflock`, `Runde`, `Schuss`, `Wertung`). Do not hardcode new copy in a component beyond
+   the gallery examples.
+8. **Spacing scale** is the Tailwind default (4, 8, 12, 16, 24, 32 px). Page bodies use `p-6`,
+   cards use `p-6`, form fields stack with `space-y-1.5` inside `Field`.
+9. **Variants come from `cva`.** New variants are added in the component's `cva` definition, not by
+   passing arbitrary classes at call sites. Public variant names stay backwards compatible.
+
+## Components
+
+Primitives live in `frontend/src/components/ui/`. They are shadcn-style: `class-variance-authority`
+for variants, Radix primitives where a behaviour is non-trivial, `cn` (`clsx` + `tailwind-merge`)
+for class merging.
+
+- Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour variants for other
+  components.
+- `Select` stays a native `<select>` on purpose: the platform picker is the control archers know and
+  it survives gloves and one-handed use.
+- `Slider` has an oversized thumb for the distance input between two Pflöcke.
+- `Field` owns label, hint, and error placement. Use it instead of hand-assembling label + input.
+- Layout components (`app-shell`, `sidebar`, `page-chrome`) and workflow components
+  (`workflow-steps`, `deployment-status`) are composed from the primitives.
+
+## The gallery at `/dev`
+
+`frontend/src/app/dev/page.dev.tsx` exists only under `next dev`: `next.config.ts` adds the
+`dev.tsx` / `dev.ts` page extensions only in the development phase, so `next build` never emits the
+route. `build:frontend` asserts that `out/dev` and the gallery code are absent from the export.
+
+- Each component section renders every variant, size, and state in a light and a dark frame on the
+  same page.
+- The Tokens section reads the computed CSS variables and prints the contrast ratio for every
+  documented pair, with an AA pass/fail badge.
+- The touch-target toggle outlines interactive elements to reveal targets under 44px.
+
+Workflow for a visual change: edit `globals.css` or a component, look at `/dev`, decide, then write
+the result into this rule and the spec decision log **in the same commit**.
+
+## Keeping this rule in sync
+
+- A new or renamed token, a changed pairing, a new component variant, or a changed visual rule must
+  be reflected in this file and in `specs/product/visual-identity.md` in the same commit. There is
+  no "document it later".
+- `check:design` (part of `mise run check`) fails when a token exists in `globals.css` but is not
+  documented here, or when a raw palette class appears under `frontend/src` outside `globals.css`.
+- Prose nuance cannot be checked mechanically. The PR checklist item "design rule and spec
+  updated" is the human half of the same obligation.

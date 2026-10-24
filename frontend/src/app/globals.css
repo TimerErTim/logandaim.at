@@ -1,12 +1,75 @@
 @import "tailwindcss";
 
-:root {
+/*
+ * Design tokens.
+ *
+ * This file is the single source of truth for every colour, radius, and font value
+ * in the app. Components never use raw palette classes (`bg-zinc-100`,
+ * `text-emerald-600`); they use the semantic utilities mapped in `@theme inline`
+ * below (`bg-surface`, `text-muted-foreground`, `border-border`).
+ *
+ * Changing a value here is the whole palette workflow: `next dev` reloads and the
+ * `/dev` gallery shows the result, including its contrast checks. The agent-facing
+ * description lives in `.cursor/rules/design-system.mdc` and must name every token
+ * below in the same commit.
+ */
+
+/* Class-based dark mode so the gallery can render light and dark side by side. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root,
+.light {
   --background: #fafafa;
   --foreground: #171717;
   --surface: #ffffff;
   --surface-muted: #f4f4f5;
   --border: #e4e4e7;
-  --primary: #059669;
+  --primary: #047857;
+  --primary-foreground: #ffffff;
+  --secondary: #e4e4e7;
+  --muted-foreground: #52525b;
+  --destructive: #dc2626;
+  --success: #047857;
+  --warning: #b45309;
+  --ring: #047857;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --surface: #09090b;
+  --surface-muted: #18181b;
+  --border: #27272a;
+  --primary: #10b981;
+  --primary-foreground: #052e16;
+  --secondary: #27272a;
+  --muted-foreground: #a1a1aa;
+  --destructive: #f87171;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --ring: #34d399;
+  --radius: 0.75rem;
+}
+
+/* System preference is the default; `.light` opts a subtree back out. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #09090b;
+    --foreground: #fafafa;
+    --surface: #09090b;
+    --surface-muted: #18181b;
+    --border: #27272a;
+    --primary: #10b981;
+    --primary-foreground: #052e16;
+    --secondary: #27272a;
+    --muted-foreground: #a1a1aa;
+    --destructive: #f87171;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --ring: #34d399;
+    --radius: 0.75rem;
+  }
 }
 
 @theme inline {
@@ -16,6 +79,19 @@
   --color-surface-muted: var(--surface-muted);
   --color-border: var(--border);
   --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -23,17 +99,6 @@
 body {
   background: var(--background);
   color: var(--foreground);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b;
-    --foreground: #fafafa;
-    --surface: #09090b;
-    --surface-muted: #18181b;
-    --border: #27272a;
-    --primary: #10b981;
-  }
 }
 
 .table-shell {
