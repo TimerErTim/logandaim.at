@@ -16,6 +16,7 @@ import {
   touchTargetOutline,
 } from "@/components/dev-gallery/component-section";
 import { FeldbuchSection } from "@/components/dev-gallery/feldbuch-section";
+import { JagdkarteSection } from "@/components/dev-gallery/jagdkarte-section";
 import {
   CheckpointSliderSection,
   PfeilTableSection,
@@ -396,6 +397,7 @@ export function GallerySections({
       <div className="space-y-10">
         <TokenSwatches />
         <PhilosophiesSection />
+        <JagdkarteSection />
         <FeldbuchSection />
         <PfeilTableSection />
         <CheckpointSliderSection />

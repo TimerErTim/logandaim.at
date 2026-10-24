@@ -378,8 +378,8 @@
     "semantic_hash": ""
   },
   "frontend/src/api/schema.ts": {
-    "mtime": 1792870643.448353,
-    "seen": 1792870650.928549,
+    "mtime": 1792872312.4241977,
+    "seen": 1792872584.25684,
     "ast_hash": "b280187c1159e8ef8c1bd9a59c55490b",
     "semantic_hash": ""
   },
@@ -1056,9 +1056,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/sections.tsx": {
-    "mtime": 1792870256.7295122,
-    "seen": 1792870650.9288464,
-    "ast_hash": "d23f4c199bdf457d4cd7461724f809d3",
+    "mtime": 1792872479.6640801,
+    "seen": 1792872584.2572436,
+    "ast_hash": "2497392b9c0ddba7d6ca119816fe308b",
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/token-swatches.tsx": {
@@ -1068,9 +1068,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/type-section.tsx": {
-    "mtime": 1792868150.0174298,
-    "seen": 1792868443.0738277,
-    "ast_hash": "f6d7253086ccb2b4136417366221521e",
+    "mtime": 1792872454.93609,
+    "seen": 1792872584.257284,
+    "ast_hash": "8f85a7403e8f4301c10e1c3de6011275",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/dialog.tsx": {
@@ -1200,21 +1200,33 @@
     "semantic_hash": ""
   },
   "specs/product/visual-identity.md": {
-    "mtime": 1792870638.4870944,
-    "seen": 1792870650.9315925,
-    "ast_hash": "10b52a6bdac40695b22c9a10c0161a10",
+    "mtime": 1792872555.8001103,
+    "seen": 1792872584.260332,
+    "ast_hash": "c4908890eaaa83f67d2b5de6debb3762",
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/pfeil-table-section.tsx": {
-    "mtime": 1792870525.2339437,
-    "seen": 1792870650.9288445,
-    "ast_hash": "ea41752071187e2183248992b4a5e1c4",
+    "mtime": 1792870773.3973258,
+    "seen": 1792872584.2572398,
+    "ast_hash": "e704d3071d0ff7ca43bb9b85f6d7fbdd",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/checkpoint-slider.tsx": {
-    "mtime": 1792870266.6368234,
-    "seen": 1792870650.929248,
-    "ast_hash": "6ad6fc08b4368b877123143d9121a4fa",
+    "mtime": 1792870753.8288198,
+    "seen": 1792872584.2576635,
+    "ast_hash": "248239a5d2e40172ca1df4a83ec24dd8",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/dev-gallery/feldbuch-section.tsx": {
+    "mtime": 1792872192.028225,
+    "seen": 1792872584.2572367,
+    "ast_hash": "c4c5be329fbf98e84e7d10e03b8fad40",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/dev-gallery/philosophies-section.tsx": {
+    "mtime": 1792872502.6360967,
+    "seen": 1792872584.2572422,
+    "ast_hash": "1be7b6a520b17077fda61c1bebbbd509",
     "semantic_hash": ""
   }
 }
