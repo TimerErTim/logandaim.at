@@ -15,6 +15,10 @@ import {
   Example,
   touchTargetOutline,
 } from "@/components/dev-gallery/component-section";
+import {
+  CheckpointSliderSection,
+  PfeilTableSection,
+} from "@/components/dev-gallery/pfeil-table-section";
 import { TokenSwatches } from "@/components/dev-gallery/token-swatches";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -389,6 +393,8 @@ export function GallerySections({
     <div className={showTouchTargets ? touchTargetOutline : undefined}>
       <div className="space-y-10">
         <TokenSwatches />
+        <PfeilTableSection />
+        <CheckpointSliderSection />
         <ButtonSection />
         <BadgeSection />
         <AlertSection />

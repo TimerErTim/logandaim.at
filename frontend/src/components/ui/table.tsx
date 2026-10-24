@@ -1,4 +1,9 @@
-import type { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from "react";
+import type {
+  ComponentProps,
+  HTMLAttributes,
+  TdHTMLAttributes,
+  ThHTMLAttributes,
+} from "react";
 
 import { cn } from "@/lib/cn";
 
@@ -40,10 +45,9 @@ export function TableBody({
   );
 }
 
-export function TableRow({
-  className,
-  ...props
-}: HTMLAttributes<HTMLTableRowElement>) {
+// `ComponentProps` rather than `HTMLAttributes`: a sortable row needs its `ref`, and
+// React 19 passes it as a plain prop.
+export function TableRow({ className, ...props }: ComponentProps<"tr">) {
   return (
     <tr
       className={cn("transition-colors hover:bg-surface-muted/60", className)}

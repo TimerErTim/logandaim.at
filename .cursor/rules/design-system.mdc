@@ -117,6 +117,19 @@ for class merging.
   it survives gloves and one-handed use.
 - `Slider` is the distance input between two Pflöcke: a 20px knob on a 6px track, with a 44px hit
   area around the knob. Do not enlarge the visible knob to reach the touch minimum.
+- `CheckpointSlider` is the same distance input when the Pflöcke are known: the track is divided
+  into the coloured bands between them, like a colour-picker stop bar. **The Pflock colours are
+  master data** supplied by the Parcours/Ziel data and arrive as a `checkpoints` prop; the design
+  system owns no Pflock palette and must never add one to `globals.css`. The value moves freely
+  and never snaps to a stake. Bands are `aria-hidden`; the legend repeats every stake with its
+  name, and the thumb's `aria-valuetext` names the nearest one, so the control works without
+  seeing colour. With no checkpoints it still renders (plain track), because a Ziel may have
+  minimal master data.
+- `Table` rows that drag are sortable through `@dnd-kit`. The drag activator is a dedicated
+  handle, never the whole row, so buttons inside the row stay clickable; the hit area of the
+  handle follows the touch rule like any other control. A handle's accessible name must be
+  distinct per row and must not invent a position that does not exist (an unshot Pfeil is "nicht
+  geschossener Pfeil", not "Pfeil 0").
 - `Field` owns label, hint, and error placement. Use it instead of hand-assembling label + input.
 - Layout components (`app-shell`, `sidebar`, `page-chrome`) and workflow components
   (`workflow-steps`, `deployment-status`) are composed from the primitives.

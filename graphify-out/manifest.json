@@ -78,9 +78,9 @@
     "semantic_hash": ""
   },
   "frontend/package.json": {
-    "mtime": 1792864653.5187306,
-    "seen": 1792867749.2896428,
-    "ast_hash": "5b218a1af8630bef36849ede988f89de",
+    "mtime": 1792869656.8102193,
+    "seen": 1792870650.928069,
+    "ast_hash": "ac749506fa7f00402efd0a3f79538ec6",
     "semantic_hash": ""
   },
   "frontend/postcss.config.mjs": {
@@ -354,9 +354,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/ui/table.tsx": {
-    "mtime": 1792866627.5995018,
-    "seen": 1792867749.289873,
-    "ast_hash": "ef2e13356765f58eab386ed86a1fee56",
+    "mtime": 1792870266.6368234,
+    "seen": 1792870650.9296775,
+    "ast_hash": "5e2732dbce76e53ad0323b1e482e27fa",
     "semantic_hash": ""
   },
   "frontend/src/lib/config.ts": {
@@ -378,8 +378,8 @@
     "semantic_hash": ""
   },
   "frontend/src/api/schema.ts": {
-    "mtime": 1792868439.815828,
-    "seen": 1792868443.0734847,
+    "mtime": 1792870643.448353,
+    "seen": 1792870650.928549,
     "ast_hash": "b280187c1159e8ef8c1bd9a59c55490b",
     "semantic_hash": ""
   },
@@ -1056,9 +1056,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/sections.tsx": {
-    "mtime": 1792867189.492265,
-    "seen": 1792867749.2897677,
-    "ast_hash": "3d3f377b95526d7f4bdccfc7b0aef028",
+    "mtime": 1792870256.7295122,
+    "seen": 1792870650.9288464,
+    "ast_hash": "d23f4c199bdf457d4cd7461724f809d3",
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/token-swatches.tsx": {
@@ -1200,9 +1200,21 @@
     "semantic_hash": ""
   },
   "specs/product/visual-identity.md": {
-    "mtime": 1792868425.0534499,
-    "seen": 1792868443.0768394,
-    "ast_hash": "070f839aaf91bd123b32e0b24c0ad56d",
+    "mtime": 1792870638.4870944,
+    "seen": 1792870650.9315925,
+    "ast_hash": "10b52a6bdac40695b22c9a10c0161a10",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/dev-gallery/pfeil-table-section.tsx": {
+    "mtime": 1792870525.2339437,
+    "seen": 1792870650.9288445,
+    "ast_hash": "ea41752071187e2183248992b4a5e1c4",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ui/checkpoint-slider.tsx": {
+    "mtime": 1792870266.6368234,
+    "seen": 1792870650.929248,
+    "ast_hash": "6ad6fc08b4368b877123143d9121a4fa",
     "semantic_hash": ""
   }
 }
