@@ -12,14 +12,14 @@ import { Button } from "@/components/ui/button";
  * reachable from `page.dev.tsx`, so the production build never emits these
  * families. `preload: false` keeps one from being fetched until its stack is used.
  */
-const plex = IBM_Plex_Sans({
+export const plex = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-candidate-plex",
   preload: false,
 });
 
-const source = Source_Sans_3({
+export const source = Source_Sans_3({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-candidate-source",

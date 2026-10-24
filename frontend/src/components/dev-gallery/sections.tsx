@@ -20,6 +20,7 @@ import {
   CheckpointSliderSection,
   PfeilTableSection,
 } from "@/components/dev-gallery/pfeil-table-section";
+import { PhilosophiesSection } from "@/components/dev-gallery/philosophies-section";
 import { TokenSwatches } from "@/components/dev-gallery/token-swatches";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -394,6 +395,7 @@ export function GallerySections({
     <div className={showTouchTargets ? touchTargetOutline : undefined}>
       <div className="space-y-10">
         <TokenSwatches />
+        <PhilosophiesSection />
         <FeldbuchSection />
         <PfeilTableSection />
         <CheckpointSliderSection />
