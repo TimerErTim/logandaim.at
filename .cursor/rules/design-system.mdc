@@ -1,31 +1,20 @@
----
-description: Visual identity, design tokens, and component conventions for the logandaim.at frontend
-alwaysApply: true
----
+# Design system — Jagdkarte & Kompass
 
-# Design system
+This is the agent-facing description of the logandaim.at visual identity. It is a rulebook, not a
+history: follow it literally when building UI. Values live in
+[`frontend/src/app/globals.css`](../../frontend/src/app/globals.css) and nowhere else. This file
+names tokens and states rules; it never restates hex codes. The product-level intent and the
+decision log live in [`specs/product/visual-identity.md`](../../specs/product/visual-identity.md).
 
-This rule is the agent-facing description of the logandaim.at visual identity. It is not a style
-guide for taste; it records decisions so that new UI looks like the existing UI.
+## The identity
 
-Values live in [`frontend/src/app/globals.css`](../../frontend/src/app/globals.css) and nowhere
-else. This rule names tokens and explains intent; it never restates hex codes. The PO-level intent
-and the decision log live in [`specs/product/visual-identity.md`](../../specs/product/visual-identity.md).
-
-## Where the identity comes from
-
-The visual identity is decided by the PO by looking at the running app, not by an agent. The
-surface for that is the component gallery at `/dev` (see below). Agents do not invent palettes,
-logos, typefaces, or brand words.
-
-The direction is the PO's, stated on 2026-10-24: **functional UI, no presentation UI.** Clean and
-low saturation, natural rather than technological. The product should read as a tool an archer trusts
-outdoors, not as a design showcase: clear boundaries, natural colours, a little rounding, and none of
-the glass, elevation, or tonal-surface languages of Apple, Google, or the hyper-modern web.
-
-The palette itself is not yet approved; today's values are the first proposal that follows the
-direction (warm paper in light, warm brown-black in dark, grass green primary). Changing a token
-value is the normal way to propose a palette; it is never a silent side effect of another change.
+**Jagdkarte & Kompass.** The app reads like a map sheet from the 3D parcours. Map paper in light,
+night-map green-black in dark, one map green for the single primary action. Structure comes from
+what maps use: hairlines, hatching, scale bars, a dashed way with numbered marks, and mono type for
+machine values. Functional UI, no presentation UI: clean, low saturation, natural rather than
+technological. The product is a tool an archer trusts outdoors — clear boundaries, natural colours,
+a little rounding, and none of the glass, elevation, gradients, or tonal-surface languages of Apple,
+Google, or the hyper-modern web.
 
 ## Tokens
 
@@ -33,14 +22,15 @@ The single source is the block in `frontend/src/app/globals.css`. Every token be
 light and dark. Add a token only together with an entry here.
 
 | Token | Meaning | Use for |
-|-------|---------|---------|
-| `--background` | Page background | The app shell and page bodies |
-| `--foreground` | Primary text | Body text, headings, default icon colour |
-| `--surface` | Raised container | Cards, tables, dialogs, header, sidebar |
-| `--surface-muted` | Secondary container | Table headers, hover rows, skeleton blocks, tab strips |
-| `--border` | Separation | Borders, dividers, table rules |
-| `--primary` | Single most important action | One primary button per screen, active nav item, slider range |
-| `--primary-foreground` | Text on primary | Button labels and icons drawn on `--primary` |
+|----|----|----|
+| `--background` | Map paper / night map | The app shell and page bodies |
+| `--foreground` | Map ink | Body text, headings, default icon colour |
+| `--surface` | A sheet lying on the map | Cards, tables, dialogs, header, sidebar |
+| `--surface-muted` | Secondary sheet | Table headers, hover rows, skeleton blocks, tab strips |
+| `--border` | Hairline | Borders, dividers, table rules |
+| `--contour` | Contour hairline | Hatching in `kontur-band`, scale-bar ticks, quiet sheet rules |
+| `--primary` | Map green: single most important action | One primary button per screen, active nav item, the way |
+| `--primary-foreground` | Ink on map green | Button labels and icons drawn on `--primary` |
 | `--secondary` | Neutral alternative fill | Inactive tracks, muted chips |
 | `--muted-foreground` | Secondary text | Hints, captions, table headers, metadata |
 | `--destructive` | Irreversible action or error | Destructive buttons, inline validation, error badges |
@@ -49,38 +39,48 @@ light and dark. Add a token only together with an entry here.
 | `--ring` | Focus indicator | Every `focus-visible` outline |
 | `--radius` | Corner radius | `--radius-sm` through `--radius-xl` are derived from it |
 | `--font-sans` | UI typeface: **Nunito Sans** | Set by the `next/font` call in `app/layout.tsx`; never name a family in a component |
-| `--font-mono` | Machine values only | Base URLs, token names, file names. Never for prose or numbers in a table |
+| `--font-mono` | Machine values only | Map references, base URLs, token names, file names. Never for prose or numbers in a table |
 
-Nunito Sans was chosen by the PO from the gallery's Schrift section: warm and friendly
-without reading as a consumer app, and it holds up in tables at `text-sm`. Weights 400,
-500, 600 and 700 are loaded, which covers every `font-medium` / `font-semibold` /
-`font-bold` in the interface — add a weight to `layout.tsx` before using one that is not
-listed, or the browser will synthesise it.
-
-The alternative faces (IBM Plex Sans, Source Sans 3) stay in
-`components/dev-gallery/type-section.tsx` for a later revisit. That module is reachable
-only from `page.dev.tsx`, so a production build never downloads them.
+Nunito Sans is the UI face; weights 400, 500, 600 and 700 are loaded, which covers every
+`font-medium` / `font-semibold` / `font-bold` in the interface — add a weight to `layout.tsx` before
+using one that is not listed, or the browser will synthesise it. Geist Mono is the machine face.
 
 Dark mode is class-based (`@custom-variant dark`), with `prefers-color-scheme` as the default. The
 gallery sets `.light` and `.dark` on wrappers to show both themes side by side.
+
+## Map language
+
+Five elements carry the identity. Use them; do not invent a sixth.
+
+1. **Kartenkopf (sheet header).** Every page and every standalone card headed like a map sheet: a
+   bold title, a mono sheet reference (`Blatt 07/32`) when a reference is meaningful, and a quiet
+   hatch band (`kontur-band-quiet`) under it. The title is text, the reference is machine data.
+2. **Konturband (contour band).** The separator. `kontur-band` draws it; `Separator` renders it.
+   Sections are separated by a contour band, never by empty space alone or by a shadow.
+3. **Weg (the way).** A route through a sequence: a dashed connector (`weg-linie`) with numbered
+   marks. `WorkflowSteps` is the way. The current position is a filled triangle marker, and it is
+   always named in text too ("Schritt 2 von 3").
+4. **Maßstab (scale bar).** Distances are drawn on a tick scale with the rule written out
+   ("ein Strich = 10 m"), not just stated. The slider is the same band as an input.
+5. **Koordinaten (machine values).** Map references, IDs, distances in data rows, and file names
+   render in `--font-mono`. Prose never does.
 
 ## Rules
 
 1. **Semantic utilities only.** Use `bg-surface`, `text-muted-foreground`, `border-border`,
    `bg-primary`, `text-destructive`, and so on. Never write a raw palette class (`bg-zinc-100`,
    `text-emerald-600`, `border-red-200`) or a hex value in a component. `check:design` fails the
-   build otherwise.
+   build otherwise. Map patterns come from `kontur-band`, `kontur-band-quiet`, `weg-linie`, or from
+   an inline style that references only `var(--…)` tokens.
 2. **Contrast is a gate.** Text on a background meets WCAG 2.2 AA (4.5:1 normal text). The gallery
    measures every documented pair; a change that drops a pair below AA is not accepted.
 3. **Colour is never the only signal.** `Wertungszone`, status, and validation carry their meaning
-   in text or an icon too. Badges and alerts always include the word.
+   in text or an icon too. Badges and alerts always include the word. Map patterns (hatching,
+   dots, dashes) are commentary on the text, never a replacement for it.
 4. **Touch targets are at least 44 by 44 pixels** on anything an archer uses with gloves: buttons,
-   nav items, checkbox and radio rows, slider thumbs.
-   The target and the drawn control are not the same thing, and only `lg` is 44px tall. A control
-   keeps its neighbour's height and extends its hit area with a `before` overlay: `Button`
-   `size="icon"` draws at `md` height (40px) with a 44px target, so icon and text buttons in one
-   row have a common height. The slider follows the same split (20px knob, 44px target). Never make
-   a control taller than its row to reach 44px.
+   nav items, checkbox and radio rows, slider thumbs. The target and the drawn control are not the
+   same thing: a control keeps its neighbour's height and extends its hit area with a `before`
+   overlay. Never make a control taller than its row to reach 44px.
 5. **Focus is always visible.** Interactive elements use `focus-visible:outline-2` with
    `outline-ring`. Never remove an outline without an equally visible replacement.
 6. **One primary action per screen.** Everything else is `secondary` or `ghost`. Destructive
@@ -92,18 +92,17 @@ gallery sets `.light` and `.dark` on wrappers to show both themes side by side.
    cards use `p-6`, form fields stack with `space-y-1.5` inside `Field`.
 9. **Variants come from `cva`.** New variants are added in the component's `cva` definition, not by
    passing arbitrary classes at call sites. Public variant names stay backwards compatible.
-10. **Flat by default.** Edges come from `border-border`, not from shadows. Only overlays that must
-    float (dialogs, dropdowns) carry a shadow. Do not add hover elevation, gradients, or glass
-    effects; they read as presentation UI.
+10. **Flat by default.** Edges come from `border-border` and `--contour`, not from shadows. Only
+    overlays that must float (dialogs, dropdowns) carry a shadow. No hover elevation, gradients, or
+    glass; they read as presentation UI.
 11. **Rounding is functional.** `--radius` is small: controls use `rounded-md`, containers
     `rounded-lg`, chips and skeleton blocks `rounded-sm`. Nothing is pill-shaped except where the
     shape is the meaning (switch track, progress bar, slider track, radio dot).
-12. **A row of controls is a flex row.** Buttons are `inline-flex`, so in a plain block container
-    they sit flush against each other. Wrap trigger groups in `Example` (or any `flex` with
-    `gap-2`) instead of stacking them as siblings.
-13. **Natural, low-saturation colour.** The palette is warm and muted: paper-like light surfaces,
-    warm brown-black dark surfaces. Dark is never pure black and never cold blue-grey; primary is a
-    grass green, not a tech accent. Status colours stay distinguishable without glowing.
+12. **A row of controls is a flex row.** Buttons are `inline-flex`; wrap trigger groups in `Example`
+    (or any `flex` with `gap-2`) instead of stacking them as siblings.
+13. **Natural, low-saturation colour.** Warm map paper and green-black night; primary is map green,
+    not a tech accent. Dark is never pure black and never cold blue-grey. Status colours stay
+    distinguishable without glowing.
 
 ## Components
 
@@ -113,6 +112,11 @@ for class merging.
 
 - Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour variants for other
   components.
+- `Card` is a map sheet: `CardHeader` carries the quiet hatch band and may show a mono sheet
+  reference in its description slot. Use `Card` for every standalone block of related content.
+- `Separator` draws the contour band. It is the standard section divider.
+- `WorkflowSteps` draws the way: numbered marks on a dashed connector, current position named in
+  text and marked with a triangle. Step order comes from the data, never from colour.
 - `Select` stays a native `<select>` on purpose: the platform picker is the control archers know and
   it survives gloves and one-handed use.
 - `Slider` is the distance input between two Pflöcke: a 20px knob on a 6px track, with a 44px hit
@@ -120,31 +124,47 @@ for class merging.
 - `CheckpointSlider` is the same distance input when the Pflöcke are known: the track is divided
   into the coloured bands between them, like a colour-picker stop bar. **The Pflock colours are
   master data** supplied by the Parcours/Ziel data and arrive as a `checkpoints` prop; the design
-  system owns no Pflock palette and must never add one to `globals.css`. The value moves freely
-  and never snaps to a stake. Bands are `aria-hidden`; the legend repeats every stake with its
-  name, and the thumb's `aria-valuetext` names the nearest one, so the control works without
-  seeing colour. With no checkpoints it still renders (plain track), because a Ziel may have
-  minimal master data.
-- `Table` rows that drag are sortable through `@dnd-kit`. The drag activator is a dedicated
-  handle, never the whole row, so buttons inside the row stay clickable; the hit area of the
-  handle follows the touch rule like any other control. A handle's accessible name must be
+  system owns no Pflock palette and must never add one to `globals.css`. The value moves freely and
+  never snaps to a stake. Bands are `aria-hidden`; the legend repeats every stake with its name, and
+  the thumb's `aria-valuetext` names the nearest one. With no checkpoints it renders a plain track.
+- `Table` rows that drag are sortable through `@dnd-kit`. The drag activator is a dedicated handle,
+  never the whole row; its hit area follows the touch rule. A handle's accessible name must be
   distinct per row and must not invent a position that does not exist (an unshot Pfeil is "nicht
-  geschossener Pfeil", not "Pfeil 0").
+  geschossener Pfeil", not "Pfeil 0"). Numbers in tables are `tabular-nums` and right-aligned;
+  machine values are mono.
 - `Field` owns label, hint, and error placement. Use it instead of hand-assembling label + input.
-- Layout components (`app-shell`, `sidebar`, `page-chrome`) and workflow components
-  (`workflow-steps`, `deployment-status`) are composed from the primitives.
+- Layout components (`app-shell`, `sidebar`, `page-chrome`) and workflow components are composed
+  from the primitives. The active nav item is marked by the waymark triangle plus `aria-current`,
+  never by colour alone.
 
-## The gallery at `/dev`
+## Screen composition
 
-`frontend/src/app/dev/page.dev.tsx` exists only under `next dev`: `next.config.ts` adds the
-`dev.tsx` / `dev.ts` page extensions only in the development phase, so `next build` never emits the
-route. `build:frontend` asserts that `out/dev` and the gallery code are absent from the export.
+A screen is a map sheet. This applies to app pages and to the mockups under `/dev/mockups`.
 
-- Each component section renders every variant, size, and state in a light and a dark frame on the
+1. The page header is a Kartenkopf: title, optional mono sheet reference, quiet hatch band under it.
+2. Content blocks are `Card`s (sheets) or ruled table sections; between sections sits a
+   `Separator` (contour band).
+3. A journey or workflow is drawn as the way (`WorkflowSteps`), with the current step named.
+4. Distances use the scale bar pattern: the rule written out, the value in mono.
+5. Numbers in rows: right-aligned, `tabular-nums`. IDs, references, coordinates: `--font-mono`.
+6. Exactly one primary action per screen, in the first action row. Everything else secondary/ghost.
+7. Status always as word (+ icon or pattern), colour only as second channel.
+
+## The gallery at `/dev` and the mockups at `/dev/mockups`
+
+`frontend/src/app/dev/page.dev.tsx` and `frontend/src/app/dev/mockups/page.dev.tsx` exist only
+under `next dev`: `next.config.ts` adds the `dev.tsx` / `dev.ts` page extensions only in the
+development phase, so `next build` never emits the routes. `build:frontend` asserts that `out/dev`
+and the gallery code are absent from the export.
+
+- The gallery renders every component, variant, size, and state in a light and a dark frame on the
   same page.
 - The Tokens section reads the computed CSS variables and prints the contrast ratio for every
   documented pair, with an AA pass/fail badge.
 - The touch-target toggle outlines interactive elements to reveal targets under 44px.
+- The mockups render whole screens from `frontend/src/components/dev-gallery/mockups/`, each in a
+  light and a dark frame. A mockup is built exactly like a production screen from the primitives,
+  with static data; it is the review surface for screen-level identity.
 
 Workflow for a visual change: edit `globals.css` or a component, look at `/dev`, decide, then write
 the result into this rule and the spec decision log **in the same commit**.

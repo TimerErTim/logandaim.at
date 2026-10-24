@@ -10,9 +10,9 @@ superseded_by: null
 # Visual identity and design system
 
 > **Status note.** The mechanics in this spec (tokens, primitives, gallery, gates) are implemented
-> under issue #7 and reviewed by looking at `/dev`. They stay in `Draft` because the identity they
-> support is not decided yet: the seed palette is inherited, and every visual decision below the
-> mechanics is still a PO call.
+> under issue #7 and reviewed by looking at `/dev`. The identity is decided: **Jagdkarte &
+> Kompass** (PO instruction, 2026-10-25), and the tokens, components, and screen composition follow
+> it. The spec stays in `Draft` until the PO formally approves this document.
 
 ## Problem
 
@@ -124,8 +124,8 @@ Rules:
 
 ## Open questions
 
-- [ ] Q-1: Design direction and palette. Answered by looking at the gallery; recorded in the
-  decision log below.
+- [x] Q-1: Design direction and palette. Answered: **Jagdkarte & Kompass** — the app reads like a
+  map sheet from the 3D parcours (see the decision log).
 - [x] Q-2: Typeface. Answered: Nunito Sans (see the decision log).
 
 ## Decision log
@@ -146,9 +146,13 @@ Rules:
 | 2026-10-24 | **Ten-variant identity line-up prototyped (Draft, not decided).** A gallery section renders ten distinct design philosophies as the same mini-kit (action pair, Wertungszonen, distance, capture-row), each with a sketched local palette, a thesis, its one structural signature, and its named risk: Feldbuch, Jagdkarte, Werkstattnotiz, Werkzeug, Siegel, Signal, Bergführer, Schrebergarten, Druckstock, Nachtjagd. Sketched palettes are local to the section; the tokens in `globals.css` are untouched. Q-1 stays open. | Agent (Cursor), proposing for TimerErTim |
 | 2026-10-24 | **"Jagdkarte & Kompass" deepened after the PO picked variant 2 (Draft, not decided).** The line-up's map proposal is developed into its own gallery section in a day and a night version: a map-sheet header with title, sheet number, and a labelled north arrow; section separators as hatched contour bands; the four Wertungszonen with cartographic fills (dots = Spot, solid = Kill, hatching = Body, empty dashed = Miss) plus a written legend, so the pattern carries meaning together with the text, never instead of it; the Runde drawn as a dashed way with numbered Pflock marks, labelled stage distances, and a filled triangle as the position marker; distance shown as a real alternating scale bar with the metre rule written out ("ein Strich = 10 m") next to the value; capture rows carrying map-style coordinates in mono. The map language is always commentary, never the only signal, and every sketched value stays local to the section. Q-1 stays open. | Agent (Cursor), proposing for TimerErTim |
 | 2026-10-24 | **Geist now actually renders.** The `next/font` variables were declared on `<body>`, where the root-level `--font-sans` mapping cannot see them, so the app silently fell back to `system-ui`. They moved to `<html>`. | Agent (Cursor) |
+| 2026-10-25 | **Identity chosen: Jagdkarte & Kompass.** PO instruction: chase the map-and-compass philosophy through the whole application. The app reads like a map sheet from the 3D parcours: map paper in light, night-map green-black in dark, one map green for the primary action, and five signature elements (Kartenkopf, Konturband, Weg, Maßstab, Koordinaten). Q-1 closes. | TimerErTim |
+| 2026-10-25 | **Token layer and components follow the identity.** `globals.css` moves to the map palette and gains `--contour` (the hairline behind hatching, scale bars, and sheet rules) plus the `kontur-band`, `kontur-band-quiet`, and `weg-linie` pattern classes. `CardHeader` carries the quiet hatch band, `Separator` draws the contour band, `WorkflowSteps` draws the way with a triangle at the current position, and the active sidebar item is marked by a waymark triangle. All documented pairs pass AA in both themes. | TimerErTim (direction), Agent (Cursor) |
+| 2026-10-25 | **Design rule rewritten as a rulebook.** `.cursor/rules/design-system.mdc` states the identity, the map language, the rules, and screen composition as instructions an agent can follow literally; the history lives only in this decision log. A "Screen composition" section defines how any screen is assembled from the map language, so subagent-built mockups can be checked for consistency against it. | TimerErTim (direction), Agent (Cursor) |
 
 ## Revision history
 
 | Date | Change | By |
 |------|--------|----|
 | 2026-10-24 | Draft from issue #7 and the design-system work. | Agent (Cursor) |
+| 2026-10-25 | Identity decided (Jagdkarte & Kompass); token layer, components, and design rule follow it; rule rewritten as a rulebook. | TimerErTim, Agent (Cursor) |

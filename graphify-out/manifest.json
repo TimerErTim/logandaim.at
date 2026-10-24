@@ -1056,9 +1056,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/sections.tsx": {
-    "mtime": 1792872479.6640801,
-    "seen": 1792872584.2572436,
-    "ast_hash": "2497392b9c0ddba7d6ca119816fe308b",
+    "mtime": 1792882794.1126604,
+    "seen": 1792883122.5516105,
+    "ast_hash": "9685bee5fb092f8b9a702b8b44d84795",
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/token-swatches.tsx": {
@@ -1200,9 +1200,9 @@
     "semantic_hash": ""
   },
   "specs/product/visual-identity.md": {
-    "mtime": 1792872555.8001103,
-    "seen": 1792872584.260332,
-    "ast_hash": "c4908890eaaa83f67d2b5de6debb3762",
+    "mtime": 1792883087.4071167,
+    "seen": 1792883122.5547836,
+    "ast_hash": "c945b500189fb59e768b9db0705701b1",
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/pfeil-table-section.tsx": {
@@ -1227,6 +1227,12 @@
     "mtime": 1792872502.6360967,
     "seen": 1792872584.2572422,
     "ast_hash": "1be7b6a520b17077fda61c1bebbbd509",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/dev-gallery/jagdkarte-section.tsx": {
+    "mtime": 1792882859.8446474,
+    "seen": 1792883122.551527,
+    "ast_hash": "4816ab99cb10fb29396e5df72dddf8b9",
     "semantic_hash": ""
   }
 }

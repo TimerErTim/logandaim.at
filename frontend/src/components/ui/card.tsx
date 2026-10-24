@@ -2,6 +2,7 @@ import type { HTMLAttributes } from "react";
 
 import { cn } from "@/lib/cn";
 
+/** A map sheet: border and hatch carry the edges, never a shadow. */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
@@ -11,11 +12,24 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   );
 }
 
+/**
+ * The sheet header: content first, then the quiet contour band along its bottom
+ * edge, like the hatch under a map sheet's title block.
+ */
 export function CardHeader({
   className,
+  children,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("space-y-1 p-6 pb-4", className)} {...props} />;
+  return (
+    <div className={cn("p-6 pb-4", className)} {...props}>
+      <div className="space-y-1">{children}</div>
+      <div
+        aria-hidden="true"
+        className="kontur-band-quiet -mx-6 -mb-4 mt-4 h-1.5"
+      />
+    </div>
+  );
 }
 
 export function CardTitle({

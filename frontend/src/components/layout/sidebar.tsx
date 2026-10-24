@@ -64,6 +64,21 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
   );
 }
 
+/** The waymark triangle: marks the current position in the navigation. */
+function WegmarkeDreieck() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="9"
+      height="9"
+      viewBox="0 0 10 10"
+      className="shrink-0 fill-primary"
+    >
+      <path d="M5 1 L9 8 L1 8 Z" />
+    </svg>
+  );
+}
+
 function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const Icon = item.icon;
   const active = isNavItemActive(pathname, item.href, item.recursive);
@@ -79,6 +94,7 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
           : "text-foreground hover:bg-surface-muted",
       )}
     >
+      {active ? <WegmarkeDreieck /> : null}
       <Icon className="size-5" />
       {item.label}
     </Link>
