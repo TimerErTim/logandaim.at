@@ -67,11 +67,20 @@ if (unreleased !== null && contentLines(unreleased).length > 0) {
 // 4. Compare against the most recent release tag rather than `main`, so the check
 // behaves the same in a release pull request and in the push-to-main run that
 // follows it. Tags are created by the `main` workflow only.
+//
+// A failure to read the tags fails the gate: silently skipping this check would let
+// an already-released version through, and `release:publish` would then fail after
+// Pages had deployed.
 const tags = run("git", ["tag", "--list", "v*", "--sort=-v:refname"]);
-const previousTag = tags.ok ? (tags.stdout.split("\n")[0] ?? "") : "";
+if (!tags.ok) fail(`cannot list release tags: ${tags.stderr.trim() || "git tag failed"}`);
+
+const previousTag = tags.stdout.split("\n")[0] ?? "";
 if (previousTag) {
   const released = run("git", ["show", `${previousTag}:Cargo.toml`]);
-  if (released.ok && workspaceVersion(released.stdout) === version) {
+  if (!released.ok) {
+    fail(`cannot read Cargo.toml at ${previousTag}: ${released.stderr.trim() || "git show failed"}`);
+  }
+  if (workspaceVersion(released.stdout) === version) {
     fail(
       `version '${version}' was already released as ${previousTag}; bump it before opening the release pull request`,
     );
@@ -85,14 +94,12 @@ if (previousTag) {
 // A developer without a `gh` login cannot run the remote part; skip it there, so
 // `mise run check:release` stays usable offline. CI always has a token, so the same
 // state is a broken pipeline and must fail before the deploy.
-const auth = tryGh("auth", "status");
-if (!auth.ok && isUnauthenticated(auth)) {
+if (isUnauthenticated()) {
   if (isCi) fail("gh is not authenticated; the release body cannot be assembled");
   console.error("check:release: gh is not authenticated; skipped the release body check");
   console.log(`check:release: ${version} ok`);
   process.exit(0);
 }
-if (!auth.ok) fail(`gh auth status failed: ${auth.stderr.trim() || `exit ${auth.status}`}`);
 
 let repo;
 try {
@@ -134,7 +141,9 @@ if (!pullRequest) {
 
 if (pullRequest) {
   try {
-    releaseBody(repo, version, pullRequest);
+    // Without the generated notes: that endpoint needs `contents: write`, and this
+    // gate deliberately runs read-only. See `releaseBody`.
+    releaseBody(repo, version, pullRequest, { contributors: false });
   } catch (error) {
     fail(`the release body cannot be generated from pull request #${pullRequest}: ${error.message}`);
   }

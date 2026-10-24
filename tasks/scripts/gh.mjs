@@ -24,14 +24,25 @@ export const tryGh = (...args) => {
       ok: false,
       stdout: (error.stdout ?? "").trimEnd(),
       status: error.status ?? null,
-      stderr: error.stderr ?? "",
+      stderr: (error.stderr ?? "").trimEnd(),
     };
   }
 };
 
 /**
- * `gh` exits 4 when no account or token is available. That is the only failure a
- * developer machine may skip; anything else (network, permissions, a broken
- * install) is a real error.
+ * True when GitHub is unreachable because there is no usable login: either no
+ * credentials at all, or a token GitHub rejects.
+ *
+ * Probes with an authenticated API call rather than `gh auth status`: that command
+ * exits 1 both for a missing login and for an invalid token, which is also the exit
+ * code of a network failure, so it cannot separate "not logged in" from "broken".
+ * `gh api` exits 4 when no credentials exist and reports 401 for a bad token.
  */
-export const isUnauthenticated = (result) => result.status === 4;
+export const isUnauthenticated = () => {
+  const result = tryGh("api", "user");
+  if (result.ok) return false;
+  if (result.status === 4) return true;
+  return /\b401\b|Bad credentials|Requires authentication/i.test(
+    `${result.stdout}\n${result.stderr}`,
+  );
+};

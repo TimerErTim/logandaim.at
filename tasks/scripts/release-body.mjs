@@ -87,20 +87,34 @@ const newContributors = (repo, version) => {
 
   const captured = [];
   for (const line of lines.slice(start + 1)) {
-    if (line.startsWith("## ") && !line.startsWith("## New Contributors")) break;
+    if (line.startsWith("## ")) break;
     captured.push(line);
   }
-  return contentLines(captured.join("\n")).join("\n");
+
+  // Keep the heading: the entries alone would read as a stray list under the
+  // changelog. An empty block (the heading always precedes at least one line) drops
+  // the section entirely.
+  const entries = contentLines(captured.join("\n"));
+  return entries.length === 0 ? "" : `## New Contributors\n\n${entries.join("\n")}`;
 };
 
-/** The full release body: description, then the changelog section, then contributors. */
-export const releaseBody = (repo, version, pullRequest) => {
+/**
+ * The full release body: description, then the changelog section, then contributors.
+ *
+ * `contributors: false` skips the generated notes. `check:release` uses it because
+ * `releases/generate-notes` requires `contents: write`, and the gate runs with
+ * `contents: read` on purpose: it must not be able to publish anything. The
+ * description and the changelog, the parts an author controls, are still validated.
+ */
+export const releaseBody = (repo, version, pullRequest, { contributors = true } = {}) => {
   const changelog = sectionContent(readChangelog(), version);
   if (!changelog) throw new Error(`CHANGELOG.md has no entries under '## [${version}]'`);
 
   const parts = [releaseDescription(repo, pullRequest), `## Changelog\n\n${changelog}`];
-  const contributors = newContributors(repo, version);
-  if (contributors) parts.push(contributors);
+  if (contributors) {
+    const block = newContributors(repo, version);
+    if (block) parts.push(block);
+  }
 
   return `${parts.join("\n\n")}\n`;
 };

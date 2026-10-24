@@ -157,7 +157,8 @@ environment differs.
 Tasks are defined in `tasks/*.toml`; the release and version checks delegate their logic to
 `tasks/scripts/`. The services are split so each piece works on its own: `run:*` starts a service
 (`tasks/run.toml`), `smoke:*` only health-checks one that already runs (point it at a deployment
-with `LOGANDAIM_API_URL` / `LOGANDAIM_FRONTEND_URL`), and `verify:*` connects the two under a daemon.
+with `LOGANDAIM_SERVER_ORIGIN` / `LOGANDAIM_FRONTEND_URL`), and `verify:*` connects the two under a
+daemon.
 
 The Pages deployment builds with `NEXT_PUBLIC_LOGANDAIM_API_URL` (repo variable
 `LOGANDAIM_API_URL`) and a base path taken from `actions/configure-pages`. The export is deployed
@@ -170,7 +171,7 @@ Useful tasks:
 | `mise run ci` | Full gate. |
 | `mise run verify:frontend`, `mise run verify:server` | Start one service as a daemon and smoke-test it. |
 | `mise run run:frontend`, `mise run run:server` | Start one service in the foreground, without the gate. |
-| `LOGANDAIM_API_URL=… mise run smoke:server` | Health-check any deployment. |
+| `LOGANDAIM_SERVER_ORIGIN=… mise run smoke:server` | Health-check any deployment (origin without `/api`). |
 | `mise run check:release` | Validate a release pull request. |
 | `mise run release:version <kind>` | Bump the workspace and frontend versions. |
 | `mise run release:notes <version> --pr <n>` | Preview the release body. |

@@ -5,7 +5,7 @@
 # Each service is split in three:
 #   run:*     the long-running service, defined in tasks/run.toml
 #   smoke:*   assumes the service already runs, only health-checks it; point it at
-#             any deployment with LOGANDAIM_FRONTEND_URL / LOGANDAIM_API_URL
+#             any deployment with LOGANDAIM_FRONTEND_URL / LOGANDAIM_SERVER_ORIGIN
 #   verify:*  `daemons = [...]` starts the service and waits for readiness,
 #             `depends = ["smoke:*"]` then runs the checks
 #
@@ -44,10 +44,14 @@ depends = ["smoke:frontend"]
 
 ["smoke:server"]
 description = "Health-check an already running backend"
+# `LOGANDAIM_SERVER_ORIGIN`, not `LOGANDAIM_API_URL`: that name already means the API
+# base URL *including* the `/api` prefix (the repo variable the frontend is built
+# with), and reusing it here would request `/api/api/health`. This is the origin that
+# serves the API, and the spec and swagger routes sit next to the prefix, not under it.
 run = """
 #!/usr/bin/env bash
 set -eu
-BASE_URL="${LOGANDAIM_API_URL:-http://127.0.0.1:{{ vars.API_PORT }}}"
+ORIGIN="${LOGANDAIM_SERVER_ORIGIN:-http://127.0.0.1:{{ vars.API_PORT }}}"
 
 fail() {
   echo "smoke:server: $1" >&2
@@ -55,25 +59,25 @@ fail() {
 }
 
 # The endpoint returns the JSON string "OK", so compare without the quotes.
-body=$(curl -fsS "$BASE_URL/api/health" || true)
+body=$(curl -fsS "$ORIGIN/api/health" || true)
 body=$(printf '%s' "$body" | tr -d '"[:space:]')
 [ "$body" = "OK" ] || fail "/api/health returned '$body', expected OK"
 
-curl -fsS "$BASE_URL/spec.json" | jq -e . >/dev/null || fail "/spec.json is not valid JSON"
+curl -fsS "$ORIGIN/spec.json" | jq -e . >/dev/null || fail "/spec.json is not valid JSON"
 
 for path in /spec.yaml /swagger; do
-  status=$(curl -fsS -o /dev/null -w '%{http_code}' "$BASE_URL$path" || true)
+  status=$(curl -fsS -o /dev/null -w '%{http_code}' "$ORIGIN$path" || true)
   [ "$status" = "200" ] || fail "$path returned '$status', expected 200"
 done
 
 # Follow no redirects: a real 404/405 from the router proves the API is mounted here.
-status=$(curl -sS -o /dev/null -w '%{http_code}' "$BASE_URL/api/does-not-exist" || true)
+status=$(curl -sS -o /dev/null -w '%{http_code}' "$ORIGIN/api/does-not-exist" || true)
 case "$status" in
   404 | 405) ;;
   *) fail "/api/does-not-exist returned '$status', expected 404 or 405" ;;
 esac
 
-echo "smoke:server: ok ($BASE_URL)"
+echo "smoke:server: ok ($ORIGIN)"
 """
 
 ["verify:server"]

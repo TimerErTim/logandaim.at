@@ -10,9 +10,12 @@
  * module.
  */
 export const config = {
-  // `||`, not `??`: an empty string is "unset", and an empty base URL would
-  // silently point the frontend at its own origin. The deploy workflow refuses to
-  // build without a value, and `dev:frontend` sets the local one.
+  // `||`, not `??`, so an empty variable is treated as unset. This module cannot
+  // reject a missing value: it is evaluated during the build and during prerender,
+  // where a throw would break the export for a reason the deploy already prevents.
+  // A missing value therefore degrades to a same-origin base URL, which is wrong
+  // but never ships: the Pages workflow fails the build without the variable, and
+  // `dev:frontend` supplies the local default.
   apiBaseUrl: (process.env.NEXT_PUBLIC_LOGANDAIM_API_URL || "").replace(
     /\/+$/,
     "",
