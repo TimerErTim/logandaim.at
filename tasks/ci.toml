@@ -1,0 +1,20 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+
+# The only command CI runs for quality assurance. Local runs use the same task,
+# so the pipelines cannot drift from a developer machine.
+
+["ci"]
+description = "Full gate: check, build, test, smoke-test"
+# `build` precedes `test`: tests then run against a tree that is known to compile,
+# so a compile error is reported by the build rather than as a failed test.
+depends = ["check", "build", "test", "verify"]
+
+["ci:release"]
+description = "Full gate plus release validation, for verifying a release pull request locally"
+# Not called by a workflow: CI runs the two halves as separate jobs on purpose.
+# `pr/base` runs `ci` on every pull request, and `release-check.yml` runs
+# `check:release` only for release pull requests and the push to `main`. Collapsing
+# them here would either make every feature pull request run release validation or
+# force the shared gate to depend on `check:release`'s permissions. This task exists
+# so a maintainer can reproduce both in one command before opening the pull request.
+depends = ["ci", "check:release"]

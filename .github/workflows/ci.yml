@@ -1,0 +1,42 @@
+name: CI
+
+# The shared gate. Every pull request and every push to `dev` runs it, and
+# `main.yml` calls it as the release gate.
+#
+# Every step delegates to a mise task. Nothing here calls cargo, npm, biome, or
+# typstyle directly, so CI cannot drift from a developer machine: the same
+# `mise run ci` produces the same result.
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # Never cancel a `main` run: it gates a release.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  base:
+    name: pr/base
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up tooling
+        uses: ./.github/actions/setup
+
+      - name: Run the full gate
+        run: mise run ci
+
+      - name: Stop verify daemons
+        if: always()
+        run: mise daemons stop || true

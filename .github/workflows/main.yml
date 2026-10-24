@@ -1,0 +1,121 @@
+name: Main
+
+# Push to `main` means a release pull request was merged: deploy the static
+# frontend, then cut a source-only GitHub release tagged `vX.Y.Z`.
+#
+# The tag is created by this workflow, never pushed by a human, so a failing
+# gate cannot leave a tag behind.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: main-${{ github.ref }}
+  # A half-deployed site and a missing tag are worse than a queued run.
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: pr/base
+    uses: ./.github/workflows/ci.yml
+
+  # The same check a release pull request must pass, repeated here so a push that
+  # bypassed its pull request still fails before Pages deploys and before the tag.
+  release-check:
+    name: release-check
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/release-check.yml
+
+  pages:
+    name: deploy/pages
+    needs: [ci, release-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up tooling
+        uses: ./.github/actions/setup
+
+      # `configure-pages` reports the real base path: `/logandaim.at` for a project
+      # site, `""` once a custom domain serves at the root. Never hardcode it.
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      - name: Build the static export
+        env:
+          NEXT_PUBLIC_LOGANDAIM_API_URL: ${{ vars.LOGANDAIM_API_URL }}
+          NEXT_PUBLIC_LOGANDAIM_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        # `--force`: the task cache keys on files, not on environment, so a cached
+        # export built for another base path or API URL must not be reused.
+        run: |
+          set -eu
+          if [ -z "${NEXT_PUBLIC_LOGANDAIM_API_URL:-}" ]; then
+            echo "::error::Repository variable LOGANDAIM_API_URL is not set. The deployed frontend would call the API on its own origin."
+            exit 1
+          fi
+          mise run --force build:frontend
+
+      - name: Upload the export
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: frontend/out
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+  release:
+    name: deploy/release
+    # When `deploy/backend` is implemented, add it here so a failed deployment
+    # blocks the tag.
+    needs: [ci, release-check, pages]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: read
+    env:
+      # `release:publish` owns the tag and the body: the release check already
+      # verified that both can be produced.
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up tooling
+        uses: ./.github/actions/setup
+
+      - name: Create the release
+        run: mise run release:publish
+
+  # Reserved for #15 and #24:
+  #
+  # deploy/backend:
+  #   name: deploy/backend
+  #   needs: [pages]
+  #   ...
+  #
+  # `deploy/release` must then add it to its `needs`, so a failed backend
+  # deployment blocks the tag. Deployment jobs run on push only, so they are not
+  # required pull request checks and do not belong in the branch rulesets.

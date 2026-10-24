@@ -2,9 +2,12 @@ Closes #
 
 **Spec:** `specs/product/<feature>.md#<section>`
 
-## Behavior
+<!--
+Targets `dev`. For `dev` -> `main`, use the release template: add `?template=release.md`.
+Run `mise run ci` (the `pr/base` check) and report failures by task name.
+-->
 
-What changes for the user or for the system.
+## Behavior
 
 ## Acceptance criteria
 
@@ -12,16 +15,12 @@ What changes for the user or for the system.
 
 ## Test evidence
 
-- [ ] `mise run check`
-- [ ] `mise run test`
-- [ ] Builds affected by this change (`mise run build:frontend`, `build:server`)
-- [ ] `mise run sync:openapi` run if the API surface changed
+- [ ] `mise run ci`
 
 ## Checklist
 
-- [ ] `CHANGELOG.md` updated under `Unreleased` (user-visible changes only)
+- [ ] `CHANGELOG.md` updated under `Unreleased` for user-visible changes (see `CONTRIBUTING.md`)
 - [ ] Spec updated if behavior differs from it
 - [ ] No new legacy names, assets, or veterinary domain terms
-- [ ] Migration or data notes below, if any
 
 ## Notes

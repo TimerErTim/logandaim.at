@@ -1,0 +1,84 @@
+name: Pull request
+
+# Pull request record checks. The quality gate itself is `pr/base` in ci.yml;
+# this workflow only validates the record and the branch-specific rules.
+#
+# Both jobs always run and succeed when they do not apply, so the same check
+# contexts exist on every pull request and can be required on both branches.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [dev, main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  dev:
+    name: pr/dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the feature pull request record
+        if: github.base_ref == 'dev'
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -eu
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+
+          echo "$TITLE" | grep -Eq '^(feat|fix|docs|chore|refactor|test|perf|build|ci)(\([a-z0-9._/-]+\))?!?: .+' \
+            || fail "Title must be a conventional commit message, for example 'feat(backend): add scoring'."
+
+          echo "$BODY" | grep -Eqi '(closes|fixes|resolves)[[:space:]]+#[0-9]+' \
+            || fail "Link the issue with 'Closes #N'."
+
+          echo "Pull request record is valid."
+
+      - name: Not a dev pull request
+        if: github.base_ref != 'dev'
+        run: echo "Skipped. This job checks pull requests into dev."
+
+  main:
+    name: pr/main
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the release pull request record
+        if: github.base_ref == 'main'
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -eu
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+
+          echo "$TITLE" | grep -Eq '^(feat|fix|docs|chore|refactor|test|perf|build|ci)(\([a-z0-9._/-]+\))?!?: .+' \
+            || fail "Title must be a conventional commit message."
+
+          [ "$HEAD_REF" = "dev" ] || echo "$HEAD_REF" | grep -Eq '^hotfix/' \
+            || fail "Pull requests into 'main' must come from 'dev' or 'hotfix/*'."
+
+          # Every released issue and pull request is already recorded in the dated
+          # CHANGELOG section, which `release-check` validates. A `#N` reference in
+          # the body adds nothing machine-readable here: `release:notes` reads only
+          # `## Release description`, and any `#N` anywhere would satisfy a grep.
+
+          echo "$BODY" | grep -Eqi '^## Release description' \
+            || fail "Add a '## Release description' section; it becomes the release body."
+
+          echo "Release pull request record is valid."
+
+      - name: Not a release pull request
+        if: github.base_ref != 'main'
+        run: echo "Skipped. This job checks pull requests into main."
