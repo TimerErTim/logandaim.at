@@ -233,4 +233,8 @@ Agent session loop:
 ## Commits
 
 Conventional commits (`feat(backend): …`, `fix(frontend): …`, `docs(specs): …`, `chore(ci): …`).
-Agents commit under their own author identity.
+
+Agents commit under their own author identity. Agent sessions (`CURSOR_AGENT` set) use a separate
+agent account, `TimerErTim - Agent <agent.timerertim@gmail.com>`, with its own SSH signing key, selected
+by `~/.config/jj/conf.d/agent.toml`. Do not pass an author, email, or signing key on the command line,
+and do not reuse the maintainer identity for agent work.

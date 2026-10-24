@@ -322,6 +322,7 @@ Recreate **workflow and visual language** from the legacy frontend, not its stac
 - **Merge, don't rebase, to integrate upstream.** When a branch conflicts with or falls behind its base, create a merge commit (`jj new <branch> <base>@github`, resolve, commit). Conflict resolutions must stay visible in history; never rewrite pushed commits to hide them.
 - Rebase only in special cases: unpushed local work, or explicit maintainer instruction.
 - Never force-push a shared or reviewed branch.
+- Commit identity and signing key come from environment-conditional jj config: with `CURSOR_AGENT` set, jj uses the agent account and its own SSH key. Never override `user.name`, `user.email`, or `signing.key` inline, and never disable signing.
 
 ## Conventions for Contributors
 
