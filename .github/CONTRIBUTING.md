@@ -128,6 +128,7 @@ history.
 | `pr/dev` | Pull requests into `dev` | Conventional title and a `Closes #N` link. |
 | `pr/main` | Pull requests into `main` | Conventional title, `dev` or `hotfix/*` source, and a `## Release description` section. |
 | `release-check` | Pull requests into `main`, called by the push to `main` | Versions agree, version bumped past the last release tag, dated changelog section with entries, the release does not exist yet, and the release body can be assembled. |
+| `Test results` | A completed `CI` run on a pull request | Publishes the JUnit report `pr/base` uploads as a check run with per-suite counts and failure details. Informational: it never blocks a merge and is not a required check. |
 | `deploy/pages` | Push to `main` | Deploys `frontend/out` to GitHub Pages. |
 | `deploy/release` | Push to `main` | Creates the source-only GitHub release. |
 | `deploy/backend` | Push to `main` | Reserved for #15 and #24. |
@@ -153,6 +154,11 @@ version agreement), `build`, `test`, and `verify` (daemon-based smoke tests of t
 and backend). `build` precedes `test` so a compile error is reported by the build rather than as a
 failed test. CI runs the same task, so a green local run means a green pipeline unless the
 environment differs.
+
+`test` writes `target/nextest/default/junit.xml` (see `.config/nextest.toml`), on failure too. CI
+uploads it and a separate `workflow_run` workflow publishes it as the `Test results` check,
+because creating a check run needs `checks: write` and the gate deliberately has only
+`contents: read`.
 
 Tasks are defined in `tasks/*.toml`; the release and version checks delegate their logic to
 `tasks/scripts/`. The services are split so each piece works on its own: `run:*` starts a service

@@ -37,6 +37,20 @@ jobs:
       - name: Run the full gate
         run: mise run ci
 
+      # nextest writes this even when tests fail, which is exactly when it matters.
+      # Publishing happens in `test-report.yml`: `workflow_run` gives that workflow
+      # the permissions a check run needs, which this gate does not have. Nothing
+      # here reads the artifact, so a malicious PR cannot shape the report.
+      - name: Upload the test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit
+          path: target/nextest/default/junit.xml
+          # Tests may not have run at all if `check` failed earlier.
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Stop verify daemons
         if: always()
         run: mise daemons stop || true
