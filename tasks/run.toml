@@ -20,14 +20,14 @@ usage = """
 flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build and run the release profile"
 flag "--host <host>" help="Address to bind to" default="127.0.0.1"
 flag "--port <port>" env="PORT" help="Port to bind to" default="{{ vars.API_PORT }}"
+flag "--database-url <url>" env="LOGANDAIM_DATABASE_URL" help="Database URL; :memory: keeps the run throwaway" default=":memory:"
+flag "--object-store-dir <dir>" env="LOGANDAIM_OBJECT_STORE_DIR" help="Object store directory, created when missing" default="target/smoke-server/storage"
 """
 # The flag reaches the build through the dependency's environment.
 depends = ["LOGANDAIM_BUILD_RELEASE={{ usage.release }} build:server"]
-# An in-memory database keeps the run throwaway without deleting anything, and the
-# object store creates its own directory. Both paths are relative to the repo root.
 run = """exec target/{% if usage.release %}release{% else %}debug{% endif %}/logandaim-server \
   --bind-address '{{ usage.host }}' \
   --bind-port '{{ usage.port }}' \
-  --database-url ':memory:' \
-  --object-store-dir 'target/smoke-server/storage'
+  --database-url '{{ usage.database_url }}' \
+  --object-store-dir '{{ usage.object_store_dir }}'
 """

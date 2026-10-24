@@ -45,10 +45,23 @@ includes = [
 # Consequence: the ports repeat `[vars]` above.
 [daemons.frontend]
 task = "run:frontend"
+args = ["--host", "127.0.0.1", "--port", "4173"]
 port = 4173
 ready_http = "http://127.0.0.1:4173/"
 
 [daemons.server]
 task = "run:server"
+# The database stays in memory and the object store lands under `target/`, so a
+# verify run leaves nothing to clean up.
+args = [
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "3311",
+    "--database-url",
+    ":memory:",
+    "--object-store-dir",
+    "target/smoke-server/storage",
+]
 port = 3311
 ready_http = "http://127.0.0.1:3311/api/health"
