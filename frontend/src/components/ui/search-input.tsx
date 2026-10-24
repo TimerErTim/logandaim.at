@@ -12,7 +12,7 @@ export function SearchInput({ className, ...props }: SearchInputProps) {
       <input
         type="search"
         className={cn(
-          "h-10 w-full rounded-lg border border-border bg-surface pr-3 pl-9 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50",
+          "h-10 w-full rounded-md border border-border bg-surface pr-3 pl-9 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         {...props}

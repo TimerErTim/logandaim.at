@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex h-14 items-center gap-3 px-4">
             <label
               htmlFor="main-drawer"
-              className="inline-flex size-11 cursor-pointer items-center justify-center rounded-lg text-foreground hover:bg-surface-muted lg:hidden"
+              className="inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-foreground hover:bg-surface-muted lg:hidden"
             >
               <Menu className="size-5" />
               <span className="sr-only">Navigation öffnen</span>
@@ -62,7 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {crumb.href ? (
                     <Link
                       href={crumb.href}
-                      className="rounded-md px-2 py-1 font-medium text-foreground hover:bg-surface-muted"
+                      className="rounded-sm px-2 py-1 font-medium text-foreground hover:bg-surface-muted"
                     >
                       {crumb.label}
                     </Link>

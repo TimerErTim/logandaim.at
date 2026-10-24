@@ -32,7 +32,7 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
           <Link
             href={homeItem.href}
             className={cn(
-              "flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               homeActive
                 ? "bg-primary text-primary-foreground"
                 : "text-foreground hover:bg-surface-muted",
@@ -73,7 +73,7 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+        "flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
         active
           ? "bg-primary/10 font-semibold text-foreground"
           : "text-foreground hover:bg-surface-muted",
@@ -89,7 +89,7 @@ function BrandFooter() {
   return (
     <div className="mt-auto border-t border-border pt-6">
       <div className="px-2">
-        <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">
+        <div className="mb-2 flex size-12 items-center justify-center rounded-md bg-primary text-lg font-bold text-primary-foreground">
           EP
         </div>
         <div className="text-xs leading-tight text-muted-foreground">

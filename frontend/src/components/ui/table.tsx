@@ -7,7 +7,7 @@ export function Table({
   ...props
 }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-sm">
+    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
       <table
         className={cn("w-full border-collapse text-sm", className)}
         {...props}

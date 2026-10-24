@@ -36,7 +36,7 @@ export function WorkflowSteps({
             key={step.id}
             aria-current={isCurrent ? "step" : undefined}
             className={cn(
-              "flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
+              "flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-medium",
               isCurrent
                 ? "border-primary bg-primary/10 text-foreground"
                 : isDone

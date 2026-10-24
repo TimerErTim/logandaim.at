@@ -100,7 +100,7 @@ function SwatchGrid() {
         {COLOUR_TOKENS.map((token) => (
           <div key={token} className="w-28 space-y-1">
             <div
-              className="h-12 rounded-md border border-border"
+              className="h-12 rounded-sm border border-border"
               style={{ background: `var(--${token})` }}
             />
             <code className="block font-mono text-[10px] break-all text-muted-foreground">

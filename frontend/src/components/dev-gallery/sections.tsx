@@ -295,66 +295,73 @@ export function DataSection() {
 }
 
 export function OverlaySection() {
+  const [distanz, setDistanz] = useState(42);
+
   return (
     <ComponentSection
       id="overlay"
       title="Dialog, Menü, Tooltip, Slider"
       description="Überlagerungen schließen mit Escape und halten den Fokus. Der Slider misst die Distanz zwischen zwei Pflöcken."
     >
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button variant="secondary">Runde abschließen</Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Runde abschließen?</DialogTitle>
-            <DialogDescription>
-              Die Runde wird gespeichert und erscheint in deiner Historie.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="secondary">Abbrechen</Button>
-            <Button>Speichern</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Example caption="Auslöser">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="secondary">Runde abschließen</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Runde abschließen?</DialogTitle>
+              <DialogDescription>
+                Die Runde wird gespeichert und erscheint in deiner Historie.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="secondary">Abbrechen</Button>
+              <Button>Speichern</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="secondary">Aktionen</Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuLabel>Runde</DropdownMenuLabel>
-          <DropdownMenuItem>Bearbeiten</DropdownMenuItem>
-          <DropdownMenuItem>Duplizieren</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Löschen</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary">Aktionen</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel>Runde</DropdownMenuLabel>
+            <DropdownMenuItem>Bearbeiten</DropdownMenuItem>
+            <DropdownMenuItem>Duplizieren</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Löschen</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Hilfe">
-              <Info />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Distanz zwischen den Pflöcken</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Hilfe">
+                <Info />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Distanz zwischen den Pflöcken</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </Example>
 
-      <div className="w-full space-y-2">
-        <Slider
-          defaultValue={[42]}
-          min={10}
-          max={80}
-          step={1}
-          aria-label="Distanz"
-        />
-        <p className="text-xs text-muted-foreground">
-          42 Schritte zwischen den Pflöcken
-        </p>
-      </div>
+      <Example caption="Slider">
+        <div className="w-full space-y-2">
+          <Slider
+            value={[distanz]}
+            onValueChange={([next]) => setDistanz(next ?? distanz)}
+            min={10}
+            max={80}
+            step={1}
+            aria-label="Distanz"
+          />
+          <p className="text-xs text-muted-foreground">
+            {distanz} Schritte zwischen den Pflöcken
+          </p>
+        </div>
+      </Example>
 
       <Tabs defaultValue="heute">
         <TabsList>

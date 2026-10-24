@@ -55,7 +55,7 @@ function ThemeFrame({
     <div
       className={cn(
         theme,
-        "overflow-hidden rounded-xl border border-border bg-background text-foreground",
+        "overflow-hidden rounded-md border border-border bg-background text-foreground",
       )}
     >
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">

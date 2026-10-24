@@ -8,6 +8,11 @@
  * `text-emerald-600`); they use the semantic utilities mapped in `@theme inline`
  * below (`bg-surface`, `text-muted-foreground`, `border-border`).
  *
+ * Direction (PO, 2026-10-24): functional UI, no presentation UI. Clean and low
+ * saturation, natural rather than technological: paper and timber in light, warm
+ * brown-black in dark, and a grass green for the single primary action. Nothing
+ * glassy, no elevation games, no material-style tonal surfaces.
+ *
  * Changing a value here is the whole palette workflow: `next dev` reloads and the
  * `/dev` gallery shows the result, including its contrast checks. The agent-facing
  * description lives in `.cursor/rules/design-system.mdc` and must name every token
@@ -17,58 +22,64 @@
 /* Class-based dark mode so the gallery can render light and dark side by side. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Light: warm paper. Surfaces are lighter than the page, borders carry the edges. */
 :root,
 .light {
-  --background: #fafafa;
-  --foreground: #171717;
-  --surface: #ffffff;
-  --surface-muted: #f4f4f5;
-  --border: #e4e4e7;
-  --primary: #047857;
-  --primary-foreground: #ffffff;
-  --secondary: #e4e4e7;
-  --muted-foreground: #52525b;
-  --destructive: #dc2626;
-  --success: #047857;
-  --warning: #b45309;
-  --ring: #047857;
-  --radius: 0.75rem;
+  --background: #f4f1e8;
+  --foreground: #2a271e;
+  --surface: #fcfaf4;
+  --surface-muted: #ebe6d8;
+  --border: #d3cbb8;
+  --primary: #4f6b3a;
+  --primary-foreground: #fbfaf4;
+  --secondary: #e2dccb;
+  --muted-foreground: #5f5a49;
+  --destructive: #a03a2a;
+  --success: #3f6b3f;
+  --warning: #8a5a14;
+  --ring: #4f6b3a;
+  --radius: 0.5rem;
 }
 
+/*
+ * Dark: warm brown-black, not pure black. Background sits below surface so cards
+ * read as raised timber rather than cut-outs, and the primary brightens to keep
+ * its contrast instead of turning into a glowing accent.
+ */
 .dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --surface: #09090b;
-  --surface-muted: #18181b;
-  --border: #27272a;
-  --primary: #10b981;
-  --primary-foreground: #052e16;
-  --secondary: #27272a;
-  --muted-foreground: #a1a1aa;
-  --destructive: #f87171;
-  --success: #34d399;
-  --warning: #fbbf24;
-  --ring: #34d399;
-  --radius: 0.75rem;
+  --background: #1a1813;
+  --foreground: #ece6d6;
+  --surface: #272319;
+  --surface-muted: #322d22;
+  --border: #473f32;
+  --primary: #9aba72;
+  --primary-foreground: #1a2110;
+  --secondary: #3b342a;
+  --muted-foreground: #aea792;
+  --destructive: #e28f7d;
+  --success: #9cc28c;
+  --warning: #ddb268;
+  --ring: #9aba72;
+  --radius: 0.5rem;
 }
 
 /* System preference is the default; `.light` opts a subtree back out. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --background: #09090b;
-    --foreground: #fafafa;
-    --surface: #09090b;
-    --surface-muted: #18181b;
-    --border: #27272a;
-    --primary: #10b981;
-    --primary-foreground: #052e16;
-    --secondary: #27272a;
-    --muted-foreground: #a1a1aa;
-    --destructive: #f87171;
-    --success: #34d399;
-    --warning: #fbbf24;
-    --ring: #34d399;
-    --radius: 0.75rem;
+    --background: #1a1813;
+    --foreground: #ece6d6;
+    --surface: #272319;
+    --surface-muted: #322d22;
+    --border: #473f32;
+    --primary: #9aba72;
+    --primary-foreground: #1a2110;
+    --secondary: #3b342a;
+    --muted-foreground: #aea792;
+    --destructive: #e28f7d;
+    --success: #9cc28c;
+    --warning: #ddb268;
+    --ring: #9aba72;
+    --radius: 0.5rem;
   }
 }
 
@@ -87,10 +98,10 @@
   --color-warning: var(--warning);
   --color-ring: var(--ring);
 
-  --radius-sm: calc(var(--radius) - 0.25rem);
-  --radius-md: calc(var(--radius) - 0.125rem);
+  --radius-sm: calc(var(--radius) - 0.125rem);
+  --radius-md: calc(var(--radius) - 0.0625rem);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 0.25rem);
+  --radius-xl: calc(var(--radius) + 0.125rem);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -99,10 +110,4 @@
 body {
   background: var(--background);
   color: var(--foreground);
-}
-
-.table-shell {
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.04),
-    0 4px 12px rgb(0 0 0 / 0.04);
 }

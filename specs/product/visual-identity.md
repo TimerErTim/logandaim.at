@@ -133,6 +133,9 @@ Rules:
 |------|----------|----|
 | 2026-10-24 | Seed palette stays the inherited zinc/green pair; no identity invented. | TimerErTim |
 | 2026-10-24 | Light-mode primary darkened to `#047857` and warning to `#b45309` after the gallery showed white-on-emerald-600 at 3.77:1 and amber-600 at 3.19:1, both below AA. | Agent (Cursor) |
+| 2026-10-24 | **Direction set.** Functional UI, no presentation UI: clean, low saturation, natural. Should appeal to an archer, so clear boundaries and natural colours rather than glass, elevation, or material-style tonal surfaces. Modern and conventional in behaviour, but nothing that reinvents UI design. Little rounding, not a lot. | TimerErTim |
+| 2026-10-24 | **Palette replaced** to follow the direction: warm paper light, warm brown-black dark (the previous near-black was too dark and sterile), grass-green primary. All documented pairs pass AA; design rules gained flat-by-default, functional rounding, and natural-colour entries. | Agent (Cursor), reviewing with TimerErTim |
+| 2026-10-24 | **Slider knob reduced** from 44px to 20px on a 6px track, keeping the 44px hit area via a padded `::before`. The touch minimum applies to the target, not the visible control. Gallery trigger buttons moved into a flex row after they rendered flush. | TimerErTim |
 
 ## Revision history
 

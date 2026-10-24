@@ -18,9 +18,14 @@ The visual identity is decided by the PO by looking at the running app, not by a
 surface for that is the component gallery at `/dev` (see below). Agents do not invent palettes,
 logos, typefaces, or brand words.
 
-Until the PO approves an identity, the tokens are the inherited neutral seed: zinc surfaces with a
-green primary. Changing a token value is the normal way to propose a palette; it is never a silent
-side effect of another change.
+The direction is the PO's, stated on 2026-10-24: **functional UI, no presentation UI.** Clean and
+low saturation, natural rather than technological. The product should read as a tool an archer trusts
+outdoors, not as a design showcase: clear boundaries, natural colours, a little rounding, and none of
+the glass, elevation, or tonal-surface languages of Apple, Google, or the hyper-modern web.
+
+The palette itself is not yet approved; today's values are the first proposal that follows the
+direction (warm paper in light, warm brown-black in dark, grass green primary). Changing a token
+value is the normal way to propose a palette; it is never a silent side effect of another change.
 
 ## Tokens
 
@@ -59,6 +64,8 @@ gallery sets `.light` and `.dark` on wrappers to show both themes side by side.
    in text or an icon too. Badges and alerts always include the word.
 4. **Touch targets are at least 44 by 44 pixels** on anything an archer uses with gloves: buttons,
    nav items, checkbox and radio rows, slider thumbs. `Button` sizes `lg` and `icon` exist for this.
+   The target and the control are not the same thing: the slider knob is 20px and its `before`
+   extends the hit area to 44px, so a control stays light without being hard to hit.
 5. **Focus is always visible.** Interactive elements use `focus-visible:outline-2` with
    `outline-ring`. Never remove an outline without an equally visible replacement.
 6. **One primary action per screen.** Everything else is `secondary` or `ghost`. Destructive
@@ -70,6 +77,18 @@ gallery sets `.light` and `.dark` on wrappers to show both themes side by side.
    cards use `p-6`, form fields stack with `space-y-1.5` inside `Field`.
 9. **Variants come from `cva`.** New variants are added in the component's `cva` definition, not by
    passing arbitrary classes at call sites. Public variant names stay backwards compatible.
+10. **Flat by default.** Edges come from `border-border`, not from shadows. Only overlays that must
+    float (dialogs, dropdowns) carry a shadow. Do not add hover elevation, gradients, or glass
+    effects; they read as presentation UI.
+11. **Rounding is functional.** `--radius` is small: controls use `rounded-md`, containers
+    `rounded-lg`, chips and skeleton blocks `rounded-sm`. Nothing is pill-shaped except where the
+    shape is the meaning (switch track, progress bar, slider track, radio dot).
+12. **A row of controls is a flex row.** Buttons are `inline-flex`, so in a plain block container
+    they sit flush against each other. Wrap trigger groups in `Example` (or any `flex` with
+    `gap-2`) instead of stacking them as siblings.
+13. **Natural, low-saturation colour.** The palette is warm and muted: paper-like light surfaces,
+    warm brown-black dark surfaces. Dark is never pure black and never cold blue-grey; primary is a
+    grass green, not a tech accent. Status colours stay distinguishable without glowing.
 
 ## Components
 
@@ -81,7 +100,8 @@ for class merging.
   components.
 - `Select` stays a native `<select>` on purpose: the platform picker is the control archers know and
   it survives gloves and one-handed use.
-- `Slider` has an oversized thumb for the distance input between two Pflöcke.
+- `Slider` is the distance input between two Pflöcke: a 20px knob on a 6px track, with a 44px hit
+  area around the knob. Do not enlarge the visible knob to reach the touch minimum.
 - `Field` owns label, hint, and error placement. Use it instead of hand-assembling label + input.
 - Layout components (`app-shell`, `sidebar`, `page-chrome`) and workflow components
   (`workflow-steps`, `deployment-status`) are composed from the primitives.
