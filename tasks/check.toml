@@ -77,6 +77,36 @@ section_entries=$(
 [ "$section_entries" -gt 0 ] \\
   || fail "CHANGELOG.md has no entries under '## [$version]'"
 
+# A release pull request moves every entry into the dated section above, so
+# `Unreleased` must be empty here. Empty is only acceptable for pull requests into
+# `dev`, where the next release has not been decided yet. HTML comments are
+# guidance for authors, not entries.
+unreleased_entries=$(
+  sed -n '/^## \\[Unreleased\\]/,/^## \\[/p' CHANGELOG.md \\
+    | sed -e '1d' -e '$d' \\
+    | awk '
+      {
+        line = $0
+        out = ""
+        while (length(line) > 0) {
+          if (in_comment) {
+            i = index(line, "-->")
+            if (i == 0) { line = ""; break }
+            line = substr(line, i + 3); in_comment = 0
+          } else {
+            i = index(line, "<!--")
+            if (i == 0) { out = out line; line = ""; break }
+            out = out substr(line, 1, i - 1); line = substr(line, i + 4); in_comment = 1
+          }
+        }
+        if (out ~ /[^[:space:]]/) count++
+      }
+      END { print count + 0 }
+    '
+)
+[ "$unreleased_entries" -eq 0 ] \\
+  || fail "CHANGELOG.md has entries under '## [Unreleased]'; move them into '## [$version]'"
+
 # Compare against the most recent release tag rather than `main`, so the check
 # behaves the same in a release pull request and in the push-to-main run that
 # follows it. Tags are created by the `main` workflow only.

@@ -35,6 +35,14 @@ When unsure, ask: *if this shipped alone, would a user notice?* If not, leave it
 
 Entries are phrased from the user's perspective — describe the effect, not the implementation.
 
+`Unreleased` is branch-dependent, not phase-dependent:
+
+- Pull requests into `dev`: `Unreleased` collects the entries for the next release. It may be empty
+  when there is nothing new to record yet.
+- Release pull requests (`dev` -> `main`): every entry moves into the dated `## [X.Y.Z]` section, so
+  `Unreleased` must be **empty** and that dated section must have entries. `mise run check:release`
+  enforces both.
+
 ### Before the first release
 
 logandaim.at is a new project being built on top of the architecture of a previous one (see the
