@@ -1,0 +1,20 @@
+{
+  "0": "sections.tsx",
+  "1": "pfeil-table-section.tsx",
+  "2": "provider.tsx",
+  "3": "package.json",
+  "4": "navigation.ts",
+  "5": "dependencies",
+  "6": "token-swatches.tsx",
+  "7": "biome.json",
+  "8": "card.tsx",
+  "9": "compilerOptions",
+  "10": "components.json",
+  "11": "layout.tsx",
+  "12": "button.tsx",
+  "13": "dates.ts",
+  "14": "devDependencies",
+  "15": "Frontend",
+  "16": "format.ts",
+  "17": "postcss.config.mjs"
+}
