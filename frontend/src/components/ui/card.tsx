@@ -2,19 +2,26 @@ import type { HTMLAttributes } from "react";
 
 import { cn } from "@/lib/cn";
 
-/** A map sheet: border and hatch carry the edges, never a shadow. */
+/**
+ * A paper sheet: a hairline plus a whisper of shadow, never a heavy border or an
+ * elevation card. `papier` supplies the shadow; dark mode sets it to `none`, so the
+ * hairline alone separates the sheet.
+ */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("rounded-md border border-border bg-surface", className)}
+      className={cn(
+        "papier rounded-md border border-border bg-surface",
+        className,
+      )}
       {...props}
     />
   );
 }
 
 /**
- * The sheet header: content first, then the quiet contour band along its bottom
- * edge, like the hatch under a map sheet's title block.
+ * The sheet header: content first, then a quiet ruled line along its bottom edge,
+ * like the printed rule under a heading in a logbook.
  */
 export function CardHeader({
   className,
@@ -26,7 +33,7 @@ export function CardHeader({
       <div className="space-y-1">{children}</div>
       <div
         aria-hidden="true"
-        className="kontur-band-quiet -mx-6 -mb-4 mt-4 h-1.5"
+        className="kontur-band-quiet -mx-6 -mb-4 mt-4 h-px"
       />
     </div>
   );
@@ -38,7 +45,10 @@ export function CardTitle({
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h2
-      className={cn("text-lg font-semibold tracking-tight", className)}
+      className={cn(
+        "font-serif text-lg font-semibold tracking-tight",
+        className,
+      )}
       {...props}
     />
   );

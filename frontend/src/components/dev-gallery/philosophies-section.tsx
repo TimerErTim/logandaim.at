@@ -497,16 +497,16 @@ export function PhilosophiesSection() {
       <header className="space-y-1">
         <h2
           id="philosophien-h"
-          className="text-base font-semibold tracking-tight"
+          className="font-serif text-lg font-semibold tracking-tight"
         >
           Design-Philosophien
         </h2>
         <p className="max-w-prose text-sm text-muted-foreground">
-          Zehn Identitätsvarianten als Vorschlagslinie-up. Jede Variante zeigt
-          denselben Mini-Ausschnitt (Aktionen, Zonen, Distanz, Tabellenzeile)
-          mit eigener Skizzen-Palette, damit sie direkt vergleichbar sind.
-          Nichts davon ist entschieden; die Token stehen unverändert in
-          globals.css.
+          Zehn Identitätsvarianten als archivierte Vorschlagslinie, allein zur
+          Einordnung. Jede Variante zeigt denselben Mini-Ausschnitt (Aktionen,
+          Zonen, Distanz, Tabellenzeile) mit eigener Skizzen-Palette.
+          Entschieden ist das Bogenschuss-Logbuch; die Skizzen hier sind
+          Geschichte und speisen keine Tokens.
         </p>
       </header>
       <div className="grid gap-8 xl:grid-cols-2">

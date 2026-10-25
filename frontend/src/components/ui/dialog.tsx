@@ -17,7 +17,11 @@ export function DialogContent({
 }: ComponentProps<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
+      {/*
+        The overlay is the desk darkening, not a black scrim: warm ink at low
+        opacity keeps the paper reading as paper underneath.
+      */}
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-foreground/25" />
       <DialogPrimitive.Content
         className={cn(
           "fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 space-y-4 rounded-md border border-border bg-surface p-6 shadow-lg focus-visible:outline-none",
@@ -59,7 +63,10 @@ export function DialogTitle({
 }: ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn("text-lg font-semibold tracking-tight", className)}
+      className={cn(
+        "font-serif text-lg font-semibold tracking-tight",
+        className,
+      )}
       {...props}
     />
   );

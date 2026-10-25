@@ -28,7 +28,7 @@ export function TableHead({
   return (
     <thead
       className={cn(
-        "sticky top-0 z-10 border-b border-border bg-surface-muted text-left font-mono text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase",
+        "sticky top-0 z-10 border-b border-border bg-surface-muted text-left text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase",
         className,
       )}
       {...props}

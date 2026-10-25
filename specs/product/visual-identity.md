@@ -10,9 +10,10 @@ superseded_by: null
 # Visual identity and design system
 
 > **Status note.** The mechanics in this spec (tokens, primitives, gallery, gates) are implemented
-> under issue #7 and reviewed by looking at `/dev`. The identity is decided: **Jagdkarte &
-> Kompass** (PO instruction, 2026-10-25), and the tokens, components, and screen composition follow
-> it. The spec stays in `Draft` until the PO formally approves this document.
+> under issue #7 and reviewed by looking at `/dev`. The identity is decided: **Bogenschuss Logbuch
+> (Sleek Paperstyle)** (PO instruction, 2026-10-25), and the tokens, components, and screen
+> composition follow it. It supersedes the earlier Jagdkarte & Kompass proposal. The spec stays in
+> `Draft` until the PO formally approves this document.
 
 ## Problem
 
@@ -124,8 +125,9 @@ Rules:
 
 ## Open questions
 
-- [x] Q-1: Design direction and palette. Answered: **Jagdkarte & Kompass** — the app reads like a
-  map sheet from the 3D parcours (see the decision log).
+- [x] Q-1: Design direction and palette. Answered: **Bogenschuss Logbuch (Sleek Paperstyle)** — the
+  app reads like a handwritten hunting logbook on warm paper, with one hunter green as the only
+  brand colour (see the decision log; supersedes the earlier Jagdkarte & Kompass answer).
 - [x] Q-2: Typeface. Answered: Nunito Sans (see the decision log).
 
 ## Decision log
@@ -151,6 +153,10 @@ Rules:
 | 2026-10-25 | **Design rule rewritten as a rulebook.** `.cursor/rules/design-system.mdc` states the identity, the map language, the rules, and screen composition as instructions an agent can follow literally; the history lives only in this decision log. A "Screen composition" section defines how any screen is assembled from the map language, so subagent-built mockups can be checked for consistency against it. | TimerErTim (direction), Agent (Cursor) |
 | 2026-10-25 | **Scope marker: visual identity only, no user flows.** The PO revoked work that drifted into journey design (an atlas of sessions, a routed parcours map). Whether a parcours is shown as a map, a progress bar, or a plain step list is a product decision and is explicitly *not* settled by this identity. The gallery's Kartographie section therefore shows the map vocabulary as elements only — contour lines, elevation profile, compass rose, subdivided scale bar, graticule, neatline, legend — with no screens and no navigation. "Screen composition" in the design rule governs appearance, not flow. | TimerErTim |
 | 2026-10-25 | **Elements retuned to the instrument reading of "sleek".** Rounded corners tightened to `rounded-sm` for controls and `rounded-md` for containers, so the interface reads as a measuring instrument rather than a toy. `Progress` and `Slider` tracks are divided by contour hairlines at the quarter points (a scale that is divided, not just filled) and the thumbs are squared. `Badge` is set as a map label: small, hairline, mono, tracked. `Tabs` is a sheet index on a hairline base with the active item marked by a filled rule *and* a change of ink. `Table` headers and `DropdownMenuLabel` use tracked mono caps. The `Switch` thumb drops its shadow for a hairline, per flat-by-default. | TimerErTim (direction), Agent (Cursor) |
+| 2026-10-25 | **Identity replaced: Bogenschuss Logbuch (Sleek Paperstyle).** The PO supplied a written design guide and asked for it to be applied and extended for dark mode. The map-and-compass language is superseded. The app is now a hunting logbook on paper: warm ivory paper, one hunter green (`#1B3B2B`) as the only brand colour, warm ink, and hairline pencil rules. Light is paper on a desk; dark is the same book read by lamplight — warm charcoal, never pure black, with the green lightened to sage so it keeps its contrast. `Jagdkarte & Kompass` stays in the history and in the archived gallery line-up, but no longer governs any token. | TimerErTim |
+| 2026-10-25 | **Two typefaces, two jobs.** Lora is the book face and is used for titles only — page, card, and dialog headings — so the logbook's character lives in the headings. Inter replaces Nunito Sans as the interface face: menus, tables, forms, and all figures. Geist Mono stays for machine values. Weight sets are declared in `layout.tsx`. | TimerErTim |
+| 2026-10-25 | **Amber darkened to stay legible.** The guide's amber (`#D97706`) measures 3.08:1 on paper and fails WCAG AA as text, so `--warning` uses its darker sibling (`#B45309`, 4.86:1). The hue family is preserved; only the lightness changed. Every documented pair now passes AA in both themes (18 measurements in the gallery). | Agent (Cursor) |
+| 2026-10-25 | **Paper and stamp vocabulary.** `Card` gains a `papier` shadow (soft in light, `none` in dark) so sheets lift off the desk without a heavy border. `Badge` becomes a rubber stamp: hairline box, tracked caps, tinted rather than filled. `Separator` draws a tick rule instead of a hatch band. `Input`/`Select`/`Textarea` stay flat and turn `--primary` on focus. `CardHeader`'s band drops to a 1px rule. The gallery's map vocabulary is deleted and replaced by a Datenbilder section: target face with plotted hits, a measurement series on millimetre paper, a ruled scale, and a stamp legend. | TimerErTim (direction), Agent (Cursor) |
 
 ## Revision history
 
@@ -158,3 +164,4 @@ Rules:
 |------|--------|----|
 | 2026-10-24 | Draft from issue #7 and the design-system work. | Agent (Cursor) |
 | 2026-10-25 | Identity decided (Jagdkarte & Kompass); token layer, components, and design rule follow it; rule rewritten as a rulebook. | TimerErTim, Agent (Cursor) |
+| 2026-10-25 | Identity replaced by Bogenschuss Logbuch (Sleek Paperstyle): paper palette, Lora + Inter, stamp and paper vocabulary, Datenbilder gallery. All pairs pass AA in both themes. | TimerErTim, Agent (Cursor) |

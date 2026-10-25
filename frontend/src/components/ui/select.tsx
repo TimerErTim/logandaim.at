@@ -15,7 +15,7 @@ export function Select({ className, ...props }: SelectProps) {
   return (
     <select
       className={cn(
-        "h-10 w-full rounded-sm border border-border bg-surface px-3 text-sm text-foreground transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50",
+        "h-10 w-full rounded-sm border border-border bg-surface px-3 text-sm text-foreground transition-colors hover:border-muted-foreground/40 focus-visible:border-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}

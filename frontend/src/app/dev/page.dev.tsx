@@ -28,7 +28,7 @@ export default function DevGalleryPage() {
       <SetBreadcrumbLabel label="Design-Galerie" />
 
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="font-serif text-2xl font-semibold tracking-tight">
           Design-Galerie
         </h1>
         <p className="max-w-prose text-sm text-muted-foreground">

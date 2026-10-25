@@ -15,13 +15,13 @@ type WorkflowStepsProps = {
 };
 
 /**
- * The way: a journey through a workflow drawn like a route on the map.
+ * A workflow as a ruled sequence: numbered marks joined by a short stitched line,
+ * like the entries of a logbook. A passed step is a filled mark, the step ahead an
+ * outline, and the current step is confirmed by a stamp-like ring.
  *
- * Numbered marks sit on a dashed way; a passed step is a filled mark, the step
- * ahead is an outline, and the current position is a filled triangle. State is
- * carried by the mark shape, the step number, the text and `aria-current`, never
- * by colour alone, so the route stays readable in daylight and to colour-blind
- * users. The current position is named in text ("Schritt 2 von 3").
+ * State is carried by the mark shape, the step number, the text and `aria-current`,
+ * never by colour alone, so the sequence stays readable in daylight and to
+ * colour-blind users. The current step is named in text ("Schritt 2 von 3").
  */
 export function WorkflowSteps({
   steps,
@@ -52,28 +52,15 @@ export function WorkflowSteps({
           >
             <span
               className={cn(
-                "flex size-6 items-center justify-center rounded-full text-[11px] font-semibold",
+                "flex size-6 items-center justify-center rounded-sm text-[11px] font-semibold tabular-nums",
                 isCurrent
-                  ? "bg-primary/10 text-foreground ring-2 ring-primary"
+                  ? "border-2 border-primary bg-surface text-foreground"
                   : isDone
                     ? "bg-primary text-primary-foreground"
-                    : "border-2 border-border text-muted-foreground",
+                    : "border border-border text-muted-foreground",
               )}
             >
-              {/* The triangle marks the current position; other steps stay numbered. */}
-              {isCurrent ? (
-                <svg
-                  aria-hidden="true"
-                  width="10"
-                  height="10"
-                  viewBox="0 0 10 10"
-                  className="fill-primary"
-                >
-                  <path d="M5 1 L9 8 L1 8 Z" />
-                </svg>
-              ) : (
-                index + 1
-              )}
+              {index + 1}
             </span>
             <span
               className={cn(

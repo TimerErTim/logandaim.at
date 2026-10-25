@@ -6,9 +6,9 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * Range slider, drawn as a scale bar: a squared track with contour hairlines at
- * the quarter points and a compact square knob, so it reads as a measuring
- * instrument rather than a consumer toggle.
+ * Range slider, drawn as a ruled measure: a squared track with fine hairlines at
+ * the quarter points and a compact squared knob, so it reads as an instrument
+ * rather than a consumer toggle.
  *
  * The visible knob is 20px; `before` expands the hit area to 44px. The touch
  * minimum applies to the target, not to the drawn control, so a glove-friendly
@@ -28,17 +28,13 @@ export function Slider({
     >
       <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-sm bg-secondary">
         <SliderPrimitive.Range className="absolute h-full bg-primary" />
-        {/* Quarter hairlines: the scale is divided, not just filled. */}
+        {/* Quarter hairlines: the measure is divided, not just filled. */}
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 flex justify-between"
         >
           {[0, 1, 2, 3, 4].map((teilung) => (
-            <span
-              key={`teilung-${teilung}`}
-              className="w-px bg-contour"
-              style={{ opacity: 0.8 }}
-            />
+            <span key={`teilung-${teilung}`} className="w-px bg-contour" />
           ))}
         </span>
       </SliderPrimitive.Track>

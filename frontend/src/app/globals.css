@@ -1,89 +1,104 @@
 @import "tailwindcss";
 
 /*
- * Design tokens — "Jagdkarte & Kompass".
+ * Design tokens — "Bogenschuss Logbuch (Sleek Paperstyle)".
  *
- * This file is the single source of truth for every colour, radius, and font value
- * in the app. Components never use raw palette classes (`bg-zinc-100`,
- * `text-emerald-600`); they use the semantic utilities mapped in `@theme inline`
+ * The app is a hunting logbook on paper, not a game. A practical, fast tool for
+ * the field or the desk: warm uncoated paper, fine pencil lines, one hunter green
+ * for the single primary action, and generous white space. Skeuomorphism stays
+ * flat — paper surfaces and hairline rules, never leather, embossing, or 3D.
+ *
+ * This file is the single source of truth for every colour, radius, shadow, and
+ * font value in the app. Components never use raw palette classes (`bg-stone-100`,
+ * `text-green-800`); they use the semantic utilities mapped in `@theme inline`
  * below (`bg-surface`, `text-muted-foreground`, `border-border`).
  *
- * Identity: the app reads like a map sheet from the 3D parcours — map paper in
- * light, night-map green-black in dark, one map green for the single primary
- * action, and a quiet hairline (`--contour`) that draws the contour bands, scale
- * bars, and sheet borders. Nothing glassy, no elevation games, no gradients as
- * decoration; edges come from borders and hatching, not from shadows.
+ * Identity pillars:
+ *   - One brand colour: hunter green. Everything else is paper or meaning.
+ *   - Paper over white: warm ivory beats #fff for long reading and for outdoors.
+ *   - Fine lines over borders: hairline rules read as pencil and stamp lines.
+ *   - Serif for titles, sans for work. The book character lives in the headings.
  *
  * Changing a value here is the whole palette workflow: `next dev` reloads and the
  * `/dev` gallery shows the result, including its contrast checks. The agent-facing
  * description lives in `.cursor/rules/design-system.mdc` and must name every token
  * below in the same commit.
+ *
+ * Contrast note: every text pair below meets WCAG 2.2 AA (>= 4.5:1). The amber
+ * from the guide (#D97706) measures 3.08:1 on paper and therefore fails as text,
+ * so `--warning` is the same hue family darkened (#B45309, 4.86:1). Use the raw
+ * #D97706 only as a non-text accent if ever needed.
  */
 
 /* Class-based dark mode so the gallery can render light and dark side by side. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Light: map paper. Surfaces are the sheets on it; borders and contour hairlines carry the edges. */
+/* Light: paper on a desk. Surfaces are the sheets; hairlines carry the edges. */
 :root,
 .light {
-  --background: #f2efe4;
-  --foreground: #26332a;
-  --surface: #f8f6ee;
-  --surface-muted: #e6e2d2;
-  --border: #b9c2ac;
-  --contour: #c2c9b4;
-  --primary: #3d5c46;
-  --primary-foreground: #f2efe4;
-  --secondary: #dfe3d2;
-  --muted-foreground: #56604c;
-  --destructive: #9a3b2c;
-  --success: #3f6b3f;
-  --warning: #7d5a12;
-  --ring: #3d5c46;
-  --radius: 0.25rem;
+  --background: #f5f1e8;
+  --foreground: #2c2a29;
+  --surface: #fdfbf7;
+  --surface-muted: #eceae2;
+  --border: #dedad2;
+  --contour: #e4e0d6;
+  --primary: #1b3b2b;
+  --primary-foreground: #fdfbf7;
+  --secondary: #e8e4da;
+  --muted-foreground: #6b6660;
+  --destructive: #a82b2b;
+  --success: #15803d;
+  --warning: #b45309;
+  --ring: #1b3b2b;
+  --radius: 0.375rem;
+  --schatten-papier:
+    0 1px 2px rgba(44, 42, 41, 0.04), 0 4px 12px rgba(44, 42, 41, 0.03);
 }
 
 /*
- * Dark: the night map. Background sits below surface so sheets read as panels;
- * the way and the marks carry the colour, everything else stays quiet. The
- * primary brightens to keep its contrast instead of turning into a glowing accent.
+ * Dark: the same logbook read by lamplight. Warm charcoal, never pure black and
+ * never cold blue-grey. Paper sheets sit just above the desk so they still read
+ * as sheets; the hunter green lightens to a sage so it keeps its contrast instead
+ * of glowing, and shadows disappear because they only muddy a dark surface.
  */
 .dark {
-  --background: #12160f;
-  --foreground: #dce3d4;
-  --surface: #1a2016;
-  --surface-muted: #232a1e;
-  --border: #3a4433;
-  --contour: #2b3325;
-  --primary: #a7d09a;
-  --primary-foreground: #182b12;
-  --secondary: #262e20;
-  --muted-foreground: #9aa596;
-  --destructive: #e0917f;
-  --success: #9cc28c;
-  --warning: #ddb268;
-  --ring: #a7d09a;
-  --radius: 0.25rem;
+  --background: #16130f;
+  --foreground: #ede8de;
+  --surface: #1e1b16;
+  --surface-muted: #262219;
+  --border: #3a3630;
+  --contour: #2e2a23;
+  --primary: #7fb08c;
+  --primary-foreground: #12100d;
+  --secondary: #262219;
+  --muted-foreground: #a8a297;
+  --destructive: #e8908a;
+  --success: #7fbf8f;
+  --warning: #e0a94f;
+  --ring: #7fb08c;
+  --radius: 0.375rem;
+  --schatten-papier: none;
 }
 
 /* System preference is the default; `.light` opts a subtree back out. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --background: #12160f;
-    --foreground: #dce3d4;
-    --surface: #1a2016;
-    --surface-muted: #232a1e;
-    --border: #3a4433;
-    --contour: #2b3325;
-    --primary: #a7d09a;
-    --primary-foreground: #182b12;
-    --secondary: #262e20;
-    --muted-foreground: #9aa596;
-    --destructive: #e0917f;
-    --success: #9cc28c;
-    --warning: #ddb268;
-    --ring: #a7d09a;
-    --radius: 0.25rem;
+    --background: #16130f;
+    --foreground: #ede8de;
+    --surface: #1e1b16;
+    --surface-muted: #262219;
+    --border: #3a3630;
+    --contour: #2e2a23;
+    --primary: #7fb08c;
+    --primary-foreground: #12100d;
+    --secondary: #262219;
+    --muted-foreground: #a8a297;
+    --destructive: #e8908a;
+    --success: #7fbf8f;
+    --warning: #e0a94f;
+    --ring: #7fb08c;
+    --radius: 0.375rem;
+    --schatten-papier: none;
   }
 }
 
@@ -103,12 +118,14 @@
   --color-warning: var(--warning);
   --color-ring: var(--ring);
 
+  /* 4 px to 6 px: angular paper, never a pill. */
   --radius-sm: calc(var(--radius) - 0.125rem);
   --radius-md: calc(var(--radius) - 0.0625rem);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 0.125rem);
 
-  --font-sans: var(--font-nunito-sans);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-lora);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -118,29 +135,38 @@ body {
 }
 
 /*
- * Signature element: the contour band. A quiet hatch strip that separates map
- * sheets, heads sections, and rules tables — the one ornament the identity
- * carries. Drawn from the tokens only, so it flips with the theme.
+ * Paper sheet. A whisper of shadow lifts a card off the desk without drawing a
+ * border in the air; in dark mode the shadow is `none` and the hairline alone
+ * separates the sheet.
+ */
+.papier {
+  box-shadow: var(--schatten-papier);
+}
+
+/*
+ * Signature element: the ruled line. Small ticks along a hairline, like the
+ * printed ruling of a logbook column or the millimetre grid under a target plot.
+ * Drawn from tokens only, so it flips with the theme.
  */
 .kontur-band {
   background-image: repeating-linear-gradient(
-    115deg,
-    transparent 0 5px,
-    var(--contour) 5px 6px
+    to right,
+    var(--contour) 0 1px,
+    transparent 1px 8px
   );
 }
 
-/* The same hatch at half strength, for sheet headers that must stay quiet. */
+/* The same ruling at half strength, for sheet headers that must stay quiet. */
 .kontur-band-quiet {
   background-image: repeating-linear-gradient(
-    115deg,
-    transparent 0 5px,
-    var(--contour) 5px 6px
+    to right,
+    var(--contour) 0 1px,
+    transparent 1px 8px
   );
-  opacity: 0.55;
+  opacity: 0.9;
 }
 
-/* The dashed way: route connectors, step lines, "you are here" trails. */
+/* The stitched line: step connectors and sequence trails. */
 .weg-linie {
   background-image: repeating-linear-gradient(
     to right,

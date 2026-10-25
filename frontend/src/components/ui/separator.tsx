@@ -6,9 +6,9 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * The contour band: the standard section divider of the map language. A quiet
- * hatch strip in `--contour`, not a hairline alone. Vertical separators stay a
- * thin rule, because a hatch strip only reads as a band when it runs across.
+ * The ruled line: the standard section divider. A tick rule in `--contour`, like
+ * the printed ruling between two blocks of a logbook page. Vertical separators stay
+ * a thin hairline, because a tick rule only reads as a rule when it runs across.
  */
 export function Separator({
   className,

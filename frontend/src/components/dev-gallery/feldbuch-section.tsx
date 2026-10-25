@@ -338,13 +338,13 @@ function FeldbuchEintrag() {
   );
 }
 
-/** The gallery section presenting the four signature elements. */
+/** An archived proposal kept for reference; it does not govern any token. */
 export function FeldbuchSection() {
   return (
     <ComponentSection
       id="feldbuch"
-      title="Feldbuch & Wegmarkierung (Vorschlag)"
-      description="Vorschlag für die Identität, noch nicht entschieden: die Historie als Feldbuch statt als Dashboard, die Raute als Wegmarke, das Maßband als Maßstab, der Treffer auf der Ringscheibe. Jedes Element ist aus der Domäne begründet."
+      title="Feldbuch & Wegmarkierung (Archiv)"
+      description="Archivierter Vorschlag, überholt vom Bogenschuss-Logbuch: die Historie als Feldbuch, die Raute als Wegmarke, das Maßband als Maßstab, der Treffer auf der Ringscheibe. Nur zur Einordnung — die Skizzen speisen keine Tokens."
     >
       <Example
         caption="Wegmarke — Kennzeichnung der aktiven Stelle"

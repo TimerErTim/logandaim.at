@@ -27,7 +27,10 @@ export function ComponentSection({
   return (
     <section id={id} aria-labelledby={headingId} className="space-y-3">
       <header className="space-y-1">
-        <h2 id={headingId} className="text-base font-semibold tracking-tight">
+        <h2
+          id={headingId}
+          className="font-serif text-lg font-semibold tracking-tight"
+        >
           {title}
         </h2>
         {description ? (
