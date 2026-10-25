@@ -100,13 +100,14 @@ function StatePicker({
       aria-label={label}
     >
       {STATES.map((state) => (
-        // Drawn at 36px so four options fit a table cell on a phone; the hit area
-        // grows to 44px via the overlay. Neighbours sit side by side, so the
-        // overlay only extends vertically.
+        // 44px drawn, not grown: a ledger's rows are painted after one another, so a
+        // `::before` overlay that reaches into the next row loses the hit test to it.
+        // The rule already says a control is never taller than its row — so the row
+        // gets a row's worth of height instead of faking the target.
         <ToggleGroupItem
           key={state}
           value={state}
-          className="relative min-h-9 px-2 text-xs before:absolute before:-inset-y-1 before:content-[''] sm:px-3"
+          className="px-2 text-xs sm:px-3"
         >
           {state}
         </ToggleGroupItem>

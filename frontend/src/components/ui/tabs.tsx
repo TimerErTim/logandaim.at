@@ -41,7 +41,10 @@ export function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "-mb-px inline-flex min-h-9 items-center justify-center border-b-2 border-transparent px-3",
+        // 36px drawn; 44px target via a vertical overlay, since tab triggers are
+        // adjacent and a horizontal one would overlap a neighbour's taps.
+        "relative -mb-px inline-flex min-h-9 items-center justify-center border-b-2 border-transparent px-3",
+        "before:absolute before:inset-x-0 before:-inset-y-[7px] before:content-['']",
         "text-sm font-medium text-secondary transition-colors hover:text-ink",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
         "disabled:pointer-events-none disabled:opacity-50",

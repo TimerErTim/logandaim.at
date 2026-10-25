@@ -517,7 +517,7 @@ export function DemoPage() {
                               <ToggleGroupItem
                                 key={zone}
                                 value={zone}
-                                className="relative min-h-8 px-1.5 text-xs before:absolute before:-inset-y-1.5 before:content-['']"
+                                className="px-2 text-xs"
                               >
                                 {zone}
                               </ToggleGroupItem>

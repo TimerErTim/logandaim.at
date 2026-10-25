@@ -48,7 +48,7 @@ export function Slider({
           // The mark in the middle makes it read as a sighting dot, not a hole.
           "after:absolute after:inset-0 after:m-auto after:size-1.5 after:rounded-full",
           "after:bg-primary after:content-['']",
-          "before:absolute before:-inset-3.5 before:content-['']",
+          "before:absolute before:-inset-[16px] before:content-['']",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
           "active:cursor-grabbing disabled:pointer-events-none disabled:cursor-not-allowed",
         )}

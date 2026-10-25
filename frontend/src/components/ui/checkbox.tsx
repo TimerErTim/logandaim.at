@@ -17,13 +17,17 @@ type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
  * shape is the meaning: a box is "tick as many as apply", a circle is "choose one".
  *
  * The label wraps the input, so the whole row is a 44px target around an 18px box
- * and the accessible name comes from the visible text exactly once.
+ * and the accessible name comes from the visible text exactly once. The box itself
+ * never grows: the drawn mark stays a mark, the row carries the touch minimum.
  */
 export function Checkbox({ className, label, ...props }: CheckboxProps) {
   return (
     <label
       className={cn(
-        "flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink",
+        // `min-h-11` on the wrapping label is the whole target: an `<input>` is a
+        // replaced element and generates no `::before` box, so the overlay trick used
+        // on `Button` would do nothing here.
+        "relative flex min-h-11 w-full cursor-pointer items-center gap-3 text-sm text-ink",
         className,
       )}
     >

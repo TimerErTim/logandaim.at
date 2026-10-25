@@ -148,7 +148,7 @@ export function CheckpointSlider({
             "relative block size-5 cursor-grab rounded-full border-2 border-ink bg-surface",
             "after:absolute after:inset-0 after:m-auto after:size-1.5 after:rounded-full",
             "after:bg-ink after:content-['']",
-            "before:absolute before:-inset-3.5 before:content-['']",
+            "before:absolute before:-inset-[16px] before:content-['']",
             "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
             "active:cursor-grabbing disabled:pointer-events-none disabled:cursor-not-allowed",
           )}

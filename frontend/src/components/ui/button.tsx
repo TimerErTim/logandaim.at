@@ -19,7 +19,9 @@ import { cn } from "@/lib/cn";
  */
 const buttonVariants = cva(
   [
-    "inline-flex shrink-0 items-center justify-center gap-2 rounded-sm",
+    // `relative` is part of the base because every size but `lg` reaches the touch
+    // minimum through a `before` overlay, never by drawing taller than its row.
+    "relative inline-flex shrink-0 items-center justify-center gap-2 rounded-sm",
     "text-sm font-medium whitespace-nowrap transition-colors",
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
     "disabled:cursor-not-allowed disabled:opacity-50",
@@ -37,13 +39,21 @@ const buttonVariants = cva(
           "border border-impact/40 bg-transparent text-impact hover:border-impact hover:bg-impact/10",
       },
       size: {
-        sm: "h-8 px-2.5 text-[13px]",
-        md: "h-10 px-4",
+        // The touch minimum is the *hit area*, never the drawn box. Two traps make a
+        // naive `-inset-y` overlay a lie:
+        //   1. `inset` resolves against the padding box, so a 1px border silently
+        //      shrinks the pseudo box by 2px.
+        //   2. `inset-y` alone leaves `left/right: auto`, so the box collapses to
+        //      zero width in a flex container and nothing is hit-testable at all.
+        // Hence `inset-x-0` plus an inset sized for a *contoured* control; the
+        // horizontal inset stays 0 so a button never steals a neighbour's taps.
+        sm: "h-8 px-2.5 text-[13px] before:absolute before:inset-x-0 before:-inset-y-[8px] before:content-['']",
+        md: "h-10 px-4 before:absolute before:inset-x-0 before:-inset-y-[4px] before:content-['']",
         // The full 44px touch minimum, drawn as such.
         lg: "h-11 px-6 text-base",
-        // Drawn at `md` width so it aligns with its neighbours; the 44px hit area
-        // comes from the `before` overlay rather than a larger drawn box.
-        icon: "relative size-10 before:absolute before:-inset-0.5 before:content-['']",
+        // Drawn at `md` size so it aligns with its neighbours; the hit area grows on
+        // both axes, since an icon is not wide enough to reach 44 on its own.
+        icon: "size-10 before:absolute before:-inset-[5px] before:content-['']",
       },
     },
     defaultVariants: {

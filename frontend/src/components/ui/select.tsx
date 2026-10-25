@@ -17,7 +17,8 @@ export function Select({ className, ...props }: SelectProps) {
   return (
     <select
       className={cn(
-        "select-chevron h-10 w-full appearance-none rounded-sm border border-control bg-elevated py-0 pr-9 pl-3 text-sm text-ink",
+        // 44px drawn: a replaced element has no `::before` box to extend.
+        "select-chevron h-11 w-full appearance-none rounded-sm border border-control bg-elevated py-0 pr-9 pl-3 text-sm text-ink",
         "transition-colors",
         "hover:border-ink/40",
         "focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary",

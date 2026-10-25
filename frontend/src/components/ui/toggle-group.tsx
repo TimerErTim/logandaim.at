@@ -19,7 +19,10 @@ import { cn } from "@/lib/cn";
  */
 const toggleGroupItemVariants = cva(
   [
-    "relative -ml-px inline-flex min-h-11 items-center justify-center gap-2 px-3.5",
+    // 44px drawn in both axes: segmented cells sit shoulder to shoulder, so a
+    // horizontal `before` overlay would steal its neighbour's taps. The minimum
+    // width is why a short label like "Beta" still gets a full-sized target.
+    "relative -ml-px inline-flex min-h-11 min-w-11 items-center justify-center gap-2 px-3.5",
     "border border-subtle text-sm font-medium text-secondary",
     "transition-colors first:ml-0 first:rounded-l-sm last:rounded-r-sm",
     "hover:bg-surface-muted hover:text-ink",

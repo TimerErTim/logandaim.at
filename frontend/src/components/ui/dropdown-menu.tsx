@@ -37,7 +37,10 @@ export function DropdownMenuItem({
   return (
     <DropdownMenuPrimitive.Item
       className={cn(
-        "relative flex min-h-9 cursor-pointer items-center gap-2 rounded-sm px-2 py-2 text-sm text-ink select-none",
+        // A menu item is defined by its padding, not a fixed height: 8 + 20 + 8 = 36
+        // drawn, so `min-h-11` gives it a real 44px target without an overlay. A
+        // menu is a stack, so an overlay would also overlap its neighbours.
+        "relative flex min-h-11 cursor-pointer items-center gap-2 rounded-sm px-2 py-2 text-sm text-ink select-none",
         "focus:bg-surface-muted focus-visible:outline-none",
         "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         inset && "pl-8",

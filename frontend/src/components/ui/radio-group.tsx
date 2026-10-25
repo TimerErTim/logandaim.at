@@ -33,7 +33,10 @@ export function RadioGroupItem({
   return (
     <RadioGroupPrimitive.Item
       className={cn(
-        "size-5 shrink-0 rounded-full border-[3px] border-control bg-surface",
+        "relative size-5 shrink-0 rounded-full border-[3px] border-control bg-surface",
+        // 20 + 24 = 44 hit area on a button element; the drawn circle stays small
+        // because the ink weight, not the size, is what makes it read as a mark.
+        "before:absolute before:-inset-[16px] before:content-['']",
         "transition-colors",
         "hover:border-ink/60",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
@@ -45,7 +48,7 @@ export function RadioGroupItem({
     >
       <RadioGroupPrimitive.Indicator className="flex size-full items-center justify-center">
         {/* A filled disc, held off the ring by a paper gap: the "check circle" fill. */}
-        <span className="size-full rounded-full border-[3px] border-surface bg-primary" />
+        <span className="pointer-events-none size-full rounded-full border-[3px] border-surface bg-primary" />
       </RadioGroupPrimitive.Indicator>
     </RadioGroupPrimitive.Item>
   );
@@ -54,8 +57,10 @@ export function RadioGroupItem({
 /**
  * Row with a 44px touch target.
  *
- * The item is a `button`, which is labelable, so `htmlFor` on the row names it
- * without relying on implicit nesting.
+ * The whole row is the label, so the target is the row rather than the 20px circle
+ * plus its text: a label of 17px tall next to a small diagram is not a touch target,
+ * whatever the control's own box measures. The item is a `button`, which is
+ * labelable, so pointing `htmlFor` at it works without relying on implicit nesting.
  */
 export function RadioGroupOption({
   value,
@@ -69,7 +74,12 @@ export function RadioGroupOption({
   return (
     <div className="flex min-h-11 items-center gap-3">
       <RadioGroupItem id={id} value={value} />
-      <label htmlFor={id} className="cursor-pointer text-sm text-ink">
+      {/* The text is part of the target: a 17px label beside a 20px circle leaves
+          the row short of the minimum even when the circle's own overlay passes. */}
+      <label
+        htmlFor={id}
+        className="flex min-h-11 cursor-pointer items-center text-sm text-ink"
+      >
         {label}
       </label>
     </div>

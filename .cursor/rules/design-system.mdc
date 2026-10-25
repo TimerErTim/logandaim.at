@@ -156,6 +156,22 @@ Six elements carry the identity. Use them; do not invent a seventh.
 4. **Touch targets ≥ 44×44 px** on every interactive element. Target ≠ drawn control: a control
    keeps its row height and extends its hit area with a `before` overlay. Never make a control
    taller than its row to reach 44px.
+
+   The overlay is a real technique with three failure modes, all of them invisible to a review by
+   eye, and all of them verified by hit-testing rather than by reading computed styles:
+   - `inset-y` alone leaves `left`/`right` at `auto`, so the pseudo box collapses to zero width
+     inside a flex control and nothing is hit-testable. Every overlay also sets `inset-x-0`.
+   - `inset` resolves against the *padding* box, so a 1px or 2px contour silently eats that much of
+     the overlay. Size the inset for the drawn border, not for the bare box.
+   - A replaced element (`input`, `select`, `textarea`) generates no `::before` box at all. A field
+     cannot be grown this way; it is drawn at 44px, because a stacked field is already its own row.
+   - A table row is painted after its neighbour, so an overlay that crosses into the next row loses
+     the hit test to it. In a dense ledger the row itself must be tall enough; that is what
+     `ToggleGroupItem`'s `min-h-11` provides.
+
+   A caption is not a target either: a 17px `<label>` beside a control must also be part of the hit
+   area (`RadioGroupOption`, `Checkbox`), or the row is short of the minimum however correct the
+   control's own box looks.
 5. **Focus always visible.** `focus-visible:outline-2` with `outline-primary`. Never remove an
    outline without an equally visible replacement.
 6. **One primary action per screen.** Everything else `secondary` or `ghost`. Destructive uses
@@ -192,9 +208,10 @@ variants, Radix where behaviour is non-trivial, `cn` (`clsx` + `tailwind-merge`)
   uses `role="alert"`.
 - `Separator` draws the ruled line; standard section divider.
 - `Input`, `Textarea`, `Select`, `SearchInput` sit on `--bg-elevated` with a `--border-control`
-  contour turning `--color-primary` on focus, darkening on hover. `Select` stays native on purpose:
-  the platform picker survives touch and one-handed use. Its chevron is a `currentColor` mask, so it
-  flips with the theme.
+  contour turning `--color-primary` on focus, darkening on hover. All four are drawn at 44px: they
+  are replaced elements and cannot take a `::before` hit-area overlay, so a 40px field would have
+  been a 40px target. `Select` stays native on purpose: the platform picker survives touch and
+  one-handed use. Its chevron is a `currentColor` mask, so it flips with the theme.
 - `Checkbox` is a square with `checkbox-tick`: green fill, paper-coloured tick, both from tokens.
   Its contour is `border-2`, not a hairline.
 - **Inked controls.** Anything drawn rather than typed carries a strong contour, because a mark on

@@ -20,7 +20,11 @@ export function Switch({
   return (
     <SwitchPrimitive.Root
       className={cn(
-        "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-control",
+        "peer relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-control",
+        // The drawn track is 24px; the 44px target comes from an overlay inset far
+        // enough to clear the 2px contour, which shrinks the padding box the inset
+        // resolves against. Vertical only: the label always sits alongside.
+        "before:absolute before:inset-x-0 before:-inset-y-[13px] before:content-['']",
         "transition-colors",
         "data-[state=checked]:border-primary data-[state=checked]:bg-primary",
         "data-[state=unchecked]:bg-surface-muted",
