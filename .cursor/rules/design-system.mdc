@@ -95,9 +95,10 @@ Five elements carry the identity. Use them; do not invent a sixth.
 10. **Flat by default.** Edges come from `border-border` and `--contour`, not from shadows. Only
     overlays that must float (dialogs, dropdowns) carry a shadow. No hover elevation, gradients, or
     glass; they read as presentation UI.
-11. **Rounding is functional.** `--radius` is small: controls use `rounded-md`, containers
-    `rounded-lg`, chips and skeleton blocks `rounded-sm`. Nothing is pill-shaped except where the
-    shape is the meaning (switch track, progress bar, slider track, radio dot).
+11. **Rounding is functional and tight.** `--radius` is small: controls use `rounded-sm`, containers
+    `rounded-md`, chips and skeleton blocks `rounded-sm`. The map language is a measuring instrument,
+    not a toy: nothing is pill-shaped except where the shape is the meaning (progress track, switch
+    track, radio dot). A rounded corner is never decoration.
 12. **A row of controls is a flex row.** Buttons are `inline-flex`; wrap trigger groups in `Example`
     (or any `flex` with `gap-2`) instead of stacking them as siblings.
 13. **Natural, low-saturation colour.** Warm map paper and green-black night; primary is map green,
@@ -139,32 +140,34 @@ for class merging.
 
 ## Screen composition
 
-A screen is a map sheet. This applies to app pages and to the mockups under `/dev/mockups`.
+A screen is a map sheet. This applies to app pages. **The rules
+below govern appearance only.** How a journey is structured — whether a parcours is shown as a map,
+a progress bar, or a plain step list — is a product decision and is not settled by this identity.
 
 1. The page header is a Kartenkopf: title, optional mono sheet reference, quiet hatch band under it.
 2. Content blocks are `Card`s (sheets) or ruled table sections; between sections sits a
    `Separator` (contour band).
-3. A journey or workflow is drawn as the way (`WorkflowSteps`), with the current step named.
-4. Distances use the scale bar pattern: the rule written out, the value in mono.
-5. Numbers in rows: right-aligned, `tabular-nums`. IDs, references, coordinates: `--font-mono`.
-6. Exactly one primary action per screen, in the first action row. Everything else secondary/ghost.
-7. Status always as word (+ icon or pattern), colour only as second channel.
+3. Distances use the scale-bar pattern: the rule written out, the value in mono.
+4. Numbers in rows: right-aligned, `tabular-nums`. IDs, references, coordinates: `--font-mono`.
+5. Exactly one primary action per screen, in the first action row. Everything else secondary/ghost.
+6. Status always as word (+ icon or pattern), colour only as second channel.
 
-## The gallery at `/dev` and the mockups at `/dev/mockups`
+## The gallery at `/dev`
 
-`frontend/src/app/dev/page.dev.tsx` and `frontend/src/app/dev/mockups/page.dev.tsx` exist only
-under `next dev`: `next.config.ts` adds the `dev.tsx` / `dev.ts` page extensions only in the
-development phase, so `next build` never emits the routes. `build:frontend` asserts that `out/dev`
-and the gallery code are absent from the export.
+`frontend/src/app/dev/page.dev.tsx` exists only under `next dev`: `next.config.ts` adds the
+`dev.tsx` / `dev.ts` page extensions only in the development phase, so `next build` never emits the
+route. `build:frontend` asserts that `out/dev` and the gallery code are absent from the export.
 
 - The gallery renders every component, variant, size, and state in a light and a dark frame on the
   same page.
 - The Tokens section reads the computed CSS variables and prints the contrast ratio for every
   documented pair, with an AA pass/fail badge.
 - The touch-target toggle outlines interactive elements to reveal targets under 44px.
-- The mockups render whole screens from `frontend/src/components/dev-gallery/mockups/`, each in a
-  light and a dark frame. A mockup is built exactly like a production screen from the primitives,
-  with static data; it is the review surface for screen-level identity.
+- The Kartographie section shows the map vocabulary as elements — contour lines, elevation profile,
+  compass rose, subdivided scale bar, graticule, neatline, legend — deliberately without screens or
+  flows, so the identity can be judged on its own.
+- The Philosophien section keeps the earlier variant line-up for reference; it is not a live
+  proposal.
 
 Workflow for a visual change: edit `globals.css` or a component, look at `/dev`, decide, then write
 the result into this rule and the spec decision log **in the same commit**.

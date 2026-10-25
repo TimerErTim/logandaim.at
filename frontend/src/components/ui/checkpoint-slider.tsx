@@ -141,7 +141,7 @@ export function CheckpointSlider({
           aria-label={label}
           aria-valuetext={valuetext}
           aria-describedby={legendId}
-          className="relative block size-5 cursor-grab rounded-full border-2 border-foreground bg-surface before:absolute before:-inset-3.5 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:cursor-grabbing"
+          className="relative block size-5 cursor-grab rounded-sm border-2 border-foreground bg-surface before:absolute before:-inset-3.5 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:cursor-grabbing"
         />
       </SliderPrimitive.Root>
 

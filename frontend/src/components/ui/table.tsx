@@ -12,7 +12,7 @@ export function Table({
   ...props
 }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+    <div className="overflow-x-auto rounded-md border border-border bg-surface">
       <table
         className={cn("w-full border-collapse text-sm", className)}
         {...props}
@@ -28,7 +28,7 @@ export function TableHead({
   return (
     <thead
       className={cn(
-        "sticky top-0 z-10 bg-surface-muted text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase",
+        "sticky top-0 z-10 border-b border-border bg-surface-muted text-left font-mono text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase",
         className,
       )}
       {...props}

@@ -11,7 +11,7 @@ import { cn } from "@/lib/cn";
  * button with text and colour, so the selection never depends on colour alone.
  */
 const toggleGroupItemVariants = cva(
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-sm px-3 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
@@ -34,7 +34,7 @@ export function ToggleGroup({
   return (
     <ToggleGroupPrimitive.Root
       className={cn(
-        "flex w-fit flex-wrap items-center gap-1 rounded-md",
+        "flex w-fit flex-wrap items-center gap-1 rounded-sm",
         className,
       )}
       {...props}

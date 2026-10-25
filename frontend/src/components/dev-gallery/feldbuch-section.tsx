@@ -338,33 +338,6 @@ function FeldbuchEintrag() {
   );
 }
 
-function WegmarkeNav() {
-  const eintraege = [
-    { label: "Historie", aktiv: true },
-    { label: "Parcours", aktiv: false },
-    { label: "Konto", aktiv: false },
-  ];
-  return (
-    <ul className="w-full space-y-1">
-      {eintraege.map((eintrag) => (
-        <li
-          key={eintrag.label}
-          aria-current={eintrag.aktiv ? "true" : undefined}
-          className={cn(
-            "flex min-h-11 items-center gap-3 rounded-md px-3 text-sm",
-            eintrag.aktiv
-              ? "font-semibold text-foreground"
-              : "text-muted-foreground",
-          )}
-        >
-          <Wegmarke aktiv={eintrag.aktiv} />
-          {eintrag.label}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 /** The gallery section presenting the four signature elements. */
 export function FeldbuchSection() {
   return (
@@ -377,7 +350,14 @@ export function FeldbuchSection() {
         caption="Wegmarke — Kennzeichnung der aktiven Stelle"
         className="block"
       >
-        <WegmarkeNav />
+        <div className="flex items-center gap-3">
+          <Wegmarke aktiv />
+          <span className="text-sm">An der aktiven Stelle</span>
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <Wegmarke />
+          <span className="text-sm">An jeder anderen Stelle</span>
+        </div>
       </Example>
 
       <Example
