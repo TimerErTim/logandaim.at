@@ -229,7 +229,10 @@ variants, Radix where behaviour is non-trivial, `cn` (`clsx` + `tailwind-merge`)
   hit area follows the touch rule. Handle names distinct per row, never inventing a position that
   does not exist. Numbers `tabular-nums` and right-aligned; machine values mono. Table heads tracked
   small caps on `--bg-surface-muted`.
-- `Field` owns label, hint, error placement. Use it instead of hand-assembling label + input.
+- `Field` owns label, hint, error placement. Use it instead of hand-assembling label + input. The
+  label is a real `<label>` attached with `htmlFor`: `Field` mints an id for a single control child
+  that has none, and leaves a control that already names itself alone. A caption drawn above an
+  unnamed input is not a labelled field; no contrast or token check detects that.
 - Layout (`app-shell`, `sidebar`, `page-chrome`) and workflow components compose from primitives.
   Active nav item is a filled treatment plus `aria-current`, never colour alone.
 
@@ -265,6 +268,14 @@ bar, or a step list is a product decision, not settled here.
   `Kategorie`, `Fortschritt`, `Alpha`/`Beta`/`Gamma`), never product entities, shooting terms, or a
   real place name. It demonstrates *how* the product looks; *what* it does is decided in product
   specs, and a plate must not imply a journey.
+- **The composed page (plate 16) is the composition test.** Every primitive on one screen in the
+  order a real page puts them — running head, plate number, title block, action row, filter row,
+  tabs, metric cards, drawing with legend, ledger with inline controls, form card with margin
+  furniture, footer. Specimens can each pass while the page fails on density, hierarchy, or
+  neighbouring contrast, so this plate is judged whole, not part by part. It renders once, not twice:
+  a page needs width, so Papier/Lampe is a switch rather than a pair, and it is laid out with
+  container queries (`@md`, `@lg`, `@xl`) because the plate is narrower than the window. Anything a
+  page needs that the parts do not provide belongs here first, then in the primitives.
 - Earlier identity proposals removed. The gallery shows the accepted system only; a superseded
   direction belongs in the spec decision log, not the page.
 
