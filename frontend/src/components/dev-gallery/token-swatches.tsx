@@ -13,33 +13,45 @@ import { Badge } from "@/components/ui/badge";
 
 /** Tokens worth showing as a swatch, in the order the design rule documents them. */
 const COLOUR_TOKENS = [
-  "background",
-  "foreground",
-  "surface",
-  "surface-muted",
-  "border",
-  "contour",
-  "primary",
+  "bg-canvas",
+  "bg-surface",
+  "bg-elevated",
+  "bg-surface-muted",
+  "border-subtle",
+  "border-strong",
+  "text-primary",
+  "text-secondary",
+  "text-muted",
+  "color-primary",
+  "color-primary-hover",
+  "color-primary-subtle",
   "primary-foreground",
-  "secondary",
-  "muted-foreground",
-  "destructive",
-  "success",
-  "warning",
-  "ring",
+  "semantic-impact",
+  "semantic-warning",
+  "semantic-success",
+  "semantic-info",
 ] as const;
 
-/** Pairs the design system promises are readable. */
+/**
+ * Pairs the design system promises are readable. Every entry must clear AA. The
+ * prescribed muted ink, amber, and strong contour do not clear AA as text, so they
+ * are deliberately absent here: the rulebook restricts them to placeholders, marks,
+ * and contours instead of pretending they pass.
+ */
 const CONTRAST_PAIRS = [
-  { fg: "foreground", bg: "background", label: "Text / Seite" },
-  { fg: "foreground", bg: "surface", label: "Text / Karte" },
-  { fg: "muted-foreground", bg: "surface", label: "Nebentext / Karte" },
-  { fg: "muted-foreground", bg: "surface-muted", label: "Nebentext / Fläche" },
-  { fg: "primary-foreground", bg: "primary", label: "Primärtext / Primär" },
-  { fg: "primary", bg: "surface", label: "Marke / Karte" },
-  { fg: "destructive", bg: "surface", label: "Fehler / Karte" },
-  { fg: "success", bg: "surface", label: "Erfolg / Karte" },
-  { fg: "warning", bg: "surface", label: "Warnung / Karte" },
+  { fg: "text-primary", bg: "bg-canvas", label: "Text / Seite" },
+  { fg: "text-primary", bg: "bg-surface", label: "Text / Karte" },
+  { fg: "text-secondary", bg: "bg-surface", label: "Nebentext / Karte" },
+  { fg: "text-secondary", bg: "bg-surface-muted", label: "Nebentext / Fläche" },
+  {
+    fg: "primary-foreground",
+    bg: "color-primary",
+    label: "Primärtext / Primär",
+  },
+  { fg: "color-primary", bg: "bg-surface", label: "Marke / Karte" },
+  { fg: "semantic-impact", bg: "bg-surface", label: "Einschlag / Karte" },
+  { fg: "semantic-success", bg: "bg-surface", label: "Erfolg / Karte" },
+  { fg: "semantic-info", bg: "bg-surface", label: "Info / Karte" },
 ] as const;
 
 type Measurement = {

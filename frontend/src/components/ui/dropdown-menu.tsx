@@ -20,7 +20,7 @@ export function DropdownMenuContent({
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "paper-overlay z-50 min-w-40 overflow-hidden rounded-md border border-border bg-surface p-1",
+          "paper-overlay z-50 min-w-40 overflow-hidden rounded-md border border-border bg-surface-elevated p-1",
           className,
         )}
         {...props}

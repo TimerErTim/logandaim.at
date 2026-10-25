@@ -78,7 +78,7 @@ export function CheckpointSlider({
    */
   const farbe =
     sorted.length === 0
-      ? "var(--secondary)"
+      ? "var(--bg-surface-muted)"
       : `linear-gradient(to right, ${[
           `${sorted[0]?.farbe} 0%`,
           ...sorted.map(

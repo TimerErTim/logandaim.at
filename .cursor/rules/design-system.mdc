@@ -29,33 +29,65 @@ document and a row here disagree, this table wins.
 
 | ✅ DO | ❌ DON'T |
 |-------|----------|
-| Use `--surface` (`#FDFBF7`) and `--background` (`#F4F1EA`) for a warm, easy-on-the-eye paper atmosphere. | Never use cold tech white (`#FFFFFF`) as the global page background, and never a blue-cast grey (e.g. Tailwind Slate) as a neutral. |
-| Use hunter green (`#1B3B2B`) as the single dominant accent colour. | Add no ornamental secondary accents: no brown buttons, no gold gradients, no arbitrarily multi-coloured badges. |
-| Reserve red (`#A82B2B`) exclusively for critical errors and destructive actions. | Never use red for ordinary UI decoration or for neutral diagram elements. |
+| Use `--bg-surface` (`#FDFBF7`) and `--bg-canvas` (`#F4F1EA`) for a warm, easy-on-the-eye paper atmosphere. | Never use cold tech white as the global page background, and never a blue-cast grey (e.g. Tailwind Slate) as a neutral. |
+| Use `--color-primary` (`#1B3B2B`, hunter green) as the single dominant accent colour. | Add no ornamental secondary accents: no brown buttons, no gold gradients, no arbitrarily multi-coloured badges. |
+| Reserve `--semantic-impact` (`#A82B2B`) exclusively for impacts, critical errors, and destructive actions. | Never use red for ordinary UI decoration or for neutral diagram elements. |
 | Keep borders thin (1px) and corners nearly square (4–6px). | No strong drop shadows, no glassmorphism (`backdrop-blur`), no heavily rounded cards (16px+). |
 | Pair serif headings with clear sans-serif forms. | Never use handwriting, script, or cursive faces for user input — legibility always wins. |
+| Treat `--semantic-*` as meaning: a colour appears only when something happened. | Never use a semantic colour because a screen looked empty or dull. |
 
 ## Tokens
 
 The single source is the block in `frontend/src/app/globals.css`. Every token below is defined for
 light and dark. Add a token only together with an entry here.
 
+The canonical token names are the design system's own vocabulary. The `@theme inline` block
+republishes them as Tailwind utilities, which is what components actually use.
+
+### Surface & paper (neutrals)
+
+| Token | Utility | Meaning | Use for |
+|----|----|----|----|
+| `--bg-canvas` | `bg-background` | The desk the paper lies on | App shell and page bodies, sidebar |
+| `--bg-surface` | `bg-surface` | A sheet of paper | Cards, tables, content areas, header |
+| `--bg-elevated` | `bg-surface-elevated` | A raised sheet | Active inputs, dropdown menus, dialogs |
+| `--bg-surface-muted` | `bg-surface-muted` | A second sheet / greyed paper | Table headers, hover rows, skeletons, inactive tracks |
+| `--border-subtle` | `border-border` | Pencil hairline | Dividers, card borders, table rules |
+| `--border-strong` | `border-border-strong` | A field's contour | Form inputs at rest, millimetre grid |
+
+### Typography & ink
+
+| Token | Utility | Meaning | Use for |
+|----|----|----|----|
+| `--text-primary` | `text-foreground` | Warm deep ink (`#2C2A29`); never pure black | Body text, headings, default icons |
+| `--text-secondary` | `text-muted-foreground` | Secondary ink | Labels, subtitles, metadata, units |
+| `--text-muted` | `text-placeholder` | Muted ink | Placeholders and disabled elements only |
+
+### The one accent
+
+| Token | Utility | Meaning | Use for |
+|----|----|----|----|
+| `--color-primary` | `bg-primary`, `text-primary`, `border-primary` | **The one brand colour: hunter green** | One primary button per screen, active nav, focus rings, neutral vector drawings |
+| `--color-primary-hover` | `bg-primary-hover` | The pressed primary | Hover and active state of a primary button |
+| `--color-primary-subtle` | `bg-primary-subtle` | A green wash | Subtle badges, selected table rows |
+| `--primary-foreground` | `text-primary-foreground` | Paper on hunter green | Labels drawn on `--color-primary` |
+
+### Semantic & data colours (meaning only)
+
+| Token | Utility | Meaning | Use for |
+|----|----|----|----|
+| `--semantic-impact` | `bg-destructive`, `text-destructive` | Crimson | Impact points, critical deviations, delete actions, errors |
+| `--semantic-warning` | `bg-warning`, `text-warning` | Ocher / amber | Warnings, unsaved changes, moderate bands |
+| `--semantic-success` | `bg-success`, `text-success` | Forest green | Optimal band, confirmations, positive trends |
+| `--semantic-info` | `bg-info`, `text-info` | Steel blue | Meteorological data and distance helper lines only |
+
+### Mechanics
+
 | Token | Meaning | Use for |
 |----|----|----|
-| `--background` | The desk the paper lies on | App shell and page bodies |
-| `--foreground` | Warm ink | Body text, headings, default icon colour |
-| `--surface` | A sheet of paper | Cards, tables, dialogs, header, sidebar |
-| `--surface-muted` | A second sheet / greyed paper | Table headers, hover rows, skeleton blocks, tab strips, inactive tracks |
-| `--border` | Pencil hairline | Borders, dividers, table rules |
-| `--contour` | Faint grid line | Tick rules (`rule-ticks`), scale marks, quiet sheet rules |
-| `--primary` | **The one brand colour: hunter green** | One primary button per screen, active nav item, the active step |
-| `--primary-foreground` | Paper on hunter green | Button labels and icons drawn on `--primary` |
-| `--secondary` | Neutral paper fill | Inactive tracks, muted chips, segmented-control rest state |
-| `--muted-foreground` | Secondary ink | Hints, captions, table headers, metadata |
-| `--destructive` | Critical failure | Destructive buttons, inline validation, error stamps |
-| `--success` | Confirmed outcome | Success stamps and alerts |
-| `--warning` | Attention without failure | Pending and edit states, the touch-target debug outline |
-| `--ring` | Focus indicator | Every `focus-visible` outline |
+| `--contour` | Alias of the hairline | Tick rules (`rule-ticks`), quiet sheet rules |
+| `--color-secondary` | Neutral paper fill | Inactive tracks, muted chips, segmented rest state |
+| `--color-ring` | Focus indicator | Every `focus-visible` outline |
 | `--radius` | Corner radius | `--radius-sm` through `--radius-xl` are derived from it |
 | `--shadow-paper` | Sheet shadow | The `paper` class. Soft in light, `none` in dark |
 | `--shadow-overlay` | Floating-sheet shadow | The `paper-overlay` class: dialogs, menus, tooltips |
@@ -77,11 +109,28 @@ There is exactly **one brand colour**. Everything else is paper, ink, or an expl
 
 - Hunter green: brand, primary action, active state. Nothing else.
 - Paper and warm neutrals: all structure.
-- Red, amber, and success green: meaning only, never decoration. Always paired with a word.
+- Impact, warning, success, info: meaning only, never decoration. Always paired with a word.
 
-Red is the most restricted colour in the system. It means "this failed" or "this destroys
-something", and nothing else. It is never a hover accent, a chart series, a category marker, or a
-way to make a screen feel lively.
+`--semantic-impact` is the most restricted colour in the system. It means "this is an impact", "this
+failed", or "this destroys something", and nothing else. It is never a hover accent, a chart series,
+a category marker, or a way to make a screen feel lively. `--semantic-info` is reserved for
+meteorological data and distance helper lines; it is not a general-purpose "informational" accent.
+
+## Contrast exceptions
+
+Four prescribed values do not clear WCAG 2.2 AA as text. They are kept because they are prescribed,
+and each is restricted to the role where it is legible:
+
+| Value | Ratio on paper | Restriction |
+|----|----|----|
+| `--text-muted` `#9E9A93` | 2.48:1 | Placeholders and disabled controls only. Never body text, labels, or metadata. |
+| `--semantic-warning` `#D97706` | 3.08:1 | Rules, washes, icons, and borders. A warning that must be *read* is ink on the amber wash. |
+| `--border-strong` `#CFCAC0` | 1.58:1 | A 1px contour, never a text carrier. |
+| `--semantic-success` `#15803D` | 4.45:1 on canvas, 4.85:1 on surface | Text on `--bg-surface` only, never on the darker canvas. |
+
+The rule this implies: **a semantic colour may always be a mark, a rule, or a wash; it may be text
+only where the table above allows it.** Badge and Alert already encode this — `warning` is ink on an
+amber wash rather than amber text.
 
 ## Paper language
 
@@ -95,8 +144,9 @@ Six elements carry the identity. Use them; do not invent a seventh.
 3. **The ruled line.** `Separator` draws `rule-ticks`: small ticks along a hairline, like the
    printed ruling of a form. Sections are divided by a ruled line, never by empty space alone or by
    a shadow.
-4. **The fine contour.** Inputs and selects are flat with a 1px `--border` contour that turns
-   `--primary` on focus and darkens slightly on hover.
+4. **The fine contour.** Inputs and selects sit on `--bg-elevated` with a 1px `--border-strong`
+   contour that turns `--color-primary` on focus and darkens slightly on hover. A card's hairline is
+   `--border-subtle`; a field's contour is stronger, because the field boundary is functional.
 5. **The stamp.** `Badge` is a rubber stamp: hairline box, tracked small caps, a tint of the
    semantic colour. Status always carries its word.
 6. **The millimetre grid.** Charts and diagrams are thin geometric lines on a faint grid, like
@@ -112,8 +162,8 @@ Six elements carry the identity. Use them; do not invent a seventh.
    `currentColor` instead of hardcoding a stroke colour. An inline style may reference only
    `var(--…)` tokens.
 2. **Contrast is a gate.** Text on a background meets WCAG 2.2 AA (4.5:1 normal text). The gallery
-   measures every documented pair; a change that drops a pair below AA is not accepted. The amber
-   from the original guide fails as text on paper, so `--warning` is its darker sibling.
+   measures every documented pair; a change that drops a pair below AA is not accepted. The four
+   prescribed exceptions above are role-restricted rather than relaxed.
 3. **Colour is never the only signal.** Status and validation carry their meaning in text or an
    icon too. Badges and alerts always include the word.
 4. **Touch targets are at least 44 by 44 pixels** on every interactive element. The target and the
@@ -159,10 +209,10 @@ for class merging.
 - `Alert` is a margin note: a coloured left rule and a tinted wash, never a full coloured block.
   `error` uses `role="alert"`.
 - `Separator` draws the ruled line. It is the standard section divider.
-- `Input`, `Textarea`, `Select`, and `SearchInput` are flat with a hairline that turns `--primary`
-  on focus and darkens on hover. `Select` stays a native `<select>` on purpose: the platform picker
-  is the control users know, and it survives touch and one-handed use. Its chevron is a mask in
-  `currentColor`, so it flips with the theme.
+- `Input`, `Textarea`, `Select`, and `SearchInput` sit on `--bg-elevated` with a `--border-strong`
+  contour that turns `--color-primary` on focus and darkens on hover. `Select` stays a native
+  `<select>` on purpose: the platform picker is the control users know, and it survives touch and
+  one-handed use. Its chevron is a mask in `currentColor`, so it flips with the theme.
 - `Checkbox` is a square with `checkbox-tick`: green fill and a paper-coloured tick, both from
   tokens. `Switch` and the radio dot are the only pills, because there the shape is the meaning.
 - `Table` is a ruled ledger: hairlines between rows, no zebra banding, `tabular-nums` and
@@ -175,7 +225,8 @@ for class merging.
 - `CheckpointSlider` is the same input for a value scale that has named checkpoints: the track is
   divided into the coloured bands between them. **The band colours are caller-supplied data**, not
   design tokens, and arrive as a `checkpoints` prop; the design system owns no palette for them and
-  must never add one to `globals.css`. The value moves freely and never snaps to a checkpoint.
+  must never add one to `globals.css`. Callers pass `var(--…)` token references, never hex values.
+  The value moves freely and never snaps to a checkpoint.
   Bands are `aria-hidden`; the legend repeats every checkpoint with its name, and the thumb's
   `aria-valuetext` names the nearest one. With no checkpoints it renders a plain track.
 - `Table` rows that drag are sortable through `@dnd-kit`. The drag activator is a dedicated handle,
@@ -218,6 +269,10 @@ route. `build:frontend` asserts that `out/dev` and the gallery code are absent f
   outlines are dashed amber on purpose: they are a measuring overlay, not part of the identity.
 - The Datenbilder plate shows the drawing vocabulary as elements — diagram, series, scale, legend —
   deliberately without screens or flows, so the visual language can be judged on its own.
+- **The gallery is domain-free.** Its fixtures use neutral German UI language (`Eintrag`, `Status`,
+  `Kategorie`, `Fortschritt`, `Alpha`/`Beta`/`Gamma`) and never product entities, shooting terms, or
+  a real place name. The gallery demonstrates *how* the product looks; *what* it does is decided in
+  the product specs, and a gallery plate must not imply a journey.
 - Earlier identity proposals have been removed. The gallery shows the accepted system only; a
   superseded direction belongs in the spec's decision log, not on the page.
 

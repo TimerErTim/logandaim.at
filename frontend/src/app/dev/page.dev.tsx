@@ -3,11 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { touchTargetOutline } from "@/components/dev-gallery/component-section";
-import { DatenbilderSection } from "@/components/dev-gallery/datenbilder-section";
-import {
-  CheckpointSliderSection,
-  PfeilTableSection,
-} from "@/components/dev-gallery/pfeil-table-section";
+import { DataFiguresSection } from "@/components/dev-gallery/data-figures-section";
 import {
   AlertSection,
   BadgeSection,
@@ -18,6 +14,10 @@ import {
   MiscSection,
   OverlaySection,
 } from "@/components/dev-gallery/sections";
+import {
+  CheckpointSliderSection,
+  SortableTableSection,
+} from "@/components/dev-gallery/sortable-table-section";
 import { TokenSwatches } from "@/components/dev-gallery/token-swatches";
 import { TypeSection } from "@/components/dev-gallery/type-section";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
@@ -42,9 +42,9 @@ import { Separator } from "@/components/ui/separator";
 const PLATES = [
   { id: "tokens", index: "01", label: "Tokens" },
   { id: "type", index: "02", label: "Schrift" },
-  { id: "pfeile", index: "03", label: "Pfeil-Tabelle" },
-  { id: "datenbilder", index: "04", label: "Datenbilder" },
-  { id: "checkpoint-slider", index: "05", label: "Distanz-Slider" },
+  { id: "sortable-table", index: "03", label: "Sortierbare Tabelle" },
+  { id: "figures", index: "04", label: "Datenbilder" },
+  { id: "checkpoint-slider", index: "05", label: "Bereichs-Slider" },
   { id: "button", index: "06", label: "Button" },
   { id: "badge", index: "07", label: "Badge" },
   { id: "alert", index: "08", label: "Alert" },
@@ -135,8 +135,8 @@ export default function DevGalleryPage() {
         <div className="space-y-14">
           <TokenSwatches />
           <TypeSection />
-          <PfeilTableSection />
-          <DatenbilderSection />
+          <SortableTableSection />
+          <DataFiguresSection />
           <CheckpointSliderSection />
           <div className={showTouchTargets ? touchTargetOutline : undefined}>
             <div className="space-y-14">

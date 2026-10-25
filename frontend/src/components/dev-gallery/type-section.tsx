@@ -70,14 +70,14 @@ function TypeSpecimen() {
       <Example caption="Überschrift und Fließtext" className="block">
         <div className="w-full space-y-2">
           <p className="font-serif text-2xl leading-tight font-semibold tracking-tight">
-            Neuer Eintrag — Revier Süd
+            Neuer Eintrag — Bereich Süd
           </p>
           <p className="text-sm">
-            Jeden Pfeil an einem Ziel registrieren. Der erste Treffer und der
-            Mehrschuss werden daraus berechnet.
+            Jeden Eintrag einzeln erfassen. Der erste Wert und der Folgewert
+            werden daraus berechnet.
           </p>
           <p className="text-sm text-muted-foreground">
-            Nebentext: 32 Ziele, 4 Pflöcke, Distanz 42 Schritte.
+            Nebentext: 32 Einträge, 4 Kategorien, Abstand 42 Schritte.
           </p>
         </div>
       </Example>
@@ -88,32 +88,32 @@ function TypeSpecimen() {
             <thead className="border-b border-border text-left text-[10px] tracking-[0.09em] text-muted-foreground uppercase">
               <tr>
                 <th scope="col" className="py-1.5 font-semibold">
-                  Pfeil
+                  Nr.
                 </th>
                 <th scope="col" className="py-1.5 font-semibold">
-                  Zone
+                  Status
                 </th>
                 <th scope="col" className="py-1.5 text-right font-semibold">
-                  Punkte
+                  Wert
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {SAMPLE_ROWS.map((row) => (
-                <tr key={row.pfeil}>
+                <tr key={row.nr}>
                   <td className="py-1.5 font-mono text-xs tabular-nums">
-                    {row.pfeil}
+                    {row.nr}
                   </td>
-                  <td className="py-1.5">{row.zone}</td>
+                  <td className="py-1.5">{row.status}</td>
                   <td className="py-1.5 text-right font-medium tabular-nums">
-                    {row.punkte}
+                    {row.wert}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm">Schuss erfassen</Button>
+            <Button size="sm">Eintrag erfassen</Button>
             <Button size="sm" variant="secondary">
               Abbrechen
             </Button>
@@ -126,7 +126,7 @@ function TypeSpecimen() {
 
       <Example caption="Zeichen" className="block">
         <p className="w-full text-sm">
-          ÄÖÜäöüß · 0123456789 · € · → · ✓ · — »Wertungszone«
+          ÄÖÜäöüß · 0123456789 · € · → · ✓ · — »Kategorie«
         </p>
       </Example>
     </>
@@ -134,7 +134,7 @@ function TypeSpecimen() {
 }
 
 const SAMPLE_ROWS = [
-  { pfeil: "1", zone: "Kill", punkte: "1" },
-  { pfeil: "2", zone: "Body", punkte: "5" },
-  { pfeil: "3", zone: "Miss", punkte: "0" },
+  { nr: "1", status: "Aktiv", wert: "1" },
+  { nr: "2", status: "Prüfung", wert: "5" },
+  { nr: "3", status: "Leer", wert: "0" },
 ];

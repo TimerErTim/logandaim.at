@@ -6,9 +6,9 @@ import { cn } from "@/lib/cn";
 type SearchInputProps = InputHTMLAttributes<HTMLInputElement>;
 
 /**
- * A search field with its icon inside the contour. Same paper and hairline as
- * `Input`, with the leading icon inset far enough that typed text never runs under
- * it.
+ * A search field with its icon inside the contour. Same raised sheet and resting
+ * contour as `Input`, with the leading icon inset far enough that typed text never
+ * runs under it.
  */
 export function SearchInput({ className, ...props }: SearchInputProps) {
   return (
@@ -20,11 +20,11 @@ export function SearchInput({ className, ...props }: SearchInputProps) {
       <input
         type="search"
         className={cn(
-          "h-10 w-full rounded-sm border border-border bg-surface pr-3 pl-9 text-sm text-foreground",
-          "transition-colors placeholder:text-muted-foreground",
-          "hover:border-muted-foreground/40",
+          "h-10 w-full rounded-sm border border-border-strong bg-surface-elevated pr-3 pl-9 text-sm text-foreground",
+          "transition-colors placeholder:text-placeholder",
+          "hover:border-muted-foreground/60",
           "focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring",
-          "disabled:cursor-not-allowed disabled:opacity-50",
+          "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-placeholder",
           className,
         )}
         {...props}

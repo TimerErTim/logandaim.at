@@ -26,7 +26,7 @@ export function DialogContent({
       <DialogPrimitive.Content
         className={cn(
           "paper-overlay fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2",
-          "space-y-4 rounded-md border border-border bg-surface p-6",
+          "space-y-4 rounded-md border border-border bg-surface-elevated p-6",
           "focus-visible:outline-none",
           className,
         )}

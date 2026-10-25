@@ -75,7 +75,7 @@ import {
 } from "@/components/ui/tooltip";
 import { WorkflowSteps } from "@/components/workflow/workflow-steps";
 
-const zonen = ["Spot", "Kill", "Body", "Miss"] as const;
+const zonen = ["Alpha", "Beta", "Gamma", "Delta"] as const;
 
 export function ButtonSection() {
   return (
@@ -106,7 +106,7 @@ export function ButtonSection() {
 
       <Example caption="Mit Icon">
         <Button>
-          <Target /> Ziel wählen
+          <Target /> Auswählen
         </Button>
         <Button variant="secondary">
           <Search /> Suchen
@@ -140,7 +140,7 @@ export function BadgeSection() {
       </Example>
       <Example caption="Im Satz">
         <p className="text-sm">
-          Runde 12 <Badge variant="success">Abgeschlossen</Badge>{" "}
+          Vorgang 12 <Badge variant="success">Abgeschlossen</Badge>{" "}
           <Badge variant="outline">Training</Badge>
         </p>
       </Example>
@@ -160,10 +160,10 @@ export function AlertSection() {
         Info: Masterdaten werden vom Administrator gepflegt.
       </Alert>
       <Alert variant="success" icon={<Check className="size-4" />}>
-        Wertung berechnet: Erster Treffer 1, Mehrschuss 5.
+        Berechnet: Erster Eintrag 1, Folgeeintrag 5.
       </Alert>
       <Alert variant="error" icon={<AlertTriangle className="size-4" />}>
-        Der Schuss konnte nicht gespeichert werden.
+        Der Eintrag konnte nicht gespeichert werden.
       </Alert>
     </ComponentSection>
   );
@@ -179,19 +179,19 @@ export function CardSection() {
     >
       <Card>
         <CardHeader>
-          <CardTitle>Parcours Großraming</CardTitle>
-          <CardDescription>32 Ziele, 4 Pflöcke</CardDescription>
+          <CardTitle>Beispielvorgang</CardTitle>
+          <CardDescription>Kurzbezeichnung und Umfang</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 pt-0">
           <TableKeyValue
             labels={[
-              { id: "letzte", label: "Letzte Runde", value: "12. Oktober" },
-              { id: "punkte", label: "Punkte", value: "284 / 320" },
+              { id: "letzte", label: "Zuletzt", value: "12. Oktober" },
+              { id: "fortschritt", label: "Fortschritt", value: "284 / 320" },
             ]}
           />
         </CardContent>
         <CardFooter>
-          <Button size="sm">Runde beginnen</Button>
+          <Button size="sm">Starten</Button>
           <Button size="sm" variant="ghost">
             Details
           </Button>
@@ -202,7 +202,7 @@ export function CardSection() {
 }
 
 export function FormSection() {
-  const [zone, setZone] = useState<string>("Kill");
+  const [zone, setZone] = useState<string>("Beta");
 
   return (
     <ComponentSection
@@ -211,48 +211,48 @@ export function FormSection() {
       title="Formular"
       description="Flache Felder mit feiner Kontur, die bei Fokus nach Jägergrün wechselt. Jedes Feld hat ein sichtbares Label; Fehler stehen darunter und ersetzen den Hinweis."
     >
-      <Field label="Ziel" hint="Kennung des Ziels">
-        <Input defaultValue="Ziel 12" />
+      <Field label="Referenz" hint="Kurze Kennung des Eintrags">
+        <Input defaultValue="Ref. 12" />
       </Field>
-      <Field label="Pfeil">
+      <Field label="Menge">
         <Input type="number" min={1} defaultValue={1} />
       </Field>
       <Field label="E-Mail" error="Bitte eine gültige Adresse eingeben.">
         <Input aria-invalid defaultValue="keine-adresse" />
       </Field>
-      <Field label="Pflock">
-        <Select defaultValue="blau">
-          <option value="weiss">Weiß</option>
-          <option value="blau">Blau</option>
-          <option value="rot">Rot</option>
-          <option value="gelb">Gelb</option>
+      <Field label="Kategorie">
+        <Select defaultValue="beta">
+          <option value="alpha">Alpha</option>
+          <option value="beta">Beta</option>
+          <option value="gamma">Gamma</option>
+          <option value="delta">Delta</option>
         </Select>
       </Field>
       <Field label="Notiz" optional>
-        <Textarea placeholder="Wind von rechts…" rows={2} />
+        <Textarea placeholder="Kurze Bemerkung…" rows={2} />
       </Field>
-      <SearchInput placeholder="Parcours suchen" aria-label="Parcours suchen" />
-      <Checkbox label="Runde als Training markieren" />
+      <SearchInput placeholder="Suchen" aria-label="Suchen" />
+      <Checkbox label="Als Entwurf markieren" />
       <div className="flex min-h-11 items-center gap-3">
-        <Switch aria-labelledby="gallery-distance-label" defaultChecked />
-        <span id="gallery-distance-label" className="text-sm text-foreground">
-          Distanz anzeigen
+        <Switch aria-labelledby="gallery-detail-label" defaultChecked />
+        <span id="gallery-detail-label" className="text-sm text-foreground">
+          Details anzeigen
         </span>
       </div>
-      <RadioGroup defaultValue="recurve" aria-label="Bogenklasse">
-        <RadioGroupOption value="blankbogen" label="Blankbogen" />
-        <RadioGroupOption value="recurve" label="Recurve" />
-        <RadioGroupOption value="compound" label="Compound" />
+      <RadioGroup defaultValue="beta" aria-label="Option">
+        <RadioGroupOption value="alpha" label="Alpha" />
+        <RadioGroupOption value="beta" label="Beta" />
+        <RadioGroupOption value="gamma" label="Gamma" />
       </RadioGroup>
       <fieldset className="space-y-2">
         <legend className="text-[10px] font-semibold tracking-[0.09em] text-muted-foreground uppercase">
-          Wertungszone
+          Status
         </legend>
         <ToggleGroup
           type="single"
           value={zone}
           onValueChange={(next) => next && setZone(next)}
-          aria-label="Wertungszone"
+          aria-label="Status"
         >
           {zonen.map((wert) => (
             <ToggleGroupItem key={wert} value={wert}>
@@ -276,24 +276,24 @@ export function DataSection() {
       <Table>
         <TableHead>
           <TableRow>
-            <TableHeader>Pfeil</TableHeader>
-            <TableHeader>Zone</TableHeader>
-            <TableHeader className="text-right">Punkte</TableHeader>
+            <TableHeader>Nr.</TableHeader>
+            <TableHeader>Status</TableHeader>
+            <TableHeader className="text-right">Wert</TableHeader>
           </TableRow>
         </TableHead>
         <TableBody>
           {[
-            { pfeil: 1, zone: "Kill", punkte: 1 },
-            { pfeil: 2, zone: "Body", punkte: 5 },
-            { pfeil: 3, zone: "Miss", punkte: 0 },
+            { nr: 1, status: "Aktiv", wert: 1 },
+            { nr: 2, status: "Prüfung", wert: 5 },
+            { nr: 3, status: "Leer", wert: 0 },
           ].map((row) => (
-            <TableRow key={row.pfeil}>
+            <TableRow key={row.nr}>
               <TableCell className="font-mono text-xs tabular-nums">
-                {row.pfeil}
+                {row.nr}
               </TableCell>
-              <TableCell>{row.zone}</TableCell>
+              <TableCell>{row.status}</TableCell>
               <TableCell className="text-right font-medium tabular-nums">
-                {row.punkte}
+                {row.wert}
               </TableCell>
             </TableRow>
           ))}
@@ -302,10 +302,10 @@ export function DataSection() {
 
       <div className="space-y-2">
         <div className="flex items-baseline justify-between text-xs">
-          <span className="text-muted-foreground">Rundenfortschritt</span>
+          <span className="text-muted-foreground">Fortschritt</span>
           <span className="font-mono tabular-nums">64 %</span>
         </div>
-        <Progress value={64} aria-label="Rundenfortschritt" />
+        <Progress value={64} aria-label="Fortschritt" />
       </div>
 
       <div className="flex gap-2">
@@ -316,11 +316,11 @@ export function DataSection() {
       <Separator />
 
       <WorkflowSteps
-        currentStepId="pfeile"
+        currentStepId="schritt2"
         steps={[
-          { id: "parcours", label: "Parcours", done: true },
-          { id: "pfeile", label: "Pfeile", done: false },
-          { id: "wertung", label: "Wertung", done: false, optional: true },
+          { id: "schritt1", label: "Erfassen", done: true },
+          { id: "schritt2", label: "Prüfen", done: false },
+          { id: "schritt3", label: "Abschließen", done: false, optional: true },
         ]}
       />
     </ComponentSection>
@@ -340,13 +340,13 @@ export function OverlaySection() {
       <Example caption="Auslöser">
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="secondary">Runde abschließen</Button>
+            <Button variant="secondary">Vorgang abschließen</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Runde abschließen?</DialogTitle>
+              <DialogTitle>Vorgang abschließen?</DialogTitle>
               <DialogDescription>
-                Die Runde wird gespeichert und erscheint in deiner Historie.
+                Der Vorgang wird gespeichert und erscheint in deiner Übersicht.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -361,7 +361,7 @@ export function OverlaySection() {
             <Button variant="secondary">Aktionen</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuLabel>Runde</DropdownMenuLabel>
+            <DropdownMenuLabel>Vorgang</DropdownMenuLabel>
             <DropdownMenuItem>Bearbeiten</DropdownMenuItem>
             <DropdownMenuItem>Duplizieren</DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -376,7 +376,7 @@ export function OverlaySection() {
                 <Info />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Distanz zwischen den Pflöcken</TooltipContent>
+            <TooltipContent>Abstand zwischen den Marken</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </Example>
@@ -389,7 +389,7 @@ export function OverlaySection() {
             min={10}
             max={80}
             step={1}
-            aria-label="Distanz"
+            aria-label="Abstand"
           />
           <div className="flex items-baseline justify-between font-mono text-xs text-muted-foreground tabular-nums">
             <span>10</span>
@@ -407,10 +407,10 @@ export function OverlaySection() {
           <TabsTrigger value="woche">Woche</TabsTrigger>
         </TabsList>
         <TabsContent value="heute" className="text-sm">
-          Zwei Runden erfasst.
+          Zwei Vorgänge erfasst.
         </TabsContent>
         <TabsContent value="woche" className="text-sm">
-          Neun Runden erfasst.
+          Neun Vorgänge erfasst.
         </TabsContent>
       </Tabs>
     </ComponentSection>
