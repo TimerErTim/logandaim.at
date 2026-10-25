@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { touchTargetOutline } from "@/components/dev-gallery/component-section";
 import { DataFiguresSection } from "@/components/dev-gallery/data-figures-section";
+import { InkedControlsSection } from "@/components/dev-gallery/inked-controls-section";
+import { PaperFurnitureSection } from "@/components/dev-gallery/paper-furniture-section";
 import {
   AlertSection,
   BadgeSection,
@@ -53,6 +55,8 @@ const PLATES = [
   { id: "data", index: "11", label: "Tabelle & Maß" },
   { id: "overlay", index: "12", label: "Überlagerung" },
   { id: "misc", index: "13", label: "Kleinteile" },
+  { id: "furniture", index: "14", label: "Papier-Möbel" },
+  { id: "inked", index: "15", label: "Markierte Bedienelemente" },
 ] as const;
 
 export default function DevGalleryPage() {
@@ -68,7 +72,7 @@ export default function DevGalleryPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="primary">Sleek Paperstyle</Badge>
             <Badge variant="outline">Nur im Dev-Server</Badge>
-            <span className="font-mono text-xs text-secondary">13 Tafeln</span>
+            <span className="font-mono text-xs text-secondary">15 Tafeln</span>
           </div>
 
           <div className="space-y-2">
@@ -143,6 +147,8 @@ export default function DevGalleryPage() {
               <DataSection />
               <OverlaySection />
               <MiscSection />
+              <PaperFurnitureSection />
+              <InkedControlsSection />
             </div>
           </div>
         </div>

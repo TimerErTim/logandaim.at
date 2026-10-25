@@ -20,7 +20,7 @@ export function SearchInput({ className, ...props }: SearchInputProps) {
       <input
         type="search"
         className={cn(
-          "h-10 w-full rounded-sm border border-strong bg-elevated pr-3 pl-9 text-sm text-ink",
+          "h-10 w-full rounded-sm border border-control bg-elevated pr-3 pl-9 text-sm text-ink",
           "transition-colors placeholder:text-muted",
           "hover:border-ink/40",
           "focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary",

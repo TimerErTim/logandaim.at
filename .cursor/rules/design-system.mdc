@@ -49,6 +49,7 @@ the design system gives "primary" to the single brand colour. Ink is **`text-ink
 | `--bg-surface-muted` | `bg-surface-muted` | A second sheet | Table headers, hover rows, skeletons, inactive tracks |
 | `--border-subtle` | `border-subtle`, `bg-subtle`, `divide-subtle` | Pencil hairline | Dividers, card borders, table rules |
 | `--border-strong` | `border-strong` | A field's contour | Inputs at rest, millimetre grid |
+| `--border-control` | `border-control` | A control's boundary, ≥ 3:1 | Inputs, selects, textareas, search fields, toggle strips, checkbox, radio ring, switch |
 | `--text-primary` | `text-ink`, `bg-ink` | Warm deep ink (`#2C2A29`), never pure black | Body, headings, default icons |
 | `--text-secondary` | `text-secondary` | Secondary ink | Labels, subtitles, metadata, units |
 | `--text-muted` | `text-muted` | Muted ink | Placeholders, disabled only |
@@ -105,6 +106,10 @@ it is legible:
 Rule: **a semantic colour may always be a mark, rule, or wash; may be text only where the table
 allows.** Badge and Alert encode this — `warning` is ink on amber, not amber text.
 
+A control's boundary is a separate bar: WCAG 2.2 §1.4.11 wants **3:1** for the outline of a control,
+so every control boundary uses `--border-control`, never `--border-strong` — not just the drawn ones:
+inputs, selects, textareas, search fields, and toggle strips are covered by the same rule.
+
 ## Paper language
 
 Six elements carry the identity. Use them; do not invent a seventh.
@@ -122,6 +127,13 @@ Six elements carry the identity. Use them; do not invent a seventh.
    always carries its word.
 6. **The millimetre grid.** Charts/diagrams are thin geometric lines on a faint grid — drawn from
    `--border-subtle` at reduced strength, never filled shapes or gradients.
+7. **The hachure wall.** `HatchBand` draws diagonal `///////` strokes as the default separation
+   between major sections: a change of subject without a border around anything. `dense` for the
+   break before a footer. `Perforation` marks a separable annex instead.
+8. **The page furniture.** `SheetNumber` (margin plate number), `RegisterLine` (running head),
+   `MarginNote` (a remark at the margin, never an `Alert`), `RulerEdge` (a block stating its own
+   scale), `DogEaredSheet` (already read), `StampMark` (record-level verdict). All decorative;
+   none may be the only carrier of state.
 
 ## Rules
 
@@ -177,12 +189,25 @@ variants, Radix where behaviour is non-trivial, `cn` (`clsx` + `tailwind-merge`)
 - `Alert` is a margin note: coloured left rule, tinted wash, never a full coloured block. `error`
   uses `role="alert"`.
 - `Separator` draws the ruled line; standard section divider.
-- `Input`, `Textarea`, `Select`, `SearchInput` sit on `--bg-elevated` with a `--border-strong`
+- `Input`, `Textarea`, `Select`, `SearchInput` sit on `--bg-elevated` with a `--border-control`
   contour turning `--color-primary` on focus, darkening on hover. `Select` stays native on purpose:
   the platform picker survives touch and one-handed use. Its chevron is a `currentColor` mask, so it
   flips with the theme.
 - `Checkbox` is a square with `checkbox-tick`: green fill, paper-coloured tick, both from tokens.
-  `Switch` and the radio dot are the only pills — there the shape is the meaning.
+  Its contour is `border-2`, not a hairline.
+- **Inked controls.** Anything drawn rather than typed carries a strong contour, because a mark on
+  paper is inked: `Checkbox` and `RadioGroupItem` are `border-2`, `Switch`'s track and thumb are
+  `border-2`. A form must read as marks, not browser chrome.
+- That contour is `border-control`, not `border-strong`. `--border-strong` is a 1px contour at
+  1.58:1 and may never bound a control: a control's boundary is meaningful and needs **3:1**
+  (WCAG 2.2 §1.4.11). `--border-control` measures 5.20:1 light and 3.82:1 dark. Thickening a
+  low-contrast hairline does not make it pass; the colour has to change.
+- `RadioGroupItem` is a check circle: a `border-2` ring that fills with a solid green disc when
+  chosen, not a small dot in a large hole.
+- `Slider`'s bullet is fully round (`rounded-full`) with `border-2 border-primary` and a solid ink
+  centre, so it reads as a cursor riding the ruled track. A squared knob would read as a second tick.
+- Roundness stays reserved for meaning: the slider bullet, the radio ring, the switch track, and the
+  radio dot. Everything else is `rounded-sm`/`rounded-md`.
 - `Table` is a ruled ledger: hairlines between rows, no zebra banding, `tabular-nums`, right-aligned
   figures. `TableKeyValue` renders label · dotted-leader · value pairs for metric lists.
 - `Progress` is a measured band with fifth-ticks; keeps `rounded-sm` — a progress track's roundness

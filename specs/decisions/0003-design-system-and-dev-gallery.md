@@ -41,6 +41,13 @@ A review surface therefore has to be absent from the build or dead weight in it.
 5. **A cheap automated guard.** `tasks/scripts/check-design.mjs` (run by `check:design` in
    `mise run check`) fails when a token is undocumented in the design rule, a raw palette class
    appears under `frontend/src` outside `globals.css`, or a retired utility name returns.
+6. **Boundaries are split by role, not by weight.** `--border-subtle` rules structure,
+   `--border-strong` contours non-interactive things, and `--border-control` bounds anything a user
+   operates. That last one is a separate token because a control outline is meaningful content under
+   WCAG 2.2 §1.4.11 and needs 3:1; `--border-strong` measures 1.58:1 and cannot carry that role.
+   Thickening a failing hairline does not fix it — the colour has to change. A consequence for
+   reviews: a new interactive control must use `border-control`, or it silently regresses
+   accessibility without failing any automated check.
 
 ## Consequences
 

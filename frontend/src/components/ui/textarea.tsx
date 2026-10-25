@@ -12,7 +12,7 @@ export function Textarea({ className, ...props }: TextareaProps) {
   return (
     <textarea
       className={cn(
-        "min-h-20 w-full resize-y rounded-sm border border-strong bg-elevated px-3 py-2 text-sm text-ink",
+        "min-h-20 w-full resize-y rounded-sm border border-control bg-elevated px-3 py-2 text-sm text-ink",
         "transition-colors placeholder:text-muted",
         "hover:border-ink/40",
         "focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary",

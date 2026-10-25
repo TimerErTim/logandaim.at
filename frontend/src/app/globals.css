@@ -50,6 +50,8 @@
   --bg-elevated: #ffffff;
   --border-subtle: #e6e2d8;
   --border-strong: #cfcac0;
+  /* A drawn control's boundary. Needs 3:1 (WCAG 1.4.11), so it is ink-strong. */
+  --border-control: #6e6a64;
 
   /* Typography & ink */
   --text-primary: #2c2a29;
@@ -91,6 +93,8 @@
   --bg-elevated: #262219;
   --border-subtle: #3a3630;
   --border-strong: #4a453d;
+  /* A drawn control's boundary. Needs 3:1 (WCAG 1.4.11), so it is ink-strong. */
+  --border-control: #7d766a;
 
   --text-primary: #ede8de;
   --text-secondary: #a8a297;
@@ -121,6 +125,7 @@
     --bg-elevated: #262219;
     --border-subtle: #3a3630;
     --border-strong: #4a453d;
+    --border-control: #7d766a;
 
     --text-primary: #ede8de;
     --text-secondary: #a8a297;
@@ -171,9 +176,10 @@
   --color-elevated: var(--bg-elevated);
   --color-surface-muted: var(--bg-surface-muted);
 
-  /* Ruling: `subtle` and `strong` are border-only names. */
+  /* Ruling: `subtle`, `strong`, and `control` are border-only names. */
   --color-subtle: var(--border-subtle);
   --color-strong: var(--border-strong);
+  --color-control: var(--border-control);
   /* Ink */
   --color-ink: var(--text-primary);
   --color-secondary: var(--text-secondary);
@@ -291,6 +297,81 @@ body {
   mask-repeat: no-repeat;
   -webkit-mask-size: 100% 100%;
   mask-size: 100% 100%;
+}
+
+/*
+ * The hachure wall: diagonal `///////` strokes, the cartographer's way of filling a
+ * slope and the logbook's way of resting the eye between two blocks. Unintrusive by
+ * construction — a hairline at 55 % and generous gaps — so it separates without
+ * becoming an ornament. Never used as a border on content.
+ */
+.hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--border-subtle) 0 1px,
+    transparent 1px 7px
+  );
+  opacity: 0.75;
+}
+
+/* The same strokes at a heavier weight, for a wall that must hold a full section. */
+.hatch-dense {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--border-strong) 0 1.5px,
+    transparent 1.5px 5px
+  );
+  opacity: 0.5;
+}
+
+/*
+ * A perforation: the tear line of a bound page, drawn as short dashes so it reads as
+ * "this sheet can be separated" rather than as a rule between sections.
+ */
+.perforation {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--border-strong) 0 2px,
+    transparent 2px 7px
+  );
+  opacity: 0.65;
+}
+
+/*
+ * A ruler edge: a graduated scale along one side of a block, subdividing every
+ * 5 px with a taller line every fourth. The page is a measuring surface, so a block
+ * may state its own scale instead of borrowing an icon that means "measure".
+ *
+ * Drawn from `--border-subtle`; the marks are structure, never emphasis.
+ */
+.ruler-edge {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--border-subtle) 0 1px,
+    transparent 1px 5px
+  );
+  background-size: 4px 100%;
+  background-repeat: no-repeat;
+}
+
+/*
+ * A dog-eared corner: the page has been turned down, so the sheet remembers it was
+ * read. A folded triangle in the top corner, drawn with borders so it takes the
+ * paper colour and the hairline from tokens and needs no image.
+ *
+ * Purely decorative — never the only sign that something is new or unread.
+ */
+.dog-ear::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0.75rem 0.75rem 0;
+  border-color: transparent var(--bg-canvas) transparent transparent;
+  filter: drop-shadow(-1px 1px 0 var(--border-subtle));
 }
 
 /* A dotted leader between a label and its value, as in a printed index. */

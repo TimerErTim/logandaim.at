@@ -13,12 +13,13 @@ import { cn } from "@/lib/cn";
  * *and* by weight, never by colour alone.
  *
  * The cells share their borders rather than sitting apart: `-ml-px` collapses the
- * seam so the strip reads as one ruled block on the paper.
+ * seam so the strip reads as one ruled block on the paper. The strip's contour is
+ * `border-control`, since it bounds a control and needs 3:1, not a hairline.
  */
 const toggleGroupItemVariants = cva(
   [
     "relative -ml-px inline-flex min-h-11 items-center justify-center gap-2 px-3.5",
-    "border border-subtle text-sm font-medium text-secondary",
+    "border border-control text-sm font-medium text-secondary",
     "transition-colors first:ml-0 first:rounded-l-sm last:rounded-r-sm",
     "hover:bg-surface-muted hover:text-ink",
     "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",

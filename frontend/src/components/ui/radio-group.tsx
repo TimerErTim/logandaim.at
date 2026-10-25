@@ -18,9 +18,13 @@ export function RadioGroup({
 }
 
 /**
- * The dot is round because a radio's shape *is* its meaning — a filled circle in a
- * ring reads as "one of these" without explanation. Everything else about it stays
- * on the paper's rules: a hairline ring, hunter green only when chosen.
+ * A check circle on paper: a ring drawn with a strong contour, as an inked mark
+ * rather than a hairline, and filled with ink — a solid disc inside the ring, not a
+ * small dot swimming in a large hole. The double ring is what makes it read as a
+ * stamped circle rather than a generic radio.
+ *
+ * Roundness is the meaning here, so it is one of the few round controls; the ring
+ * never goes hairline, because an inked mark has weight.
  */
 export function RadioGroupItem({
   className,
@@ -29,8 +33,10 @@ export function RadioGroupItem({
   return (
     <RadioGroupPrimitive.Item
       className={cn(
-        "size-4 shrink-0 rounded-full border border-subtle bg-surface",
+        // A drawn circle: strong contour at rest so it is an inked mark, not a hairline.
+        "size-[1.125rem] shrink-0 rounded-full border-2 border-control bg-surface",
         "transition-colors",
+        "hover:border-ink/50",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
         "disabled:cursor-not-allowed disabled:opacity-50",
         "data-[state=checked]:border-primary",
@@ -38,8 +44,9 @@ export function RadioGroupItem({
       )}
       {...props}
     >
-      <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-        <span className="size-2 rounded-full bg-primary" />
+      <RadioGroupPrimitive.Indicator className="flex size-full items-center justify-center">
+        {/* A filled disc, ringed by the contour: the "check circle" fill. */}
+        <span className="size-full rounded-full border-2 border-surface bg-primary" />
       </RadioGroupPrimitive.Indicator>
     </RadioGroupPrimitive.Item>
   );

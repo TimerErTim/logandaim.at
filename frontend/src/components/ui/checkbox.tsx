@@ -8,11 +8,15 @@ type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
 };
 
 /**
- * A checkbox on the paper: a small square with a hairline, filled with hunter green
- * when checked and ticked in the paper colour. The tick and the fill come from the
- * `checkbox-tick` class, which uses tokens rather than a baked-in white.
+ * A checkbox on the paper: a small square with a strong contour, filled with hunter
+ * green when checked and ticked in the paper colour. The tick and the fill come from
+ * the `checkbox-tick` class, which uses tokens rather than a baked-in white.
  *
- * The label wraps the input, so the whole row is a 44px target around a 16px box
+ * The contour is `border-2` to match the radio's inked ring — an unchecked box is a
+ * drawn mark, not a hairline, so a form's controls read as one family. The square
+ * shape is the meaning: a box is "tick as many as apply", a circle is "choose one".
+ *
+ * The label wraps the input, so the whole row is a 44px target around an 18px box
  * and the accessible name comes from the visible text exactly once.
  */
 export function Checkbox({ className, label, ...props }: CheckboxProps) {
@@ -26,8 +30,9 @@ export function Checkbox({ className, label, ...props }: CheckboxProps) {
       <input
         type="checkbox"
         className={cn(
-          "checkbox-tick size-4 shrink-0 cursor-pointer appearance-none rounded-sm border border-subtle bg-surface",
+          "checkbox-tick size-[1.125rem] shrink-0 cursor-pointer appearance-none rounded-sm border-2 border-control bg-surface",
           "transition-colors",
+          "hover:border-ink/50",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
           "disabled:cursor-not-allowed disabled:opacity-50",
         )}
