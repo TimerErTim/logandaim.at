@@ -29,4 +29,4 @@ usage = """
 flag "--check" env="LOGANDAIM_FMT_CHECK" help="Only performs a check of the formatting"
 """
 tools."cargo:lineguard" = { version = "0.2.1" }
-run = "lineguard .{% if usage.check %} {% else %} --fix {% endif %}-r --ignore 'graphify-out/**'"
+run = "lineguard .{% if usage.check %} {% else %} --fix {% endif %}-r --ignore '**/graphify-out/**'"
