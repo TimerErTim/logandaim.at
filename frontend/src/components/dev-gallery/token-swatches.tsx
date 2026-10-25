@@ -64,6 +64,7 @@ export function TokenSwatches() {
   return (
     <ComponentSection
       id="tokens"
+      index="01"
       title="Tokens"
       description="Alle Farbwerte kommen aus globals.css. Die Kontrastwerte werden aus den gerenderten CSS-Variablen gemessen (WCAG 2.2 AA, normaler Text 4.5:1)."
     >

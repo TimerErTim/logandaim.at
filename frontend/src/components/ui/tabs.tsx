@@ -15,9 +15,9 @@ export function Tabs({
 }
 
 /**
- * A tab strip, styled as a sheet index: the triggers sit on a hairline base like
- * map folds, and the active one is marked by a filled run of the same hairline
- * plus a change in ink — never by colour alone.
+ * Tabs as a sheet index: the triggers sit on a hairline base, and the active one is
+ * marked by a filled run of hunter green *and* a change of ink — the rule is the
+ * primary signal, colour only reinforces it.
  */
 export function TabsList({
   className,
@@ -41,7 +41,11 @@ export function TabsTrigger({
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "-mb-px inline-flex min-h-9 items-center justify-center border-b-2 border-transparent px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-primary data-[state=active]:text-foreground",
+        "-mb-px inline-flex min-h-9 items-center justify-center border-b-2 border-transparent px-3",
+        "text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "disabled:pointer-events-none disabled:opacity-50",
+        "data-[state=active]:border-primary data-[state=active]:text-foreground",
         className,
       )}
       {...props}
@@ -56,7 +60,7 @@ export function TabsContent({
   return (
     <TabsPrimitive.Content
       className={cn(
-        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         className,
       )}
       {...props}

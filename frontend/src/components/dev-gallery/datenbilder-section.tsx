@@ -27,6 +27,7 @@ export function DatenbilderSection() {
   return (
     <ComponentSection
       id="datenbilder"
+      index="04"
       title="Datenbilder"
       description="Wie Daten gezeichnet werden: dünne geometrische Linien auf Millimeterpapier, flach und ohne Verläufe. Das Trefferbild, eine Messreihe, ein Maßstab und die Legende — nur das Aussehen der Elemente, keine Bildschirme oder Bedienwege."
     >

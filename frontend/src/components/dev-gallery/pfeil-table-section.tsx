@@ -393,6 +393,7 @@ export function CheckpointSliderSection() {
   return (
     <ComponentSection
       id="checkpoint-slider"
+      index="05"
       title="Distanz-Slider"
       description="Ein durchgehender Wert, dessen Bahn in die farbigen Abschnitte zwischen den Pflöcken geteilt ist. Der Daumen rastet nicht ein; der nächste Pflock steht in der Legende und in der Ansage des Daumens."
     >
@@ -466,6 +467,7 @@ export function PfeilTableSection() {
   return (
     <ComponentSection
       id="pfeile"
+      index="03"
       title="Pfeile erfassen"
       description="Eine Zeile pro Pfeil mit Wertungszone, geschossen, Punkten und der Distanz zwischen den Pflöcken. Die unterste Zeile legt den nächsten Pfeil an; Zeilen lassen sich am Griff und per Tastatur umsortieren."
     >

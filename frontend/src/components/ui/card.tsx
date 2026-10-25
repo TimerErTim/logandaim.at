@@ -3,15 +3,15 @@ import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * A paper sheet: a hairline plus a whisper of shadow, never a heavy border or an
- * elevation card. `papier` supplies the shadow; dark mode sets it to `none`, so the
- * hairline alone separates the sheet.
+ * A sheet of paper. A hairline and a whisper of shadow lift it off the desk; in
+ * dark mode the shadow is `none` and the hairline does the work. Nothing heavier:
+ * the guide is explicit that there are no heavy borders and no leather.
  */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "papier rounded-md border border-border bg-surface",
+        "paper rounded-md border border-border bg-surface",
         className,
       )}
       {...props}
@@ -20,8 +20,9 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
 }
 
 /**
- * The sheet header: content first, then a quiet ruled line along its bottom edge,
- * like the printed rule under a heading in a logbook.
+ * The sheet's title block: title and optional description, then a faint ruled line
+ * across the full width. The rule is a hairline with ticks, like the printed fill
+ * line of a form — one pixel, not a band.
  */
 export function CardHeader({
   className,
@@ -29,16 +30,22 @@ export function CardHeader({
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("p-6 pb-4", className)} {...props}>
+    <div className={cn("px-6 pt-5 pb-4", className)} {...props}>
       <div className="space-y-1">{children}</div>
       <div
         aria-hidden="true"
-        className="kontur-band-quiet -mx-6 -mb-4 mt-4 h-px"
+        className="rule-ticks-quiet -mx-6 mt-4 h-px"
+        style={{ transform: "translateY(0.5px)" }}
       />
     </div>
   );
 }
 
+/**
+ * The title is the logbook's hand: serif, tight, and the only place the historical
+ * character appears. It is deliberately one step larger than body text but never
+ * a display size — this is a tool, not a magazine.
+ */
 export function CardTitle({
   className,
   ...props
@@ -46,7 +53,7 @@ export function CardTitle({
   return (
     <h2
       className={cn(
-        "font-serif text-lg font-semibold tracking-tight",
+        "font-serif text-[17px] leading-snug font-semibold tracking-tight",
         className,
       )}
       {...props}
@@ -59,7 +66,10 @@ export function CardDescription({
   ...props
 }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("text-sm text-muted-foreground", className)} {...props} />
+    <p
+      className={cn("text-[13px] text-muted-foreground", className)}
+      {...props}
+    />
   );
 }
 
@@ -67,7 +77,7 @@ export function CardContent({
   className,
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-6 pt-0", className)} {...props} />;
+  return <div className={cn("px-6 pt-5 pb-6", className)} {...props} />;
 }
 
 export function CardFooter({
@@ -76,7 +86,10 @@ export function CardFooter({
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex items-center gap-3 p-6 pt-0", className)}
+      className={cn(
+        "flex items-center gap-2 border-t border-border px-6 py-3",
+        className,
+      )}
       {...props}
     />
   );

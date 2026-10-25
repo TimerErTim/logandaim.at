@@ -7,10 +7,16 @@ type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
   label: string;
 };
 
+/**
+ * A checkbox on the paper: a small square with a hairline, filled with hunter green
+ * when checked and ticked in the paper colour. The tick and the fill come from the
+ * `checkbox-tick` class, which uses tokens rather than a baked-in white.
+ *
+ * The label wraps the input, so the whole row is a 44px target around a 16px box
+ * and the accessible name comes from the visible text exactly once.
+ */
 export function Checkbox({ className, label, ...props }: CheckboxProps) {
   return (
-    // The label wraps the input: the accessible name comes from the visible text
-    // once, and the whole row is a 44px touch target around a 16px box.
     <label
       className={cn(
         "flex min-h-11 cursor-pointer items-center gap-3 text-sm text-foreground",
@@ -19,7 +25,12 @@ export function Checkbox({ className, label, ...props }: CheckboxProps) {
     >
       <input
         type="checkbox"
-        className="size-4 shrink-0 rounded border border-border accent-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className={cn(
+          "checkbox-tick size-4 shrink-0 cursor-pointer appearance-none rounded-sm border border-border bg-surface",
+          "transition-colors",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+        )}
         {...props}
       />
       {label}

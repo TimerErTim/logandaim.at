@@ -85,7 +85,10 @@ export function WorkflowSteps({
               </span>
             ) : null}
             {isLast ? null : (
-              <span aria-hidden="true" className="weg-linie h-0.5 w-8" />
+              <span
+                aria-hidden="true"
+                className="h-px w-8 border-t border-dashed border-border"
+              />
             )}
           </li>
         );

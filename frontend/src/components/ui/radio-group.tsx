@@ -17,6 +17,11 @@ export function RadioGroup({
   );
 }
 
+/**
+ * The dot is round because a radio's shape *is* its meaning — a filled circle in a
+ * ring reads as "one of these" without explanation. Everything else about it stays
+ * on the paper's rules: a hairline ring, hunter green only when chosen.
+ */
 export function RadioGroupItem({
   className,
   ...props
@@ -24,7 +29,11 @@ export function RadioGroupItem({
   return (
     <RadioGroupPrimitive.Item
       className={cn(
-        "size-4 shrink-0 rounded-full border border-border text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-primary",
+        "size-4 shrink-0 rounded-full border border-border bg-surface",
+        "transition-colors",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "disabled:cursor-not-allowed disabled:opacity-50",
+        "data-[state=checked]:border-primary",
         className,
       )}
       {...props}

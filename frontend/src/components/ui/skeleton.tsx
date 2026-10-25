@@ -2,7 +2,12 @@ import type { HTMLAttributes } from "react";
 
 import { cn } from "@/lib/cn";
 
-/** Placeholder for content that is loading; pair with `aria-busy` on the region. */
+/**
+ * A placeholder that keeps the shape of what is coming, so the page does not jump
+ * when it arrives. It pulses on `--surface-muted` — a faint printed block, not a
+ * shimmer — and is hidden from the accessibility tree; the region around it carries
+ * `aria-busy`.
+ */
 export function Skeleton({
   className,
   ...props

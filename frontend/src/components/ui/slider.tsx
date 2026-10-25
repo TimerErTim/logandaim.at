@@ -6,13 +6,14 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * Range slider, drawn as a ruled measure: a squared track with fine hairlines at
- * the quarter points and a compact squared knob, so it reads as an instrument
- * rather than a consumer toggle.
+ * A range input drawn as a ruled measure: a squared track divided by ticks and a
+ * compact squared knob, so it reads as an instrument rather than a consumer toggle.
+ * The value is a distance between two Pflöcke, which is why the track is a measure
+ * and not a fill.
  *
- * The visible knob is 20px; `before` expands the hit area to 44px. The touch
- * minimum applies to the target, not to the drawn control, so a glove-friendly
- * slider does not have to look like a dumbbell.
+ * The visible knob is 20px; `before` expands the hit area to 44px. The touch minimum
+ * applies to the target, not to the drawn control, so a glove-friendly slider does
+ * not have to look like a dumbbell.
  */
 export function Slider({
   className,
@@ -28,17 +29,23 @@ export function Slider({
     >
       <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-sm bg-secondary">
         <SliderPrimitive.Range className="absolute h-full bg-primary" />
-        {/* Quarter hairlines: the measure is divided, not just filled. */}
         <span
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 flex justify-between"
         >
-          {[0, 1, 2, 3, 4].map((teilung) => (
-            <span key={`teilung-${teilung}`} className="w-px bg-contour" />
+          {[0, 1, 2, 3, 4].map((tick) => (
+            <span key={`tick-${tick}`} className="w-px bg-contour" />
           ))}
         </span>
       </SliderPrimitive.Track>
-      <SliderPrimitive.Thumb className="relative block size-5 cursor-grab rounded-sm border-2 border-primary bg-surface before:absolute before:-inset-3.5 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:cursor-not-allowed" />
+      <SliderPrimitive.Thumb
+        className={cn(
+          "relative block size-5 cursor-grab rounded-sm border-2 border-primary bg-surface",
+          "before:absolute before:-inset-3.5 before:content-['']",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          "active:cursor-grabbing disabled:pointer-events-none disabled:cursor-not-allowed",
+        )}
+      />
     </SliderPrimitive.Root>
   );
 }

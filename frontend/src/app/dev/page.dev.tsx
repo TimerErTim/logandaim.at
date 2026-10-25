@@ -2,66 +2,166 @@
 
 import Link from "next/link";
 import { useState } from "react";
-
-import { GallerySections } from "@/components/dev-gallery/sections";
+import { touchTargetOutline } from "@/components/dev-gallery/component-section";
+import { DatenbilderSection } from "@/components/dev-gallery/datenbilder-section";
+import {
+  CheckpointSliderSection,
+  PfeilTableSection,
+} from "@/components/dev-gallery/pfeil-table-section";
+import {
+  AlertSection,
+  BadgeSection,
+  ButtonSection,
+  CardSection,
+  DataSection,
+  FormSection,
+  MiscSection,
+  OverlaySection,
+} from "@/components/dev-gallery/sections";
+import { TokenSwatches } from "@/components/dev-gallery/token-swatches";
 import { TypeSection } from "@/components/dev-gallery/type-section";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
-import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 /**
- * Component gallery and visual identity review surface.
+ * The design gallery: the visual identity reviewed as a logbook of itself.
  *
- * Exists only under `next dev`: the file is `page.dev.tsx`, and `next.config.ts`
- * adds `dev.tsx` to `pageExtensions` for the development phase only. `next build`
- * does not see it, so nothing here ships.
+ * Exists only under `next dev`. The file is `page.dev.tsx`, and `next.config.ts`
+ * adds `dev.tsx` to `pageExtensions` for the development phase only, so `next build`
+ * never sees it and nothing here ships.
  *
- * The workflow it serves: change a token in `globals.css`, this page reloads, the
- * PO looks at both themes, and the decision is written into
- * `.cursor/rules/design-system.mdc` and `specs/product/visual-identity.md`.
+ * The workflow it serves: change a token in `globals.css`, this page reloads, and
+ * both themes are judged side by side on the same specimen — no switching, no
+ * memory. Decisions are then written into `.cursor/rules/design-system.mdc` and
+ * `specs/product/visual-identity.md`.
  */
+
+/** The plate index, in the order the system is read: foundation, then parts. */
+const PLATES = [
+  { id: "tokens", index: "01", label: "Tokens" },
+  { id: "type", index: "02", label: "Schrift" },
+  { id: "pfeile", index: "03", label: "Pfeil-Tabelle" },
+  { id: "datenbilder", index: "04", label: "Datenbilder" },
+  { id: "checkpoint-slider", index: "05", label: "Distanz-Slider" },
+  { id: "button", index: "06", label: "Button" },
+  { id: "badge", index: "07", label: "Badge" },
+  { id: "alert", index: "08", label: "Alert" },
+  { id: "card", index: "09", label: "Card" },
+  { id: "form", index: "10", label: "Formular" },
+  { id: "data", index: "11", label: "Tabelle & Maß" },
+  { id: "overlay", index: "12", label: "Überlagerung" },
+  { id: "misc", index: "13", label: "Kleinteile" },
+] as const;
+
 export default function DevGalleryPage() {
   const [showTouchTargets, setShowTouchTargets] = useState(false);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6">
+    <div className="min-h-full bg-background">
       <SetBreadcrumbLabel label="Design-Galerie" />
 
-      <header className="space-y-2">
-        <h1 className="font-serif text-2xl font-semibold tracking-tight">
-          Design-Galerie
-        </h1>
-        <p className="max-w-prose text-sm text-muted-foreground">
-          Jede Komponente in jeder Variante, links hell und rechts dunkel. Diese
-          Seite existiert nur im Dev-Server. Farben und Radien kommen aus{" "}
-          <code className="font-mono text-xs">globals.css</code>; jede Änderung
-          erscheint hier nach dem Hot-Reload.
-        </p>
-        <Alert variant="info">
-          Nicht im statischen Export enthalten: die Route wird über{" "}
-          <code className="font-mono text-xs">pageExtensions</code> nur in der
-          Dev-Phase aufgelöst.
-        </Alert>
-      </header>
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        {/* Title block: a logbook's cover page. */}
+        <header className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="primary">Sleek Paperstyle</Badge>
+            <Badge variant="outline">Nur im Dev-Server</Badge>
+            <span className="font-mono text-xs text-muted-foreground">
+              14 Tafeln
+            </span>
+          </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
-          <input
-            type="checkbox"
-            checked={showTouchTargets}
-            onChange={(event) => setShowTouchTargets(event.target.checked)}
-            className="size-4 accent-primary"
-          />
-          44px-Touch-Ziele markieren
-        </label>
-        <Button variant="ghost" asChild>
-          <Link href="/">Zur App</Link>
-        </Button>
-      </div>
+          <div className="space-y-2">
+            <h1 className="font-serif text-3xl leading-tight font-semibold tracking-tight text-balance">
+              Bogenschuss-Logbuch
+            </h1>
+            <p className="max-w-prose text-sm text-muted-foreground">
+              Der Wald auf Papier, die Effizienz im Browser. Jede Tafel zeigt
+              dieselben Bausteine zweimal: links auf Elfenbeinpapier, rechts im
+              Lampenlicht. Farben, Radien und Schatten kommen ausschließlich aus{" "}
+              <code className="font-mono text-xs text-foreground">
+                globals.css
+              </code>
+              .
+            </p>
+          </div>
 
-      <div className="space-y-10">
-        <TypeSection />
-        <GallerySections showTouchTargets={showTouchTargets} />
+          <Separator />
+        </header>
+
+        {/* Index: a printed table of contents, not a nav bar. */}
+        <nav aria-label="Tafeln" className="py-6">
+          <ol className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            {PLATES.map((plate) => (
+              <li key={plate.id}>
+                <a
+                  href={`#${plate.id}`}
+                  className="group flex items-baseline gap-2 rounded-sm py-0.5 text-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                    {plate.index}
+                  </span>
+                  <span>{plate.label}</span>
+                  <span
+                    aria-hidden="true"
+                    className="leader mb-1 h-2 flex-1 opacity-50"
+                  />
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        <Separator />
+
+        {/* Toolbar: the one control that is about the gallery, not the system. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
+            <input
+              type="checkbox"
+              checked={showTouchTargets}
+              onChange={(event) => setShowTouchTargets(event.target.checked)}
+              className="checkbox-tick size-4 appearance-none rounded-sm border border-border bg-surface"
+            />
+            44 px Touch-Ziele markieren
+          </label>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/">Zur App</Link>
+          </Button>
+        </div>
+
+        <div className="space-y-14">
+          <TokenSwatches />
+          <TypeSection />
+          <PfeilTableSection />
+          <DatenbilderSection />
+          <CheckpointSliderSection />
+          <div className={showTouchTargets ? touchTargetOutline : undefined}>
+            <div className="space-y-14">
+              <ButtonSection />
+              <BadgeSection />
+              <AlertSection />
+              <CardSection />
+              <FormSection />
+              <DataSection />
+              <OverlaySection />
+              <MiscSection />
+            </div>
+          </div>
+        </div>
+
+        {/* Colophon: the page signs itself off, as a printed specimen sheet does. */}
+        <footer className="mt-16 border-t border-border pt-4">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
+            <span>Lora · Inter · Geist Mono</span>
+            <span aria-hidden="true">·</span>
+            <span>WCAG 2.2 AA</span>
+            <span aria-hidden="true">·</span>
+            <span>44 px Touch</span>
+          </p>
+        </footer>
       </div>
     </div>
   );

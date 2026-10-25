@@ -9,9 +9,14 @@ export const TooltipProvider = TooltipPrimitive.Provider;
 export const Tooltip = TooltipPrimitive.Root;
 export const TooltipTrigger = TooltipPrimitive.Trigger;
 
+/**
+ * A tooltip is a pencil annotation: inverted ink on a small sheet, one line, no
+ * arrow. It explains a control, so it must never be the only place an essential
+ * instruction exists.
+ */
 export function TooltipContent({
   className,
-  sideOffset = 4,
+  sideOffset = 6,
   ...props
 }: ComponentProps<typeof TooltipPrimitive.Content>) {
   return (
@@ -19,7 +24,7 @@ export function TooltipContent({
       <TooltipPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 rounded-sm bg-foreground px-2 py-1 text-xs text-background shadow",
+          "paper-overlay z-50 max-w-64 rounded-sm bg-foreground px-2 py-1 text-xs text-background",
           className,
         )}
         {...props}

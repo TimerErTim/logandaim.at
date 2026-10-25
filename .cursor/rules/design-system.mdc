@@ -31,7 +31,7 @@ light and dark. Add a token only together with an entry here.
 | `--surface` | A sheet of paper | Cards, tables, dialogs, header, sidebar |
 | `--surface-muted` | A second sheet / greyed paper | Table headers, hover rows, skeleton blocks, tab strips, inactive tracks |
 | `--border` | Pencil hairline | Borders, dividers, table rules |
-| `--contour` | Faint grid line | Tick rules (`kontur-band`), scale marks, quiet sheet rules |
+| `--contour` | Faint grid line | Tick rules (`rule-ticks`), scale marks, quiet sheet rules |
 | `--primary` | **The one brand colour: hunter green** | One primary button per screen, active nav item, the active step |
 | `--primary-foreground` | Paper on hunter green | Button labels and icons drawn on `--primary` |
 | `--secondary` | Neutral paper fill | Inactive tracks, muted chips, segmented-control rest state |
@@ -41,7 +41,8 @@ light and dark. Add a token only together with an entry here.
 | `--warning` | Attention without failure | Pending/edit states, moderate hits, touch-target debug outline |
 | `--ring` | Focus indicator | Every `focus-visible` outline |
 | `--radius` | Corner radius | `--radius-sm` through `--radius-xl` are derived from it |
-| `--schatten-papier` | Sheet shadow | The `papier` class. Soft in light, `none` in dark |
+| `--shadow-paper` | Sheet shadow | The `paper` class. Soft in light, `none` in dark |
+| `--shadow-overlay` | Floating-sheet shadow | The `paper-overlay` class: dialogs, menus, tooltips |
 | `--font-sans` | Interface face: **Inter** | Menus, tables, forms, small figures. Never name a family in a component |
 | `--font-serif` | Book face: **Lora** | Titles only — page, card, and dialog headings |
 | `--font-mono` | Machine values only | References, base URLs, token names, file names. Never for prose |
@@ -71,7 +72,7 @@ Six elements carry the identity. Use them; do not invent a seventh.
    the sheet.
 2. **Titel (serif headings).** Page, card, and dialog titles are `font-serif`. The serif is the
    logbook's hand and the only thing that carries the historical character; body text never uses it.
-3. **Ruled line (the divider).** `Separator` draws `kontur-band`: small ticks along a hairline, like
+3. **Ruled line (the divider).** `Separator` draws `rule-ticks`: small ticks along a hairline, like
    the printed ruling of a logbook column. Sections are divided by a ruled line, never by empty
    space alone or by a shadow.
 4. **Feine Kontur (hairline controls).** Inputs and selects are flat with a 1px `--border` contour
@@ -86,8 +87,10 @@ Six elements carry the identity. Use them; do not invent a seventh.
 1. **Semantic utilities only.** Use `bg-surface`, `text-muted-foreground`, `border-border`,
    `bg-primary`, `text-destructive`, and so on. Never write a raw palette class (`bg-stone-100`,
    `text-green-800`, `border-red-200`) or a hex value in a component. `check:design` fails the
-   build otherwise. Paper patterns come from `kontur-band`, `kontur-band-quiet`, `weg-linie`, or from
-   an inline style that references only `var(--…)` tokens.
+   build otherwise. Paper patterns come from `rule-ticks`, `rule-ticks-quiet`, `leader`,
+   `select-chevron`, or `checkbox-tick`; their SVG masks live in `globals.css` so they inherit
+   `currentColor` instead of hardcoding a stroke colour. An inline style may reference only
+   `var(--…)` tokens.
 2. **Contrast is a gate.** Text on a background meets WCAG 2.2 AA (4.5:1 normal text). The gallery
    measures every documented pair; a change that drops a pair below AA is not accepted. The amber
    from the original guide fails as text on paper, so `--warning` is its darker sibling.
@@ -109,9 +112,9 @@ Six elements carry the identity. Use them; do not invent a seventh.
    identity: prefer a wider gap to another rule.
 9. **Variants come from `cva`.** New variants are added in the component's `cva` definition, not by
    passing arbitrary classes at call sites. Public variant names stay backwards compatible.
-10. **Flat by default.** Edges come from `border-border` and `--contour`. Cards carry the `papier`
+10. **Flat by default.** Edges come from `border-border` and `--contour`. Cards carry the `paper`
     shadow class, which is `none` in dark mode; only overlays that genuinely float (dialogs,
-    dropdowns) may carry a larger shadow. No hover elevation, gradients, or glass.
+    dropdowns, tooltips) carry `paper-overlay`. No hover elevation, gradients, or glass.
 11. **Angular paper, not pills.** `--radius` is 4–6px: controls use `rounded-sm`, containers
     `rounded-md`. The only pill shapes are where the shape is the meaning (progress track, switch
     track, radio dot). A rounded corner is never decoration.
@@ -128,12 +131,24 @@ for class merging.
 
 - Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour variants for other
   components.
-- `Card` is a paper sheet and carries `papier`. `CardTitle` is `font-serif`.
-- `Badge` is a stamp: hairline, tracked caps, tinted. It names its status in words.
+- `Card` is a paper sheet and carries `paper`. `CardTitle` is `font-serif`; `CardHeader` closes with
+  a `rule-ticks-quiet` hairline so the title block reads as a printed form head.
+- `Badge` is a stamp: hairline, tracked caps, tinted. It names its status in words. `primary` is the
+  one stamp in brand ink; use it for the single state worth marking strongly on a screen.
+- `Alert` is a margin note: a coloured left rule and a tinted wash, never a full coloured block.
+  `error` uses `role="alert"`.
 - `Separator` draws the ruled line. It is the standard section divider.
 - `Input`, `Textarea`, `Select`, and `SearchInput` are flat with a hairline that turns `--primary`
-  on focus. `Select` stays a native `<select>` on purpose: the platform picker is the control
-  archers know and it survives gloves and one-handed use.
+  on focus and darkens on hover. `Select` stays a native `<select>` on purpose: the platform picker
+  is the control archers know and it survives gloves and one-handed use. Its chevron is a mask in
+  `currentColor`, so it flips with the theme.
+- `Checkbox` is a square with `checkbox-tick`: green fill and a paper-coloured tick, both from
+  tokens. `Switch` and the radio dot are the only pills, because there the shape is the meaning.
+- `Table` is a ruled ledger: hairlines between rows, no zebra banding, `tabular-nums` and
+  right-aligned figures. `TableKeyValue` renders the label · dotted-leader · value pairs the
+  logbook uses for metrics.
+- `Progress` is a measured band with fifth-ticks on its track; it keeps `rounded-sm`, since a
+  progress track's roundness would mean nothing.
 - `Slider` is a distance input drawn as a ruled measure: a compact squared knob on a divided track,
   with a 44px hit area around the knob. Do not enlarge the visible knob to reach the touch minimum.
 - `CheckpointSlider` is the same distance input when the Pflöcke are known: the track is divided
@@ -171,16 +186,19 @@ product decision and is not settled by this identity.
 `dev.tsx` / `dev.ts` page extensions only in the development phase, so `next build` never emits the
 route. `build:frontend` asserts that `out/dev` and the gallery code are absent from the export.
 
-- The gallery renders every component, variant, size, and state in a light and a dark frame on the
-  same page.
-- The Tokens section reads the computed CSS variables and prints the contrast ratio for every
+- The page is laid out as a printed specimen book: a cover title block, a table-of-contents index,
+  then numbered plates. Each `ComponentSection` carries a two-digit `index` in mono down the
+  margin, a serif title, a one-line rationale, and a ruled line before the specimens.
+- Every plate renders its content twice — on `.light` (Papier) and `.dark` (Lampe) — so a palette
+  change is judged side by side instead of from memory.
+- The Tokens plate reads the computed CSS variables and prints the contrast ratio for every
   documented pair, with an AA pass/fail stamp.
-- The touch-target toggle outlines interactive elements to reveal targets under 44px.
-- The Datenbilder section shows the drawing vocabulary as elements — target face,
-  measurement series on graph paper, ruled scale, stamp legend — deliberately without
-  screens or flows, so the identity can be judged on its own.
-- The Philosophien section keeps the earlier variant line-up for reference; it is not a live
-  proposal.
+- The touch-target toggle outlines interactive elements to reveal targets under 44px. The
+  outlines are dashed amber on purpose: they are a measuring overlay, not part of the identity.
+- The Datenbilder plate shows the drawing vocabulary as elements — target face, measurement
+  series on graph paper, ruled scale, stamp legend — deliberately without screens or flows.
+- Earlier identity proposals have been removed. The gallery shows the accepted system only; a
+  superseded direction belongs in the spec's decision log, not on the page.
 
 Workflow for a visual change: edit `globals.css` or a component, look at `/dev`, decide, then write
 the result into this rule and the spec decision log **in the same commit**.

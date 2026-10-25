@@ -1,39 +1,37 @@
 @import "tailwindcss";
 
 /*
- * Design tokens — "Bogenschuss Logbuch (Sleek Paperstyle)".
+ * Design tokens — Bogenschuss Logbuch (Sleek Paperstyle).
  *
- * The app is a hunting logbook on paper, not a game. A practical, fast tool for
- * the field or the desk: warm uncoated paper, fine pencil lines, one hunter green
- * for the single primary action, and generous white space. Skeuomorphism stays
- * flat — paper surfaces and hairline rules, never leather, embossing, or 3D.
+ * "Der Wald auf Papier, die Effizienz im Browser." The app is a handwritten hunting
+ * logbook turned into a fast tool: warm uncoated paper, fine pencil lines, one
+ * hunter green for the single primary action, and generous white space. Paper is
+ * flat — surfaces and hairlines carry the structure, never leather, embossing, or 3D.
  *
- * This file is the single source of truth for every colour, radius, shadow, and
- * font value in the app. Components never use raw palette classes (`bg-stone-100`,
+ * This file is the single source of truth for every colour, radius, shadow, and font
+ * value in the app. Components never use raw palette classes (`bg-stone-100`,
  * `text-green-800`); they use the semantic utilities mapped in `@theme inline`
- * below (`bg-surface`, `text-muted-foreground`, `border-border`).
+ * (`bg-surface`, `text-muted-foreground`, `border-border`).
  *
- * Identity pillars:
- *   - One brand colour: hunter green. Everything else is paper or meaning.
- *   - Paper over white: warm ivory beats #fff for long reading and for outdoors.
- *   - Fine lines over borders: hairline rules read as pencil and stamp lines.
- *   - Serif for titles, sans for work. The book character lives in the headings.
+ * The layout of the system:
+ *   --background  the desk        --surface       a sheet of paper on it
+ *   --border      the pencil line --contour       the faint printed grid
+ *   --primary     the one brand colour, and nobody else's
  *
  * Changing a value here is the whole palette workflow: `next dev` reloads and the
  * `/dev` gallery shows the result, including its contrast checks. The agent-facing
  * description lives in `.cursor/rules/design-system.mdc` and must name every token
  * below in the same commit.
  *
- * Contrast note: every text pair below meets WCAG 2.2 AA (>= 4.5:1). The amber
- * from the guide (#D97706) measures 3.08:1 on paper and therefore fails as text,
- * so `--warning` is the same hue family darkened (#B45309, 4.86:1). Use the raw
- * #D97706 only as a non-text accent if ever needed.
+ * Contrast note: every text pair below meets WCAG 2.2 AA (>= 4.5:1). The amber from
+ * the original guide (#D97706) measures 3.08:1 on paper and fails as text, so
+ * `--warning` is the same hue family darkened (#B45309, 4.86:1).
  */
 
 /* Class-based dark mode so the gallery can render light and dark side by side. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Light: paper on a desk. Surfaces are the sheets; hairlines carry the edges. */
+/* Light: paper on a desk. */
 :root,
 .light {
   --background: #f5f1e8;
@@ -51,15 +49,17 @@
   --warning: #b45309;
   --ring: #1b3b2b;
   --radius: 0.375rem;
-  --schatten-papier:
+  --shadow-paper:
     0 1px 2px rgba(44, 42, 41, 0.04), 0 4px 12px rgba(44, 42, 41, 0.03);
+  --shadow-overlay:
+    0 2px 4px rgba(44, 42, 41, 0.05), 0 12px 32px rgba(44, 42, 41, 0.08);
 }
 
 /*
  * Dark: the same logbook read by lamplight. Warm charcoal, never pure black and
- * never cold blue-grey. Paper sheets sit just above the desk so they still read
- * as sheets; the hunter green lightens to a sage so it keeps its contrast instead
- * of glowing, and shadows disappear because they only muddy a dark surface.
+ * never cold blue-grey. Sheets sit just above the desk so they still read as
+ * sheets; the hunter green lightens to sage so it keeps its contrast instead of
+ * glowing, and paper shadows disappear because they only muddy a dark surface.
  */
 .dark {
   --background: #16130f;
@@ -77,7 +77,8 @@
   --warning: #e0a94f;
   --ring: #7fb08c;
   --radius: 0.375rem;
-  --schatten-papier: none;
+  --shadow-paper: none;
+  --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 /* System preference is the default; `.light` opts a subtree back out. */
@@ -98,7 +99,8 @@
     --warning: #e0a94f;
     --ring: #7fb08c;
     --radius: 0.375rem;
-    --schatten-papier: none;
+    --shadow-paper: none;
+    --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -132,23 +134,28 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  /* Paper has tooth: slightly tighter text and tabular figures everywhere by default. */
+  font-feature-settings: "cv05", "tnum";
 }
 
 /*
- * Paper sheet. A whisper of shadow lifts a card off the desk without drawing a
- * border in the air; in dark mode the shadow is `none` and the hairline alone
- * separates the sheet.
+ * A sheet of paper: a hairline and a whisper of shadow. In dark mode the shadow is
+ * `none`, so the hairline alone separates the sheet from the desk.
  */
-.papier {
-  box-shadow: var(--schatten-papier);
+.paper {
+  box-shadow: var(--shadow-paper);
+}
+
+/* An overlay that genuinely floats above the page: dialog, menu, tooltip. */
+.paper-overlay {
+  box-shadow: var(--shadow-overlay);
 }
 
 /*
- * Signature element: the ruled line. Small ticks along a hairline, like the
- * printed ruling of a logbook column or the millimetre grid under a target plot.
- * Drawn from tokens only, so it flips with the theme.
+ * The ruled line: small ticks along a hairline, like the printed ruling of a logbook
+ * column. Sections are divided by this, never by empty space alone.
  */
-.kontur-band {
+.rule-ticks {
   background-image: repeating-linear-gradient(
     to right,
     var(--contour) 0 1px,
@@ -156,8 +163,8 @@ body {
   );
 }
 
-/* The same ruling at half strength, for sheet headers that must stay quiet. */
-.kontur-band-quiet {
+/* The same ruling at reduced strength, for the rule under a header. */
+.rule-ticks-quiet {
   background-image: repeating-linear-gradient(
     to right,
     var(--contour) 0 1px,
@@ -166,11 +173,59 @@ body {
   opacity: 0.9;
 }
 
-/* The stitched line: step connectors and sequence trails. */
-.weg-linie {
-  background-image: repeating-linear-gradient(
-    to right,
-    var(--primary) 0 6px,
-    transparent 6px 11px
-  );
+/*
+ * The select chevron, drawn as a masked shape so it takes `currentColor` and flips
+ * with the theme. A data-URI background cannot read a CSS variable; a mask can.
+ */
+.select-chevron {
+  position: relative;
+}
+.select-chevron::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  width: 0.625rem;
+  height: 0.375rem;
+  transform: translateY(-50%);
+  background-color: currentColor;
+  opacity: 0.75;
+  pointer-events: none;
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/*
+ * The checkbox tick. Drawn as a mask in `--primary-foreground`, so it sits on the
+ * filled hunter-green box and flips with the theme instead of hardcoding white.
+ */
+.checkbox-tick:checked {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  background-image: none;
+}
+.checkbox-tick:checked::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: var(--primary-foreground);
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+/* A dotted leader between a label and its value, as in a printed index. */
+.leader {
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 6px 6px;
+  background-position: bottom;
+  background-repeat: repeat-x;
 }
