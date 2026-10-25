@@ -1,278 +1,252 @@
 # Design system — Sleek Paperstyle
 
-This is the agent-facing description of the logandaim.at visual identity. It is a rulebook, not a
-history: follow it literally when building UI. Values live in
-[`frontend/src/app/globals.css`](../../frontend/src/app/globals.css) and nowhere else. This file
-names tokens and states rules; it never restates hex codes.
+Rulebook for the logandaim.at visual identity. Not history: follow it literally. Values live in
+[`frontend/src/app/globals.css`](../../frontend/src/app/globals.css) only; this file names tokens and
+states rules, never hex codes.
 
-**Scope: appearance only.** This document does not describe what the product does, which journeys
-it supports, or how data flows through it. It describes how any screen must look, feel, and behave
-visually. What is shown inside a component is content, and content decisions live in the product
-specs.
+**Scope: appearance only.** Describes how any screen looks, feels, behaves visually — not what the
+product does, which journeys it supports, or how data flows. Content decisions live in product specs.
 
 ## The identity
 
-**Sleek Paperstyle.** A warm, tactile logbook on paper, rendered with the speed and precision of a
-modern web application. The interface borrows the material language of uncoated paper and pencil
-ruling, and nothing else.
+A warm, tactile logbook on paper, with the speed and precision of a modern web app. Borrows the
+material language of uncoated paper and pencil ruling, nothing else.
 
-- **Restrained skeuomorphism.** Flat, light paper surfaces, hairline rules, an organic warmth, and
-  generous space to breathe. No leather textures, no embossing, no 3D book spines, no ornament.
-- **Utility first.** Every interaction is fast, accessible, and logical. The aesthetic never
-  competes with reading or entry.
-- **Calm focus.** The surface stays quiet so content can be the loudest thing on the screen.
+- **Restrained skeuomorphism.** Flat paper, hairline rules, organic warmth, generous space. No
+  leather, embossing, 3D book spines, ornament.
+- **Utility first.** Fast, accessible, logical. Aesthetic never competes with reading or entry.
+- **Calm focus.** Surface stays quiet so content is loudest.
 
 ## Do / Don't
 
-The table below is the shortest complete statement of the identity. When a rule elsewhere in this
-document and a row here disagree, this table wins.
+Shortest complete statement of the identity. Wins over any rule below that disagrees.
 
 | ✅ DO | ❌ DON'T |
 |-------|----------|
-| Use `--bg-surface` (`#FDFBF7`) and `--bg-canvas` (`#F4F1EA`) for a warm, easy-on-the-eye paper atmosphere. | Never use cold tech white as the global page background, and never a blue-cast grey (e.g. Tailwind Slate) as a neutral. |
-| Use `--color-primary` (`#1B3B2B`, hunter green) as the single dominant accent colour. | Add no ornamental secondary accents: no brown buttons, no gold gradients, no arbitrarily multi-coloured badges. |
-| Reserve `--semantic-impact` (`#A82B2B`) exclusively for impacts, critical errors, and destructive actions. | Never use red for ordinary UI decoration or for neutral diagram elements. |
-| Keep borders thin (1px) and corners nearly square (4–6px). | No strong drop shadows, no glassmorphism (`backdrop-blur`), no heavily rounded cards (16px+). |
-| Pair serif headings with clear sans-serif forms. | Never use handwriting, script, or cursive faces for user input — legibility always wins. |
-| Treat `--semantic-*` as meaning: a colour appears only when something happened. | Never use a semantic colour because a screen looked empty or dull. |
+| Use `--bg-surface` (`#FDFBF7`) and `--bg-canvas` (`#F4F1EA`) for warm paper. | Cold tech white as page background; blue-cast grey (Tailwind Slate) as neutral. |
+| Use `--color-primary` (`#1B3B2B`, hunter green) as the single accent. | Ornamental accents: brown buttons, gold gradients, multi-coloured badges. |
+| Reserve `--semantic-impact` (`#A82B2B`) for impacts, critical errors, destructive actions. | Red for decoration or neutral diagram elements. |
+| Thin borders (1px), corners nearly square (4–6px). | Strong drop shadows, glassmorphism (`backdrop-blur`), rounded cards (16px+). |
+| Serif headings with clear sans-serif forms. | Handwriting, script, or cursive for user input — legibility wins. |
+| Treat `--semantic-*` as meaning: colour appears only when something happened. | Semantic colour because a screen looked empty or dull. |
 
 ## Tokens
 
-The single source is the block in `frontend/src/app/globals.css`. Every token below is defined for
-light and dark. Add a token only together with an entry here.
+Source is `globals.css`. Every token defined for light and dark. Add a token only with an entry here.
 
-**One name per colour.** The utility suffix is the token suffix: strip `--color-` or `--bg-` and you
-have the class. There are no aliases and no second vocabulary — a component either uses the design
-system's name or it does not compile into the system.
+**One name per colour.** Utility suffix = token suffix: strip `--color-` or `--bg-` and you have the
+class. No aliases, no second vocabulary.
 
-The one deliberate exception is ink. The design system gives the word "primary" to the single brand
-colour, so `--text-primary` (ink) would collide with it on `text-primary`. Ink is therefore renamed
-in utilities to **`text-ink`**: the brand owns every `primary` utility, ink is called ink.
+One deliberate exception: `--text-primary` (ink) would collide with the brand on `text-primary`, so
+the design system gives "primary" to the single brand colour. Ink is **`text-ink`**: brand owns every
+`primary` utility, ink is called ink.
 
 | Token | Utilities | Meaning | Use for |
 |----|----|----|----|
-| `--bg-canvas` | `bg-canvas` | The desk the paper lies on | App shell, page bodies, sidebar |
-| `--bg-surface` | `bg-surface` | A sheet of paper | Cards, tables, content areas, header |
-| `--bg-elevated` | `bg-elevated` | A raised sheet | Inputs, dropdown menus, dialogs |
+| `--bg-canvas` | `bg-canvas` | Desk the paper lies on | App shell, page bodies, sidebar |
+| `--bg-surface` | `bg-surface` | A sheet of paper | Cards, tables, content, header |
+| `--bg-elevated` | `bg-elevated` | A raised sheet | Inputs, dropdowns, dialogs |
 | `--bg-surface-muted` | `bg-surface-muted` | A second sheet | Table headers, hover rows, skeletons, inactive tracks |
 | `--border-subtle` | `border-subtle`, `bg-subtle`, `divide-subtle` | Pencil hairline | Dividers, card borders, table rules |
 | `--border-strong` | `border-strong` | A field's contour | Inputs at rest, millimetre grid |
-| `--text-primary` | `text-ink`, `bg-ink` | Warm deep ink (`#2C2A29`); never pure black | Body text, headings, default icons |
+| `--text-primary` | `text-ink`, `bg-ink` | Warm deep ink (`#2C2A29`), never pure black | Body, headings, default icons |
 | `--text-secondary` | `text-secondary` | Secondary ink | Labels, subtitles, metadata, units |
-| `--text-muted` | `text-muted` | Muted ink | Placeholders and disabled elements only |
+| `--text-muted` | `text-muted` | Muted ink | Placeholders, disabled only |
 | `--color-primary` | `bg-primary`, `text-primary`, `border-primary`, `ring-primary`, `outline-primary` | **The one brand colour: hunter green** | One primary button per screen, active nav, focus rings, neutral vector drawings |
-| `--color-primary-hover` | `bg-primary-hover` | The pressed primary | Hover and active state of a primary button |
-| `--color-primary-subtle` | `bg-primary-subtle` | A green wash | Subtle badges, selected table rows |
-| `--primary-foreground` | `text-primary-foreground` | Paper on hunter green | Labels drawn on `--color-primary` |
-| `--semantic-impact` | `text-impact`, `bg-impact`, `border-impact`, `outline-impact`, `border-l-impact` | Crimson | Impact points, critical deviations, delete actions, errors |
+| `--color-primary-hover` | `bg-primary-hover` | Pressed primary | Primary button hover/active |
+| `--color-primary-subtle` | `bg-primary-subtle` | Green wash | Subtle badges, selected rows |
+| `--primary-foreground` | `text-primary-foreground` | Paper on hunter green | Labels on `--color-primary` |
+| `--semantic-impact` | `text-impact`, `bg-impact`, `border-impact`, `outline-impact`, `border-l-impact` | Crimson | Impact points, critical deviations, delete, errors |
 | `--semantic-warning` | `text-warning`, `bg-warning`, `border-warning` | Ocher / amber | Warnings, unsaved changes, moderate bands |
 | `--semantic-success` | `text-success`, `bg-success`, `border-success` | Forest green | Optimal band, confirmations, positive trends |
-| `--semantic-info` | `text-info`, `bg-info`, `border-info` | Steel blue | Meteorological data and distance helper lines only |
+| `--semantic-info` | `text-info`, `bg-info`, `border-info` | Steel blue | Meteorological data, distance helper lines only |
 
 ### Mechanics
 
 | Token | Meaning | Use for |
 |----|----|----|
-| `--shadow-paper` | Sheet shadow | The `paper` class. Soft in light, `none` in dark |
-| `--shadow-overlay` | Floating-sheet shadow | The `paper-overlay` class: dialogs, menus, tooltips |
-| `--font-sans` | Interface face: **Inter** | Menus, tables, forms, small figures. Never name a family in a component |
-| `--font-serif` | Book face: **Lora** | Titles only — page, card, and dialog headings |
-| `--font-mono` | Machine values only | References, base URLs, token names, file names. Never for prose |
+| `--shadow-paper` | Sheet shadow | `paper` class. Soft in light, `none` in dark |
+| `--shadow-overlay` | Floating-sheet shadow | `paper-overlay` class: dialogs, menus, tooltips |
+| `--font-sans` | Interface face: **Inter** | Menus, tables, forms, figures. Never name a family in a component |
+| `--font-serif` | Book face: **Lora** | Titles only — page, card, dialog headings |
+| `--font-mono` | Machine values only | References, base URLs, token names, file names. Never prose |
 
-Inter is the work face and Lora is the book face. Headings use `font-serif`; everything the user
-works with uses `font-sans`. Weights are listed in `layout.tsx` — add one there before using a
-`font-*` weight that is not loaded, or the browser will synthesise it. Geist Mono is the machine
-face.
+Lora is the book face, Inter the work face. Add a weight to `layout.tsx` before using it, or the
+browser synthesises it. Geist Mono is the machine face.
 
-Dark mode is class-based (`@custom-variant dark`), with `prefers-color-scheme` as the default. The
-gallery sets `.light` and `.dark` on wrappers to show both themes side by side.
+Dark mode is class-based (`@custom-variant dark`), defaulting to `prefers-color-scheme`. The gallery
+sets `.light` / `.dark` on wrappers to show both side by side.
 
 ## Colour discipline
 
-There is exactly **one brand colour**. Everything else is paper, ink, or an explicit meaning:
+One brand colour. Everything else is paper, ink, or explicit meaning:
 
 - Hunter green: brand, primary action, active state. Nothing else.
 - Paper and warm neutrals: all structure.
 - Impact, warning, success, info: meaning only, never decoration. Always paired with a word.
 
-`--semantic-impact` is the most restricted colour in the system. It means "this is an impact", "this
-failed", or "this destroys something", and nothing else. It is never a hover accent, a chart series,
-a category marker, or a way to make a screen feel lively. `--semantic-info` is reserved for
-meteorological data and distance helper lines; it is not a general-purpose "informational" accent.
+`--semantic-impact` is the most restricted. It means "this is an impact", "this failed", or "this
+destroys something". Never a hover accent, chart series, category marker, or a way to liven a screen.
+`--semantic-info` is reserved for meteorological data and distance helper lines, not general
+"informational" accents.
 
 ## Contrast exceptions
 
-Four prescribed values do not clear WCAG 2.2 AA as text. They are kept because they are prescribed,
-and each is restricted to the role where it is legible:
+Four prescribed values fail WCAG 2.2 AA as text. Kept because prescribed; each restricted to where
+it is legible:
 
 | Value | Ratio on paper | Restriction |
 |----|----|----|
-| `--text-muted` `#9E9A93` | 2.48:1 | Placeholders and disabled controls only. Never body text, labels, or metadata. |
-| `--semantic-warning` `#D97706` | 3.08:1 | Rules, washes, icons, and borders. A warning that must be *read* is ink on the amber wash. |
-| `--border-strong` `#CFCAC0` | 1.58:1 | A 1px contour, never a text carrier. |
-| `--semantic-success` `#15803D` | 4.45:1 on canvas, 4.85:1 on surface | Text on `--bg-surface` only, never on the darker canvas. |
+| `--text-muted` `#9E9A93` | 2.48:1 | Placeholders, disabled only. Never body, labels, metadata. |
+| `--semantic-warning` `#D97706` | 3.08:1 | Rules, washes, icons, borders. A warning that must be *read* is ink on the amber wash. |
+| `--border-strong` `#CFCAC0` | 1.58:1 | 1px contour, never a text carrier. |
+| `--semantic-success` `#15803D` | 4.45:1 canvas, 4.85:1 surface | Text on `--bg-surface` only, never the darker canvas. |
 
-The rule this implies: **a semantic colour may always be a mark, a rule, or a wash; it may be text
-only where the table above allows it.** Badge and Alert already encode this — `warning` is ink on an
-amber wash rather than amber text.
+Rule: **a semantic colour may always be a mark, rule, or wash; may be text only where the table
+allows.** Badge and Alert encode this — `warning` is ink on amber, not amber text.
 
 ## Paper language
 
 Six elements carry the identity. Use them; do not invent a seventh.
 
-1. **The sheet.** Content sits on `Card` — a hairline and a whisper of shadow, never a heavy border
-   or an elevation card. In dark mode the shadow is `none` and the hairline alone separates the
-   sheet.
-2. **The serif title.** Page, card, and dialog titles are `font-serif`. The serif is the book face
-   and the only thing that carries the material character; body text never uses it.
-3. **The ruled line.** `Separator` draws `rule-ticks`: small ticks along a hairline, like the
-   printed ruling of a form. Sections are divided by a ruled line, never by empty space alone or by
-   a shadow.
-4. **The fine contour.** Inputs and selects sit on `--bg-elevated` with a 1px `--border-strong`
-   contour that turns `--color-primary` on focus and darkens slightly on hover. A card's hairline is
-   `--border-subtle`; a field's contour is stronger, because the field boundary is functional.
-5. **The stamp.** `Badge` is a rubber stamp: hairline box, tracked small caps, a tint of the
-   semantic colour. Status always carries its word.
-6. **The millimetre grid.** Charts and diagrams are thin geometric lines on a faint grid, like
-   graph paper — drawn from `--border-subtle` at reduced strength, never filled shapes or
-   gradients.
+1. **The sheet.** Content sits on `Card` — hairline and a whisper of shadow, never a heavy border or
+   elevation. Dark mode: shadow `none`, hairline alone separates.
+2. **The serif title.** Page, card, dialog titles are `font-serif`. Serif is the book face and the
+   only material character; body never uses it.
+3. **The ruled line.** `Separator` draws `rule-ticks`: small ticks along a hairline like printed
+   form ruling. Sections divided by a ruled line, never by empty space alone or a shadow.
+4. **The fine contour.** Inputs/selects sit on `--bg-elevated` with a 1px `--border-strong` contour,
+   turning `--color-primary` on focus, darkening on hover. Card hairline is `--border-subtle`; a
+   field contour is stronger because that boundary is functional.
+5. **The stamp.** `Badge` is a rubber stamp: hairline box, tracked small caps, semantic tint. Status
+   always carries its word.
+6. **The millimetre grid.** Charts/diagrams are thin geometric lines on a faint grid — drawn from
+   `--border-subtle` at reduced strength, never filled shapes or gradients.
 
 ## Rules
 
 1. **Semantic utilities only, one name per colour.** Use `bg-surface`, `text-secondary`,
-   `border-subtle`, `bg-primary`, `text-impact`, and so on. Never write a raw palette class
-   (`bg-stone-100`, `text-green-800`, `border-red-200`) or a hex value in a component. The
-   shadcn-era names (`text-foreground`, `text-muted-foreground`, `border-border`, `text-destructive`,
-   `bg-surface-elevated`, `bg-background`, `outline-ring`) are **retired** and `check:design` fails
-   the build if any of them reappears — the palette must not grow a second vocabulary. There is no
-   alias layer; `@theme inline` maps each token to exactly one utility name. Paper patterns come from `rule-ticks`, `rule-ticks-quiet`, `leader`,
-   `select-chevron`, or `checkbox-tick`; their SVG masks live in `globals.css` so they inherit
-   `currentColor` instead of hardcoding a stroke colour. An inline style may reference only
-   `var(--…)` tokens.
-2. **Contrast is a gate.** Text on a background meets WCAG 2.2 AA (4.5:1 normal text). The gallery
-   measures every documented pair; a change that drops a pair below AA is not accepted. The four
-   prescribed exceptions above are role-restricted rather than relaxed.
-3. **Colour is never the only signal.** Status and validation carry their meaning in text or an
-   icon too. Badges and alerts always include the word.
-4. **Touch targets are at least 44 by 44 pixels** on every interactive element. The target and the
-   drawn control are not the same thing: a control keeps its neighbour's height and extends its hit
-   area with a `before` overlay. Never make a control taller than its row to reach 44px.
-5. **Focus is always visible.** Interactive elements use `focus-visible:outline-2` with
-   `outline-primary`. Never remove an outline without an equally visible replacement.
-6. **One primary action per screen.** Everything else is `secondary` or `ghost`. Destructive
-   actions use `destructive` and are never the primary button.
-7. **German UI copy, English code.** Labels are German, identifiers and comments are English. Do
-   not hardcode new copy in a component beyond the gallery examples; product wording lives with the
-   product.
-8. **Spacing scale** is the Tailwind default (4, 8, 12, 16, 24, 32 px). Page bodies use `p-6`,
-   cards use `p-6`, form fields stack with `space-y-1.5` inside `Field`. White space is part of the
-   identity: prefer a wider gap to another rule.
-9. **Variants come from `cva`.** New variants are added in the component's `cva` definition, not by
-   passing arbitrary classes at call sites. Public variant names stay backwards compatible.
-10. **Flat by default.** Edges come from `border-subtle`. Cards carry the `paper`
-    shadow class, which is `none` in dark mode; only overlays that genuinely float (dialogs,
-    dropdowns, tooltips) carry `paper-overlay`. No hover elevation, gradients, or glass. A dragging
-    row is marked by `ring-1 ring-primary`, never by a shadow.
-11. **Angular paper, not pills.** `--radius` is 4–6px: controls use `rounded-sm`, containers
-    `rounded-md`. The only pill shapes are where the shape is the meaning (progress track, switch
-    track, radio dot). A rounded corner is never decoration.
-12. **Serif for titles only.** `font-serif` on page, card, and dialog headings; never on body copy,
-    table cells, form labels, or buttons. Never a script or cursive face anywhere — user input must
-    stay maximally legible.
-13. **Warm and natural, low saturation.** Warm paper and warm ink; dark mode is warm charcoal, never
-    pure black and never cold blue-grey. Status colours stay distinguishable without glowing.
+   `border-subtle`, `bg-primary`, `text-impact`. Never a raw palette class (`bg-stone-100`,
+   `text-green-800`, `border-red-200`) or a hex value in a component. The shadcn-era names
+   (`text-foreground`, `text-muted-foreground`, `border-border`, `text-destructive`,
+   `bg-surface-elevated`, `bg-background`, `outline-ring`) are **retired**; `check:design` fails if
+   any reappears — the palette must not grow a second vocabulary. No alias layer: `@theme inline`
+   maps each token to exactly one utility. Paper patterns come from `rule-ticks`, `rule-ticks-quiet`,
+   `leader`, `select-chevron`, `checkbox-tick`; their SVG masks live in `globals.css` and inherit
+   `currentColor` instead of hardcoding a stroke. An inline style may reference only `var(--…)`.
+2. **Contrast is a gate.** Text meets WCAG 2.2 AA (4.5:1 normal). The gallery measures every
+   documented pair; a change dropping one below AA is not accepted. The four exceptions above are
+   role-restricted, not relaxed.
+3. **Colour is never the only signal.** Status and validation carry meaning in text or icon too.
+   Badges and alerts always include the word.
+4. **Touch targets ≥ 44×44 px** on every interactive element. Target ≠ drawn control: a control
+   keeps its row height and extends its hit area with a `before` overlay. Never make a control
+   taller than its row to reach 44px.
+5. **Focus always visible.** `focus-visible:outline-2` with `outline-primary`. Never remove an
+   outline without an equally visible replacement.
+6. **One primary action per screen.** Everything else `secondary` or `ghost`. Destructive uses
+   `destructive`, never the primary button.
+7. **German UI copy, English code.** Labels German, identifiers and comments English. Do not
+   hardcode new copy in a component beyond gallery examples; product wording lives with the product.
+8. **Spacing scale** is Tailwind default (4, 8, 12, 16, 24, 32 px). Page bodies and cards `p-6`,
+   fields stack with `space-y-1.5` inside `Field`. White space is part of the identity: prefer a
+   wider gap to another rule.
+9. **Variants come from `cva`.** Add variants in the component's `cva` definition, never by passing
+   arbitrary classes at call sites. Public variant names stay backwards compatible.
+10. **Flat by default.** Edges from `border-subtle`. Cards carry `paper` (`none` in dark); only
+    genuinely floating overlays (dialogs, dropdowns, tooltips) carry `paper-overlay`. No hover
+    elevation, gradients, glass. A dragging row is `ring-1 ring-primary`, never a shadow.
+11. **Angular paper, not pills.** `--radius` 4–6px: controls `rounded-sm`, containers `rounded-md`.
+    Pills only where the shape is the meaning (progress track, switch track, radio dot). Rounding is
+    never decoration.
+12. **Serif for titles only.** `font-serif` on page, card, dialog headings; never body, table cells,
+    form labels, buttons. Never script or cursive — input must stay legible.
+13. **Warm and natural, low saturation.** Warm paper and ink; dark is warm charcoal, never pure
+    black, never cold blue-grey. Status colours distinguishable without glowing.
 
 ## Components
 
-Primitives live in `frontend/src/components/ui/`. They are shadcn-style: `class-variance-authority`
-for variants, Radix primitives where a behaviour is non-trivial, `cn` (`clsx` + `tailwind-merge`)
-for class merging.
+Primitives live in `frontend/src/components/ui/`. shadcn-style: `class-variance-authority` for
+variants, Radix where behaviour is non-trivial, `cn` (`clsx` + `tailwind-merge`) for merging.
 
-- Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour variants for other
-  components.
-- `Card` is a paper sheet and carries `paper`. `CardTitle` is `font-serif`; `CardHeader` closes with
-  a `rule-ticks-quiet` hairline so the title block reads as a printed form head.
-- `Badge` is a stamp: hairline, tracked caps, tinted. It names its status in words. `primary` is the
-  one stamp in brand ink; use it for the single state worth marking strongly on a screen.
-- `Alert` is a margin note: a coloured left rule and a tinted wash, never a full coloured block.
-  `error` uses `role="alert"`.
-- `Separator` draws the ruled line. It is the standard section divider.
-- `Input`, `Textarea`, `Select`, and `SearchInput` sit on `--bg-elevated` with a `--border-strong`
-  contour that turns `--color-primary` on focus and darkens on hover. `Select` stays a native
-  `<select>` on purpose: the platform picker is the control users know, and it survives touch and
-  one-handed use. Its chevron is a mask in `currentColor`, so it flips with the theme.
-- `Checkbox` is a square with `checkbox-tick`: green fill and a paper-coloured tick, both from
-  tokens. `Switch` and the radio dot are the only pills, because there the shape is the meaning.
-- `Table` is a ruled ledger: hairlines between rows, no zebra banding, `tabular-nums` and
-  right-aligned figures. `TableKeyValue` renders the label · dotted-leader · value pairs used for
-  metric lists.
-- `Progress` is a measured band with fifth-ticks on its track; it keeps `rounded-sm`, since a
-  progress track's roundness would mean nothing.
-- `Slider` is a value input drawn as a ruled measure: a compact squared knob on a divided track,
-  with a 44px hit area around the knob. Do not enlarge the visible knob to reach the touch minimum.
-- `CheckpointSlider` is the same input for a value scale that has named checkpoints: the track is
-  divided into the coloured bands between them. **The band colours are caller-supplied data**, not
-  design tokens, and arrive as a `checkpoints` prop; the design system owns no palette for them and
-  must never add one to `globals.css`. Callers pass `var(--…)` token references, never hex values.
-  The value moves freely and never snaps to a checkpoint.
-  Bands are `aria-hidden`; the legend repeats every checkpoint with its name, and the thumb's
-  `aria-valuetext` names the nearest one. With no checkpoints it renders a plain track.
-- `Table` rows that drag are sortable through `@dnd-kit`. The drag activator is a dedicated handle,
-  never the whole row; its hit area follows the touch rule. A handle's accessible name must be
-  distinct per row and must not invent a position that does not exist. Numbers in tables are
-  `tabular-nums` and right-aligned; machine values are mono. Table heads are tracked small caps on
-  `--bg-surface-muted`.
-- `Field` owns label, hint, and error placement. Use it instead of hand-assembling label + input.
-- Layout components (`app-shell`, `sidebar`, `page-chrome`) and workflow components are composed
-  from the primitives. The active nav item is marked by a filled treatment plus `aria-current`,
-  never by colour alone.
+- Only `Button`, `Alert`, `Badge` carry status variants. Do not invent colour variants elsewhere.
+- `Card` is a paper sheet, carries `paper`. `CardTitle` is `font-serif`; `CardHeader` closes with a
+  `rule-ticks-quiet` hairline so the title block reads as a printed form head.
+- `Badge` is a stamp: hairline, tracked caps, tinted, names its status in words. `primary` is the one
+  stamp in brand ink — use for the single state worth marking strongly.
+- `Alert` is a margin note: coloured left rule, tinted wash, never a full coloured block. `error`
+  uses `role="alert"`.
+- `Separator` draws the ruled line; standard section divider.
+- `Input`, `Textarea`, `Select`, `SearchInput` sit on `--bg-elevated` with a `--border-strong`
+  contour turning `--color-primary` on focus, darkening on hover. `Select` stays native on purpose:
+  the platform picker survives touch and one-handed use. Its chevron is a `currentColor` mask, so it
+  flips with the theme.
+- `Checkbox` is a square with `checkbox-tick`: green fill, paper-coloured tick, both from tokens.
+  `Switch` and the radio dot are the only pills — there the shape is the meaning.
+- `Table` is a ruled ledger: hairlines between rows, no zebra banding, `tabular-nums`, right-aligned
+  figures. `TableKeyValue` renders label · dotted-leader · value pairs for metric lists.
+- `Progress` is a measured band with fifth-ticks; keeps `rounded-sm` — a progress track's roundness
+  would mean nothing.
+- `Slider` is a value input drawn as a ruled measure: compact squared knob on a divided track, 44px
+  hit area around it. Do not enlarge the visible knob to reach the touch minimum.
+- `CheckpointSlider` is that input for a scale with named checkpoints: track divided into coloured
+  bands between them. **Band colours are caller-supplied data**, not design tokens — they arrive as
+  a `checkpoints` prop. The design system owns no palette for them and must never add one to
+  `globals.css`. Callers pass `var(--…)` references, never hex. Value moves freely, never snaps.
+  Bands are `aria-hidden`; the legend repeats every checkpoint by name, the thumb's `aria-valuetext`
+  names the nearest. No checkpoints renders a plain track.
+- Sortable `Table` rows use `@dnd-kit`. Drag activator is a dedicated handle, never the whole row;
+  hit area follows the touch rule. Handle names distinct per row, never inventing a position that
+  does not exist. Numbers `tabular-nums` and right-aligned; machine values mono. Table heads tracked
+  small caps on `--bg-surface-muted`.
+- `Field` owns label, hint, error placement. Use it instead of hand-assembling label + input.
+- Layout (`app-shell`, `sidebar`, `page-chrome`) and workflow components compose from primitives.
+  Active nav item is a filled treatment plus `aria-current`, never colour alone.
 
 ## Screen composition
 
-A screen is a page of the logbook. **These rules govern appearance only.** How a journey is
-structured — whether something is shown as a map, a progress bar, or a plain step list — is a
-product decision and is not settled by this identity.
+A screen is a page of the logbook. **Appearance only.** Whether a journey shows a map, a progress
+bar, or a step list is a product decision, not settled here.
 
-1. The page header is a serif title with a hairline ruled line beneath it.
-2. Content blocks are `Card`s (sheets) or ruled table sections; between sections sits a `Separator`.
-3. Work is dense and scannable: one primary action, tables for records, forms stacked in `Field`.
-4. Numbers in rows: right-aligned, `tabular-nums`. IDs, references, coordinates: `--font-mono`.
-5. Exactly one primary action per screen, in the first action row. Everything else secondary/ghost.
-6. Status always as word (+ icon or stamp), colour only as second channel.
+1. Page header: serif title with a hairline ruled line beneath.
+2. Content blocks are `Card`s (sheets) or ruled table sections; a `Separator` between sections.
+3. Dense and scannable: one primary action, tables for records, forms stacked in `Field`.
+4. Numbers in rows right-aligned, `tabular-nums`. IDs, references, coordinates `--font-mono`.
+5. Exactly one primary action per screen, in the first action row. Else secondary/ghost.
+6. Status always as word (+ icon or stamp); colour only as second channel.
 
 ## The gallery at `/dev`
 
-`frontend/src/app/dev/page.dev.tsx` exists only under `next dev`: `next.config.ts` adds the
-`dev.tsx` / `dev.ts` page extensions only in the development phase, so `next build` never emits the
-route. `build:frontend` asserts that `out/dev` and the gallery code are absent from the export.
+`frontend/src/app/dev/page.dev.tsx` exists only under `next dev`: `next.config.ts` adds `dev.tsx` /
+`dev.ts` to `pageExtensions` only in the development phase, so `next build` never emits the route.
 
-- The page is laid out as a printed specimen book: a cover title block, a table-of-contents index,
-  then numbered plates. Each `ComponentSection` carries a two-digit `index` in mono down the
-  margin, a serif title, a one-line rationale, and a ruled line before the specimens.
-- Every plate renders its content twice — on `.light` (Papier) and `.dark` (Lampe) — so a palette
-  change is judged side by side instead of from memory.
-- The Tokens plate reads the computed CSS variables and prints the contrast ratio for every
-  documented pair, with an AA pass/fail stamp.
-- The touch-target toggle outlines interactive elements to reveal targets under 44px. The
-  outlines are dashed amber on purpose: they are a measuring overlay, not part of the identity.
-- The Datenbilder plate shows the drawing vocabulary as elements — diagram, series, scale, legend —
-  deliberately without screens or flows, so the visual language can be judged on its own.
-- **The gallery is domain-free.** Its fixtures use neutral German UI language (`Eintrag`, `Status`,
-  `Kategorie`, `Fortschritt`, `Alpha`/`Beta`/`Gamma`) and never product entities, shooting terms, or
-  a real place name. The gallery demonstrates *how* the product looks; *what* it does is decided in
-  the product specs, and a gallery plate must not imply a journey.
-- Earlier identity proposals have been removed. The gallery shows the accepted system only; a
-  superseded direction belongs in the spec's decision log, not on the page.
+- Laid out as a printed specimen book: cover title block, table-of-contents index, numbered plates.
+  Each `ComponentSection` carries a two-digit mono `index` in the margin, a serif title, a one-line
+  rationale, and a ruled line before the specimens.
+- Every plate renders twice — `.light` (Papier) and `.dark` (Lampe) — so a palette change is judged
+  side by side, not from memory.
+- Tokens plate reads computed CSS variables and prints the contrast ratio for every documented pair
+  with an AA pass/fail stamp.
+- Touch-target toggle outlines interactive elements to reveal targets under 44px. Dashed amber on
+  purpose: a measuring overlay, not part of the identity.
+- Datenbilder plate shows the drawing vocabulary as elements — diagram, series, scale, legend —
+  deliberately without screens or flows, so the language can be judged alone.
+- **The gallery is domain-free.** Fixtures use neutral German UI language (`Eintrag`, `Status`,
+  `Kategorie`, `Fortschritt`, `Alpha`/`Beta`/`Gamma`), never product entities, shooting terms, or a
+  real place name. It demonstrates *how* the product looks; *what* it does is decided in product
+  specs, and a plate must not imply a journey.
+- Earlier identity proposals removed. The gallery shows the accepted system only; a superseded
+  direction belongs in the spec decision log, not the page.
 
-Workflow for a visual change: edit `globals.css` or a component, look at `/dev`, decide, then write
-the result into this rule and the spec decision log **in the same commit**.
+Visual change workflow: edit `globals.css` or a component, look at `/dev`, decide, then write the
+result into this rule and the spec decision log **in the same commit**.
 
 ## Keeping this rule in sync
 
-- A new or renamed token, a changed pairing, a new component variant, or a changed visual rule must
-  be reflected in this file and in `specs/product/visual-identity.md` in the same commit. There is
-  no "document it later".
-- `check:design` (part of `mise run check`) fails when a token exists in `globals.css` but is not
-  documented here, or when a raw palette class appears under `frontend/src` outside `globals.css`.
-- Prose nuance cannot be checked mechanically. The PR checklist item "design rule and spec
-  updated" is the human half of the same obligation.
+- A new or renamed token, changed pairing, new component variant, or changed visual rule must land
+  here and in `specs/product/visual-identity.md` in the same commit. No "document it later".
+- `check:design` (in `mise run check`) fails when a token in `globals.css` is undocumented here, a
+  raw palette class appears under `frontend/src` outside `globals.css`, or a retired utility name
+  returns.
+- Prose nuance cannot be checked mechanically. The "design rule and spec updated" PR checklist item
+  is the human half.
