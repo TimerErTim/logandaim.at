@@ -57,14 +57,11 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
             </div>
           ))}
         </div>
-
-        <BrandFooter />
       </div>
     </aside>
   );
 }
 
-/** A small hunter-green rule: marks the current page in the navigation. */
 function NavMarkierung() {
   return (
     <span
@@ -93,23 +90,5 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
       <Icon className="size-5" />
       {item.label}
     </Link>
-  );
-}
-
-function BrandFooter() {
-  return (
-    <div className="mt-auto border-t border-border pt-6">
-      <div className="px-2">
-        <div className="mb-2 flex size-12 items-center justify-center rounded-sm bg-primary font-serif text-lg font-bold text-primary-foreground">
-          EP
-        </div>
-        <div className="text-xs leading-tight text-muted-foreground">
-          <p className="font-serif text-sm font-semibold text-foreground">
-            Energetik Sabine Petschl
-          </p>
-          <p>Wohlfühlen für Mensch und Tier</p>
-        </div>
-      </div>
-    </div>
   );
 }
