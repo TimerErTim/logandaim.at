@@ -145,36 +145,51 @@
 }
 
 /*
- * Canonical names to Tailwind utilities. Nothing here invents a value; every entry
- * points at a token above. Utilities keep their established names so components do
- * not churn, while the palette is named the way the design system names it.
+ * Tokens to Tailwind utilities, one to one. There is exactly one name per colour
+ * across the whole app: the utility suffix is the token suffix, with `--color-` and
+ * `--bg-` stripped. No aliases, no second vocabulary.
+ *
+ *   --bg-canvas          → bg-canvas
+ *   --bg-surface         → bg-surface
+ *   --bg-elevated        → bg-elevated
+ *   --bg-surface-muted   → bg-surface-muted
+ *   --border-subtle      → border-subtle
+ *   --border-strong      → border-strong
+ *   --text-primary       → text-ink        (ink is called ink; primary is the brand)
+ *   --text-secondary     → text-secondary
+ *   --text-muted         → text-muted
+ *   --color-primary      → bg-primary, text-primary, border-primary, …
+ *   --semantic-impact    → text-impact, bg-impact, border-impact, …
+ *
+ * The `text-primary` collision is why ink is `text-ink`: the design system gives
+ * "primary" to the one brand colour, so the brand owns every `primary` utility.
  */
 @theme inline {
-  --color-background: var(--bg-canvas);
+  /* Surface & paper */
+  --color-canvas: var(--bg-canvas);
   --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
   --color-surface-muted: var(--bg-surface-muted);
-  --color-surface-elevated: var(--bg-elevated);
 
-  --color-border: var(--border-subtle);
-  --color-border-strong: var(--border-strong);
-  --color-contour: var(--border-subtle);
+  /* Ruling: `subtle` and `strong` are border-only names. */
+  --color-subtle: var(--border-subtle);
+  --color-strong: var(--border-strong);
+  /* Ink */
+  --color-ink: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
 
-  --color-foreground: var(--text-primary);
-  --color-muted-foreground: var(--text-secondary);
-  --color-placeholder: var(--text-muted);
-
+  /* The one accent */
   --color-primary: var(--color-primary);
   --color-primary-hover: var(--color-primary-hover);
   --color-primary-subtle: var(--color-primary-subtle);
   --color-primary-foreground: var(--primary-foreground);
 
-  --color-destructive: var(--semantic-impact);
-  --color-success: var(--semantic-success);
+  /* Meaning only */
+  --color-impact: var(--semantic-impact);
   --color-warning: var(--semantic-warning);
+  --color-success: var(--semantic-success);
   --color-info: var(--semantic-info);
-
-  --color-secondary: var(--bg-surface-muted);
-  --color-ring: var(--color-primary);
 
   /* 4 px to 6 px: angular paper, never a pill. */
   --radius-sm: calc(var(--radius) - 0.125rem);

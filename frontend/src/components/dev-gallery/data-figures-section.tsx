@@ -39,7 +39,7 @@ export function DataFiguresSection() {
               className="relative"
             />
           </div>
-          <p className="max-w-xs text-xs text-muted-foreground">
+          <p className="max-w-xs text-xs text-secondary">
             Die Mitte ist die einzige gefüllte Fläche, damit sie sofort lesbar
             ist. Jede Marke steht zusätzlich als Text daneben; die Zeichnung
             trägt keine Bedeutung allein.
@@ -51,7 +51,7 @@ export function DataFiguresSection() {
         caption="Messreihe — eine Bleistiftlinie auf Millimeterpapier"
         className="block"
       >
-        <div className="w-full rounded-sm border border-border bg-surface p-3">
+        <div className="w-full rounded-sm border border-subtle bg-surface p-3">
           <SeriesPlot
             points={[
               { id: "p1", x: 4, y: 24, label: "1", value: 20 },
@@ -64,7 +64,7 @@ export function DataFiguresSection() {
             ]}
             label="Messreihe, Punkte 1 bis 7"
           />
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-2 text-xs text-secondary">
             Jeder Punkt sitzt auf einer Hilfslinie und trägt seinen Wert in
             Mono. Keine Balken, kein Verlauf, kein gefülltes Gitter.
           </p>
@@ -77,7 +77,7 @@ export function DataFiguresSection() {
       >
         <div className="w-64 space-y-2">
           <div className="flex items-baseline gap-2">
-            <span className="text-xs text-muted-foreground">Messwert</span>
+            <span className="text-xs text-secondary">Messwert</span>
             <span className="text-sm font-semibold tabular-nums">42 m</span>
           </div>
           <ScaleBar segments={4} unitsPerSegment={10} unit="units" />

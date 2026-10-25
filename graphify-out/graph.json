@@ -1261,7 +1261,7 @@
       "file_type": "code",
       "norm_label": "example()",
       "source_file": "frontend/src/components/dev-gallery/component-section.tsx",
-      "source_location": "L107"
+      "source_location": "L103"
     },
     {
       "id": "frontend_src_components_dev_gallery_component_section_themeplate",
@@ -1273,7 +1273,7 @@
       "file_type": "code",
       "norm_label": "themeplate()",
       "source_file": "frontend/src/components/dev-gallery/component-section.tsx",
-      "source_location": "L75"
+      "source_location": "L73"
     },
     {
       "id": "frontend_src_components_dev_gallery_contrast_contrastratio",
@@ -1873,7 +1873,7 @@
       "file_type": "code",
       "norm_label": "sortabletablesection()",
       "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L360"
+      "source_location": "L358"
     },
     {
       "id": "frontend_src_components_dev_gallery_sortable_table_section_sortabletablesection_create",
@@ -1885,7 +1885,7 @@
       "file_type": "code",
       "norm_label": "create()",
       "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L380"
+      "source_location": "L378"
     },
     {
       "id": "frontend_src_components_dev_gallery_sortable_table_section_sortabletablesection_update",
@@ -1897,7 +1897,7 @@
       "file_type": "code",
       "norm_label": "update()",
       "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L374"
+      "source_location": "L372"
     },
     {
       "id": "frontend_src_components_dev_gallery_sortable_table_section_statepicker",
@@ -1921,7 +1921,7 @@
       "file_type": "code",
       "norm_label": "tablecaptionexample()",
       "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L467"
+      "source_location": "L465"
     },
     {
       "id": "frontend_src_components_ui_checkpoint_slider_checkpointslider",
@@ -2053,7 +2053,7 @@
       "file_type": "code",
       "norm_label": "cardcontent()",
       "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L76"
+      "source_location": "L73"
     },
     {
       "id": "frontend_src_components_ui_card_carddescription",
@@ -2077,7 +2077,7 @@
       "file_type": "code",
       "norm_label": "cardfooter()",
       "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L83"
+      "source_location": "L80"
     },
     {
       "id": "frontend_src_components_ui_card_cardheader",
@@ -2329,7 +2329,7 @@
       "file_type": "code",
       "norm_label": "miscsection()",
       "source_file": "frontend/src/components/dev-gallery/sections.tsx",
-      "source_location": "L420"
+      "source_location": "L418"
     },
     {
       "id": "frontend_src_components_dev_gallery_sections_overlaysection",
@@ -2353,7 +2353,7 @@
       "file_type": "code",
       "norm_label": "checkpointslidersection()",
       "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L342"
+      "source_location": "L340"
     },
     {
       "id": "frontend_src_components_ui_dropdown_menu_dropdownmenucontent",
@@ -15647,7 +15647,7 @@
       "file_type": "code",
       "norm_label": "touchtargetoutline",
       "source_file": "frontend/src/components/dev-gallery/component-section.tsx",
-      "source_location": "L140"
+      "source_location": "L136"
     },
     {
       "id": "frontend_src_components_dev_gallery_contrast",
@@ -17055,7 +17055,7 @@
       "node_kind": "heading",
       "norm_label": "revision history",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L164"
+      "source_location": "L170"
     },
     {
       "id": "specs_product_visual_identity_roles",
@@ -23622,7 +23622,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/components/dev-gallery/component-section.tsx",
-      "source_location": "L128",
+      "source_location": "L124",
       "weight": 1.0
     },
     {
@@ -23634,7 +23634,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/components/dev-gallery/component-section.tsx",
-      "source_location": "L84",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
@@ -23946,7 +23946,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L80",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
@@ -23958,7 +23958,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L70",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -23970,7 +23970,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L89",
+      "source_location": "L86",
       "weight": 1.0
     },
     {
@@ -24738,7 +24738,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L374",
+      "source_location": "L372",
       "weight": 1.0
     },
     {
@@ -48487,7 +48487,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/component-section.tsx",
-      "source_location": "L107",
+      "source_location": "L103",
       "weight": 1.0
     },
     {
@@ -48498,7 +48498,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/component-section.tsx",
-      "source_location": "L140",
+      "source_location": "L136",
       "weight": 1.0
     },
     {
@@ -48520,7 +48520,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/component-section.tsx",
-      "source_location": "L75",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -48751,7 +48751,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/sections.tsx",
-      "source_location": "L420",
+      "source_location": "L418",
       "weight": 1.0
     },
     {
@@ -48817,7 +48817,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L342",
+      "source_location": "L340",
       "weight": 1.0
     },
     {
@@ -48828,7 +48828,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L360",
+      "source_location": "L358",
       "weight": 1.0
     },
     {
@@ -48839,7 +48839,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L467",
+      "source_location": "L465",
       "weight": 1.0
     },
     {
@@ -48916,7 +48916,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L380",
+      "source_location": "L378",
       "weight": 1.0
     },
     {
@@ -49301,7 +49301,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L76",
+      "source_location": "L73",
       "weight": 1.0
     },
     {
@@ -49312,7 +49312,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/ui/card.tsx",
-      "source_location": "L83",
+      "source_location": "L80",
       "weight": 1.0
     },
     {
@@ -52326,7 +52326,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L164",
+      "source_location": "L170",
       "weight": 1.0
     },
     {
@@ -58414,5 +58414,5 @@
       "source_file": ".cursor/AGENTS.md"
     }
   ],
-  "built_at_commit": "5969bee7009a6b093bd7f715c5dd86083f8de33f"
+  "built_at_commit": "5c3e9309d6f6d975a7e9b601632ca9c5cee39be3"
 }

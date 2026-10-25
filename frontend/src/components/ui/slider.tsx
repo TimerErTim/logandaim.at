@@ -34,7 +34,7 @@ export function Slider({
           className="pointer-events-none absolute inset-0 flex justify-between"
         >
           {[0, 1, 2, 3, 4].map((tick) => (
-            <span key={`tick-${tick}`} className="w-px bg-contour" />
+            <span key={`tick-${tick}`} className="w-px bg-subtle" />
           ))}
         </span>
       </SliderPrimitive.Track>
@@ -42,7 +42,7 @@ export function Slider({
         className={cn(
           "relative block size-5 cursor-grab rounded-sm border-2 border-primary bg-surface",
           "before:absolute before:-inset-3.5 before:content-['']",
-          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
           "active:cursor-grabbing disabled:pointer-events-none disabled:cursor-not-allowed",
         )}
       />

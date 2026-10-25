@@ -15,16 +15,16 @@ export function SearchInput({ className, ...props }: SearchInputProps) {
     <div className="relative w-full max-w-xs">
       <Search
         aria-hidden="true"
-        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-secondary"
       />
       <input
         type="search"
         className={cn(
-          "h-10 w-full rounded-sm border border-border-strong bg-surface-elevated pr-3 pl-9 text-sm text-foreground",
-          "transition-colors placeholder:text-placeholder",
-          "hover:border-muted-foreground/60",
-          "focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring",
-          "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-placeholder",
+          "h-10 w-full rounded-sm border border-strong bg-elevated pr-3 pl-9 text-sm text-ink",
+          "transition-colors placeholder:text-muted",
+          "hover:border-ink/40",
+          "focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary",
+          "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted",
           className,
         )}
         {...props}

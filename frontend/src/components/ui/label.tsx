@@ -14,7 +14,7 @@ export function Label({
   return (
     <span
       className={cn(
-        "text-[11px] font-semibold tracking-[0.07em] text-muted-foreground uppercase",
+        "text-[11px] font-semibold tracking-[0.07em] text-secondary uppercase",
         className,
       )}
       {...props}

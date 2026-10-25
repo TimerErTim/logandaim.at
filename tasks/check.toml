@@ -50,6 +50,26 @@ if [ -n "$leaks" ]; then
   exit 1
 fi
 
+# The palette has exactly one name per colour. These are the shadcn/legacy names
+# the system replaced; if any reappears, the alias layer has crept back in and the
+# app has two vocabularies again. `text-primary` is deliberately absent: it is the
+# brand colour, and ink is `text-ink`.
+legacy=$(grep -rnE '(bg|text|border|from|to|via|ring|outline|divide|placeholder|fill|stroke|accent|caret|decoration)-(foreground|background|muted-foreground|destructive|surface-elevated|placeholder|border-strong|contour)' \\
+  "$ROOT/frontend/src" --include='*.tsx' --include='*.ts' |
+  grep -vF 'frontend/src/app/globals.css' || true)
+
+# `border-border`, `divide-border`, `bg-border` and bare `border`-as-colour names.
+legacy_border=$(grep -rnE '(bg|text|divide|ring|outline|placeholder|fill|stroke|accent|caret)-(border|ring)\b|border-border\b' \\
+  "$ROOT/frontend/src" --include='*.tsx' --include='*.ts' |
+  grep -vF 'frontend/src/app/globals.css' || true)
+
+if [ -n "$legacy" ] || [ -n "$legacy_border" ]; then
+  echo "check:design: legacy utility names found; the palette has one name per colour:" >&2
+  printf '%s\n%s\n' "$legacy" "$legacy_border" | grep -v '^$' | sed 's/^/  /' >&2
+  echo "  use: text-ink, text-secondary, text-muted, text-impact, border-subtle, border-strong, bg-canvas, bg-elevated" >&2
+  exit 1
+fi
+
 echo "check:design: ok"
 """
 

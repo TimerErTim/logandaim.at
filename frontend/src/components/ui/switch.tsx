@@ -17,11 +17,11 @@ export function Switch({
   return (
     <SwitchPrimitive.Root
       className={cn(
-        "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-border",
+        "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border border-subtle",
         "transition-colors",
         "data-[state=checked]:border-primary data-[state=checked]:bg-primary",
         "data-[state=unchecked]:bg-surface-muted",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
@@ -29,7 +29,7 @@ export function Switch({
     >
       <SwitchPrimitive.Thumb
         className={cn(
-          "pointer-events-none block size-5 rounded-full border border-border bg-surface",
+          "pointer-events-none block size-5 rounded-full border border-subtle bg-surface",
           "transition-transform",
           "data-[state=checked]:translate-x-[1.375rem] data-[state=unchecked]:translate-x-0.5",
         )}

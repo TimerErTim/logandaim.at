@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const actions = navActionsForPathname(pathname);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-canvas">
       <input id="main-drawer" type="checkbox" className="peer hidden" />
 
       <Sidebar
@@ -37,11 +37,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       />
 
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-30 border-b border-border bg-surface">
+        <header className="sticky top-0 z-30 border-b border-subtle bg-surface">
           <div className="flex h-14 items-center gap-3 px-4">
             <label
               htmlFor="main-drawer"
-              className="inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-foreground hover:bg-surface-muted lg:hidden"
+              className="inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-ink hover:bg-surface-muted lg:hidden"
             >
               <Menu className="size-5" />
               <span className="sr-only">Navigation öffnen</span>
@@ -57,17 +57,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className="flex items-center"
                 >
                   {index > 0 ? (
-                    <span className="mx-1 text-muted-foreground">/</span>
+                    <span className="mx-1 text-secondary">/</span>
                   ) : null}
                   {crumb.href ? (
                     <Link
                       href={crumb.href}
-                      className="rounded-sm px-2 py-1 font-medium text-foreground hover:bg-surface-muted"
+                      className="rounded-sm px-2 py-1 font-medium text-ink hover:bg-surface-muted"
                     >
                       {crumb.label}
                     </Link>
                   ) : (
-                    <span className="px-2 py-1 font-semibold text-foreground">
+                    <span className="px-2 py-1 font-semibold text-ink">
                       {crumb.label}
                     </span>
                   )}

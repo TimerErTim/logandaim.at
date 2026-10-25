@@ -12,12 +12,12 @@ export function Textarea({ className, ...props }: TextareaProps) {
   return (
     <textarea
       className={cn(
-        "min-h-20 w-full resize-y rounded-sm border border-border-strong bg-surface-elevated px-3 py-2 text-sm text-foreground",
-        "transition-colors placeholder:text-placeholder",
-        "hover:border-muted-foreground/60",
-        "focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring",
-        "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-placeholder",
-        "aria-invalid:border-destructive aria-invalid:focus-visible:outline-destructive",
+        "min-h-20 w-full resize-y rounded-sm border border-strong bg-elevated px-3 py-2 text-sm text-ink",
+        "transition-colors placeholder:text-muted",
+        "hover:border-ink/40",
+        "focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary",
+        "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted",
+        "aria-invalid:border-impact aria-invalid:focus-visible:outline-impact",
         className,
       )}
       {...props}

@@ -32,16 +32,16 @@ export function Field({
       <span className="flex items-baseline justify-between gap-2">
         <Label>{label}</Label>
         {optional ? (
-          <span className="text-[11px] text-muted-foreground">optional</span>
+          <span className="text-[11px] text-secondary">optional</span>
         ) : null}
       </span>
       {children}
       {error ? (
-        <p role="alert" className="text-xs text-destructive">
+        <p role="alert" className="text-xs text-impact">
           {error}
         </p>
       ) : hint ? (
-        <p className="text-xs text-muted-foreground">{hint}</p>
+        <p className="text-xs text-secondary">{hint}</p>
       ) : null}
     </div>
   );

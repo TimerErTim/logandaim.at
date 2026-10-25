@@ -37,7 +37,7 @@ export function ComponentSection({
         {index ? (
           <span
             aria-hidden="true"
-            className="font-mono text-xs text-muted-foreground tabular-nums"
+            className="font-mono text-xs text-secondary tabular-nums"
           >
             {index}
           </span>
@@ -50,9 +50,7 @@ export function ComponentSection({
             {title}
           </h2>
           {description ? (
-            <p className="max-w-prose text-sm text-muted-foreground">
-              {description}
-            </p>
+            <p className="max-w-prose text-sm text-secondary">{description}</p>
           ) : null}
         </div>
       </header>
@@ -83,16 +81,14 @@ function ThemePlate({
     <div
       className={cn(
         theme,
-        "overflow-hidden rounded-md border border-border bg-background text-foreground",
+        "overflow-hidden rounded-md border border-subtle bg-canvas text-ink",
       )}
     >
-      <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="text-[10px] font-semibold tracking-[0.09em] text-muted-foreground uppercase">
+      <div className="flex items-center justify-between border-b border-subtle px-4 py-2">
+        <span className="text-[10px] font-semibold tracking-[0.09em] text-secondary uppercase">
           {theme === "light" ? "Papier" : "Lampe"}
         </span>
-        <code className="font-mono text-[10px] text-muted-foreground">
-          .{theme}
-        </code>
+        <code className="font-mono text-[10px] text-secondary">.{theme}</code>
       </div>
       <div className="space-y-5 p-4">{children}</div>
     </div>
@@ -120,7 +116,7 @@ export function Example({
       {caption ? (
         <p
           id={captionId}
-          className="text-[10px] font-semibold tracking-[0.09em] text-muted-foreground uppercase"
+          className="text-[10px] font-semibold tracking-[0.09em] text-secondary uppercase"
         >
           {caption}
         </p>

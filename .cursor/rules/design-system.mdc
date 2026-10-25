@@ -41,54 +41,38 @@ document and a row here disagree, this table wins.
 The single source is the block in `frontend/src/app/globals.css`. Every token below is defined for
 light and dark. Add a token only together with an entry here.
 
-The canonical token names are the design system's own vocabulary. The `@theme inline` block
-republishes them as Tailwind utilities, which is what components actually use.
+**One name per colour.** The utility suffix is the token suffix: strip `--color-` or `--bg-` and you
+have the class. There are no aliases and no second vocabulary — a component either uses the design
+system's name or it does not compile into the system.
 
-### Surface & paper (neutrals)
+The one deliberate exception is ink. The design system gives the word "primary" to the single brand
+colour, so `--text-primary` (ink) would collide with it on `text-primary`. Ink is therefore renamed
+in utilities to **`text-ink`**: the brand owns every `primary` utility, ink is called ink.
 
-| Token | Utility | Meaning | Use for |
+| Token | Utilities | Meaning | Use for |
 |----|----|----|----|
-| `--bg-canvas` | `bg-background` | The desk the paper lies on | App shell and page bodies, sidebar |
+| `--bg-canvas` | `bg-canvas` | The desk the paper lies on | App shell, page bodies, sidebar |
 | `--bg-surface` | `bg-surface` | A sheet of paper | Cards, tables, content areas, header |
-| `--bg-elevated` | `bg-surface-elevated` | A raised sheet | Active inputs, dropdown menus, dialogs |
-| `--bg-surface-muted` | `bg-surface-muted` | A second sheet / greyed paper | Table headers, hover rows, skeletons, inactive tracks |
-| `--border-subtle` | `border-border` | Pencil hairline | Dividers, card borders, table rules |
-| `--border-strong` | `border-border-strong` | A field's contour | Form inputs at rest, millimetre grid |
-
-### Typography & ink
-
-| Token | Utility | Meaning | Use for |
-|----|----|----|----|
-| `--text-primary` | `text-foreground` | Warm deep ink (`#2C2A29`); never pure black | Body text, headings, default icons |
-| `--text-secondary` | `text-muted-foreground` | Secondary ink | Labels, subtitles, metadata, units |
-| `--text-muted` | `text-placeholder` | Muted ink | Placeholders and disabled elements only |
-
-### The one accent
-
-| Token | Utility | Meaning | Use for |
-|----|----|----|----|
-| `--color-primary` | `bg-primary`, `text-primary`, `border-primary` | **The one brand colour: hunter green** | One primary button per screen, active nav, focus rings, neutral vector drawings |
+| `--bg-elevated` | `bg-elevated` | A raised sheet | Inputs, dropdown menus, dialogs |
+| `--bg-surface-muted` | `bg-surface-muted` | A second sheet | Table headers, hover rows, skeletons, inactive tracks |
+| `--border-subtle` | `border-subtle`, `bg-subtle`, `divide-subtle` | Pencil hairline | Dividers, card borders, table rules |
+| `--border-strong` | `border-strong` | A field's contour | Inputs at rest, millimetre grid |
+| `--text-primary` | `text-ink`, `bg-ink` | Warm deep ink (`#2C2A29`); never pure black | Body text, headings, default icons |
+| `--text-secondary` | `text-secondary` | Secondary ink | Labels, subtitles, metadata, units |
+| `--text-muted` | `text-muted` | Muted ink | Placeholders and disabled elements only |
+| `--color-primary` | `bg-primary`, `text-primary`, `border-primary`, `ring-primary`, `outline-primary` | **The one brand colour: hunter green** | One primary button per screen, active nav, focus rings, neutral vector drawings |
 | `--color-primary-hover` | `bg-primary-hover` | The pressed primary | Hover and active state of a primary button |
 | `--color-primary-subtle` | `bg-primary-subtle` | A green wash | Subtle badges, selected table rows |
 | `--primary-foreground` | `text-primary-foreground` | Paper on hunter green | Labels drawn on `--color-primary` |
-
-### Semantic & data colours (meaning only)
-
-| Token | Utility | Meaning | Use for |
-|----|----|----|----|
-| `--semantic-impact` | `bg-destructive`, `text-destructive` | Crimson | Impact points, critical deviations, delete actions, errors |
-| `--semantic-warning` | `bg-warning`, `text-warning` | Ocher / amber | Warnings, unsaved changes, moderate bands |
-| `--semantic-success` | `bg-success`, `text-success` | Forest green | Optimal band, confirmations, positive trends |
-| `--semantic-info` | `bg-info`, `text-info` | Steel blue | Meteorological data and distance helper lines only |
+| `--semantic-impact` | `text-impact`, `bg-impact`, `border-impact`, `outline-impact`, `border-l-impact` | Crimson | Impact points, critical deviations, delete actions, errors |
+| `--semantic-warning` | `text-warning`, `bg-warning`, `border-warning` | Ocher / amber | Warnings, unsaved changes, moderate bands |
+| `--semantic-success` | `text-success`, `bg-success`, `border-success` | Forest green | Optimal band, confirmations, positive trends |
+| `--semantic-info` | `text-info`, `bg-info`, `border-info` | Steel blue | Meteorological data and distance helper lines only |
 
 ### Mechanics
 
 | Token | Meaning | Use for |
 |----|----|----|
-| `--contour` | Alias of the hairline | Tick rules (`rule-ticks`), quiet sheet rules |
-| `--color-secondary` | Neutral paper fill | Inactive tracks, muted chips, segmented rest state |
-| `--color-ring` | Focus indicator | Every `focus-visible` outline |
-| `--radius` | Corner radius | `--radius-sm` through `--radius-xl` are derived from it |
 | `--shadow-paper` | Sheet shadow | The `paper` class. Soft in light, `none` in dark |
 | `--shadow-overlay` | Floating-sheet shadow | The `paper-overlay` class: dialogs, menus, tooltips |
 | `--font-sans` | Interface face: **Inter** | Menus, tables, forms, small figures. Never name a family in a component |
@@ -150,14 +134,18 @@ Six elements carry the identity. Use them; do not invent a seventh.
 5. **The stamp.** `Badge` is a rubber stamp: hairline box, tracked small caps, a tint of the
    semantic colour. Status always carries its word.
 6. **The millimetre grid.** Charts and diagrams are thin geometric lines on a faint grid, like
-   graph paper — drawn from `--contour`, never filled shapes or gradients.
+   graph paper — drawn from `--border-subtle` at reduced strength, never filled shapes or
+   gradients.
 
 ## Rules
 
-1. **Semantic utilities only.** Use `bg-surface`, `text-muted-foreground`, `border-border`,
-   `bg-primary`, `text-destructive`, and so on. Never write a raw palette class (`bg-stone-100`,
-   `text-green-800`, `border-red-200`) or a hex value in a component. `check:design` fails the
-   build otherwise. Paper patterns come from `rule-ticks`, `rule-ticks-quiet`, `leader`,
+1. **Semantic utilities only, one name per colour.** Use `bg-surface`, `text-secondary`,
+   `border-subtle`, `bg-primary`, `text-impact`, and so on. Never write a raw palette class
+   (`bg-stone-100`, `text-green-800`, `border-red-200`) or a hex value in a component. The
+   shadcn-era names (`text-foreground`, `text-muted-foreground`, `border-border`, `text-destructive`,
+   `bg-surface-elevated`, `bg-background`, `outline-ring`) are **retired** and `check:design` fails
+   the build if any of them reappears — the palette must not grow a second vocabulary. There is no
+   alias layer; `@theme inline` maps each token to exactly one utility name. Paper patterns come from `rule-ticks`, `rule-ticks-quiet`, `leader`,
    `select-chevron`, or `checkbox-tick`; their SVG masks live in `globals.css` so they inherit
    `currentColor` instead of hardcoding a stroke colour. An inline style may reference only
    `var(--…)` tokens.
@@ -170,7 +158,7 @@ Six elements carry the identity. Use them; do not invent a seventh.
    drawn control are not the same thing: a control keeps its neighbour's height and extends its hit
    area with a `before` overlay. Never make a control taller than its row to reach 44px.
 5. **Focus is always visible.** Interactive elements use `focus-visible:outline-2` with
-   `outline-ring`. Never remove an outline without an equally visible replacement.
+   `outline-primary`. Never remove an outline without an equally visible replacement.
 6. **One primary action per screen.** Everything else is `secondary` or `ghost`. Destructive
    actions use `destructive` and are never the primary button.
 7. **German UI copy, English code.** Labels are German, identifiers and comments are English. Do
@@ -181,7 +169,7 @@ Six elements carry the identity. Use them; do not invent a seventh.
    identity: prefer a wider gap to another rule.
 9. **Variants come from `cva`.** New variants are added in the component's `cva` definition, not by
    passing arbitrary classes at call sites. Public variant names stay backwards compatible.
-10. **Flat by default.** Edges come from `border-border` and `--contour`. Cards carry the `paper`
+10. **Flat by default.** Edges come from `border-subtle`. Cards carry the `paper`
     shadow class, which is `none` in dark mode; only overlays that genuinely float (dialogs,
     dropdowns, tooltips) carry `paper-overlay`. No hover elevation, gradients, or glass. A dragging
     row is marked by `ring-1 ring-primary`, never by a shadow.
@@ -233,7 +221,7 @@ for class merging.
   never the whole row; its hit area follows the touch rule. A handle's accessible name must be
   distinct per row and must not invent a position that does not exist. Numbers in tables are
   `tabular-nums` and right-aligned; machine values are mono. Table heads are tracked small caps on
-  `--surface-muted`.
+  `--bg-surface-muted`.
 - `Field` owns label, hint, and error placement. Use it instead of hand-assembling label + input.
 - Layout components (`app-shell`, `sidebar`, `page-chrome`) and workflow components are composed
   from the primitives. The active nav item is marked by a filled treatment plus `aria-current`,

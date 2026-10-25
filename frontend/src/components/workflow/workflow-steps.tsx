@@ -54,10 +54,10 @@ export function WorkflowSteps({
               className={cn(
                 "flex size-6 items-center justify-center rounded-sm text-[11px] font-semibold tabular-nums",
                 isCurrent
-                  ? "border-2 border-primary bg-surface text-foreground"
+                  ? "border-2 border-primary bg-surface text-ink"
                   : isDone
                     ? "bg-primary text-primary-foreground"
-                    : "border border-border text-muted-foreground",
+                    : "border border-subtle text-secondary",
               )}
             >
               {index + 1}
@@ -66,28 +66,26 @@ export function WorkflowSteps({
               className={cn(
                 "text-sm",
                 isCurrent
-                  ? "font-semibold text-foreground"
+                  ? "font-semibold text-ink"
                   : isDone
-                    ? "text-foreground"
-                    : "text-muted-foreground",
+                    ? "text-ink"
+                    : "text-secondary",
               )}
             >
               {step.label}
               {isCurrent ? (
-                <span className="ml-1.5 font-mono text-xs text-muted-foreground">
+                <span className="ml-1.5 font-mono text-xs text-secondary">
                   Schritt {index + 1} von {steps.length}
                 </span>
               ) : null}
             </span>
             {step.optional ? (
-              <span className="text-xs text-muted-foreground">
-                ({optionalLabel})
-              </span>
+              <span className="text-xs text-secondary">({optionalLabel})</span>
             ) : null}
             {isLast ? null : (
               <span
                 aria-hidden="true"
-                className="h-px w-8 border-t border-dashed border-border"
+                className="h-px w-8 border-t border-dashed border-subtle"
               />
             )}
           </li>

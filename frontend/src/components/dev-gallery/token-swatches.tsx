@@ -115,10 +115,10 @@ function SwatchGrid() {
         {COLOUR_TOKENS.map((token) => (
           <div key={token} className="w-28 space-y-1">
             <div
-              className="h-12 rounded-sm border border-border"
+              className="h-12 rounded-sm border border-subtle"
               style={{ background: `var(--${token})` }}
             />
-            <code className="block font-mono text-[10px] break-all text-muted-foreground">
+            <code className="block font-mono text-[10px] break-all text-secondary">
               --{token}
             </code>
           </div>
@@ -126,7 +126,7 @@ function SwatchGrid() {
       </Example>
 
       <div className="space-y-1.5">
-        <p className="text-xs font-medium text-muted-foreground">Kontrast</p>
+        <p className="text-xs font-medium text-secondary">Kontrast</p>
         <ul className="space-y-1">
           {measurements.map((entry) => {
             const passes =
@@ -138,7 +138,7 @@ function SwatchGrid() {
               >
                 <span>{entry.label}</span>
                 <span className="flex items-center gap-2">
-                  <code className="font-mono text-muted-foreground">
+                  <code className="font-mono text-secondary">
                     {entry.ratio === null ? "–" : `${entry.ratio.toFixed(2)}:1`}
                   </code>
                   <Badge variant={passes ? "success" : "error"}>
@@ -150,7 +150,7 @@ function SwatchGrid() {
           })}
         </ul>
         {measurements.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Wird gemessen…</p>
+          <p className="text-xs text-secondary">Wird gemessen…</p>
         ) : null}
       </div>
     </div>

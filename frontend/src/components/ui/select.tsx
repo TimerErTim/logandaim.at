@@ -17,11 +17,11 @@ export function Select({ className, ...props }: SelectProps) {
   return (
     <select
       className={cn(
-        "select-chevron h-10 w-full appearance-none rounded-sm border border-border-strong bg-surface-elevated py-0 pr-9 pl-3 text-sm text-foreground",
+        "select-chevron h-10 w-full appearance-none rounded-sm border border-strong bg-elevated py-0 pr-9 pl-3 text-sm text-ink",
         "transition-colors",
-        "hover:border-muted-foreground/60",
-        "focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ring",
-        "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-placeholder",
+        "hover:border-ink/40",
+        "focus-visible:border-primary focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary",
+        "disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-muted",
         className,
       )}
       {...props}

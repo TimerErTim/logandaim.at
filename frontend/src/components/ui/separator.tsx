@@ -23,7 +23,7 @@ export function Separator({
       className={cn(
         orientation === "horizontal"
           ? "rule-ticks h-px w-full"
-          : "h-full w-px bg-border",
+          : "h-full w-px bg-subtle",
         className,
       )}
       {...props}

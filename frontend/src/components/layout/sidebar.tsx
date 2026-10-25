@@ -22,7 +22,7 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-surface transition-transform",
+        "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-subtle bg-surface transition-transform",
         "-translate-x-full lg:static lg:translate-x-0",
         "peer-checked:translate-x-0",
       )}
@@ -35,7 +35,7 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
               "flex min-h-11 w-full items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition-colors",
               homeActive
                 ? "bg-primary text-primary-foreground"
-                : "text-foreground hover:bg-surface-muted",
+                : "text-ink hover:bg-surface-muted",
             )}
           >
             <HomeIcon className="size-5" />
@@ -46,7 +46,7 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
         <div className="flex-1 space-y-8">
           {categories.map((category) => (
             <div key={category.label} className="space-y-2">
-              <h3 className="px-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              <h3 className="px-2 text-xs font-semibold tracking-wider text-secondary uppercase">
                 {category.label}
               </h3>
               <div className="space-y-1">
@@ -82,8 +82,8 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
       className={cn(
         "flex min-h-11 w-full items-center gap-3 rounded-sm px-3 py-2 text-sm transition-colors",
         active
-          ? "bg-primary/10 font-semibold text-foreground"
-          : "text-foreground hover:bg-surface-muted",
+          ? "bg-primary/10 font-semibold text-ink"
+          : "text-ink hover:bg-surface-muted",
       )}
     >
       {active ? <NavMarkierung /> : null}

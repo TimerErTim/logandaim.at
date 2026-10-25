@@ -154,7 +154,7 @@ function SortableRow({
         className={cn(
           "relative",
           isDragging && "z-10 bg-surface ring-1 ring-primary",
-          !row.active && "text-muted-foreground",
+          !row.active && "text-secondary",
         )}
       >
         <TableCell className="w-10 py-1 pr-0">
@@ -166,7 +166,7 @@ function SortableRow({
             variant="ghost"
             size="icon"
             aria-label={`Verschieben: ${name}`}
-            className="cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+            className="cursor-grab touch-none text-secondary active:cursor-grabbing"
             {...attributes}
             {...listeners}
           >
@@ -217,7 +217,7 @@ function SortableRow({
               size="icon"
               aria-label={`Löschen: ${name}`}
               onClick={onDelete}
-              className="text-muted-foreground hover:text-destructive"
+              className="text-secondary hover:text-impact"
             >
               <Trash2 />
             </Button>
@@ -238,7 +238,7 @@ function SortableRow({
             className="bg-surface-muted/50 pt-0"
           >
             <div className="space-y-2 py-3">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-xs font-medium text-secondary">
                 Messwert für {name}
               </p>
               <CheckpointSlider
@@ -274,12 +274,12 @@ function DraftRow({
       <TableCell className="w-10 py-1 pr-0">
         <span
           aria-hidden="true"
-          className="flex size-10 items-center justify-center text-muted-foreground"
+          className="flex size-10 items-center justify-center text-secondary"
         >
           <Plus />
         </span>
       </TableCell>
-      <TableHeader scope="row" className="w-16 py-1 text-muted-foreground">
+      <TableHeader scope="row" className="w-16 py-1 text-secondary">
         <span className="font-mono text-xs tabular-nums">{nextIndex}</span>
       </TableHeader>
       <TableCell className="py-1" colSpan={4}>
@@ -289,7 +289,7 @@ function DraftRow({
             onChange={onCreate}
             label={`Status für neue Zeile ${nextIndex}`}
           />
-          <span className="text-xs text-muted-foreground">
+          <span className="text-xs text-secondary">
             Status wählen, um die Zeile anzulegen
           </span>
         </div>
@@ -316,7 +316,7 @@ function CheckpointSliderDemo({
   return (
     <div className="w-full max-w-md space-y-2">
       {caption ? (
-        <p className="text-xs font-medium text-muted-foreground">{caption}</p>
+        <p className="text-xs font-medium text-secondary">{caption}</p>
       ) : null}
       <CheckpointSlider
         checkpoints={checkpoints}
@@ -328,9 +328,7 @@ function CheckpointSliderDemo({
         einheit="Einheiten"
         disabled={disabled}
       />
-      <p className="text-xs text-muted-foreground tabular-nums">
-        {measure} Einheiten
-      </p>
+      <p className="text-xs text-secondary tabular-nums">{measure} Einheiten</p>
     </div>
   );
 }

@@ -24,7 +24,7 @@ export function TooltipContent({
       <TooltipPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "paper-overlay z-50 max-w-64 rounded-sm bg-foreground px-2 py-1 text-xs text-background",
+          "paper-overlay z-50 max-w-64 rounded-sm bg-ink px-2 py-1 text-xs text-canvas",
           className,
         )}
         {...props}

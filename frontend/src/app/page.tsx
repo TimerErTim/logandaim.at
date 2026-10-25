@@ -12,7 +12,7 @@ export default function HomePage() {
         <CardHeader>
           <CardTitle>logandaim.at</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
+        <CardContent className="space-y-2 text-sm text-secondary">
           <p>Platzhalter. Die Anwendung wird hier aufgebaut.</p>
           <p>
             API-Status:{" "}

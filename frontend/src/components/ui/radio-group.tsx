@@ -29,9 +29,9 @@ export function RadioGroupItem({
   return (
     <RadioGroupPrimitive.Item
       className={cn(
-        "size-4 shrink-0 rounded-full border border-border bg-surface",
+        "size-4 shrink-0 rounded-full border border-subtle bg-surface",
         "transition-colors",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
         "disabled:cursor-not-allowed disabled:opacity-50",
         "data-[state=checked]:border-primary",
         className,
@@ -63,7 +63,7 @@ export function RadioGroupOption({
   return (
     <div className="flex min-h-11 items-center gap-3">
       <RadioGroupItem id={id} value={value} />
-      <label htmlFor={id} className="cursor-pointer text-sm text-foreground">
+      <label htmlFor={id} className="cursor-pointer text-sm text-ink">
         {label}
       </label>
     </div>

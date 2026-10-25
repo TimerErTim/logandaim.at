@@ -235,7 +235,7 @@ export function FormSection() {
       <Checkbox label="Als Entwurf markieren" />
       <div className="flex min-h-11 items-center gap-3">
         <Switch aria-labelledby="gallery-detail-label" defaultChecked />
-        <span id="gallery-detail-label" className="text-sm text-foreground">
+        <span id="gallery-detail-label" className="text-sm text-ink">
           Details anzeigen
         </span>
       </div>
@@ -245,7 +245,7 @@ export function FormSection() {
         <RadioGroupOption value="gamma" label="Gamma" />
       </RadioGroup>
       <fieldset className="space-y-2">
-        <legend className="text-[10px] font-semibold tracking-[0.09em] text-muted-foreground uppercase">
+        <legend className="text-[10px] font-semibold tracking-[0.09em] text-secondary uppercase">
           Status
         </legend>
         <ToggleGroup
@@ -302,7 +302,7 @@ export function DataSection() {
 
       <div className="space-y-2">
         <div className="flex items-baseline justify-between text-xs">
-          <span className="text-muted-foreground">Fortschritt</span>
+          <span className="text-secondary">Fortschritt</span>
           <span className="font-mono tabular-nums">64 %</span>
         </div>
         <Progress value={64} aria-label="Fortschritt" />
@@ -391,11 +391,9 @@ export function OverlaySection() {
             step={1}
             aria-label="Abstand"
           />
-          <div className="flex items-baseline justify-between font-mono text-xs text-muted-foreground tabular-nums">
+          <div className="flex items-baseline justify-between font-mono text-xs text-secondary tabular-nums">
             <span>10</span>
-            <span className="text-sm font-semibold text-foreground">
-              {distanz} m
-            </span>
+            <span className="text-sm font-semibold text-ink">{distanz} m</span>
             <span>80</span>
           </div>
         </div>
@@ -430,10 +428,10 @@ export function MiscSection() {
           Fließtext in Inter. Die Zeile bleibt bei etwa 68 Zeichen, damit das
           Auge den nächsten Satz findet.
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-secondary">
           Nebentext für Hinweise, Einheiten und Zeitstempel.
         </p>
-        <p className="font-mono text-xs text-muted-foreground">
+        <p className="font-mono text-xs text-secondary">
           0712 · 284 / 320 · 42 m
         </p>
       </div>

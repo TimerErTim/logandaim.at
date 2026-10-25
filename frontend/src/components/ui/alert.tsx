@@ -17,15 +17,15 @@ import { cn } from "@/lib/cn";
  * so meaning never rests on the tint alone.
  */
 const alertVariants = cva(
-  "flex items-start gap-3 rounded-sm border border-l-2 px-4 py-3 text-sm text-foreground",
+  "flex items-start gap-3 rounded-sm border border-l-2 px-4 py-3 text-sm text-ink",
   {
     variants: {
       variant: {
-        info: "border-border border-l-info bg-info/10",
+        info: "border-subtle border-l-info bg-info/10",
         // `bg-warning/12` keeps the wash light enough that ink on it clears AA.
         success: "border-success/30 border-l-success bg-success/10",
         warning: "border-warning/40 border-l-warning bg-warning/12",
-        error: "border-destructive/30 border-l-destructive bg-destructive/10",
+        error: "border-impact/30 border-l-impact bg-impact/10",
       },
     },
     defaultVariants: {
@@ -44,7 +44,7 @@ const iconColour: Record<NonNullable<AlertProps["variant"]>, string> = {
   info: "text-info",
   success: "text-success",
   warning: "text-warning",
-  error: "text-destructive",
+  error: "text-impact",
 };
 
 export function Alert({

@@ -38,7 +38,7 @@ export function Progress({
         className="pointer-events-none absolute inset-0 flex justify-between"
       >
         {[0, 1, 2, 3, 4].map((ticks) => (
-          <span key={`tick-${ticks}`} className="w-px bg-contour" />
+          <span key={`tick-${ticks}`} className="w-px bg-subtle" />
         ))}
       </span>
     </ProgressPrimitive.Root>

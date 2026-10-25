@@ -13,7 +13,7 @@ export function Table({
   ...props
 }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto rounded-md border border-border bg-surface">
+    <div className="overflow-x-auto rounded-md border border-subtle bg-surface">
       <table
         className={cn("w-full border-collapse text-sm", className)}
         {...props}
@@ -30,8 +30,8 @@ export function TableHead({
   return (
     <thead
       className={cn(
-        "sticky top-0 z-10 border-b border-border bg-surface-muted text-left",
-        "text-[10px] font-semibold tracking-[0.09em] text-muted-foreground uppercase",
+        "sticky top-0 z-10 border-b border-subtle bg-surface-muted text-left",
+        "text-[10px] font-semibold tracking-[0.09em] text-secondary uppercase",
         className,
       )}
       {...props}
@@ -44,7 +44,7 @@ export function TableBody({
   ...props
 }: HTMLAttributes<HTMLTableSectionElement>) {
   return (
-    <tbody className={cn("divide-y divide-border", className)} {...props} />
+    <tbody className={cn("divide-y divide-subtle", className)} {...props} />
   );
 }
 
@@ -96,7 +96,7 @@ export function TableKeyValue({
     <dl className={cn("space-y-1.5 text-sm", className)}>
       {labels.map((entry) => (
         <div key={entry.id} className="flex items-baseline gap-2">
-          <dt className="shrink-0 text-muted-foreground">{entry.label}</dt>
+          <dt className="shrink-0 text-secondary">{entry.label}</dt>
           <span
             aria-hidden="true"
             className="leader mb-1 h-2 min-w-4 flex-1 opacity-60"

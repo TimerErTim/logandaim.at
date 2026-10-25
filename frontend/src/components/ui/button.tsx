@@ -21,7 +21,7 @@ const buttonVariants = cva(
   [
     "inline-flex shrink-0 items-center justify-center gap-2 rounded-sm",
     "text-sm font-medium whitespace-nowrap transition-colors",
-    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
     "disabled:cursor-not-allowed disabled:opacity-50",
     "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   ].join(" "),
@@ -31,10 +31,10 @@ const buttonVariants = cva(
         primary:
           "bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-hover",
         secondary:
-          "border border-border-strong bg-surface-elevated text-foreground hover:border-muted-foreground/60 hover:bg-surface-muted",
-        ghost: "text-foreground hover:bg-surface-muted",
+          "border border-strong bg-elevated text-ink hover:border-ink/40 hover:bg-surface-muted",
+        ghost: "text-ink hover:bg-surface-muted",
         destructive:
-          "border border-destructive/40 bg-transparent text-destructive hover:border-destructive hover:bg-destructive/10",
+          "border border-impact/40 bg-transparent text-impact hover:border-impact hover:bg-impact/10",
       },
       size: {
         sm: "h-8 px-2.5 text-[13px]",

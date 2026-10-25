@@ -18,15 +18,15 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-border bg-surface-muted text-foreground",
+        default: "border-subtle bg-surface-muted text-ink",
         success: "border-success/40 bg-success/10 text-success",
-        error: "border-destructive/40 bg-destructive/10 text-destructive",
+        error: "border-impact/40 bg-impact/10 text-impact",
         // Ink on amber: the wash carries the colour, the word stays legible.
-        warning: "border-warning/50 bg-warning/15 text-foreground",
+        warning: "border-warning/50 bg-warning/15 text-ink",
         // The one stamp in brand ink, for the single state worth marking strongly.
         primary: "border-primary/40 bg-primary-subtle text-primary",
         info: "border-info/40 bg-info/10 text-info",
-        outline: "border-border bg-transparent text-foreground",
+        outline: "border-subtle bg-transparent text-ink",
       },
     },
     defaultVariants: {

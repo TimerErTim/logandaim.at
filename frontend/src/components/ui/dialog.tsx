@@ -22,11 +22,11 @@ export function DialogContent({
 }: ComponentProps<typeof DialogPrimitive.Content>) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-foreground/25" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ink/25" />
       <DialogPrimitive.Content
         className={cn(
           "paper-overlay fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2",
-          "space-y-4 rounded-md border border-border bg-surface-elevated p-6",
+          "space-y-4 rounded-md border border-subtle bg-elevated p-6",
           "focus-visible:outline-none",
           className,
         )}
@@ -37,8 +37,8 @@ export function DialogContent({
           aria-label="Schließen"
           className={cn(
             "absolute top-2 right-2 inline-flex size-11 items-center justify-center rounded-sm",
-            "text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+            "text-secondary transition-colors hover:bg-surface-muted hover:text-ink",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
           )}
         >
           <X className="size-4" />
@@ -56,7 +56,7 @@ export function DialogFooter({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-2 border-t border-subtle pt-4 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}
@@ -86,7 +86,7 @@ export function DialogDescription({
 }: ComponentProps<typeof DialogPrimitive.Description>) {
   return (
     <DialogPrimitive.Description
-      className={cn("text-[13px] text-muted-foreground", className)}
+      className={cn("text-[13px] text-secondary", className)}
       {...props}
     />
   );

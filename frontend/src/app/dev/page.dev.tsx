@@ -59,7 +59,7 @@ export default function DevGalleryPage() {
   const [showTouchTargets, setShowTouchTargets] = useState(false);
 
   return (
-    <div className="min-h-full bg-background">
+    <div className="min-h-full bg-canvas">
       <SetBreadcrumbLabel label="Design-Galerie" />
 
       <div className="mx-auto max-w-6xl px-6 py-10">
@@ -68,23 +68,18 @@ export default function DevGalleryPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="primary">Sleek Paperstyle</Badge>
             <Badge variant="outline">Nur im Dev-Server</Badge>
-            <span className="font-mono text-xs text-muted-foreground">
-              13 Tafeln
-            </span>
+            <span className="font-mono text-xs text-secondary">13 Tafeln</span>
           </div>
 
           <div className="space-y-2">
             <h1 className="font-serif text-3xl leading-tight font-semibold tracking-tight text-balance">
               Gestaltungs-Galerie
             </h1>
-            <p className="max-w-prose text-sm text-muted-foreground">
+            <p className="max-w-prose text-sm text-secondary">
               Die visuelle Identität als Musterbuch. Jede Tafel zeigt dieselben
               Bausteine zweimal: links auf warmem Papier, rechts im Lampenlicht.
               Farben, Radien und Schatten kommen ausschließlich aus{" "}
-              <code className="font-mono text-xs text-foreground">
-                globals.css
-              </code>
-              .
+              <code className="font-mono text-xs text-ink">globals.css</code>.
             </p>
           </div>
 
@@ -98,9 +93,9 @@ export default function DevGalleryPage() {
               <li key={plate.id}>
                 <a
                   href={`#${plate.id}`}
-                  className="group flex items-baseline gap-2 rounded-sm py-0.5 text-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  className="group flex items-baseline gap-2 rounded-sm py-0.5 text-sm transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
-                  <span className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                  <span className="font-mono text-[11px] text-secondary tabular-nums">
                     {plate.index}
                   </span>
                   <span>{plate.label}</span>
@@ -123,7 +118,7 @@ export default function DevGalleryPage() {
               type="checkbox"
               checked={showTouchTargets}
               onChange={(event) => setShowTouchTargets(event.target.checked)}
-              className="checkbox-tick size-4 appearance-none rounded-sm border border-border bg-surface"
+              className="checkbox-tick size-4 appearance-none rounded-sm border border-subtle bg-surface"
             />
             44 px Touch-Ziele markieren
           </label>
@@ -153,8 +148,8 @@ export default function DevGalleryPage() {
         </div>
 
         {/* Colophon: the page signs itself off, as a printed specimen sheet does. */}
-        <footer className="mt-16 border-t border-border pt-4">
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
+        <footer className="mt-16 border-t border-subtle pt-4">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-secondary">
             <span>Lora · Inter · Geist Mono</span>
             <span aria-hidden="true">·</span>
             <span>WCAG 2.2 AA</span>

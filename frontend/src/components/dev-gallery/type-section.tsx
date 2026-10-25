@@ -25,7 +25,7 @@ export function TypeSection() {
       <header className="flex items-baseline gap-4 pb-3">
         <span
           aria-hidden="true"
-          className="font-mono text-xs text-muted-foreground tabular-nums"
+          className="font-mono text-xs text-secondary tabular-nums"
         >
           02
         </span>
@@ -36,7 +36,7 @@ export function TypeSection() {
           >
             Schrift
           </h2>
-          <p className="max-w-prose text-sm text-muted-foreground">
+          <p className="max-w-prose text-sm text-secondary">
             Lora trägt die Überschriften, Inter die Arbeit. Der Buchcharakter
             lebt in den Titeln; alles, was gelesen und bedient wird, bleibt
             nüchtern.
@@ -47,10 +47,10 @@ export function TypeSection() {
       <div aria-hidden="true" className="rule-ticks mb-4 h-px w-full" />
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="light space-y-5 rounded-md border border-border bg-background p-4 text-foreground">
+        <div className="light space-y-5 rounded-md border border-subtle bg-canvas p-4 text-ink">
           <TypeSpecimen />
         </div>
-        <div className="dark space-y-5 rounded-md border border-border bg-background p-4 text-foreground">
+        <div className="dark space-y-5 rounded-md border border-subtle bg-canvas p-4 text-ink">
           <TypeSpecimen />
         </div>
       </div>
@@ -76,7 +76,7 @@ function TypeSpecimen() {
             Jeden Eintrag einzeln erfassen. Der erste Wert und der Folgewert
             werden daraus berechnet.
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-secondary">
             Nebentext: 32 Einträge, 4 Kategorien, Abstand 42 Schritte.
           </p>
         </div>
@@ -85,7 +85,7 @@ function TypeSpecimen() {
       <Example caption="Tabelle und Bedienelemente" className="block">
         <div className="w-full space-y-3">
           <table className="w-full border-collapse text-sm">
-            <thead className="border-b border-border text-left text-[10px] tracking-[0.09em] text-muted-foreground uppercase">
+            <thead className="border-b border-subtle text-left text-[10px] tracking-[0.09em] text-secondary uppercase">
               <tr>
                 <th scope="col" className="py-1.5 font-semibold">
                   Nr.
@@ -98,7 +98,7 @@ function TypeSpecimen() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody className="divide-y divide-subtle">
               {SAMPLE_ROWS.map((row) => (
                 <tr key={row.nr}>
                   <td className="py-1.5 font-mono text-xs tabular-nums">
@@ -117,7 +117,7 @@ function TypeSpecimen() {
             <Button size="sm" variant="secondary">
               Abbrechen
             </Button>
-            <span className="font-mono text-xs text-muted-foreground tabular-nums">
+            <span className="font-mono text-xs text-secondary tabular-nums">
               0712 · 284 / 320
             </span>
           </div>

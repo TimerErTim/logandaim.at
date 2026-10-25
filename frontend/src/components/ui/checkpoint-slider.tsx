@@ -117,7 +117,7 @@ export function CheckpointSlider({
         max={max}
         step={step}
       >
-        <SliderPrimitive.Track className="relative h-3 w-full grow overflow-hidden rounded-sm border border-border">
+        <SliderPrimitive.Track className="relative h-3 w-full grow overflow-hidden rounded-sm border border-subtle">
           <span
             aria-hidden="true"
             className="absolute inset-0"
@@ -131,7 +131,7 @@ export function CheckpointSlider({
             {sorted.map((eintrag) => (
               <span
                 key={eintrag.id}
-                className="absolute top-0 h-full w-px bg-foreground/40"
+                className="absolute top-0 h-full w-px bg-ink/40"
                 style={{ left: `${position(eintrag.wert)}%` }}
               />
             ))}
@@ -141,7 +141,7 @@ export function CheckpointSlider({
           aria-label={label}
           aria-valuetext={valuetext}
           aria-describedby={legendId}
-          className="relative block size-5 cursor-grab rounded-sm border-2 border-foreground bg-surface before:absolute before:-inset-3.5 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:cursor-grabbing"
+          className="relative block size-5 cursor-grab rounded-sm border-2 border-ink bg-surface before:absolute before:-inset-3.5 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:cursor-grabbing"
         />
       </SliderPrimitive.Root>
 
@@ -153,11 +153,11 @@ export function CheckpointSlider({
           <li key={eintrag.id} className="flex items-center gap-1.5">
             <span
               aria-hidden="true"
-              className="size-3 rounded-sm border border-border"
+              className="size-3 rounded-sm border border-subtle"
               style={{ background: eintrag.farbe }}
             />
-            <span className="font-medium text-foreground">{eintrag.label}</span>
-            <span className="text-muted-foreground tabular-nums">
+            <span className="font-medium text-ink">{eintrag.label}</span>
+            <span className="text-secondary tabular-nums">
               {eintrag.wert}
               {einheitText}
             </span>

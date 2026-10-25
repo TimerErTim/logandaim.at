@@ -258,19 +258,19 @@ export function ScaleBar({
 
   return (
     <div className={cn("space-y-1", className)}>
-      <div className="flex h-2.5 items-stretch border border-foreground">
+      <div className="flex h-2.5 items-stretch border border-ink">
         {pieces.map((piece, index) => (
           <div
             key={piece.key}
             className={cn(
               "flex-1",
-              piece.filled ? "bg-foreground" : "bg-transparent",
-              index > 0 ? "border-l border-foreground" : "",
+              piece.filled ? "bg-ink" : "bg-transparent",
+              index > 0 ? "border-l border-ink" : "",
             )}
           />
         ))}
       </div>
-      <div className="flex justify-between font-mono text-[10px] text-muted-foreground">
+      <div className="flex justify-between font-mono text-[10px] text-secondary">
         <span>0</span>
         <span>
           one stroke = {unitsPerSegment} {unit}
@@ -309,11 +309,11 @@ export function Legend({
   return (
     <div
       className={cn(
-        "rounded-sm border border-border bg-surface p-3",
+        "rounded-sm border border-subtle bg-surface p-3",
         className,
       )}
     >
-      <p className="mb-2 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+      <p className="mb-2 text-[11px] font-semibold tracking-[0.08em] text-secondary uppercase">
         {title}
       </p>
       <ul className="space-y-1.5">

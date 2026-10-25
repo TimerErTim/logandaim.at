@@ -137,9 +137,7 @@ export default function SchussPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {schüsse.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Noch kein Schuss erfasst.
-            </p>
+            <p className="text-sm text-secondary">Noch kein Schuss erfasst.</p>
           ) : (
             <Table>
               <TableHead>
@@ -187,23 +185,19 @@ export default function SchussPage() {
           {wertung ? (
             <dl className="grid gap-3 text-sm sm:grid-cols-3">
               <div>
-                <dt className="font-medium text-muted-foreground">
-                  Erster Treffer
-                </dt>
+                <dt className="font-medium text-secondary">Erster Treffer</dt>
                 <dd className="mt-0.5 text-lg font-semibold">
                   {wertung.ersterTreffer}
                 </dd>
               </div>
               <div>
-                <dt className="font-medium text-muted-foreground">
-                  Mehrschuss
-                </dt>
+                <dt className="font-medium text-secondary">Mehrschuss</dt>
                 <dd className="mt-0.5 text-lg font-semibold">
                   {wertung.mehrschuss}
                 </dd>
               </div>
               <div>
-                <dt className="font-medium text-muted-foreground">
+                <dt className="font-medium text-secondary">
                   Erster Pfeil getroffen
                 </dt>
                 <dd className="mt-0.5 text-lg font-semibold">

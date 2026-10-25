@@ -18,10 +18,10 @@ import { cn } from "@/lib/cn";
 const toggleGroupItemVariants = cva(
   [
     "relative -ml-px inline-flex min-h-11 items-center justify-center gap-2 px-3.5",
-    "border border-border text-sm font-medium text-muted-foreground",
+    "border border-subtle text-sm font-medium text-secondary",
     "transition-colors first:ml-0 first:rounded-l-sm last:rounded-r-sm",
-    "hover:bg-surface-muted hover:text-foreground",
-    "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+    "hover:bg-surface-muted hover:text-ink",
+    "focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
     "disabled:pointer-events-none disabled:opacity-50",
     "data-[state=on]:z-10 data-[state=on]:border-primary data-[state=on]:bg-primary data-[state=on]:font-semibold data-[state=on]:text-primary-foreground",
   ].join(" "),
