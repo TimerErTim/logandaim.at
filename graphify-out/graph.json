@@ -256,43 +256,17 @@
       "source_location": "L38"
     },
     {
-      "id": "frontend_src_components_dev_gallery_data_figures_legendentry",
-      "label": "LegendEntry",
+      "id": "frontend_src_components_ui_search_input_searchinputprops",
+      "label": "SearchInputProps",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 6,
       "community_name": "cn",
       "file_type": "code",
-      "norm_label": "legendentry",
-      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
-      "source_location": "L290"
-    },
-    {
-      "id": "frontend_src_components_dev_gallery_data_figures_ringmark",
-      "label": "RingMark",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "ringmark",
-      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
-      "source_location": "L49"
-    },
-    {
-      "id": "frontend_src_components_dev_gallery_data_figures_seriespoint",
-      "label": "SeriesPoint",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "seriespoint",
-      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
-      "source_location": "L153"
+      "norm_label": "searchinputprops",
+      "source_file": "frontend/src/components/ui/search-input.tsx",
+      "source_location": "L6"
     },
     {
       "id": "frontend_src_components_workflow_workflow_steps_step",
@@ -321,19 +295,6 @@
       "source_location": "L10"
     },
     {
-      "id": "frontend_src_components_ui_checkbox_checkboxprops",
-      "label": "CheckboxProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 70,
-      "community_name": "react",
-      "file_type": "code",
-      "norm_label": "checkboxprops",
-      "source_file": "frontend/src/components/ui/checkbox.tsx",
-      "source_location": "L5"
-    },
-    {
       "id": "frontend_src_components_ui_field_fieldprops",
       "label": "FieldProps",
       "_callable": true,
@@ -345,19 +306,6 @@
       "norm_label": "fieldprops",
       "source_file": "frontend/src/components/ui/field.tsx",
       "source_location": "L6"
-    },
-    {
-      "id": "frontend_src_components_ui_select_selectprops",
-      "label": "SelectProps",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "community": 70,
-      "community_name": "react",
-      "file_type": "code",
-      "norm_label": "selectprops",
-      "source_file": "frontend/src/components/ui/select.tsx",
-      "source_location": "L5"
     },
     {
       "id": "frontend_src_components_ui_textarea_textareaprops",
@@ -412,6 +360,19 @@
       "source_location": "L53"
     },
     {
+      "id": "frontend_src_components_ui_checkbox_checkboxprops",
+      "label": "CheckboxProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "sortable-table-section.tsx",
+      "file_type": "code",
+      "norm_label": "checkboxprops",
+      "source_file": "frontend/src/components/ui/checkbox.tsx",
+      "source_location": "L5"
+    },
+    {
       "id": "frontend_src_components_ui_checkpoint_slider_checkpoint",
       "label": "Checkpoint",
       "_callable": true,
@@ -443,11 +404,24 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 74,
-      "community_name": "sortable-table-section.tsx",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
       "norm_label": "inputprops",
       "source_file": "frontend/src/components/ui/input.tsx",
+      "source_location": "L5"
+    },
+    {
+      "id": "frontend_src_components_ui_select_selectprops",
+      "label": "SelectProps",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "selectprops",
+      "source_file": "frontend/src/components/ui/select.tsx",
       "source_location": "L5"
     },
     {
@@ -555,17 +529,43 @@
       "source_location": "L8"
     },
     {
-      "id": "frontend_src_components_ui_search_input_searchinputprops",
-      "label": "SearchInputProps",
+      "id": "frontend_src_components_dev_gallery_data_figures_legendentry",
+      "label": "LegendEntry",
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
       "community": 91,
-      "community_name": "search-input.tsx",
+      "community_name": "data-figures.tsx",
       "file_type": "code",
-      "norm_label": "searchinputprops",
-      "source_file": "frontend/src/components/ui/search-input.tsx",
-      "source_location": "L6"
+      "norm_label": "legendentry",
+      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
+      "source_location": "L290"
+    },
+    {
+      "id": "frontend_src_components_dev_gallery_data_figures_ringmark",
+      "label": "RingMark",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "data-figures.tsx",
+      "file_type": "code",
+      "norm_label": "ringmark",
+      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
+      "source_location": "L49"
+    },
+    {
+      "id": "frontend_src_components_dev_gallery_data_figures_seriespoint",
+      "label": "SeriesPoint",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "data-figures.tsx",
+      "file_type": "code",
+      "norm_label": "seriespoint",
+      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
+      "source_location": "L153"
     },
     {
       "id": "frontend_src_lib_format_formatdate",
@@ -902,18 +902,6 @@
       "norm_label": "toisodate()",
       "source_file": "frontend/src/lib/dates.ts",
       "source_location": "L5"
-    },
-    {
-      "id": "frontend_src_components_ui_slider_slider",
-      "label": "Slider()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "slider()",
-      "source_file": "frontend/src/components/ui/slider.tsx",
-      "source_location": "L18"
     },
     {
       "id": "tasks_scripts_changelog_contentlines",
@@ -1420,90 +1408,6 @@
       "source_location": "L3"
     },
     {
-      "id": "frontend_src_components_dev_gallery_data_figures_gridpaper",
-      "label": "GridPaper()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "gridpaper()",
-      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
-      "source_location": "L26"
-    },
-    {
-      "id": "frontend_src_components_dev_gallery_data_figures_legend",
-      "label": "Legend()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "legend()",
-      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
-      "source_location": "L300"
-    },
-    {
-      "id": "frontend_src_components_dev_gallery_data_figures_ringplot",
-      "label": "RingPlot()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "ringplot()",
-      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
-      "source_location": "L64"
-    },
-    {
-      "id": "frontend_src_components_dev_gallery_data_figures_scalebar",
-      "label": "ScaleBar()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "scalebar()",
-      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
-      "source_location": "L243"
-    },
-    {
-      "id": "frontend_src_components_dev_gallery_data_figures_section_datafiguressection",
-      "label": "DataFiguresSection()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "datafiguressection()",
-      "source_file": "frontend/src/components/dev-gallery/data-figures-section.tsx",
-      "source_location": "L21"
-    },
-    {
-      "id": "frontend_src_components_dev_gallery_data_figures_seriesplot",
-      "label": "SeriesPlot()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "seriesplot()",
-      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
-      "source_location": "L168"
-    },
-    {
-      "id": "frontend_src_components_dev_gallery_sortable_table_section_sortablerow",
-      "label": "SortableRow()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "sortablerow()",
-      "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
-      "source_location": "L118"
-    },
-    {
       "id": "frontend_src_components_ui_dialog_dialogcontent",
       "label": "DialogContent()",
       "_callable": true,
@@ -1562,6 +1466,54 @@
       "norm_label": "dialogtitle()",
       "source_file": "frontend/src/components/ui/dialog.tsx",
       "source_location": "L68"
+    },
+    {
+      "id": "frontend_src_components_ui_radio_group_radiogroup",
+      "label": "RadioGroup()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cn",
+      "file_type": "code",
+      "norm_label": "radiogroup()",
+      "source_file": "frontend/src/components/ui/radio-group.tsx",
+      "source_location": "L8"
+    },
+    {
+      "id": "frontend_src_components_ui_radio_group_radiogroupitem",
+      "label": "RadioGroupItem()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cn",
+      "file_type": "code",
+      "norm_label": "radiogroupitem()",
+      "source_file": "frontend/src/components/ui/radio-group.tsx",
+      "source_location": "L25"
+    },
+    {
+      "id": "frontend_src_components_ui_radio_group_radiogroupoption",
+      "label": "RadioGroupOption()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cn",
+      "file_type": "code",
+      "norm_label": "radiogroupoption()",
+      "source_file": "frontend/src/components/ui/radio-group.tsx",
+      "source_location": "L54"
+    },
+    {
+      "id": "frontend_src_components_ui_search_input_searchinput",
+      "label": "SearchInput()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cn",
+      "file_type": "code",
+      "norm_label": "searchinput()",
+      "source_file": "frontend/src/components/ui/search-input.tsx",
+      "source_location": "L13"
     },
     {
       "id": "frontend_src_components_ui_tabs_tabs",
@@ -1660,18 +1612,6 @@
       "source_location": "L15"
     },
     {
-      "id": "frontend_src_components_ui_checkbox_checkbox",
-      "label": "Checkbox()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 70,
-      "community_name": "react",
-      "file_type": "code",
-      "norm_label": "checkbox()",
-      "source_file": "frontend/src/components/ui/checkbox.tsx",
-      "source_location": "L18"
-    },
-    {
       "id": "frontend_src_components_ui_field_field",
       "label": "Field()",
       "_callable": true,
@@ -1708,18 +1648,6 @@
       "source_location": "L16"
     },
     {
-      "id": "frontend_src_components_ui_select_select",
-      "label": "Select()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 70,
-      "community_name": "react",
-      "file_type": "code",
-      "norm_label": "select()",
-      "source_file": "frontend/src/components/ui/select.tsx",
-      "source_location": "L16"
-    },
-    {
       "id": "frontend_src_components_ui_skeleton_skeleton",
       "label": "Skeleton()",
       "_callable": true,
@@ -1730,6 +1658,18 @@
       "norm_label": "skeleton()",
       "source_file": "frontend/src/components/ui/skeleton.tsx",
       "source_location": "L11"
+    },
+    {
+      "id": "frontend_src_components_ui_slider_slider",
+      "label": "Slider()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "react",
+      "file_type": "code",
+      "norm_label": "slider()",
+      "source_file": "frontend/src/components/ui/slider.tsx",
+      "source_location": "L18"
     },
     {
       "id": "frontend_src_components_ui_switch_switch",
@@ -1754,30 +1694,6 @@
       "norm_label": "textarea()",
       "source_file": "frontend/src/components/ui/textarea.tsx",
       "source_location": "L11"
-    },
-    {
-      "id": "frontend_src_components_ui_toggle_group_togglegroup",
-      "label": "ToggleGroup()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 71,
-      "community_name": "toggle-group.tsx",
-      "file_type": "code",
-      "norm_label": "togglegroup()",
-      "source_file": "frontend/src/components/ui/toggle-group.tsx",
-      "source_location": "L30"
-    },
-    {
-      "id": "frontend_src_components_ui_toggle_group_togglegroupitem",
-      "label": "ToggleGroupItem()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 71,
-      "community_name": "toggle-group.tsx",
-      "file_type": "code",
-      "norm_label": "togglegroupitem()",
-      "source_file": "frontend/src/components/ui/toggle-group.tsx",
-      "source_location": "L42"
     },
     {
       "id": "tasks_scripts_check_version_fail",
@@ -1864,6 +1780,18 @@
       "source_location": "L265"
     },
     {
+      "id": "frontend_src_components_dev_gallery_sortable_table_section_sortablerow",
+      "label": "SortableRow()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "sortable-table-section.tsx",
+      "file_type": "code",
+      "norm_label": "sortablerow()",
+      "source_file": "frontend/src/components/dev-gallery/sortable-table-section.tsx",
+      "source_location": "L118"
+    },
+    {
       "id": "frontend_src_components_dev_gallery_sortable_table_section_sortabletablesection",
       "label": "SortableTableSection()",
       "_callable": true,
@@ -1924,6 +1852,18 @@
       "source_location": "L465"
     },
     {
+      "id": "frontend_src_components_ui_checkbox_checkbox",
+      "label": "Checkbox()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "sortable-table-section.tsx",
+      "file_type": "code",
+      "norm_label": "checkbox()",
+      "source_file": "frontend/src/components/ui/checkbox.tsx",
+      "source_location": "L18"
+    },
+    {
       "id": "frontend_src_components_ui_checkpoint_slider_checkpointslider",
       "label": "CheckpointSlider()",
       "_callable": true,
@@ -1936,100 +1876,28 @@
       "source_location": "L49"
     },
     {
-      "id": "frontend_src_components_ui_input_input",
-      "label": "Input()",
+      "id": "frontend_src_components_ui_toggle_group_togglegroup",
+      "label": "ToggleGroup()",
       "_callable": true,
       "_origin": "ast",
       "community": 74,
       "community_name": "sortable-table-section.tsx",
       "file_type": "code",
-      "norm_label": "input()",
-      "source_file": "frontend/src/components/ui/input.tsx",
-      "source_location": "L14"
+      "norm_label": "togglegroup()",
+      "source_file": "frontend/src/components/ui/toggle-group.tsx",
+      "source_location": "L30"
     },
     {
-      "id": "frontend_src_components_ui_table_table",
-      "label": "Table()",
+      "id": "frontend_src_components_ui_toggle_group_togglegroupitem",
+      "label": "ToggleGroupItem()",
       "_callable": true,
       "_origin": "ast",
       "community": 74,
       "community_name": "sortable-table-section.tsx",
       "file_type": "code",
-      "norm_label": "table()",
-      "source_file": "frontend/src/components/ui/table.tsx",
-      "source_location": "L11"
-    },
-    {
-      "id": "frontend_src_components_ui_table_tablebody",
-      "label": "TableBody()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 74,
-      "community_name": "sortable-table-section.tsx",
-      "file_type": "code",
-      "norm_label": "tablebody()",
-      "source_file": "frontend/src/components/ui/table.tsx",
+      "norm_label": "togglegroupitem()",
+      "source_file": "frontend/src/components/ui/toggle-group.tsx",
       "source_location": "L42"
-    },
-    {
-      "id": "frontend_src_components_ui_table_tablecell",
-      "label": "TableCell()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 74,
-      "community_name": "sortable-table-section.tsx",
-      "file_type": "code",
-      "norm_label": "tablecell()",
-      "source_file": "frontend/src/components/ui/table.tsx",
-      "source_location": "L77"
-    },
-    {
-      "id": "frontend_src_components_ui_table_tablehead",
-      "label": "TableHead()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 74,
-      "community_name": "sortable-table-section.tsx",
-      "file_type": "code",
-      "norm_label": "tablehead()",
-      "source_file": "frontend/src/components/ui/table.tsx",
-      "source_location": "L26"
-    },
-    {
-      "id": "frontend_src_components_ui_table_tableheader",
-      "label": "TableHeader()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 74,
-      "community_name": "sortable-table-section.tsx",
-      "file_type": "code",
-      "norm_label": "tableheader()",
-      "source_file": "frontend/src/components/ui/table.tsx",
-      "source_location": "L67"
-    },
-    {
-      "id": "frontend_src_components_ui_table_tablekeyvalue",
-      "label": "TableKeyValue()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 74,
-      "community_name": "sortable-table-section.tsx",
-      "file_type": "code",
-      "norm_label": "tablekeyvalue()",
-      "source_file": "frontend/src/components/ui/table.tsx",
-      "source_location": "L88"
-    },
-    {
-      "id": "frontend_src_components_ui_table_tablerow",
-      "label": "TableRow()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 74,
-      "community_name": "sortable-table-section.tsx",
-      "file_type": "code",
-      "norm_label": "tablerow()",
-      "source_file": "frontend/src/components/ui/table.tsx",
-      "source_location": "L53"
     },
     {
       "id": "frontend_src_components_ui_card_card",
@@ -2037,7 +1905,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 81,
-      "community_name": "card.tsx",
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
       "norm_label": "card()",
       "source_file": "frontend/src/components/ui/card.tsx",
@@ -2049,7 +1917,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 81,
-      "community_name": "card.tsx",
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
       "norm_label": "cardcontent()",
       "source_file": "frontend/src/components/ui/card.tsx",
@@ -2061,7 +1929,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 81,
-      "community_name": "card.tsx",
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
       "norm_label": "carddescription()",
       "source_file": "frontend/src/components/ui/card.tsx",
@@ -2073,7 +1941,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 81,
-      "community_name": "card.tsx",
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
       "norm_label": "cardfooter()",
       "source_file": "frontend/src/components/ui/card.tsx",
@@ -2085,7 +1953,7 @@
       "_callable": true,
       "_origin": "ast",
       "community": 81,
-      "community_name": "card.tsx",
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
       "norm_label": "cardheader()",
       "source_file": "frontend/src/components/ui/card.tsx",
@@ -2097,23 +1965,119 @@
       "_callable": true,
       "_origin": "ast",
       "community": 81,
-      "community_name": "card.tsx",
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
       "norm_label": "cardtitle()",
       "source_file": "frontend/src/components/ui/card.tsx",
       "source_location": "L49"
     },
     {
-      "id": "frontend_src_api_errors_apierror_fromunknown",
-      "label": ".fromUnknown()",
+      "id": "frontend_src_components_ui_input_input",
+      "label": "Input()",
       "_callable": true,
       "_origin": "ast",
-      "community": 84,
-      "community_name": "http-client.ts",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
-      "norm_label": ".fromunknown()",
-      "source_file": "frontend/src/api/errors.ts",
-      "source_location": "L12"
+      "norm_label": "input()",
+      "source_file": "frontend/src/components/ui/input.tsx",
+      "source_location": "L14"
+    },
+    {
+      "id": "frontend_src_components_ui_select_select",
+      "label": "Select()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "select()",
+      "source_file": "frontend/src/components/ui/select.tsx",
+      "source_location": "L16"
+    },
+    {
+      "id": "frontend_src_components_ui_table_table",
+      "label": "Table()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "table()",
+      "source_file": "frontend/src/components/ui/table.tsx",
+      "source_location": "L11"
+    },
+    {
+      "id": "frontend_src_components_ui_table_tablebody",
+      "label": "TableBody()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "tablebody()",
+      "source_file": "frontend/src/components/ui/table.tsx",
+      "source_location": "L42"
+    },
+    {
+      "id": "frontend_src_components_ui_table_tablecell",
+      "label": "TableCell()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "tablecell()",
+      "source_file": "frontend/src/components/ui/table.tsx",
+      "source_location": "L77"
+    },
+    {
+      "id": "frontend_src_components_ui_table_tablehead",
+      "label": "TableHead()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "tablehead()",
+      "source_file": "frontend/src/components/ui/table.tsx",
+      "source_location": "L26"
+    },
+    {
+      "id": "frontend_src_components_ui_table_tableheader",
+      "label": "TableHeader()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "tableheader()",
+      "source_file": "frontend/src/components/ui/table.tsx",
+      "source_location": "L67"
+    },
+    {
+      "id": "frontend_src_components_ui_table_tablekeyvalue",
+      "label": "TableKeyValue()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "tablekeyvalue()",
+      "source_file": "frontend/src/components/ui/table.tsx",
+      "source_location": "L88"
+    },
+    {
+      "id": "frontend_src_components_ui_table_tablerow",
+      "label": "TableRow()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "tablerow()",
+      "source_file": "frontend/src/components/ui/table.tsx",
+      "source_location": "L53"
     },
     {
       "id": "frontend_src_api_http_client_httplogandaimapi_constructor",
@@ -2234,6 +2198,18 @@
       "norm_label": ".constructor()",
       "source_file": "frontend/src/api/errors.ts",
       "source_location": "L6"
+    },
+    {
+      "id": "frontend_src_api_errors_apierror_fromunknown",
+      "label": ".fromUnknown()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 89,
+      "community_name": "ApiError",
+      "file_type": "code",
+      "norm_label": ".fromunknown()",
+      "source_file": "frontend/src/api/errors.ts",
+      "source_location": "L12"
     },
     {
       "id": "frontend_src_app_dev_page_dev_devgallerypage",
@@ -2428,52 +2404,88 @@
       "source_location": "L17"
     },
     {
-      "id": "frontend_src_components_ui_radio_group_radiogroup",
-      "label": "RadioGroup()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 90,
-      "community_name": "radio-group.tsx",
-      "file_type": "code",
-      "norm_label": "radiogroup()",
-      "source_file": "frontend/src/components/ui/radio-group.tsx",
-      "source_location": "L8"
-    },
-    {
-      "id": "frontend_src_components_ui_radio_group_radiogroupitem",
-      "label": "RadioGroupItem()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 90,
-      "community_name": "radio-group.tsx",
-      "file_type": "code",
-      "norm_label": "radiogroupitem()",
-      "source_file": "frontend/src/components/ui/radio-group.tsx",
-      "source_location": "L25"
-    },
-    {
-      "id": "frontend_src_components_ui_radio_group_radiogroupoption",
-      "label": "RadioGroupOption()",
-      "_callable": true,
-      "_origin": "ast",
-      "community": 90,
-      "community_name": "radio-group.tsx",
-      "file_type": "code",
-      "norm_label": "radiogroupoption()",
-      "source_file": "frontend/src/components/ui/radio-group.tsx",
-      "source_location": "L54"
-    },
-    {
-      "id": "frontend_src_components_ui_search_input_searchinput",
-      "label": "SearchInput()",
+      "id": "frontend_src_components_dev_gallery_data_figures_gridpaper",
+      "label": "GridPaper()",
       "_callable": true,
       "_origin": "ast",
       "community": 91,
-      "community_name": "search-input.tsx",
+      "community_name": "data-figures.tsx",
       "file_type": "code",
-      "norm_label": "searchinput()",
-      "source_file": "frontend/src/components/ui/search-input.tsx",
-      "source_location": "L13"
+      "norm_label": "gridpaper()",
+      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
+      "source_location": "L26"
+    },
+    {
+      "id": "frontend_src_components_dev_gallery_data_figures_legend",
+      "label": "Legend()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "data-figures.tsx",
+      "file_type": "code",
+      "norm_label": "legend()",
+      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
+      "source_location": "L300"
+    },
+    {
+      "id": "frontend_src_components_dev_gallery_data_figures_ringplot",
+      "label": "RingPlot()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "data-figures.tsx",
+      "file_type": "code",
+      "norm_label": "ringplot()",
+      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
+      "source_location": "L64"
+    },
+    {
+      "id": "frontend_src_components_dev_gallery_data_figures_scalebar",
+      "label": "ScaleBar()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "data-figures.tsx",
+      "file_type": "code",
+      "norm_label": "scalebar()",
+      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
+      "source_location": "L243"
+    },
+    {
+      "id": "frontend_src_components_dev_gallery_data_figures_section_datafiguressection",
+      "label": "DataFiguresSection()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "data-figures.tsx",
+      "file_type": "code",
+      "norm_label": "datafiguressection()",
+      "source_file": "frontend/src/components/dev-gallery/data-figures-section.tsx",
+      "source_location": "L21"
+    },
+    {
+      "id": "frontend_src_components_dev_gallery_data_figures_seriesplot",
+      "label": "SeriesPlot()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "data-figures.tsx",
+      "file_type": "code",
+      "norm_label": "seriesplot()",
+      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
+      "source_location": "L168"
+    },
+    {
+      "id": "tasks_scripts_check_design_walk",
+      "label": "walk()",
+      "_callable": true,
+      "_origin": "ast",
+      "community": 93,
+      "community_name": "check-design.mjs",
+      "file_type": "code",
+      "norm_label": "walk()",
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L38"
     },
     {
       "id": "crates_logandaim_core_src_application_instrumented_instrumentedpdfrenderer_rendern",
@@ -4093,6 +4105,105 @@
       "source_location": ""
     },
     {
+      "id": "crates_logandaim_api_src_errors_structured_error",
+      "label": "structured_error.rs",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "StructuredError",
+      "file_type": "code",
+      "norm_label": "structured_error.rs",
+      "source_file": "crates/logandaim-api/src/errors/structured_error.rs",
+      "source_location": "L1"
+    },
+    {
+      "id": "crates_logandaim_api_src_errors_structured_error_into_structured_error_from_frame",
+      "label": "into_structured_error_from_frame()",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "StructuredError",
+      "file_type": "code",
+      "norm_label": "into_structured_error_from_frame()",
+      "source_file": "crates/logandaim-api/src/errors/structured_error.rs",
+      "source_location": "L15"
+    },
+    {
+      "id": "crates_logandaim_api_src_errors_structured_error_rs_from",
+      "label": "From",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "StructuredError",
+      "file_type": "code",
+      "norm_label": "from",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_api_src_errors_structured_error_rs_report",
+      "label": "Report",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "StructuredError",
+      "file_type": "code",
+      "norm_label": "report",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_api_src_errors_structured_error_rs_self",
+      "label": "Self",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "StructuredError",
+      "file_type": "code",
+      "norm_label": "self",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_api_src_errors_structured_error_rs_vec",
+      "label": "Vec",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "StructuredError",
+      "file_type": "code",
+      "norm_label": "vec",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_api_src_errors_structured_error_structurederror",
+      "label": "StructuredError",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "StructuredError",
+      "file_type": "code",
+      "norm_label": "structurederror",
+      "source_file": "crates/logandaim-api/src/errors/structured_error.rs",
+      "source_location": "L9"
+    },
+    {
+      "id": "crates_logandaim_api_src_errors_structured_error_structurederror_from",
+      "label": ".from()",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "StructuredError",
+      "file_type": "code",
+      "norm_label": ".from()",
+      "source_file": "crates/logandaim-api/src/errors/structured_error.rs",
+      "source_location": "L70"
+    },
+    {
+      "id": "frame",
+      "label": "Frame",
+      "_origin": "ast",
+      "community": 101,
+      "community_name": "StructuredError",
+      "file_type": "code",
+      "norm_label": "frame",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "backend_server_src_config",
       "label": "config.rs",
       "_origin": "ast",
@@ -4445,94 +4556,6 @@
       "source_location": "L11"
     },
     {
-      "id": "crates_logandaim_api_src_errors_structured_error",
-      "label": "structured_error.rs",
-      "_origin": "ast",
-      "community": 102,
-      "community_name": "String",
-      "file_type": "code",
-      "norm_label": "structured_error.rs",
-      "source_file": "crates/logandaim-api/src/errors/structured_error.rs",
-      "source_location": "L1"
-    },
-    {
-      "id": "crates_logandaim_api_src_errors_structured_error_into_structured_error_from_frame",
-      "label": "into_structured_error_from_frame()",
-      "_origin": "ast",
-      "community": 102,
-      "community_name": "String",
-      "file_type": "code",
-      "norm_label": "into_structured_error_from_frame()",
-      "source_file": "crates/logandaim-api/src/errors/structured_error.rs",
-      "source_location": "L15"
-    },
-    {
-      "id": "crates_logandaim_api_src_errors_structured_error_rs_from",
-      "label": "From",
-      "_origin": "ast",
-      "community": 102,
-      "community_name": "String",
-      "file_type": "code",
-      "norm_label": "from",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_api_src_errors_structured_error_rs_report",
-      "label": "Report",
-      "_origin": "ast",
-      "community": 102,
-      "community_name": "String",
-      "file_type": "code",
-      "norm_label": "report",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_api_src_errors_structured_error_rs_self",
-      "label": "Self",
-      "_origin": "ast",
-      "community": 102,
-      "community_name": "String",
-      "file_type": "code",
-      "norm_label": "self",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_api_src_errors_structured_error_rs_vec",
-      "label": "Vec",
-      "_origin": "ast",
-      "community": 102,
-      "community_name": "String",
-      "file_type": "code",
-      "norm_label": "vec",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_api_src_errors_structured_error_structurederror",
-      "label": "StructuredError",
-      "_origin": "ast",
-      "community": 102,
-      "community_name": "String",
-      "file_type": "code",
-      "norm_label": "structurederror",
-      "source_file": "crates/logandaim-api/src/errors/structured_error.rs",
-      "source_location": "L9"
-    },
-    {
-      "id": "crates_logandaim_api_src_errors_structured_error_structurederror_from",
-      "label": ".from()",
-      "_origin": "ast",
-      "community": 102,
-      "community_name": "String",
-      "file_type": "code",
-      "norm_label": ".from()",
-      "source_file": "crates/logandaim-api/src/errors/structured_error.rs",
-      "source_location": "L70"
-    },
-    {
       "id": "crates_logandaim_core_src_domain_kontakt",
       "label": "kontakt.rs",
       "_origin": "ast",
@@ -4775,17 +4798,6 @@
       "source_location": ""
     },
     {
-      "id": "frame",
-      "label": "Frame",
-      "_origin": "ast",
-      "community": 102,
-      "community_name": "String",
-      "file_type": "code",
-      "norm_label": "frame",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
       "id": "s",
       "label": "S",
       "_origin": "ast",
@@ -4806,6 +4818,105 @@
       "norm_label": "tryfrom",
       "source_file": "",
       "source_location": ""
+    },
+    {
+      "id": "frontend_package_scripts",
+      "label": "scripts",
+      "_origin": "ast",
+      "community": 103,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "scripts",
+      "source_file": "frontend/package.json",
+      "source_location": "L5"
+    },
+    {
+      "id": "frontend_package_scripts_build",
+      "label": "build",
+      "_origin": "ast",
+      "community": 103,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "build",
+      "source_file": "frontend/package.json",
+      "source_location": "L7"
+    },
+    {
+      "id": "frontend_package_scripts_check_format",
+      "label": "check:format",
+      "_origin": "ast",
+      "community": 103,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "check:format",
+      "source_file": "frontend/package.json",
+      "source_location": "L12"
+    },
+    {
+      "id": "frontend_package_scripts_check_lint",
+      "label": "check:lint",
+      "_origin": "ast",
+      "community": 103,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "check:lint",
+      "source_file": "frontend/package.json",
+      "source_location": "L10"
+    },
+    {
+      "id": "frontend_package_scripts_check_ts",
+      "label": "check:ts",
+      "_origin": "ast",
+      "community": 103,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "check:ts",
+      "source_file": "frontend/package.json",
+      "source_location": "L13"
+    },
+    {
+      "id": "frontend_package_scripts_dev",
+      "label": "dev",
+      "_origin": "ast",
+      "community": 103,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "dev",
+      "source_file": "frontend/package.json",
+      "source_location": "L6"
+    },
+    {
+      "id": "frontend_package_scripts_fix_format",
+      "label": "fix:format",
+      "_origin": "ast",
+      "community": 103,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "fix:format",
+      "source_file": "frontend/package.json",
+      "source_location": "L11"
+    },
+    {
+      "id": "frontend_package_scripts_fix_lint",
+      "label": "fix:lint",
+      "_origin": "ast",
+      "community": 103,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "fix:lint",
+      "source_file": "frontend/package.json",
+      "source_location": "L9"
+    },
+    {
+      "id": "frontend_package_scripts_start",
+      "label": "start",
+      "_origin": "ast",
+      "community": 103,
+      "community_name": "scripts",
+      "file_type": "code",
+      "norm_label": "start",
+      "source_file": "frontend/package.json",
+      "source_location": "L8"
     },
     {
       "id": "frontend_src_lib_format",
@@ -7490,17 +7601,6 @@
       "source_location": "L3"
     },
     {
-      "id": "frontend_src_components_ui_slider",
-      "label": "slider.tsx",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "code",
-      "norm_label": "slider.tsx",
-      "source_file": "frontend/src/components/ui/slider.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "ref_babel_plugin_react_compiler",
       "label": "babel-plugin-react-compiler",
       "_origin": "ast",
@@ -7554,6 +7654,17 @@
       "norm_label": "@dnd-kit/utilities",
       "source_file": "frontend/package.json",
       "source_location": "L18"
+    },
+    {
+      "id": "ref_openapi_fetch",
+      "label": "openapi-fetch",
+      "_origin": "ast",
+      "community": 157,
+      "community_name": "package.json",
+      "file_type": "concept",
+      "norm_label": "openapi-fetch",
+      "source_file": "frontend/package.json",
+      "source_location": "L39"
     },
     {
       "id": "ref_openapi_typescript",
@@ -7611,17 +7722,6 @@
       "source_location": "L24"
     },
     {
-      "id": "ref_radix_ui_react_slider",
-      "label": "@radix-ui/react-slider",
-      "_origin": "ast",
-      "community": 157,
-      "community_name": "package.json",
-      "file_type": "concept",
-      "norm_label": "@radix-ui/react-slider",
-      "source_file": "frontend/package.json",
-      "source_location": "L26"
-    },
-    {
       "id": "ref_radix_ui_react_toggle",
       "label": "@radix-ui/react-toggle",
       "_origin": "ast",
@@ -7664,6 +7764,17 @@
       "norm_label": "@tailwindcss/postcss",
       "source_file": "frontend/package.json",
       "source_location": "L46"
+    },
+    {
+      "id": "ref_tanstack_react_query_devtools",
+      "label": "@tanstack/react-query-devtools",
+      "_origin": "ast",
+      "community": 157,
+      "community_name": "package.json",
+      "file_type": "concept",
+      "norm_label": "@tanstack/react-query-devtools",
+      "source_file": "frontend/package.json",
+      "source_location": "L34"
     },
     {
       "id": "ref_types_node",
@@ -9530,6 +9641,17 @@
       "source_location": "L15"
     },
     {
+      "id": "crates_logandaim_core_src_application_context_executioncontext_a_clock",
+      "label": ".clock()",
+      "_origin": "ast",
+      "community": 20,
+      "community_name": "Clock",
+      "file_type": "code",
+      "norm_label": ".clock()",
+      "source_file": "crates/logandaim-core/src/application/context.rs",
+      "source_location": "L56"
+    },
+    {
       "id": "crates_logandaim_core_src_application_ports_clock",
       "label": "ports/clock.rs",
       "_origin": "ast",
@@ -10937,17 +11059,6 @@
       "source_location": "L27"
     },
     {
-      "id": "crates_logandaim_core_src_application_context_executioncontext_a_clock",
-      "label": ".clock()",
-      "_origin": "ast",
-      "community": 27,
-      "community_name": "ExecutionContext",
-      "file_type": "code",
-      "norm_label": ".clock()",
-      "source_file": "crates/logandaim-core/src/application/context.rs",
-      "source_location": "L56"
-    },
-    {
       "id": "crates_logandaim_core_src_application_context_executioncontext_a_enter",
       "label": ".enter()",
       "_origin": "ast",
@@ -12127,39 +12238,6 @@
       "source_location": "L246"
     },
     {
-      "id": "crates_logandaim_api_src_api_mod",
-      "label": "api/mod.rs",
-      "_origin": "ast",
-      "community": 32,
-      "community_name": "App",
-      "file_type": "code",
-      "norm_label": "api/mod.rs",
-      "source_file": "crates/logandaim-api/src/api/mod.rs",
-      "source_location": "L1"
-    },
-    {
-      "id": "crates_logandaim_api_src_api_mod_logandaimappapi",
-      "label": "LogandaimAppApi",
-      "_origin": "ast",
-      "community": 32,
-      "community_name": "App",
-      "file_type": "code",
-      "norm_label": "logandaimappapi",
-      "source_file": "crates/logandaim-api/src/api/mod.rs",
-      "source_location": "L18"
-    },
-    {
-      "id": "crates_logandaim_api_src_api_mod_logandaimappapi_inner_app",
-      "label": ".inner_app()",
-      "_origin": "ast",
-      "community": 32,
-      "community_name": "App",
-      "file_type": "code",
-      "norm_label": ".inner_app()",
-      "source_file": "crates/logandaim-api/src/api/mod.rs",
-      "source_location": "L27"
-    },
-    {
       "id": "crates_logandaim_api_src_api_mod_logandaimappapi_new",
       "label": ".new()",
       "_origin": "ast",
@@ -12171,51 +12249,7 @@
       "source_location": "L23"
     },
     {
-      "id": "crates_logandaim_api_src_api_mod_rs_arc",
-      "label": "Arc",
-      "_origin": "ast",
-      "community": 32,
-      "community_name": "App",
-      "file_type": "code",
-      "norm_label": "arc",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
       "id": "crates_logandaim_api_src_api_mod_rs_self",
-      "label": "Self",
-      "_origin": "ast",
-      "community": 32,
-      "community_name": "App",
-      "file_type": "code",
-      "norm_label": "self",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_api_src_spec_logandaimapispec_from",
-      "label": ".from()",
-      "_origin": "ast",
-      "community": 32,
-      "community_name": "App",
-      "file_type": "code",
-      "norm_label": ".from()",
-      "source_file": "crates/logandaim-api/src/spec.rs",
-      "source_location": "L33"
-    },
-    {
-      "id": "crates_logandaim_api_src_spec_logandaimapispec_new",
-      "label": ".new()",
-      "_origin": "ast",
-      "community": 32,
-      "community_name": "App",
-      "file_type": "code",
-      "norm_label": ".new()",
-      "source_file": "crates/logandaim-api/src/spec.rs",
-      "source_location": "L27"
-    },
-    {
-      "id": "crates_logandaim_api_src_spec_rs_self",
       "label": "Self",
       "_origin": "ast",
       "community": 32,
@@ -13389,116 +13423,6 @@
       "source_location": "L71"
     },
     {
-      "id": "crates_logandaim_core_src_application_instrumented_instrumentedunitofwork_sch\u00fcsse",
-      "label": ".sch\u00fcsse()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".schusse()",
-      "source_file": "crates/logandaim-core/src/application/instrumented.rs",
-      "source_location": "L89"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_rs_repositoryresult",
-      "label": "RepositoryResult",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "repositoryresult",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_rs_schuss",
-      "label": "Schuss",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "schuss",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_rs_send",
-      "label": "Send",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "send",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_rs_sync",
-      "label": "Sync",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "sync",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_rs_vec",
-      "label": "Vec",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "vec",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository",
-      "label": "SchussRepository",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "schussrepository",
-      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
-      "source_location": "L37"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_create",
-      "label": ".create()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".create()",
-      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
-      "source_location": "L38"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_find_by_id",
-      "label": ".find_by_id()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".find_by_id()",
-      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
-      "source_location": "L40"
-    },
-    {
-      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_find_by_ids",
-      "label": ".find_by_ids()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".find_by_ids()",
-      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
-      "source_location": "L44"
-    },
-    {
       "id": "crates_logandaim_core_src_domain_schuss",
       "label": "domain/schuss.rs",
       "_origin": "ast",
@@ -13508,17 +13432,6 @@
       "norm_label": "domain/schuss.rs",
       "source_file": "crates/logandaim-core/src/domain/schuss.rs",
       "source_location": "L1"
-    },
-    {
-      "id": "crates_logandaim_core_src_domain_schuss_from_parts_roundtrip",
-      "label": "from_parts_roundtrip()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "from_parts_roundtrip()",
-      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
-      "source_location": "L205"
     },
     {
       "id": "crates_logandaim_core_src_domain_schuss_id",
@@ -13541,17 +13454,6 @@
       "norm_label": "neuerschuss",
       "source_file": "crates/logandaim-core/src/domain/schuss.rs",
       "source_location": "L27"
-    },
-    {
-      "id": "crates_logandaim_core_src_domain_schuss_neuerschuss_neu",
-      "label": ".neu()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".neu()",
-      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
-      "source_location": "L35"
     },
     {
       "id": "crates_logandaim_core_src_domain_schuss_neuerschuss_pfeil",
@@ -13587,39 +13489,6 @@
       "source_location": "L48"
     },
     {
-      "id": "crates_logandaim_core_src_domain_schuss_pfeil_ist_eins_basiert",
-      "label": "pfeil_ist_eins_basiert()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "pfeil_ist_eins_basiert()",
-      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
-      "source_location": "L179"
-    },
-    {
-      "id": "crates_logandaim_core_src_domain_schuss_pfeil_null_wird_abgelehnt",
-      "label": "pfeil_null_wird_abgelehnt()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "pfeil_null_wird_abgelehnt()",
-      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
-      "source_location": "L188"
-    },
-    {
-      "id": "crates_logandaim_core_src_domain_schuss_pfeil_vier_und_sp\u00e4ter_sind_erlaubt",
-      "label": "pfeil_vier_und_sp\u00e4ter_sind_erlaubt()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "pfeil_vier_und_spater_sind_erlaubt()",
-      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
-      "source_location": "L197"
-    },
-    {
       "id": "crates_logandaim_core_src_domain_schuss_rs_nonzerousize",
       "label": "NonZeroUsize",
       "_origin": "ast",
@@ -13627,28 +13496,6 @@
       "community_name": "domain/schuss.rs",
       "file_type": "code",
       "norm_label": "nonzerousize",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_domain_schuss_rs_result",
-      "label": "Result",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "result",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_domain_schuss_rs_self",
-      "label": "Self",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "self",
       "source_file": "",
       "source_location": ""
     },
@@ -13686,17 +13533,6 @@
       "source_location": "L67"
     },
     {
-      "id": "crates_logandaim_core_src_domain_schuss_schuss_from_parts",
-      "label": ".from_parts()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".from_parts()",
-      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
-      "source_location": "L88"
-    },
-    {
       "id": "crates_logandaim_core_src_domain_schuss_schuss_id",
       "label": ".id()",
       "_origin": "ast",
@@ -13706,17 +13542,6 @@
       "norm_label": ".id()",
       "source_file": "crates/logandaim-core/src/domain/schuss.rs",
       "source_location": "L98"
-    },
-    {
-      "id": "crates_logandaim_core_src_domain_schuss_schuss_neu",
-      "label": ".neu()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".neu()",
-      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
-      "source_location": "L78"
     },
     {
       "id": "crates_logandaim_core_src_domain_schuss_schuss_pfeil",
@@ -13750,28 +13575,6 @@
       "norm_label": ".ziel_id()",
       "source_file": "crates/logandaim-core/src/domain/schuss.rs",
       "source_location": "L102"
-    },
-    {
-      "id": "crates_logandaim_core_src_domain_schuss_schussfehler",
-      "label": "SchussFehler",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "schussfehler",
-      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
-      "source_location": "L17"
-    },
-    {
-      "id": "crates_logandaim_core_src_domain_schuss_schussid",
-      "label": "SchussId",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "schussid",
-      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
-      "source_location": "L14"
     },
     {
       "id": "crates_logandaim_core_src_domain_schuss_wertung_ab_pfeil_vier_zaehlt_null",
@@ -13840,17 +13643,6 @@
       "source_location": "L118"
     },
     {
-      "id": "crates_logandaim_core_src_domain_schuss_ziel",
-      "label": "ziel()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "ziel()",
-      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
-      "source_location": "L163"
-    },
-    {
       "id": "crates_logandaim_core_src_domain_schuss_zielid",
       "label": "ZielId",
       "_origin": "ast",
@@ -13860,369 +13652,6 @@
       "norm_label": "zielid",
       "source_file": "crates/logandaim-core/src/domain/schuss.rs",
       "source_location": "L10"
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss",
-      "label": "use_cases/schuss.rs",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "use_cases/schuss.rs",
-      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
-      "source_location": "L1"
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_rs_error",
-      "label": "Error",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "error",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_rs_result",
-      "label": "Result",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "result",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_rs_schuss",
-      "label": "Schuss",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "schuss",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_rs_vec",
-      "label": "Vec",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "vec",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_rs_wertungszone",
-      "label": "Wertungszone",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "wertungszone",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_schussregistrieren",
-      "label": "SchussRegistrieren",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "schussregistrieren",
-      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
-      "source_location": "L14"
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_schussregistrieren_perform",
-      "label": ".perform()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".perform()",
-      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
-      "source_location": "L30"
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_schussregistrierenfehler",
-      "label": "SchussRegistrierenFehler",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "schussregistrierenfehler",
-      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
-      "source_location": "L21"
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_wertungberechnen",
-      "label": "WertungBerechnen",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "wertungberechnen",
-      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
-      "source_location": "L74"
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_wertungberechnen_perform",
-      "label": ".perform()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".perform()",
-      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
-      "source_location": "L82"
-    },
-    {
-      "id": "crates_logandaim_core_src_service_use_cases_schuss_wertungfehler",
-      "label": "WertungFehler",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "wertungfehler",
-      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
-      "source_location": "L60"
-    },
-    {
-      "id": "crates_logandaim_fakes_src_uow_fakeunitofwork_sch\u00fcsse",
-      "label": ".sch\u00fcsse()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".schusse()",
-      "source_file": "crates/logandaim-fakes/src/uow.rs",
-      "source_location": "L84"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_mod",
-      "label": "repos/mod.rs",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "repos/mod.rs",
-      "source_file": "crates/logandaim-sqlite/src/repos/mod.rs",
-      "source_location": "L1"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss",
-      "label": "repos/schuss.rs",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "repos/schuss.rs",
-      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
-      "source_location": "L1"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_arc",
-      "label": "Arc",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "arc",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_mutex",
-      "label": "Mutex",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "mutex",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_option",
-      "label": "Option",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "option",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_repositoryerror",
-      "label": "RepositoryError",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "repositoryerror",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_repositoryresult",
-      "label": "RepositoryResult",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "repositoryresult",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_result",
-      "label": "Result",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "result",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_schuss",
-      "label": "Schuss",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "schuss",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_transaction",
-      "label": "Transaction",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "transaction",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_vec",
-      "label": "Vec",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "vec",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_wertungszone",
-      "label": "Wertungszone",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "wertungszone",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_schuss_from_row",
-      "label": "schuss_from_row()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "schuss_from_row()",
-      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
-      "source_location": "L37"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_sqliteschussrepository",
-      "label": "SQLiteSchussRepository",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "sqliteschussrepository",
-      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
-      "source_location": "L52"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_sqliteschussrepository_create",
-      "label": ".create()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".create()",
-      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
-      "source_location": "L58"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_sqliteschussrepository_find_by_id",
-      "label": ".find_by_id()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".find_by_id()",
-      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
-      "source_location": "L80"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_sqliteschussrepository_find_by_ids",
-      "label": ".find_by_ids()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".find_by_ids()",
-      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
-      "source_location": "L103"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_zone_from_str",
-      "label": "zone_from_str()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "zone_from_str()",
-      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
-      "source_location": "L27"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_repos_schuss_zone_to_str",
-      "label": "zone_to_str()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": "zone_to_str()",
-      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
-      "source_location": "L18"
-    },
-    {
-      "id": "crates_logandaim_sqlite_src_uow_sqliteunitofwork_sch\u00fcsse",
-      "label": ".sch\u00fcsse()",
-      "_origin": "ast",
-      "community": 48,
-      "community_name": "domain/schuss.rs",
-      "file_type": "code",
-      "norm_label": ".schusse()",
-      "source_file": "crates/logandaim-sqlite/src/uow.rs",
-      "source_location": "L65"
     },
     {
       "id": "crates_logandaim_sqlite_src_repos_common",
@@ -15221,6 +14650,17 @@
       "source_location": "L96"
     },
     {
+      "id": "crates_logandaim_api_tests_e2e_main_base_app_builder",
+      "label": "base_app_builder()",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "LogandaimApiTestClient",
+      "file_type": "code",
+      "norm_label": "base_app_builder()",
+      "source_file": "crates/logandaim-api/tests/e2e/main.rs",
+      "source_location": "L14"
+    },
+    {
       "id": "crates_logandaim_api_tests_e2e_main_health_returns_ok",
       "label": "health_returns_ok()",
       "_origin": "ast",
@@ -15298,6 +14738,17 @@
       "source_location": "L48"
     },
     {
+      "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_new",
+      "label": ".new()",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "LogandaimApiTestClient",
+      "file_type": "code",
+      "norm_label": ".new()",
+      "source_file": "crates/logandaim-api/tests/e2e/main.rs",
+      "source_location": "L28"
+    },
+    {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_post",
       "label": ".post()",
       "_origin": "ast",
@@ -15342,6 +14793,17 @@
       "source_location": ""
     },
     {
+      "id": "crates_logandaim_api_tests_e2e_main_rs_self",
+      "label": "Self",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "LogandaimApiTestClient",
+      "file_type": "code",
+      "norm_label": "self",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
       "id": "crates_logandaim_api_tests_e2e_main_rs_statuscode",
       "label": "StatusCode",
       "_origin": "ast",
@@ -15362,6 +14824,50 @@
       "norm_label": "vec",
       "source_file": "",
       "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_api_tests_e2e_schuss",
+      "label": "e2e/schuss.rs",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "LogandaimApiTestClient",
+      "file_type": "code",
+      "norm_label": "e2e/schuss.rs",
+      "source_file": "crates/logandaim-api/tests/e2e/schuss.rs",
+      "source_location": "L1"
+    },
+    {
+      "id": "crates_logandaim_api_tests_e2e_schuss_leere_schussliste_ist_bad_request",
+      "label": "leere_schussliste_ist_bad_request()",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "LogandaimApiTestClient",
+      "file_type": "code",
+      "norm_label": "leere_schussliste_ist_bad_request()",
+      "source_file": "crates/logandaim-api/tests/e2e/schuss.rs",
+      "source_location": "L50"
+    },
+    {
+      "id": "crates_logandaim_api_tests_e2e_schuss_pfeil_null_ist_bad_request",
+      "label": "pfeil_null_ist_bad_request()",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "LogandaimApiTestClient",
+      "file_type": "code",
+      "norm_label": "pfeil_null_ist_bad_request()",
+      "source_file": "crates/logandaim-api/tests/e2e/schuss.rs",
+      "source_location": "L36"
+    },
+    {
+      "id": "crates_logandaim_api_tests_e2e_schuss_schuss_erfassen_und_wertung_berechnen",
+      "label": "schuss_erfassen_und_wertung_berechnen()",
+      "_origin": "ast",
+      "community": 52,
+      "community_name": "LogandaimApiTestClient",
+      "file_type": "code",
+      "norm_label": "schuss_erfassen_und_wertung_berechnen()",
+      "source_file": "crates/logandaim-api/tests/e2e/schuss.rs",
+      "source_location": "L7"
     },
     {
       "id": "route",
@@ -16248,105 +15754,6 @@
       "source_location": "L34"
     },
     {
-      "id": "frontend_package_scripts",
-      "label": "scripts",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "scripts",
-      "source_file": "frontend/package.json",
-      "source_location": "L5"
-    },
-    {
-      "id": "frontend_package_scripts_build",
-      "label": "build",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "build",
-      "source_file": "frontend/package.json",
-      "source_location": "L7"
-    },
-    {
-      "id": "frontend_package_scripts_check_format",
-      "label": "check:format",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "check:format",
-      "source_file": "frontend/package.json",
-      "source_location": "L12"
-    },
-    {
-      "id": "frontend_package_scripts_check_lint",
-      "label": "check:lint",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "check:lint",
-      "source_file": "frontend/package.json",
-      "source_location": "L10"
-    },
-    {
-      "id": "frontend_package_scripts_check_ts",
-      "label": "check:ts",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "check:ts",
-      "source_file": "frontend/package.json",
-      "source_location": "L13"
-    },
-    {
-      "id": "frontend_package_scripts_dev",
-      "label": "dev",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "dev",
-      "source_file": "frontend/package.json",
-      "source_location": "L6"
-    },
-    {
-      "id": "frontend_package_scripts_fix_format",
-      "label": "fix:format",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "fix:format",
-      "source_file": "frontend/package.json",
-      "source_location": "L11"
-    },
-    {
-      "id": "frontend_package_scripts_fix_lint",
-      "label": "fix:lint",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "fix:lint",
-      "source_file": "frontend/package.json",
-      "source_location": "L9"
-    },
-    {
-      "id": "frontend_package_scripts_start",
-      "label": "start",
-      "_origin": "ast",
-      "community": 58,
-      "community_name": "dependencies",
-      "file_type": "code",
-      "norm_label": "start",
-      "source_file": "frontend/package.json",
-      "source_location": "L8"
-    },
-    {
       "id": "frontend_src_app_layout",
       "label": "layout.tsx",
       "_origin": "ast",
@@ -16435,28 +15842,6 @@
       "source_location": "L33"
     },
     {
-      "id": "frontend_src_components_dev_gallery_data_figures",
-      "label": "data-figures.tsx",
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "data-figures.tsx",
-      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_components_dev_gallery_data_figures_section",
-      "label": "data-figures-section.tsx",
-      "_origin": "ast",
-      "community": 6,
-      "community_name": "cn",
-      "file_type": "code",
-      "norm_label": "data-figures-section.tsx",
-      "source_file": "frontend/src/components/dev-gallery/data-figures-section.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "frontend_src_components_ui_dialog",
       "label": "dialog.tsx",
       "_origin": "ast",
@@ -16501,6 +15886,28 @@
       "source_location": "L10"
     },
     {
+      "id": "frontend_src_components_ui_radio_group",
+      "label": "radio-group.tsx",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cn",
+      "file_type": "code",
+      "norm_label": "radio-group.tsx",
+      "source_file": "frontend/src/components/ui/radio-group.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_ui_search_input",
+      "label": "search-input.tsx",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cn",
+      "file_type": "code",
+      "norm_label": "search-input.tsx",
+      "source_file": "frontend/src/components/ui/search-input.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "frontend_src_components_ui_tabs",
       "label": "tabs.tsx",
       "_origin": "ast",
@@ -16521,6 +15928,28 @@
       "norm_label": "workflow-steps.tsx",
       "source_file": "frontend/src/components/workflow/workflow-steps.tsx",
       "source_location": "L1"
+    },
+    {
+      "id": "ref_lucide_react",
+      "label": "lucide-react",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cn",
+      "file_type": "concept",
+      "norm_label": "lucide-react",
+      "source_file": "frontend/package.json",
+      "source_location": "L37"
+    },
+    {
+      "id": "ref_radix_ui_react_radio_group",
+      "label": "@radix-ui/react-radio-group",
+      "_origin": "ast",
+      "community": 6,
+      "community_name": "cn",
+      "file_type": "concept",
+      "norm_label": "@radix-ui/react-radio-group",
+      "source_file": "frontend/package.json",
+      "source_location": "L23"
     },
     {
       "id": "ref_radix_ui_react_tabs",
@@ -16722,28 +16151,6 @@
       "source_location": "L1"
     },
     {
-      "id": "crates_logandaim_api_src_spec_logandaimapispec",
-      "label": "LogandaimApiSpec",
-      "_origin": "ast",
-      "community": 61,
-      "community_name": "StreamBinaryResponse",
-      "file_type": "code",
-      "norm_label": "logandaimapispec",
-      "source_file": "crates/logandaim-api/src/spec.rs",
-      "source_location": "L22"
-    },
-    {
-      "id": "crates_logandaim_api_src_spec_logandaimapispec_health",
-      "label": ".health()",
-      "_origin": "ast",
-      "community": 61,
-      "community_name": "StreamBinaryResponse",
-      "file_type": "code",
-      "norm_label": ".health()",
-      "source_file": "crates/logandaim-api/src/spec.rs",
-      "source_location": "L139"
-    },
-    {
       "id": "crates_logandaim_api_src_spec_logandaimapispec_schuss_registrieren",
       "label": ".schuss_registrieren()",
       "_origin": "ast",
@@ -16773,17 +16180,6 @@
       "community_name": "StreamBinaryResponse",
       "file_type": "code",
       "norm_label": "c",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_api_src_spec_rs_from",
-      "label": "From",
-      "_origin": "ast",
-      "community": 61,
-      "community_name": "StreamBinaryResponse",
-      "file_type": "code",
-      "norm_label": "from",
       "source_file": "",
       "source_location": ""
     },
@@ -16971,7 +16367,7 @@
       "node_kind": "heading",
       "norm_label": "acceptance criteria",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L116"
+      "source_location": "L104"
     },
     {
       "id": "specs_product_visual_identity_decision_log",
@@ -16983,7 +16379,7 @@
       "node_kind": "heading",
       "norm_label": "decision log",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L133"
+      "source_location": "L121"
     },
     {
       "id": "specs_product_visual_identity_domain_terms_and_business_rules",
@@ -16995,7 +16391,7 @@
       "node_kind": "heading",
       "norm_label": "domain terms and business rules",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L76"
+      "source_location": "L70"
     },
     {
       "id": "specs_product_visual_identity_open_questions",
@@ -17007,7 +16403,7 @@
       "node_kind": "heading",
       "norm_label": "open questions",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L126"
+      "source_location": "L114"
     },
     {
       "id": "specs_product_visual_identity_outcome",
@@ -17019,7 +16415,7 @@
       "node_kind": "heading",
       "norm_label": "outcome",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L25"
+      "source_location": "L22"
     },
     {
       "id": "specs_product_visual_identity_problem",
@@ -17031,7 +16427,7 @@
       "node_kind": "heading",
       "norm_label": "problem",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L18"
+      "source_location": "L16"
     },
     {
       "id": "specs_product_visual_identity_requirements",
@@ -17043,7 +16439,7 @@
       "node_kind": "heading",
       "norm_label": "requirements",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L94"
+      "source_location": "L87"
     },
     {
       "id": "specs_product_visual_identity_revision_history",
@@ -17055,7 +16451,7 @@
       "node_kind": "heading",
       "norm_label": "revision history",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L170"
+      "source_location": "L149"
     },
     {
       "id": "specs_product_visual_identity_roles",
@@ -17067,7 +16463,7 @@
       "node_kind": "heading",
       "norm_label": "roles",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L33"
+      "source_location": "L29"
     },
     {
       "id": "specs_product_visual_identity_scope",
@@ -17079,7 +16475,7 @@
       "node_kind": "heading",
       "norm_label": "scope",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L41"
+      "source_location": "L37"
     },
     {
       "id": "specs_product_visual_identity_user_journeys",
@@ -17091,7 +16487,7 @@
       "node_kind": "heading",
       "norm_label": "user journeys",
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L65"
+      "source_location": "L59"
     },
     {
       "id": "specs_product_visual_identity_visual_identity_and_design_system",
@@ -17238,59 +16634,224 @@
       "source_location": ""
     },
     {
-      "id": "crates_logandaim_api_tests_e2e_main_base_app_builder",
-      "label": "base_app_builder()",
+      "id": "crates_logandaim_core_src_domain_schuss_schussid",
+      "label": "SchussId",
       "_origin": "ast",
       "community": 64,
-      "community_name": "base_app_builder",
+      "community_name": "SchussId",
       "file_type": "code",
-      "norm_label": "base_app_builder()",
-      "source_file": "crates/logandaim-api/tests/e2e/main.rs",
+      "norm_label": "schussid",
+      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
       "source_location": "L14"
     },
     {
-      "id": "crates_logandaim_api_tests_e2e_schuss",
-      "label": "e2e/schuss.rs",
+      "id": "crates_logandaim_sqlite_src_repos_mod",
+      "label": "repos/mod.rs",
       "_origin": "ast",
       "community": 64,
-      "community_name": "base_app_builder",
+      "community_name": "SchussId",
       "file_type": "code",
-      "norm_label": "e2e/schuss.rs",
-      "source_file": "crates/logandaim-api/tests/e2e/schuss.rs",
+      "norm_label": "repos/mod.rs",
+      "source_file": "crates/logandaim-sqlite/src/repos/mod.rs",
       "source_location": "L1"
     },
     {
-      "id": "crates_logandaim_api_tests_e2e_schuss_leere_schussliste_ist_bad_request",
-      "label": "leere_schussliste_ist_bad_request()",
+      "id": "crates_logandaim_sqlite_src_repos_schuss",
+      "label": "repos/schuss.rs",
       "_origin": "ast",
       "community": 64,
-      "community_name": "base_app_builder",
+      "community_name": "SchussId",
       "file_type": "code",
-      "norm_label": "leere_schussliste_ist_bad_request()",
-      "source_file": "crates/logandaim-api/tests/e2e/schuss.rs",
-      "source_location": "L50"
+      "norm_label": "repos/schuss.rs",
+      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
+      "source_location": "L1"
     },
     {
-      "id": "crates_logandaim_api_tests_e2e_schuss_pfeil_null_ist_bad_request",
-      "label": "pfeil_null_ist_bad_request()",
+      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_arc",
+      "label": "Arc",
       "_origin": "ast",
       "community": 64,
-      "community_name": "base_app_builder",
+      "community_name": "SchussId",
       "file_type": "code",
-      "norm_label": "pfeil_null_ist_bad_request()",
-      "source_file": "crates/logandaim-api/tests/e2e/schuss.rs",
-      "source_location": "L36"
+      "norm_label": "arc",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "crates_logandaim_api_tests_e2e_schuss_schuss_erfassen_und_wertung_berechnen",
-      "label": "schuss_erfassen_und_wertung_berechnen()",
+      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_mutex",
+      "label": "Mutex",
       "_origin": "ast",
       "community": 64,
-      "community_name": "base_app_builder",
+      "community_name": "SchussId",
       "file_type": "code",
-      "norm_label": "schuss_erfassen_und_wertung_berechnen()",
-      "source_file": "crates/logandaim-api/tests/e2e/schuss.rs",
-      "source_location": "L7"
+      "norm_label": "mutex",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_option",
+      "label": "Option",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "option",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_repositoryerror",
+      "label": "RepositoryError",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "repositoryerror",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_repositoryresult",
+      "label": "RepositoryResult",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "repositoryresult",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_result",
+      "label": "Result",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "result",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_schuss",
+      "label": "Schuss",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "schuss",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_transaction",
+      "label": "Transaction",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "transaction",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_vec",
+      "label": "Vec",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "vec",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_rs_wertungszone",
+      "label": "Wertungszone",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "wertungszone",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_schuss_from_row",
+      "label": "schuss_from_row()",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "schuss_from_row()",
+      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
+      "source_location": "L37"
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_sqliteschussrepository",
+      "label": "SQLiteSchussRepository",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "sqliteschussrepository",
+      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
+      "source_location": "L52"
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_sqliteschussrepository_create",
+      "label": ".create()",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": ".create()",
+      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
+      "source_location": "L58"
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_sqliteschussrepository_find_by_id",
+      "label": ".find_by_id()",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": ".find_by_id()",
+      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
+      "source_location": "L80"
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_sqliteschussrepository_find_by_ids",
+      "label": ".find_by_ids()",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": ".find_by_ids()",
+      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
+      "source_location": "L103"
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_zone_from_str",
+      "label": "zone_from_str()",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "zone_from_str()",
+      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
+      "source_location": "L27"
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_repos_schuss_zone_to_str",
+      "label": "zone_to_str()",
+      "_origin": "ast",
+      "community": 64,
+      "community_name": "SchussId",
+      "file_type": "code",
+      "norm_label": "zone_to_str()",
+      "source_file": "crates/logandaim-sqlite/src/repos/schuss.rs",
+      "source_location": "L18"
     },
     {
       "id": "frontend_package_devdependencies",
@@ -18160,17 +17721,6 @@
       "source_location": ""
     },
     {
-      "id": "frontend_src_components_ui_checkbox",
-      "label": "checkbox.tsx",
-      "_origin": "ast",
-      "community": 70,
-      "community_name": "react",
-      "file_type": "code",
-      "norm_label": "checkbox.tsx",
-      "source_file": "frontend/src/components/ui/checkbox.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "frontend_src_components_ui_field",
       "label": "field.tsx",
       "_origin": "ast",
@@ -18204,17 +17754,6 @@
       "source_location": "L1"
     },
     {
-      "id": "frontend_src_components_ui_select",
-      "label": "select.tsx",
-      "_origin": "ast",
-      "community": 70,
-      "community_name": "react",
-      "file_type": "code",
-      "norm_label": "select.tsx",
-      "source_file": "frontend/src/components/ui/select.tsx",
-      "source_location": "L1"
-    },
-    {
       "id": "frontend_src_components_ui_skeleton",
       "label": "skeleton.tsx",
       "_origin": "ast",
@@ -18223,6 +17762,17 @@
       "file_type": "code",
       "norm_label": "skeleton.tsx",
       "source_file": "frontend/src/components/ui/skeleton.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_ui_slider",
+      "label": "slider.tsx",
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "react",
+      "file_type": "code",
+      "norm_label": "slider.tsx",
+      "source_file": "frontend/src/components/ui/slider.tsx",
       "source_location": "L1"
     },
     {
@@ -18281,6 +17831,17 @@
       "source_location": "L22"
     },
     {
+      "id": "ref_radix_ui_react_slider",
+      "label": "@radix-ui/react-slider",
+      "_origin": "ast",
+      "community": 70,
+      "community_name": "react",
+      "file_type": "concept",
+      "norm_label": "@radix-ui/react-slider",
+      "source_file": "frontend/package.json",
+      "source_location": "L26"
+    },
+    {
       "id": "ref_radix_ui_react_switch",
       "label": "@radix-ui/react-switch",
       "_origin": "ast",
@@ -18314,37 +17875,136 @@
       "source_location": "L42"
     },
     {
-      "id": "frontend_src_components_ui_toggle_group",
-      "label": "toggle-group.tsx",
+      "id": "crates_logandaim_core_src_application_instrumented_instrumentedunitofwork_sch\u00fcsse",
+      "label": ".sch\u00fcsse()",
       "_origin": "ast",
       "community": 71,
-      "community_name": "toggle-group.tsx",
+      "community_name": "SchussRepository",
       "file_type": "code",
-      "norm_label": "toggle-group.tsx",
-      "source_file": "frontend/src/components/ui/toggle-group.tsx",
-      "source_location": "L1"
+      "norm_label": ".schusse()",
+      "source_file": "crates/logandaim-core/src/application/instrumented.rs",
+      "source_location": "L89"
     },
     {
-      "id": "frontend_src_components_ui_toggle_group_togglegroupitemvariants",
-      "label": "toggleGroupItemVariants",
+      "id": "crates_logandaim_core_src_application_ports_repos_rs_repositoryresult",
+      "label": "RepositoryResult",
       "_origin": "ast",
       "community": 71,
-      "community_name": "toggle-group.tsx",
+      "community_name": "SchussRepository",
       "file_type": "code",
-      "norm_label": "togglegroupitemvariants",
-      "source_file": "frontend/src/components/ui/toggle-group.tsx",
-      "source_location": "L18"
+      "norm_label": "repositoryresult",
+      "source_file": "",
+      "source_location": ""
     },
     {
-      "id": "ref_radix_ui_react_toggle_group",
-      "label": "@radix-ui/react-toggle-group",
+      "id": "crates_logandaim_core_src_application_ports_repos_rs_schuss",
+      "label": "Schuss",
       "_origin": "ast",
       "community": 71,
-      "community_name": "toggle-group.tsx",
-      "file_type": "concept",
-      "norm_label": "@radix-ui/react-toggle-group",
-      "source_file": "frontend/package.json",
-      "source_location": "L31"
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": "schuss",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_rs_send",
+      "label": "Send",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": "send",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_rs_sync",
+      "label": "Sync",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": "sync",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_rs_vec",
+      "label": "Vec",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": "vec",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository",
+      "label": "SchussRepository",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": "schussrepository",
+      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
+      "source_location": "L37"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_create",
+      "label": ".create()",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": ".create()",
+      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
+      "source_location": "L38"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_find_by_id",
+      "label": ".find_by_id()",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": ".find_by_id()",
+      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
+      "source_location": "L40"
+    },
+    {
+      "id": "crates_logandaim_core_src_application_ports_repos_schussrepository_find_by_ids",
+      "label": ".find_by_ids()",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": ".find_by_ids()",
+      "source_file": "crates/logandaim-core/src/application/ports/repos.rs",
+      "source_location": "L44"
+    },
+    {
+      "id": "crates_logandaim_fakes_src_uow_fakeunitofwork_sch\u00fcsse",
+      "label": ".sch\u00fcsse()",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": ".schusse()",
+      "source_file": "crates/logandaim-fakes/src/uow.rs",
+      "source_location": "L84"
+    },
+    {
+      "id": "crates_logandaim_sqlite_src_uow_sqliteunitofwork_sch\u00fcsse",
+      "label": ".sch\u00fcsse()",
+      "_origin": "ast",
+      "community": 71,
+      "community_name": "SchussRepository",
+      "file_type": "code",
+      "norm_label": ".schusse()",
+      "source_file": "crates/logandaim-sqlite/src/uow.rs",
+      "source_location": "L65"
     },
     {
       "id": "tasks_scripts_check_version",
@@ -18435,39 +18095,6 @@
       "source_location": "L12"
     },
     {
-      "id": "ref_tanstack_react_query_devtools",
-      "label": "@tanstack/react-query-devtools",
-      "_origin": "ast",
-      "community": 73,
-      "community_name": "provider.tsx",
-      "file_type": "concept",
-      "norm_label": "@tanstack/react-query-devtools",
-      "source_file": "frontend/package.json",
-      "source_location": "L34"
-    },
-    {
-      "id": "frontend_src_app_schuss_page",
-      "label": "schuss/page.tsx",
-      "_origin": "ast",
-      "community": 74,
-      "community_name": "sortable-table-section.tsx",
-      "file_type": "code",
-      "norm_label": "schuss/page.tsx",
-      "source_file": "frontend/src/app/schuss/page.tsx",
-      "source_location": "L1"
-    },
-    {
-      "id": "frontend_src_app_schuss_page_zonen",
-      "label": "zonen",
-      "_origin": "ast",
-      "community": 74,
-      "community_name": "sortable-table-section.tsx",
-      "file_type": "code",
-      "norm_label": "zonen",
-      "source_file": "frontend/src/app/schuss/page.tsx",
-      "source_location": "L28"
-    },
-    {
       "id": "frontend_src_components_dev_gallery_sortable_table_section",
       "label": "sortable-table-section.tsx",
       "_origin": "ast",
@@ -18512,6 +18139,17 @@
       "source_location": "L52"
     },
     {
+      "id": "frontend_src_components_ui_checkbox",
+      "label": "checkbox.tsx",
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "sortable-table-section.tsx",
+      "file_type": "code",
+      "norm_label": "checkbox.tsx",
+      "source_file": "frontend/src/components/ui/checkbox.tsx",
+      "source_location": "L1"
+    },
+    {
       "id": "frontend_src_components_ui_checkpoint_slider",
       "label": "checkpoint-slider.tsx",
       "_origin": "ast",
@@ -18523,26 +18161,37 @@
       "source_location": "L1"
     },
     {
-      "id": "frontend_src_components_ui_input",
-      "label": "input.tsx",
+      "id": "frontend_src_components_ui_toggle_group",
+      "label": "toggle-group.tsx",
       "_origin": "ast",
       "community": 74,
       "community_name": "sortable-table-section.tsx",
       "file_type": "code",
-      "norm_label": "input.tsx",
-      "source_file": "frontend/src/components/ui/input.tsx",
+      "norm_label": "toggle-group.tsx",
+      "source_file": "frontend/src/components/ui/toggle-group.tsx",
       "source_location": "L1"
     },
     {
-      "id": "frontend_src_components_ui_table",
-      "label": "table.tsx",
+      "id": "frontend_src_components_ui_toggle_group_togglegroupitemvariants",
+      "label": "toggleGroupItemVariants",
       "_origin": "ast",
       "community": 74,
       "community_name": "sortable-table-section.tsx",
       "file_type": "code",
-      "norm_label": "table.tsx",
-      "source_file": "frontend/src/components/ui/table.tsx",
-      "source_location": "L1"
+      "norm_label": "togglegroupitemvariants",
+      "source_file": "frontend/src/components/ui/toggle-group.tsx",
+      "source_location": "L18"
+    },
+    {
+      "id": "ref_radix_ui_react_toggle_group",
+      "label": "@radix-ui/react-toggle-group",
+      "_origin": "ast",
+      "community": 74,
+      "community_name": "sortable-table-section.tsx",
+      "file_type": "concept",
+      "norm_label": "@radix-ui/react-toggle-group",
+      "source_file": "frontend/package.json",
+      "source_location": "L31"
     },
     {
       "id": "specs_decisions_0003_design_system_and_dev_gallery",
@@ -19122,7 +18771,7 @@
       "label": "service/mod.rs",
       "_origin": "ast",
       "community": 80,
-      "community_name": "UseCase",
+      "community_name": "SchussRegistrieren",
       "file_type": "code",
       "norm_label": "service/mod.rs",
       "source_file": "crates/logandaim-core/src/service/mod.rs",
@@ -19133,7 +18782,7 @@
       "label": "Context",
       "_origin": "ast",
       "community": 80,
-      "community_name": "UseCase",
+      "community_name": "SchussRegistrieren",
       "file_type": "code",
       "norm_label": "context",
       "source_file": "",
@@ -19144,7 +18793,7 @@
       "label": "Output",
       "_origin": "ast",
       "community": 80,
-      "community_name": "UseCase",
+      "community_name": "SchussRegistrieren",
       "file_type": "code",
       "norm_label": "output",
       "source_file": "",
@@ -19155,7 +18804,7 @@
       "label": "ResultReport",
       "_origin": "ast",
       "community": 80,
-      "community_name": "UseCase",
+      "community_name": "SchussRegistrieren",
       "file_type": "code",
       "norm_label": "resultreport",
       "source_file": "",
@@ -19166,7 +18815,7 @@
       "label": "UseCase",
       "_origin": "ast",
       "community": 80,
-      "community_name": "UseCase",
+      "community_name": "SchussRegistrieren",
       "file_type": "code",
       "norm_label": "usecase",
       "source_file": "crates/logandaim-core/src/service/mod.rs",
@@ -19177,32 +18826,219 @@
       "label": ".perform()",
       "_origin": "ast",
       "community": 80,
-      "community_name": "UseCase",
+      "community_name": "SchussRegistrieren",
       "file_type": "code",
       "norm_label": ".perform()",
       "source_file": "crates/logandaim-core/src/service/mod.rs",
       "source_location": "L15"
     },
     {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss",
+      "label": "use_cases/schuss.rs",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": "use_cases/schuss.rs",
+      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
+      "source_location": "L1"
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_rs_error",
+      "label": "Error",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": "error",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_rs_result",
+      "label": "Result",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": "result",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_rs_schuss",
+      "label": "Schuss",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": "schuss",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_rs_vec",
+      "label": "Vec",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": "vec",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_rs_wertungszone",
+      "label": "Wertungszone",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": "wertungszone",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_schussregistrieren",
+      "label": "SchussRegistrieren",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": "schussregistrieren",
+      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
+      "source_location": "L14"
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_schussregistrieren_perform",
+      "label": ".perform()",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": ".perform()",
+      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
+      "source_location": "L30"
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_schussregistrierenfehler",
+      "label": "SchussRegistrierenFehler",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": "schussregistrierenfehler",
+      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
+      "source_location": "L21"
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_wertungberechnen",
+      "label": "WertungBerechnen",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": "wertungberechnen",
+      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
+      "source_location": "L74"
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_wertungberechnen_perform",
+      "label": ".perform()",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": ".perform()",
+      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
+      "source_location": "L82"
+    },
+    {
+      "id": "crates_logandaim_core_src_service_use_cases_schuss_wertungfehler",
+      "label": "WertungFehler",
+      "_origin": "ast",
+      "community": 80,
+      "community_name": "SchussRegistrieren",
+      "file_type": "code",
+      "norm_label": "wertungfehler",
+      "source_file": "crates/logandaim-core/src/service/use_cases/schuss.rs",
+      "source_location": "L60"
+    },
+    {
       "id": "frontend_src_app_page",
       "label": "app/page.tsx",
       "_origin": "ast",
       "community": 81,
-      "community_name": "card.tsx",
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
       "norm_label": "app/page.tsx",
       "source_file": "frontend/src/app/page.tsx",
       "source_location": "L1"
     },
     {
+      "id": "frontend_src_app_schuss_page",
+      "label": "schuss/page.tsx",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "schuss/page.tsx",
+      "source_file": "frontend/src/app/schuss/page.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_app_schuss_page_zonen",
+      "label": "zonen",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "zonen",
+      "source_file": "frontend/src/app/schuss/page.tsx",
+      "source_location": "L28"
+    },
+    {
       "id": "frontend_src_components_ui_card",
       "label": "card.tsx",
       "_origin": "ast",
       "community": 81,
-      "community_name": "card.tsx",
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
       "norm_label": "card.tsx",
       "source_file": "frontend/src/components/ui/card.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_ui_input",
+      "label": "input.tsx",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "input.tsx",
+      "source_file": "frontend/src/components/ui/input.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_ui_select",
+      "label": "select.tsx",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "select.tsx",
+      "source_file": "frontend/src/components/ui/select.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "frontend_src_components_ui_table",
+      "label": "table.tsx",
+      "_origin": "ast",
+      "community": 81,
+      "community_name": "schuss/page.tsx",
+      "file_type": "code",
+      "norm_label": "table.tsx",
+      "source_file": "frontend/src/components/ui/table.tsx",
       "source_location": "L1"
     },
     {
@@ -19210,7 +19046,7 @@
       "label": "deployment-status.tsx",
       "_origin": "ast",
       "community": 81,
-      "community_name": "card.tsx",
+      "community_name": "schuss/page.tsx",
       "file_type": "code",
       "norm_label": "deployment-status.tsx",
       "source_file": "frontend/src/components/workflow/deployment-status.tsx",
@@ -19467,17 +19303,6 @@
       "source_location": "L1"
     },
     {
-      "id": "ref_openapi_fetch",
-      "label": "openapi-fetch",
-      "_origin": "ast",
-      "community": 84,
-      "community_name": "http-client.ts",
-      "file_type": "concept",
-      "norm_label": "openapi-fetch",
-      "source_file": "frontend/package.json",
-      "source_location": "L39"
-    },
-    {
       "id": "crates_molting_src_tests_mod",
       "label": "tests/mod.rs",
       "_origin": "ast",
@@ -19617,28 +19442,6 @@
       "community_name": "openapi_service",
       "file_type": "code",
       "norm_label": "item",
-      "source_file": "",
-      "source_location": ""
-    },
-    {
-      "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_new",
-      "label": ".new()",
-      "_origin": "ast",
-      "community": 87,
-      "community_name": "openapi_service",
-      "file_type": "code",
-      "norm_label": ".new()",
-      "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L28"
-    },
-    {
-      "id": "crates_logandaim_api_tests_e2e_main_rs_self",
-      "label": "Self",
-      "_origin": "ast",
-      "community": 87,
-      "community_name": "openapi_service",
-      "file_type": "code",
-      "norm_label": "self",
       "source_file": "",
       "source_location": ""
     },
@@ -19896,48 +19699,356 @@
       "source_location": "L32"
     },
     {
-      "id": "frontend_src_components_ui_radio_group",
-      "label": "radio-group.tsx",
+      "id": "crates_logandaim_core_src_domain_schuss_from_parts_roundtrip",
+      "label": "from_parts_roundtrip()",
       "_origin": "ast",
       "community": 90,
-      "community_name": "radio-group.tsx",
+      "community_name": ".from_parts",
       "file_type": "code",
-      "norm_label": "radio-group.tsx",
-      "source_file": "frontend/src/components/ui/radio-group.tsx",
+      "norm_label": "from_parts_roundtrip()",
+      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
+      "source_location": "L205"
+    },
+    {
+      "id": "crates_logandaim_core_src_domain_schuss_neuerschuss_neu",
+      "label": ".neu()",
+      "_origin": "ast",
+      "community": 90,
+      "community_name": ".from_parts",
+      "file_type": "code",
+      "norm_label": ".neu()",
+      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
+      "source_location": "L35"
+    },
+    {
+      "id": "crates_logandaim_core_src_domain_schuss_pfeil_ist_eins_basiert",
+      "label": "pfeil_ist_eins_basiert()",
+      "_origin": "ast",
+      "community": 90,
+      "community_name": ".from_parts",
+      "file_type": "code",
+      "norm_label": "pfeil_ist_eins_basiert()",
+      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
+      "source_location": "L179"
+    },
+    {
+      "id": "crates_logandaim_core_src_domain_schuss_pfeil_null_wird_abgelehnt",
+      "label": "pfeil_null_wird_abgelehnt()",
+      "_origin": "ast",
+      "community": 90,
+      "community_name": ".from_parts",
+      "file_type": "code",
+      "norm_label": "pfeil_null_wird_abgelehnt()",
+      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
+      "source_location": "L188"
+    },
+    {
+      "id": "crates_logandaim_core_src_domain_schuss_pfeil_vier_und_sp\u00e4ter_sind_erlaubt",
+      "label": "pfeil_vier_und_sp\u00e4ter_sind_erlaubt()",
+      "_origin": "ast",
+      "community": 90,
+      "community_name": ".from_parts",
+      "file_type": "code",
+      "norm_label": "pfeil_vier_und_spater_sind_erlaubt()",
+      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
+      "source_location": "L197"
+    },
+    {
+      "id": "crates_logandaim_core_src_domain_schuss_rs_result",
+      "label": "Result",
+      "_origin": "ast",
+      "community": 90,
+      "community_name": ".from_parts",
+      "file_type": "code",
+      "norm_label": "result",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_domain_schuss_rs_self",
+      "label": "Self",
+      "_origin": "ast",
+      "community": 90,
+      "community_name": ".from_parts",
+      "file_type": "code",
+      "norm_label": "self",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_core_src_domain_schuss_schuss_from_parts",
+      "label": ".from_parts()",
+      "_origin": "ast",
+      "community": 90,
+      "community_name": ".from_parts",
+      "file_type": "code",
+      "norm_label": ".from_parts()",
+      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
+      "source_location": "L88"
+    },
+    {
+      "id": "crates_logandaim_core_src_domain_schuss_schuss_neu",
+      "label": ".neu()",
+      "_origin": "ast",
+      "community": 90,
+      "community_name": ".from_parts",
+      "file_type": "code",
+      "norm_label": ".neu()",
+      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
+      "source_location": "L78"
+    },
+    {
+      "id": "crates_logandaim_core_src_domain_schuss_schussfehler",
+      "label": "SchussFehler",
+      "_origin": "ast",
+      "community": 90,
+      "community_name": ".from_parts",
+      "file_type": "code",
+      "norm_label": "schussfehler",
+      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
+      "source_location": "L17"
+    },
+    {
+      "id": "crates_logandaim_core_src_domain_schuss_ziel",
+      "label": "ziel()",
+      "_origin": "ast",
+      "community": 90,
+      "community_name": ".from_parts",
+      "file_type": "code",
+      "norm_label": "ziel()",
+      "source_file": "crates/logandaim-core/src/domain/schuss.rs",
+      "source_location": "L163"
+    },
+    {
+      "id": "frontend_src_components_dev_gallery_data_figures",
+      "label": "data-figures.tsx",
+      "_origin": "ast",
+      "community": 91,
+      "community_name": "data-figures.tsx",
+      "file_type": "code",
+      "norm_label": "data-figures.tsx",
+      "source_file": "frontend/src/components/dev-gallery/data-figures.tsx",
       "source_location": "L1"
     },
     {
-      "id": "ref_radix_ui_react_radio_group",
-      "label": "@radix-ui/react-radio-group",
+      "id": "frontend_src_components_dev_gallery_data_figures_section",
+      "label": "data-figures-section.tsx",
       "_origin": "ast",
-      "community": 90,
-      "community_name": "radio-group.tsx",
-      "file_type": "concept",
-      "norm_label": "@radix-ui/react-radio-group",
-      "source_file": "frontend/package.json",
+      "community": 91,
+      "community_name": "data-figures.tsx",
+      "file_type": "code",
+      "norm_label": "data-figures-section.tsx",
+      "source_file": "frontend/src/components/dev-gallery/data-figures-section.tsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "crates_logandaim_api_src_api_mod",
+      "label": "api/mod.rs",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "LogandaimAppApi",
+      "file_type": "code",
+      "norm_label": "api/mod.rs",
+      "source_file": "crates/logandaim-api/src/api/mod.rs",
+      "source_location": "L1"
+    },
+    {
+      "id": "crates_logandaim_api_src_api_mod_logandaimappapi",
+      "label": "LogandaimAppApi",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "LogandaimAppApi",
+      "file_type": "code",
+      "norm_label": "logandaimappapi",
+      "source_file": "crates/logandaim-api/src/api/mod.rs",
+      "source_location": "L18"
+    },
+    {
+      "id": "crates_logandaim_api_src_api_mod_logandaimappapi_inner_app",
+      "label": ".inner_app()",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "LogandaimAppApi",
+      "file_type": "code",
+      "norm_label": ".inner_app()",
+      "source_file": "crates/logandaim-api/src/api/mod.rs",
+      "source_location": "L27"
+    },
+    {
+      "id": "crates_logandaim_api_src_api_mod_rs_arc",
+      "label": "Arc",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "LogandaimAppApi",
+      "file_type": "code",
+      "norm_label": "arc",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_api_src_spec_logandaimapispec",
+      "label": "LogandaimApiSpec",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "LogandaimAppApi",
+      "file_type": "code",
+      "norm_label": "logandaimapispec",
+      "source_file": "crates/logandaim-api/src/spec.rs",
+      "source_location": "L22"
+    },
+    {
+      "id": "crates_logandaim_api_src_spec_logandaimapispec_from",
+      "label": ".from()",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "LogandaimAppApi",
+      "file_type": "code",
+      "norm_label": ".from()",
+      "source_file": "crates/logandaim-api/src/spec.rs",
+      "source_location": "L33"
+    },
+    {
+      "id": "crates_logandaim_api_src_spec_logandaimapispec_health",
+      "label": ".health()",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "LogandaimAppApi",
+      "file_type": "code",
+      "norm_label": ".health()",
+      "source_file": "crates/logandaim-api/src/spec.rs",
+      "source_location": "L139"
+    },
+    {
+      "id": "crates_logandaim_api_src_spec_logandaimapispec_new",
+      "label": ".new()",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "LogandaimAppApi",
+      "file_type": "code",
+      "norm_label": ".new()",
+      "source_file": "crates/logandaim-api/src/spec.rs",
+      "source_location": "L27"
+    },
+    {
+      "id": "crates_logandaim_api_src_spec_rs_from",
+      "label": "From",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "LogandaimAppApi",
+      "file_type": "code",
+      "norm_label": "from",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "crates_logandaim_api_src_spec_rs_self",
+      "label": "Self",
+      "_origin": "ast",
+      "community": 92,
+      "community_name": "LogandaimAppApi",
+      "file_type": "code",
+      "norm_label": "self",
+      "source_file": "",
+      "source_location": ""
+    },
+    {
+      "id": "tasks_scripts_check_design",
+      "label": "check-design.mjs",
+      "_origin": "ast",
+      "community": 93,
+      "community_name": "check-design.mjs",
+      "file_type": "code",
+      "norm_label": "check-design.mjs",
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L1"
+    },
+    {
+      "id": "tasks_scripts_check_design_css",
+      "label": "CSS",
+      "_origin": "ast",
+      "community": 93,
+      "community_name": "check-design.mjs",
+      "file_type": "code",
+      "norm_label": "css",
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L17"
+    },
+    {
+      "id": "tasks_scripts_check_design_failures",
+      "label": "failures",
+      "_origin": "ast",
+      "community": 93,
+      "community_name": "check-design.mjs",
+      "file_type": "code",
+      "norm_label": "failures",
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L36"
+    },
+    {
+      "id": "tasks_scripts_check_design_root",
+      "label": "ROOT",
+      "_origin": "ast",
+      "community": 93,
+      "community_name": "check-design.mjs",
+      "file_type": "code",
+      "norm_label": "root",
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L16"
+    },
+    {
+      "id": "tasks_scripts_check_design_rule",
+      "label": "RULE",
+      "_origin": "ast",
+      "community": 93,
+      "community_name": "check-design.mjs",
+      "file_type": "code",
+      "norm_label": "rule",
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L18"
+    },
+    {
+      "id": "tasks_scripts_check_design_scanned",
+      "label": "SCANNED",
+      "_origin": "ast",
+      "community": 93,
+      "community_name": "check-design.mjs",
+      "file_type": "code",
+      "norm_label": "scanned",
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L22"
+    },
+    {
+      "id": "tasks_scripts_check_design_skip_dirs",
+      "label": "SKIP_DIRS",
+      "_origin": "ast",
+      "community": 93,
+      "community_name": "check-design.mjs",
+      "file_type": "code",
+      "norm_label": "skip_dirs",
+      "source_file": "tasks/scripts/check-design.mjs",
       "source_location": "L23"
     },
     {
-      "id": "frontend_src_components_ui_search_input",
-      "label": "search-input.tsx",
+      "id": "tasks_scripts_check_design_src",
+      "label": "SRC",
       "_origin": "ast",
-      "community": 91,
-      "community_name": "search-input.tsx",
+      "community": 93,
+      "community_name": "check-design.mjs",
       "file_type": "code",
-      "norm_label": "search-input.tsx",
-      "source_file": "frontend/src/components/ui/search-input.tsx",
-      "source_location": "L1"
+      "norm_label": "src",
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L19"
     },
     {
-      "id": "ref_lucide_react",
-      "label": "lucide-react",
+      "id": "tasks_scripts_check_design_tokens",
+      "label": "tokens",
       "_origin": "ast",
-      "community": 91,
-      "community_name": "search-input.tsx",
-      "file_type": "concept",
-      "norm_label": "lucide-react",
-      "source_file": "frontend/package.json",
-      "source_location": "L37"
+      "community": 93,
+      "community_name": "check-design.mjs",
+      "file_type": "code",
+      "norm_label": "tokens",
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L62"
     },
     {
       "id": "specs_readme_language",
@@ -52293,7 +52404,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L116",
+      "source_location": "L104",
       "weight": 1.0
     },
     {
@@ -52304,7 +52415,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L126",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
@@ -52315,7 +52426,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L133",
+      "source_location": "L121",
       "weight": 1.0
     },
     {
@@ -52326,7 +52437,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L170",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -52337,7 +52448,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L18",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -52348,7 +52459,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L25",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -52359,7 +52470,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L33",
+      "source_location": "L29",
       "weight": 1.0
     },
     {
@@ -52370,7 +52481,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L41",
+      "source_location": "L37",
       "weight": 1.0
     },
     {
@@ -52381,7 +52492,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L65",
+      "source_location": "L59",
       "weight": 1.0
     },
     {
@@ -52392,7 +52503,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L76",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -52403,7 +52514,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/visual-identity.md",
-      "source_location": "L94",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -52811,6 +52922,105 @@
       "confidence_score": 1.0,
       "source_file": "tasks/scripts/changelog.mjs",
       "source_location": "L9",
+      "weight": 1.0
+    },
+    {
+      "source": "tasks_scripts_check_design",
+      "target": "tasks_scripts_check_design_root",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "tasks_scripts_check_design",
+      "target": "tasks_scripts_check_design_src",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "tasks_scripts_check_design",
+      "target": "tasks_scripts_check_design_scanned",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L22",
+      "weight": 1.0
+    },
+    {
+      "source": "tasks_scripts_check_design",
+      "target": "tasks_scripts_check_design_skip_dirs",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L23",
+      "weight": 1.0
+    },
+    {
+      "source": "tasks_scripts_check_design",
+      "target": "tasks_scripts_check_design_failures",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "tasks_scripts_check_design",
+      "target": "tasks_scripts_check_design_walk",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L38",
+      "weight": 1.0
+    },
+    {
+      "source": "tasks_scripts_check_design",
+      "target": "tasks_scripts_check_design_css",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L57",
+      "weight": 1.0
+    },
+    {
+      "source": "tasks_scripts_check_design",
+      "target": "tasks_scripts_check_design_rule",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L58",
+      "weight": 1.0
+    },
+    {
+      "source": "tasks_scripts_check_design",
+      "target": "tasks_scripts_check_design_tokens",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "tasks/scripts/check-design.mjs",
+      "source_location": "L62",
       "weight": 1.0
     },
     {
@@ -58414,5 +58624,5 @@
       "source_file": ".cursor/AGENTS.md"
     }
   ],
-  "built_at_commit": "5c3e9309d6f6d975a7e9b601632ca9c5cee39be3"
+  "built_at_commit": "8a048a4684b9727237759ebc5b88f67e6d81821e"
 }

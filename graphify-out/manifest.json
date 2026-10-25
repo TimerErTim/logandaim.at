@@ -342,8 +342,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/ui/badge.tsx": {
-    "mtime": 1792964351.2966752,
-    "seen": 1792964395.1101475,
+    "mtime": 1792964673.580801,
+    "seen": 1792964753.6387713,
     "ast_hash": "d1588011ebedfa28a5413a74a7879b0b",
     "semantic_hash": ""
   },
@@ -378,8 +378,8 @@
     "semantic_hash": ""
   },
   "frontend/src/api/schema.ts": {
-    "mtime": 1792964372.9726636,
-    "seen": 1792964395.1098845,
+    "mtime": 1792964740.692491,
+    "seen": 1792964753.6380084,
     "ast_hash": "b280187c1159e8ef8c1bd9a59c55490b",
     "semantic_hash": ""
   },
@@ -1194,15 +1194,15 @@
     "semantic_hash": ""
   },
   "specs/decisions/0003-design-system-and-dev-gallery.md": {
-    "mtime": 1792939492.5046465,
-    "seen": 1792941435.0056481,
-    "ast_hash": "0865e3915f6d16ec93bb373fe61a0a73",
+    "mtime": 1792964729.1045501,
+    "seen": 1792964753.6413193,
+    "ast_hash": "b744174b6ab41921fef1099cc77157c6",
     "semantic_hash": ""
   },
   "specs/product/visual-identity.md": {
-    "mtime": 1792964357.6846607,
-    "seen": 1792964395.1127536,
-    "ast_hash": "2b6a50fc2ea30a46f6868fb3258cbc7e",
+    "mtime": 1792964723.9765449,
+    "seen": 1792964753.6419444,
+    "ast_hash": "7d428767b1935632317b722f0b8cd503",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/checkpoint-slider.tsx": {
@@ -1227,6 +1227,12 @@
     "mtime": 1792964335.268664,
     "seen": 1792964395.1100466,
     "ast_hash": "e77a3b7cbd1dd2bed0086e8d6d7b2975",
+    "semantic_hash": ""
+  },
+  "tasks/scripts/check-design.mjs": {
+    "mtime": 1792964663.0908918,
+    "seen": 1792964753.6400423,
+    "ast_hash": "707c726f36f0c2aa3cc6de60439ecdb5",
     "semantic_hash": ""
   }
 }
