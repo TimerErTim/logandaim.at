@@ -35,9 +35,48 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/**
+ * Icons and the web manifest live in `public/` and are linked explicitly, because the
+ * favicon set is a single copy shared by every deployment shape.
+ *
+ * Next applies `basePath` to file-convention metadata it generates itself, but it
+ * emits hand-written `metadata.icons` / `metadata.manifest` URLs verbatim. The prefix
+ * therefore has to be added here, or the links 404 on the GitHub Pages project site.
+ */
+const basePath = process.env.NEXT_PUBLIC_LOGANDAIM_BASE_PATH ?? "";
+
 export const metadata: Metadata = {
   title: "logandaim.at",
-  description: "Yet Another Management Software",
+  description: "Logbuch für 3D-Bogenschießen.",
+  applicationName: "logandaim.at",
+  manifest: `${basePath}/site.webmanifest`,
+  icons: {
+    icon: [
+      { url: `${basePath}/favicon.ico`, sizes: "any", type: "image/x-icon" },
+      {
+        url: `${basePath}/favicon-32x32.png`,
+        sizes: "32x32",
+        type: "image/png",
+      },
+      {
+        url: `${basePath}/favicon-16x16.png`,
+        sizes: "16x16",
+        type: "image/png",
+      },
+    ],
+    apple: {
+      url: `${basePath}/apple-touch-icon.png`,
+      sizes: "180x180",
+      type: "image/png",
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "de_AT",
+    siteName: "logandaim.at",
+    title: "logandaim.at",
+    description: "Logbuch für 3D-Bogenschießen.",
+  },
 };
 
 export default function RootLayout({

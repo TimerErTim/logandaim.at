@@ -37,6 +37,22 @@ changing UI.
 - **Changing the look**: edit a token in `globals.css`, look at `/dev`, and on acceptance update the
   design rule and the spec decision log in the same commit.
 
+## Metadata and icons
+
+The favicon set and the web manifest are the single copy in `public/`
+(`favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png`,
+`android-chrome-*.png`, `site.webmanifest`). They live there rather than in `src/app/` so the
+brand assets are one set, not a second file-convention copy.
+
+`src/app/layout.tsx` links them explicitly and prefixes every URL with
+`NEXT_PUBLIC_LOGANDAIM_BASE_PATH`. Next applies the base path to file-convention metadata it
+generates itself, but not to hand-written `metadata.icons` / `metadata.manifest` URLs, so the
+prefix has to be added by hand. Manifest icon and `start_url` entries are relative on purpose:
+they resolve against the manifest's own URL and follow the deployment prefix without help.
+The manifest's `background_color` / `theme_color` mirror `--bg-canvas` and `--color-primary`;
+JSON cannot hold a `var()`, so those two are the only literal palette values outside
+`globals.css`. Change them only together with the tokens.
+
 ## Configuration
 
 There is no runtime configuration file: every value is a `NEXT_PUBLIC_*` variable read at build time.
