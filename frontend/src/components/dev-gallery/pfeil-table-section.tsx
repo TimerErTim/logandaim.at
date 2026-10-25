@@ -200,7 +200,7 @@ function SortablePfeilRow({
         style={{ transform: CSS.Translate.toString(transform), transition }}
         className={cn(
           "relative",
-          isDragging && "z-10 bg-surface shadow-lg",
+          isDragging && "z-10 bg-surface ring-1 ring-primary",
           !pfeil.geschossen && "text-muted-foreground",
         )}
       >
@@ -395,7 +395,7 @@ export function CheckpointSliderSection() {
       id="checkpoint-slider"
       index="05"
       title="Distanz-Slider"
-      description="Ein durchgehender Wert, dessen Bahn in die farbigen Abschnitte zwischen den Pflöcken geteilt ist. Der Daumen rastet nicht ein; der nächste Pflock steht in der Legende und in der Ansage des Daumens."
+      description="Ein durchgehender Wert, dessen Bahn in farbige Abschnitte geteilt ist. Der Daumen rastet nicht ein; die benachbarten Marken stehen in der Legende und in der Ansage des Daumens."
     >
       <CheckpointSliderDemo caption="Vier Pflöcke" />
       <CheckpointSliderDemo
@@ -469,7 +469,7 @@ export function PfeilTableSection() {
       id="pfeile"
       index="03"
       title="Pfeile erfassen"
-      description="Eine Zeile pro Pfeil mit Wertungszone, geschossen, Punkten und der Distanz zwischen den Pflöcken. Die unterste Zeile legt den nächsten Pfeil an; Zeilen lassen sich am Griff und per Tastatur umsortieren."
+      description="Eine dichte Zeilentabelle mit sortierbaren Zeilen: Haarlinien statt Zebrastreifen, Zahlen rechtsbündig in Tabellenziffern, ein Griff pro Zeile als einziger Ziehpunkt. Die Zeilen lassen sich per Zeiger und per Tastatur umsortieren."
     >
       <div className="space-y-3">
         <DndContext

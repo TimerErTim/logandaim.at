@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 /*
- * Design tokens — Bogenschuss Logbuch (Sleek Paperstyle).
+ * Design tokens — Sleek Paperstyle.
  *
- * "Der Wald auf Papier, die Effizienz im Browser." The app is a handwritten hunting
- * logbook turned into a fast tool: warm uncoated paper, fine pencil lines, one
- * hunter green for the single primary action, and generous white space. Paper is
- * flat — surfaces and hairlines carry the structure, never leather, embossing, or 3D.
+ * A warm, tactile logbook on paper, rendered with the speed and precision of a web
+ * app: warm uncoated paper, fine pencil lines, one hunter green for the single
+ * primary action, and generous white space. Paper is flat — surfaces and hairlines
+ * carry the structure, never leather, embossing, or 3D.
  *
  * This file is the single source of truth for every colour, radius, shadow, and font
  * value in the app. Components never use raw palette classes (`bg-stone-100`,
@@ -34,7 +34,7 @@
 /* Light: paper on a desk. */
 :root,
 .light {
-  --background: #f5f1e8;
+  --background: #f4f1ea;
   --foreground: #2c2a29;
   --surface: #fdfbf7;
   --surface-muted: #eceae2;

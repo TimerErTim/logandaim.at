@@ -6,14 +6,14 @@ import { useId } from "react";
 import { cn } from "@/lib/cn";
 
 /**
- * A checkpoint on the track. `farbe` is a colour supplied by master data (a Pflock
- * colour), not a design token, so it is rendered as given.
+ * A named checkpoint on the track. `farbe` is a colour supplied by the caller, not
+ * a design token, so it is rendered as given.
  */
 export type Checkpoint = {
   id: string;
   /** Position on the value scale. */
   wert: number;
-  /** Stake colour from master data, for example `#3f6b8a`. */
+  /** Caller-supplied band colour, for example `#3f6b8a`. */
   farbe: string;
   /** Name shown in the legend; colour is never the only signal. */
   label: string;

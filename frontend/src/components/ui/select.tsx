@@ -8,7 +8,7 @@ type SelectProps = SelectHTMLAttributes<HTMLSelectElement>;
  * Native select, styled to match `Input`.
  *
  * Kept native on purpose: it works with gloves, one-handed, and the platform picker
- * is the control archers already know. A custom listbox would trade that for styling
+ * is the control users already know. A custom listbox would trade that for styling
  * freedom this product does not need. The chevron comes from the `select-chevron`
  * class, drawn as a mask so it inherits `currentColor` and flips with the theme
  * instead of hardcoding a stroke colour.

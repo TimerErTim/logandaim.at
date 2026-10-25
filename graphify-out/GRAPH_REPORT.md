@@ -1,7 +1,7 @@
 # Graph Report - logandaim.at  (2026-10-25)
 
 ## Corpus Check
-- 189 files · ~66,163 words
+- 189 files · ~66,362 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `14bb641f`
+- Built from commit: `a9f9e0c6`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

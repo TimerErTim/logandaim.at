@@ -8,9 +8,9 @@ import { cn } from "@/lib/cn";
 
 /**
  * A segmented control: a printed strip of cells sharing one contour, where exactly
- * one is marked as chosen. Used to pick a Wertungszone, so every option is a real
- * button with text, and the selection is carried by the fill *and* by weight, never
- * by colour alone.
+ * one is marked as chosen. Used for picking a single option from a small set, so
+ * every option is a real button with text, and the selection is carried by the fill
+ * *and* by weight, never by colour alone.
  *
  * The cells share their borders rather than sitting apart: `-ml-px` collapses the
  * seam so the strip reads as one ruled block on the paper.

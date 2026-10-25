@@ -1,23 +1,39 @@
-# Design system — Bogenschuss Logbuch (Sleek Paperstyle)
+# Design system — Sleek Paperstyle
 
 This is the agent-facing description of the logandaim.at visual identity. It is a rulebook, not a
 history: follow it literally when building UI. Values live in
 [`frontend/src/app/globals.css`](../../frontend/src/app/globals.css) and nowhere else. This file
-names tokens and states rules; it never restates hex codes. The product-level intent and the
-decision log live in [`specs/product/visual-identity.md`](../../specs/product/visual-identity.md).
+names tokens and states rules; it never restates hex codes.
+
+**Scope: appearance only.** This document does not describe what the product does, which journeys
+it supports, or how data flows through it. It describes how any screen must look, feel, and behave
+visually. What is shown inside a component is content, and content decisions live in the product
+specs.
 
 ## The identity
 
-**Bogenschuss Logbuch — "der Wald auf Papier, die Effizienz im Browser."** The app joins the haptics
-of a handwritten hunting logbook to the speed and precision of a web app. It is not a game: it is a
-practical, fast tool for archers and hunters in the field or at the desk.
+**Sleek Paperstyle.** A warm, tactile logbook on paper, rendered with the speed and precision of a
+modern web application. The interface borrows the material language of uncoated paper and pencil
+ruling, and nothing else.
 
-- **Skeuomorphism, but restrained.** Flat, light paper surfaces, fine lines, an organic feel, and
-  a lot of room to breathe. No leather textures, no 3D book spines, no ornament.
-- **Utility first.** Every interaction is fast, accessible, and logical. This is a data-capture app,
-  not a lifestyle magazine.
-- **Calm focus.** The interface must not distract on the range. Natural, unobtrusive contrast keeps
-  it readable outdoors.
+- **Restrained skeuomorphism.** Flat, light paper surfaces, hairline rules, an organic warmth, and
+  generous space to breathe. No leather textures, no embossing, no 3D book spines, no ornament.
+- **Utility first.** Every interaction is fast, accessible, and logical. The aesthetic never
+  competes with reading or entry.
+- **Calm focus.** The surface stays quiet so content can be the loudest thing on the screen.
+
+## Do / Don't
+
+The table below is the shortest complete statement of the identity. When a rule elsewhere in this
+document and a row here disagree, this table wins.
+
+| ✅ DO | ❌ DON'T |
+|-------|----------|
+| Use `--surface` (`#FDFBF7`) and `--background` (`#F4F1EA`) for a warm, easy-on-the-eye paper atmosphere. | Never use cold tech white (`#FFFFFF`) as the global page background, and never a blue-cast grey (e.g. Tailwind Slate) as a neutral. |
+| Use hunter green (`#1B3B2B`) as the single dominant accent colour. | Add no ornamental secondary accents: no brown buttons, no gold gradients, no arbitrarily multi-coloured badges. |
+| Reserve red (`#A82B2B`) exclusively for critical errors and destructive actions. | Never use red for ordinary UI decoration or for neutral diagram elements. |
+| Keep borders thin (1px) and corners nearly square (4–6px). | No strong drop shadows, no glassmorphism (`backdrop-blur`), no heavily rounded cards (16px+). |
+| Pair serif headings with clear sans-serif forms. | Never use handwriting, script, or cursive faces for user input — legibility always wins. |
 
 ## Tokens
 
@@ -36,9 +52,9 @@ light and dark. Add a token only together with an entry here.
 | `--primary-foreground` | Paper on hunter green | Button labels and icons drawn on `--primary` |
 | `--secondary` | Neutral paper fill | Inactive tracks, muted chips, segmented-control rest state |
 | `--muted-foreground` | Secondary ink | Hints, captions, table headers, metadata |
-| `--destructive` | Failure, miss, impact point | Destructive buttons, inline validation, error stamps |
-| `--success` | Confirmed outcome ("gespeichert") | Success stamps and alerts |
-| `--warning` | Attention without failure | Pending/edit states, moderate hits, touch-target debug outline |
+| `--destructive` | Critical failure | Destructive buttons, inline validation, error stamps |
+| `--success` | Confirmed outcome | Success stamps and alerts |
+| `--warning` | Attention without failure | Pending and edit states, the touch-target debug outline |
 | `--ring` | Focus indicator | Every `focus-visible` outline |
 | `--radius` | Corner radius | `--radius-sm` through `--radius-xl` are derived from it |
 | `--shadow-paper` | Sheet shadow | The `paper` class. Soft in light, `none` in dark |
@@ -61,26 +77,30 @@ There is exactly **one brand colour**. Everything else is paper, ink, or an expl
 
 - Hunter green: brand, primary action, active state. Nothing else.
 - Paper and warm neutrals: all structure.
-- Red, amber/ochre, success green: meaning only, never decoration. Always paired with a word.
+- Red, amber, and success green: meaning only, never decoration. Always paired with a word.
+
+Red is the most restricted colour in the system. It means "this failed" or "this destroys
+something", and nothing else. It is never a hover accent, a chart series, a category marker, or a
+way to make a screen feel lively.
 
 ## Paper language
 
 Six elements carry the identity. Use them; do not invent a seventh.
 
-1. **Papier (the sheet).** Content sits on `Card` — a hairline and a whisper of shadow, never a heavy
-   border or an elevation card. In dark mode the shadow is `none` and the hairline alone separates
-   the sheet.
-2. **Titel (serif headings).** Page, card, and dialog titles are `font-serif`. The serif is the
-   logbook's hand and the only thing that carries the historical character; body text never uses it.
-3. **Ruled line (the divider).** `Separator` draws `rule-ticks`: small ticks along a hairline, like
-   the printed ruling of a logbook column. Sections are divided by a ruled line, never by empty
-   space alone or by a shadow.
-4. **Feine Kontur (hairline controls).** Inputs and selects are flat with a 1px `--border` contour
-   that turns `--primary` on focus and darkens slightly on hover.
-5. **Stempel (stamps).** `Badge` is a rubber stamp: hairline box, tracked small caps, a tint of the
+1. **The sheet.** Content sits on `Card` — a hairline and a whisper of shadow, never a heavy border
+   or an elevation card. In dark mode the shadow is `none` and the hairline alone separates the
+   sheet.
+2. **The serif title.** Page, card, and dialog titles are `font-serif`. The serif is the book face
+   and the only thing that carries the material character; body text never uses it.
+3. **The ruled line.** `Separator` draws `rule-ticks`: small ticks along a hairline, like the
+   printed ruling of a form. Sections are divided by a ruled line, never by empty space alone or by
+   a shadow.
+4. **The fine contour.** Inputs and selects are flat with a 1px `--border` contour that turns
+   `--primary` on focus and darkens slightly on hover.
+5. **The stamp.** `Badge` is a rubber stamp: hairline box, tracked small caps, a tint of the
    semantic colour. Status always carries its word.
-6. **Millimetergrid (grid data).** Charts, targets, and statistics are thin geometric lines on a
-   faint grid, like graph paper — drawn from `--contour`, never filled shapes or gradients.
+6. **The millimetre grid.** Charts and diagrams are thin geometric lines on a faint grid, like
+   graph paper — drawn from `--contour`, never filled shapes or gradients.
 
 ## Rules
 
@@ -94,19 +114,18 @@ Six elements carry the identity. Use them; do not invent a seventh.
 2. **Contrast is a gate.** Text on a background meets WCAG 2.2 AA (4.5:1 normal text). The gallery
    measures every documented pair; a change that drops a pair below AA is not accepted. The amber
    from the original guide fails as text on paper, so `--warning` is its darker sibling.
-3. **Colour is never the only signal.** `Wertungszone`, status, and validation carry their meaning
-   in text or an icon too. Badges and alerts always include the word.
-4. **Touch targets are at least 44 by 44 pixels** on anything an archer uses with gloves: buttons,
-   nav items, checkbox and radio rows, slider thumbs. The target and the drawn control are not the
-   same thing: a control keeps its neighbour's height and extends its hit area with a `before`
-   overlay. Never make a control taller than its row to reach 44px.
+3. **Colour is never the only signal.** Status and validation carry their meaning in text or an
+   icon too. Badges and alerts always include the word.
+4. **Touch targets are at least 44 by 44 pixels** on every interactive element. The target and the
+   drawn control are not the same thing: a control keeps its neighbour's height and extends its hit
+   area with a `before` overlay. Never make a control taller than its row to reach 44px.
 5. **Focus is always visible.** Interactive elements use `focus-visible:outline-2` with
    `outline-ring`. Never remove an outline without an equally visible replacement.
 6. **One primary action per screen.** Everything else is `secondary` or `ghost`. Destructive
    actions use `destructive` and are never the primary button.
-7. **German UI copy, English code.** Labels follow the ubiquitous language (`Anlage`, `Parcours`,
-   `Ziel`, `Pflock`, `Runde`, `Schuss`, `Wertung`). Do not hardcode new copy in a component beyond
-   the gallery examples.
+7. **German UI copy, English code.** Labels are German, identifiers and comments are English. Do
+   not hardcode new copy in a component beyond the gallery examples; product wording lives with the
+   product.
 8. **Spacing scale** is the Tailwind default (4, 8, 12, 16, 24, 32 px). Page bodies use `p-6`,
    cards use `p-6`, form fields stack with `space-y-1.5` inside `Field`. White space is part of the
    identity: prefer a wider gap to another rule.
@@ -114,12 +133,14 @@ Six elements carry the identity. Use them; do not invent a seventh.
    passing arbitrary classes at call sites. Public variant names stay backwards compatible.
 10. **Flat by default.** Edges come from `border-border` and `--contour`. Cards carry the `paper`
     shadow class, which is `none` in dark mode; only overlays that genuinely float (dialogs,
-    dropdowns, tooltips) carry `paper-overlay`. No hover elevation, gradients, or glass.
+    dropdowns, tooltips) carry `paper-overlay`. No hover elevation, gradients, or glass. A dragging
+    row is marked by `ring-1 ring-primary`, never by a shadow.
 11. **Angular paper, not pills.** `--radius` is 4–6px: controls use `rounded-sm`, containers
     `rounded-md`. The only pill shapes are where the shape is the meaning (progress track, switch
     track, radio dot). A rounded corner is never decoration.
 12. **Serif for titles only.** `font-serif` on page, card, and dialog headings; never on body copy,
-    table cells, form labels, or buttons. The book character lives in the headings alone.
+    table cells, form labels, or buttons. Never a script or cursive face anywhere — user input must
+    stay maximally legible.
 13. **Warm and natural, low saturation.** Warm paper and warm ink; dark mode is warm charcoal, never
     pure black and never cold blue-grey. Status colours stay distinguishable without glowing.
 
@@ -140,37 +161,37 @@ for class merging.
 - `Separator` draws the ruled line. It is the standard section divider.
 - `Input`, `Textarea`, `Select`, and `SearchInput` are flat with a hairline that turns `--primary`
   on focus and darkens on hover. `Select` stays a native `<select>` on purpose: the platform picker
-  is the control archers know and it survives gloves and one-handed use. Its chevron is a mask in
+  is the control users know, and it survives touch and one-handed use. Its chevron is a mask in
   `currentColor`, so it flips with the theme.
 - `Checkbox` is a square with `checkbox-tick`: green fill and a paper-coloured tick, both from
   tokens. `Switch` and the radio dot are the only pills, because there the shape is the meaning.
 - `Table` is a ruled ledger: hairlines between rows, no zebra banding, `tabular-nums` and
-  right-aligned figures. `TableKeyValue` renders the label · dotted-leader · value pairs the
-  logbook uses for metrics.
+  right-aligned figures. `TableKeyValue` renders the label · dotted-leader · value pairs used for
+  metric lists.
 - `Progress` is a measured band with fifth-ticks on its track; it keeps `rounded-sm`, since a
   progress track's roundness would mean nothing.
-- `Slider` is a distance input drawn as a ruled measure: a compact squared knob on a divided track,
+- `Slider` is a value input drawn as a ruled measure: a compact squared knob on a divided track,
   with a 44px hit area around the knob. Do not enlarge the visible knob to reach the touch minimum.
-- `CheckpointSlider` is the same distance input when the Pflöcke are known: the track is divided
-  into the coloured bands between them. **The Pflock colours are master data** supplied by the
-  Parcours/Ziel data and arrive as a `checkpoints` prop; the design system owns no Pflock palette
-  and must never add one to `globals.css`. The value moves freely and never snaps to a stake. Bands
-  are `aria-hidden`; the legend repeats every stake with its name, and the thumb's `aria-valuetext`
-  names the nearest one. With no checkpoints it renders a plain track.
+- `CheckpointSlider` is the same input for a value scale that has named checkpoints: the track is
+  divided into the coloured bands between them. **The band colours are caller-supplied data**, not
+  design tokens, and arrive as a `checkpoints` prop; the design system owns no palette for them and
+  must never add one to `globals.css`. The value moves freely and never snaps to a checkpoint.
+  Bands are `aria-hidden`; the legend repeats every checkpoint with its name, and the thumb's
+  `aria-valuetext` names the nearest one. With no checkpoints it renders a plain track.
 - `Table` rows that drag are sortable through `@dnd-kit`. The drag activator is a dedicated handle,
   never the whole row; its hit area follows the touch rule. A handle's accessible name must be
-  distinct per row and must not invent a position that does not exist (an unshot Pfeil is "nicht
-  geschossener Pfeil", not "Pfeil 0"). Numbers in tables are `tabular-nums` and right-aligned;
-  machine values are mono. Table heads are tracked small caps on `--surface-muted`.
+  distinct per row and must not invent a position that does not exist. Numbers in tables are
+  `tabular-nums` and right-aligned; machine values are mono. Table heads are tracked small caps on
+  `--surface-muted`.
 - `Field` owns label, hint, and error placement. Use it instead of hand-assembling label + input.
 - Layout components (`app-shell`, `sidebar`, `page-chrome`) and workflow components are composed
-  from the primitives. The active nav item is marked by the waymark triangle plus `aria-current`,
+  from the primitives. The active nav item is marked by a filled treatment plus `aria-current`,
   never by colour alone.
 
 ## Screen composition
 
-A screen is a page of the logbook. **The rules below govern appearance only.** How a journey is
-structured — whether a parcours is shown as a map, a progress bar, or a plain step list — is a
+A screen is a page of the logbook. **These rules govern appearance only.** How a journey is
+structured — whether something is shown as a map, a progress bar, or a plain step list — is a
 product decision and is not settled by this identity.
 
 1. The page header is a serif title with a hairline ruled line beneath it.
@@ -195,8 +216,8 @@ route. `build:frontend` asserts that `out/dev` and the gallery code are absent f
   documented pair, with an AA pass/fail stamp.
 - The touch-target toggle outlines interactive elements to reveal targets under 44px. The
   outlines are dashed amber on purpose: they are a measuring overlay, not part of the identity.
-- The Datenbilder plate shows the drawing vocabulary as elements — target face, measurement
-  series on graph paper, ruled scale, stamp legend — deliberately without screens or flows.
+- The Datenbilder plate shows the drawing vocabulary as elements — diagram, series, scale, legend —
+  deliberately without screens or flows, so the visual language can be judged on its own.
 - Earlier identity proposals have been removed. The gallery shows the accepted system only; a
   superseded direction belongs in the spec's decision log, not on the page.
 

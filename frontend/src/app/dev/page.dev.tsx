@@ -69,18 +69,18 @@ export default function DevGalleryPage() {
             <Badge variant="primary">Sleek Paperstyle</Badge>
             <Badge variant="outline">Nur im Dev-Server</Badge>
             <span className="font-mono text-xs text-muted-foreground">
-              14 Tafeln
+              13 Tafeln
             </span>
           </div>
 
           <div className="space-y-2">
             <h1 className="font-serif text-3xl leading-tight font-semibold tracking-tight text-balance">
-              Bogenschuss-Logbuch
+              Gestaltungs-Galerie
             </h1>
             <p className="max-w-prose text-sm text-muted-foreground">
-              Der Wald auf Papier, die Effizienz im Browser. Jede Tafel zeigt
-              dieselben Bausteine zweimal: links auf Elfenbeinpapier, rechts im
-              Lampenlicht. Farben, Radien und Schatten kommen ausschließlich aus{" "}
+              Die visuelle Identität als Musterbuch. Jede Tafel zeigt dieselben
+              Bausteine zweimal: links auf warmem Papier, rechts im Lampenlicht.
+              Farben, Radien und Schatten kommen ausschließlich aus{" "}
               <code className="font-mono text-xs text-foreground">
                 globals.css
               </code>
