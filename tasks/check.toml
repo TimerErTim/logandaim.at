@@ -17,61 +17,9 @@ run = "git diff --exit-code -- frontend/src/api/schema.ts"
 
 ["check:design"]
 description = "Fail when a design token is undocumented or a raw palette class leaks into a component"
-# Two halves of the same rule: every literal token declared in `globals.css` must be
-# named in `.cursor/rules/design-system.mdc`, and components must use semantic
-# utilities only.
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-ROOT="{{ vars.REPO_ROOT }}"
-CSS="$ROOT/frontend/src/app/globals.css"
-RULE="$ROOT/.cursor/rules/design-system.mdc"
-
-# Tokens are the literal `--name: <value>` declarations. The `@theme inline` block
-# only re-exports them as `var(...)`/`calc(...)` mappings and is skipped by that.
-tokens=$(grep -oE '^  --[a-z0-9-]+: *(#[0-9a-fA-F]{3,8}|[0-9.]+rem)' "$CSS" |
-  sed 's/^  //; s/:.*//' | sort -u)
-missing=$(for token in $tokens; do grep -qF -- "$token" "$RULE" || echo "$token"; done)
-
-if [ -n "$missing" ]; then
-  echo "check:design: tokens missing from .cursor/rules/design-system.mdc:" >&2
-  echo "$missing" | sed 's/^/  /' >&2
-  exit 1
-fi
-
-# `globals.css` names colours on purpose; components must use semantic utilities.
-leaks=$(grep -rnE '(bg|text|border|from|to|via|ring|outline|divide|placeholder|fill|stroke|accent|caret)-(zinc|gray|slate|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-[0-9]{2,3}' \\
-  "$ROOT/frontend/src" --include='*.tsx' --include='*.ts' --include='*.css' |
-  grep -vF 'frontend/src/app/globals.css' || true)
-
-if [ -n "$leaks" ]; then
-  echo "check:design: raw palette classes found; use semantic tokens instead:" >&2
-  echo "$leaks" | sed 's/^/  /' >&2
-  exit 1
-fi
-
-# The palette has exactly one name per colour. These are the shadcn/legacy names
-# the system replaced; if any reappears, the alias layer has crept back in and the
-# app has two vocabularies again. `text-primary` is deliberately absent: it is the
-# brand colour, and ink is `text-ink`.
-legacy=$(grep -rnE '(bg|text|border|from|to|via|ring|outline|divide|placeholder|fill|stroke|accent|caret|decoration)-(foreground|background|muted-foreground|destructive|surface-elevated|placeholder|border-strong|contour)' \\
-  "$ROOT/frontend/src" --include='*.tsx' --include='*.ts' |
-  grep -vF 'frontend/src/app/globals.css' || true)
-
-# `border-border`, `divide-border`, `bg-border` and bare `border`-as-colour names.
-legacy_border=$(grep -rnE '(bg|text|divide|ring|outline|placeholder|fill|stroke|accent|caret)-(border|ring)\b|border-border\b' \\
-  "$ROOT/frontend/src" --include='*.tsx' --include='*.ts' |
-  grep -vF 'frontend/src/app/globals.css' || true)
-
-if [ -n "$legacy" ] || [ -n "$legacy_border" ]; then
-  echo "check:design: legacy utility names found; the palette has one name per colour:" >&2
-  printf '%s\n%s\n' "$legacy" "$legacy_border" | grep -v '^$' | sed 's/^/  /' >&2
-  echo "  use: text-ink, text-secondary, text-muted, text-impact, border-subtle, border-strong, bg-canvas, bg-elevated" >&2
-  exit 1
-fi
-
-echo "check:design: ok"
-"""
+# Three halves of one rule — tokens documented, no palette classes, no retired
+# names — live in `tasks/scripts/check-design.mjs` like every other long task.
+run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-design.mjs"
 
 ["check:version"]
 description = "Fail when the workspace, frontend, and changelog versions disagree"

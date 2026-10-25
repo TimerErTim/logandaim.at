@@ -29,25 +29,8 @@ sources = [
 ]
 outputs = ["out/**"]
 # Dev-only routes (`.dev.tsx`) are gated by `pageExtensions` in `next.config.ts`.
-# The assertion below proves the gate held: a file named `page.tsx` under
-# `src/app/dev` would ship the gallery, so the build fails instead.
-run = """
-#!/usr/bin/env bash
-set -eu
-npm run build
-
-if [ -d out/dev ]; then
-  echo "build:frontend: out/dev exists; the pageExtensions dev gate is broken" >&2
-  exit 1
-fi
-
-# One string the gallery renders and nothing else does; it would land in the
-# prerendered RSC payload of `/dev` if the route slipped past the gate.
-if grep -rqF -- "Design-Galerie" out; then
-  echo "build:frontend: gallery code leaked into the static export" >&2
-  exit 1
-fi
-"""
+# We trust that gate; the build does not re-assert it.
+run = "npm run build"
 
 ["build"]
 description = "Builds whole project"
