@@ -141,7 +141,17 @@ export function CheckpointSlider({
           aria-label={label}
           aria-valuetext={valuetext}
           aria-describedby={legendId}
-          className="relative block size-5 cursor-grab rounded-sm border-2 border-ink bg-surface before:absolute before:-inset-3.5 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary active:cursor-grabbing"
+          className={cn(
+            // The same round, inked bullet as `Slider`, so both sliders read alike.
+            // The contour is ink rather than primary: the track underneath is a ramp
+            // of caller-supplied stake colours, and ink survives every one of them.
+            "relative block size-5 cursor-grab rounded-full border-2 border-ink bg-surface",
+            "after:absolute after:inset-0 after:m-auto after:size-1.5 after:rounded-full",
+            "after:bg-ink after:content-['']",
+            "before:absolute before:-inset-3.5 before:content-['']",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+            "active:cursor-grabbing disabled:pointer-events-none disabled:cursor-not-allowed",
+          )}
         />
       </SliderPrimitive.Root>
 

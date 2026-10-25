@@ -18,13 +18,13 @@ export function RadioGroup({
 }
 
 /**
- * A check circle on paper: a ring drawn with a strong contour, as an inked mark
- * rather than a hairline, and filled with ink — a solid disc inside the ring, not a
- * small dot swimming in a large hole. The double ring is what makes it read as a
- * stamped circle rather than a generic radio.
+ * A check circle on paper: a heavy ring drawn as an inked mark, filled with a solid
+ * disc that leaves a paper gap inside the ring. The double ring is what makes it read
+ * as a stamped circle rather than a generic radio.
  *
- * Roundness is the meaning here, so it is one of the few round controls; the ring
- * never goes hairline, because an inked mark has weight.
+ * The ring is `border-[3px]` on a 20px circle. At 2px on 18px it read as a default
+ * browser radio, not an inked one: the stroke has to be heavy enough to be seen as a
+ * drawn circle at arm's length, which is the whole point of the control's look.
  */
 export function RadioGroupItem({
   className,
@@ -33,10 +33,9 @@ export function RadioGroupItem({
   return (
     <RadioGroupPrimitive.Item
       className={cn(
-        // A drawn circle: strong contour at rest so it is an inked mark, not a hairline.
-        "size-[1.125rem] shrink-0 rounded-full border-2 border-control bg-surface",
+        "size-5 shrink-0 rounded-full border-[3px] border-control bg-surface",
         "transition-colors",
-        "hover:border-ink/50",
+        "hover:border-ink/60",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
         "disabled:cursor-not-allowed disabled:opacity-50",
         "data-[state=checked]:border-primary",
@@ -45,8 +44,8 @@ export function RadioGroupItem({
       {...props}
     >
       <RadioGroupPrimitive.Indicator className="flex size-full items-center justify-center">
-        {/* A filled disc, ringed by the contour: the "check circle" fill. */}
-        <span className="size-full rounded-full border-2 border-surface bg-primary" />
+        {/* A filled disc, held off the ring by a paper gap: the "check circle" fill. */}
+        <span className="size-full rounded-full border-[3px] border-surface bg-primary" />
       </RadioGroupPrimitive.Indicator>
     </RadioGroupPrimitive.Item>
   );

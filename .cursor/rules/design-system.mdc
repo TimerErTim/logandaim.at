@@ -49,7 +49,7 @@ the design system gives "primary" to the single brand colour. Ink is **`text-ink
 | `--bg-surface-muted` | `bg-surface-muted` | A second sheet | Table headers, hover rows, skeletons, inactive tracks |
 | `--border-subtle` | `border-subtle`, `bg-subtle`, `divide-subtle` | Pencil hairline | Dividers, card borders, table rules |
 | `--border-strong` | `border-strong` | A field's contour | Inputs at rest, millimetre grid |
-| `--border-control` | `border-control` | A control's boundary, ≥ 3:1 | Inputs, selects, textareas, search fields, toggle strips, checkbox, radio ring, switch |
+| `--border-control` | `border-control` | A control's boundary, ≥ 3:1 | Inputs, selects, textareas, search fields, checkbox, radio ring, switch |
 | `--text-primary` | `text-ink`, `bg-ink` | Warm deep ink (`#2C2A29`), never pure black | Body, headings, default icons |
 | `--text-secondary` | `text-secondary` | Secondary ink | Labels, subtitles, metadata, units |
 | `--text-muted` | `text-muted` | Muted ink | Placeholders, disabled only |
@@ -108,7 +108,9 @@ allows.** Badge and Alert encode this — `warning` is ink on amber, not amber t
 
 A control's boundary is a separate bar: WCAG 2.2 §1.4.11 wants **3:1** for the outline of a control,
 so every control boundary uses `--border-control`, never `--border-strong` — not just the drawn ones:
-inputs, selects, textareas, search fields, and toggle strips are covered by the same rule.
+inputs, selects, textareas, and search fields are covered by the same rule. A segmented `ToggleGroup`
+is the exception: its cells are adjacent labelled buttons, not one field, so the strip stays on
+`border-subtle` and a heavier contour reads as framed furniture.
 
 ## Paper language
 
@@ -196,16 +198,19 @@ variants, Radix where behaviour is non-trivial, `cn` (`clsx` + `tailwind-merge`)
 - `Checkbox` is a square with `checkbox-tick`: green fill, paper-coloured tick, both from tokens.
   Its contour is `border-2`, not a hairline.
 - **Inked controls.** Anything drawn rather than typed carries a strong contour, because a mark on
-  paper is inked: `Checkbox` and `RadioGroupItem` are `border-2`, `Switch`'s track and thumb are
-  `border-2`. A form must read as marks, not browser chrome.
+  paper is inked: `Checkbox` and `Switch`'s track and thumb are `border-2`, `RadioGroupItem` is
+  `border-[3px]`. A form must read as marks, not browser chrome.
 - That contour is `border-control`, not `border-strong`. `--border-strong` is a 1px contour at
   1.58:1 and may never bound a control: a control's boundary is meaningful and needs **3:1**
   (WCAG 2.2 §1.4.11). `--border-control` measures 5.20:1 light and 3.82:1 dark. Thickening a
   low-contrast hairline does not make it pass; the colour has to change.
-- `RadioGroupItem` is a check circle: a `border-2` ring that fills with a solid green disc when
-  chosen, not a small dot in a large hole.
+- `RadioGroupItem` is a check circle: a `border-[3px]` ring on a 20px circle that fills with a solid
+  green disc held off the ring by a paper gap, not a small dot in a large hole. The ring is heavier
+  than the other controls because at 2px on 18px it read as a default browser radio.
 - `Slider`'s bullet is fully round (`rounded-full`) with `border-2 border-primary` and a solid ink
   centre, so it reads as a cursor riding the ruled track. A squared knob would read as a second tick.
+  `CheckpointSlider`'s bullet is the same shape and centre, contoured in ink rather than primary
+  because it sits on a ramp of caller-supplied stake colours and ink survives all of them.
 - Roundness stays reserved for meaning: the slider bullet, the radio ring, the switch track, and the
   radio dot. Everything else is `rounded-sm`/`rounded-md`.
 - `Table` is a ruled ledger: hairlines between rows, no zebra banding, `tabular-nums`, right-aligned
