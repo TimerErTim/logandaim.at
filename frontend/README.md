@@ -18,24 +18,23 @@ npm run build
 
 Dev-only routes are gated by the Next phase in `next.config.ts`: `.dev.tsx` / `.dev.ts` page
 extensions are added only for `next dev`, so a route written as `page.dev.tsx` cannot reach the
-static export. `build:frontend` verifies that afterwards and fails if `out/dev` exists.
+static export.
 
 ## Design system
 
-The visual identity is described in [`.cursor/rules/design-system.mdc`](../.cursor/rules/design-system.mdc)
-and [`specs/product/visual-identity.md`](../specs/product/visual-identity.md). Read the rule before
-changing UI.
+**Read [`.cursor/rules/design-system.mdc`](../.cursor/rules/design-system.mdc) before changing UI.**
+It is the operative rulebook — tokens, components, accessibility, screen composition. Rationale and
+history are in [`specs/product/visual-identity.md`](../specs/product/visual-identity.md); do not
+restate either document here.
 
-- **Tokens**: every colour, radius, and font value lives in `src/app/globals.css`. Components use
-  the semantic utilities it maps (`bg-surface`, `text-muted-foreground`, `border-border`,
-  `bg-primary`); raw palette classes and hex values are rejected by `mise run check:design`.
-- **Primitives**: `src/components/ui/` holds shadcn-style components with variants declared via
-  `class-variance-authority`. Add variants there, not in call sites.
-- **Gallery**: run `mise run dev:frontend` and open `/dev`. Every component, variant, and state
-  renders in a light and a dark frame, with per-token contrast checks and a touch-target overlay.
-  The page needs no backend.
-- **Changing the look**: edit a token in `globals.css`, look at `/dev`, and on acceptance update the
-  design rule and the spec decision log in the same commit.
+Three things this README adds:
+
+- **Values**: every colour, radius, shadow, and font lives in `src/app/globals.css`. Raw palette
+  classes and hex values in a component are rejected by `mise run check:design`.
+- **Primitives**: `src/components/ui/`, variants declared via `class-variance-authority`. Add
+  variants there, not at call sites.
+- **Gallery**: `mise run dev:frontend`, then open `/dev`. Light and dark side by side, per-token
+  contrast checks, a touch-target overlay, and one composed page. It needs no backend.
 
 ## Metadata and icons
 

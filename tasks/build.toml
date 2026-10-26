@@ -28,8 +28,6 @@ sources = [
     "package-lock.json",
 ]
 outputs = ["out/**"]
-# Dev-only routes (`.dev.tsx`) are gated by `pageExtensions` in `next.config.ts`.
-# We trust that gate; the build does not re-assert it.
 run = "npm run build"
 
 ["build"]
