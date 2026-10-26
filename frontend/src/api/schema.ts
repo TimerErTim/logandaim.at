@@ -146,10 +146,622 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/registrierung/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Step 1 of registration. Answers `200` whether the address is free or taken, so the
+         *     endpoint is not an address oracle (AC-2).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["RegistrierungStartAnfrage"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["OkAntwort"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registrierung/abschluss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Step 2: creates Benutzer + Konto and answers the first token pair. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["RegistrierungAbschlussAnfrage"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["AnmeldeAntwort"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anmeldung": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["AnmeldeAnfrage"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["AnmeldeAntwort"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anmeldung/erneuerung": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rotate the refresh token from the cookie. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["AnmeldeAntwort"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anmeldung/abmeldung": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["OkAntwort"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/passwort-vergessen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["PasswortVergessenAnfrage"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["OkAntwort"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/passwort-wiederherstellen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Single use, and ends every session: the cookie is cleared with them. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["PasswortWiederherstellenAnfrage"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["OkAntwort"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/benutzer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's own Benutzer. `?benutzerId=` names another one and needs
+         *     `Systemadministrator`.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    benutzerId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["BenutzerAntwort"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/benutzer/loeschung": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deletes the caller's own Benutzer. The cookie is cleared with the identity. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["BenutzerLoeschungAnfrage"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["OkAntwort"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnmeldeAnfrage */
+        AnmeldeAnfrage: {
+            eMailAdresse: string;
+            passwort: string;
+        };
+        /**
+         * AnmeldeAntwort
+         * @description What registration step 2, login, and renewal hand back.
+         *
+         *     The access token is in the body; the refresh token is *not* — it leaves as the
+         *     `__Host-` cookie, so a script that can read a JSON response still cannot read it, and
+         *     nothing in the body is ever stored by a proxy (`Cache-Control: no-store`).
+         */
+        AnmeldeAntwort: {
+            accessToken: string;
+            benutzer: components["schemas"]["SchemaBenutzer"];
+        };
+        /**
+         * BenutzerAntwort
+         * @description The logged-in Benutzer as `GET /benutzer` answers it.
+         */
+        BenutzerAntwort: {
+            /** Format: uuid */
+            id: string;
+            eMailAdresse: string;
+            rolle: components["schemas"]["SchemaRolle"];
+        };
+        /**
+         * BenutzerLoeschungAnfrage
+         * @description Deleting one's own Benutzer: the Passwort is re-entered, and the intent is explicit.
+         */
+        BenutzerLoeschungAnfrage: {
+            passwort: string;
+            /** @description Must be `true`; a missing flag is a refusal, never a default. */
+            bestaetigt: boolean;
+        };
+        /**
+         * OkAntwort
+         * @description Acknowledgement of a request that has nothing to return.
+         *
+         *     A bare `204` would be indistinguishable from a proxy's empty answer, and a caller
+         *     cannot tell success from a dropped connection; an explicit body is worth the two bytes.
+         */
+        OkAntwort: {
+            ok: boolean;
+        };
+        /** PasswortVergessenAnfrage */
+        PasswortVergessenAnfrage: {
+            eMailAdresse: string;
+        };
+        /** PasswortWiederherstellenAnfrage */
+        PasswortWiederherstellenAnfrage: {
+            token: string;
+            neuesPasswort: string;
+        };
+        /**
+         * RegistrierungAbschlussAnfrage
+         * @description Registration step 2.
+         */
+        RegistrierungAbschlussAnfrage: {
+            token: string;
+            passwort: string;
+        };
+        /**
+         * RegistrierungStartAnfrage
+         * @description Registration step 1.
+         */
+        RegistrierungStartAnfrage: {
+            eMailAdresse: string;
+        };
+        /**
+         * SchemaBenutzer
+         * @description One Benutzer. It carries no address: the `Konto` owns the address, and only the
+         *     caller's own `Konto` is ever disclosed (see [`BenutzerAntwort`]).
+         */
+        SchemaBenutzer: {
+            /** Format: uuid */
+            id: string;
+            rolle: components["schemas"]["SchemaRolle"];
+        };
+        /**
+         * @description Authority of a Benutzer, as the API spells it.
+         * @enum {string}
+         */
+        SchemaRolle: SchemaRolle;
         /**
          * Schuss
          * @description One logged arrow, translated from the domain.
@@ -217,6 +829,10 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
+export enum SchemaRolle {
+    Benutzer = "Benutzer",
+    Systemadministrator = "Systemadministrator"
+}
 export enum Wertungszone {
     Spot = "Spot",
     Kill = "Kill",

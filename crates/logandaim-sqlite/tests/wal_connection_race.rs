@@ -4,13 +4,32 @@
 use std::sync::Arc;
 
 use logandaim_core::App;
+use logandaim_core::application::KontoKonfiguration;
+use logandaim_core::domain::konto::{SigningKeyId, SigningKeypair};
 use logandaim_core::ports::RepositoryError;
+use logandaim_fakes::{FakeMailSender, InMemoryDrossel};
 use logandaim_sqlite::SQLiteInstance;
 
 async fn app() -> Arc<App> {
     let sqlite = SQLiteInstance::in_temp_dir().await.unwrap();
     sqlite.migrate_repos_to_latest().await.unwrap();
-    Arc::new(App::builder().uow_provider(Box::new(sqlite)).build())
+    Arc::new(
+        App::builder()
+            .uow_provider(Box::new(sqlite))
+            .signing_key(SigningKeypair::from_secret_bytes(
+                SigningKeyId::new("test-key").unwrap(),
+                &[7u8; 32],
+            ))
+            .drossel(Arc::new(InMemoryDrossel::new()))
+            .mail_sender(Arc::new(FakeMailSender::new()))
+            .konto(KontoKonfiguration::neu(
+                "https://logandaim.at/registrierung",
+                "https://logandaim.at/passwort",
+                "logandaim.at",
+                "logandaim-api",
+            ))
+            .build(),
+    )
 }
 
 #[test_log::test(pollster::test)]
@@ -28,10 +47,13 @@ async fn parallel_execute_fn_survives_wal_connection_init() {
         handles.push(std::thread::spawn(move || {
             pollster::block_on(async move {
                 writer_app
-                    .execute_fn::<_, _, RepositoryError>(async |ctx| {
-                        let uow = ctx.enter().await?;
-                        uow.commit().await
-                    })
+                    .execute_fn::<_, _, RepositoryError>(
+                        logandaim_core::application::AuthContext::Anonymous,
+                        async |ctx| {
+                            let uow = ctx.enter().await?;
+                            uow.commit().await
+                        },
+                    )
                     .await
                     .expect("writer execute_fn must not fail with database locked");
             })
@@ -39,10 +61,13 @@ async fn parallel_execute_fn_survives_wal_connection_init() {
         handles.push(std::thread::spawn(move || {
             pollster::block_on(async move {
                 opener_app
-                    .execute_fn::<_, _, RepositoryError>(async |ctx| {
-                        let uow = ctx.enter().await?;
-                        uow.rollback().await
-                    })
+                    .execute_fn::<_, _, RepositoryError>(
+                        logandaim_core::application::AuthContext::Anonymous,
+                        async |ctx| {
+                            let uow = ctx.enter().await?;
+                            uow.rollback().await
+                        },
+                    )
                     .await
                     .expect("opener execute_fn must not fail with database locked / WAL init");
             })

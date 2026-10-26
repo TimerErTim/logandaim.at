@@ -2,12 +2,17 @@ use std::sync::Arc;
 
 use crate::{
     application::instrumented::{
-        InstrumentedObjectStore, InstrumentedPdfRenderer, InstrumentedUnitOfWork,
+        InstrumentedDrossel, InstrumentedMailSender, InstrumentedObjectStore,
+        InstrumentedPdfRenderer, InstrumentedUnitOfWork,
     },
     application::uow::{UnitOfWork, UnitOfWorkImpl, UnitOfWorkProvider},
-    ports::{Clock, ObjectStore, PdfRenderer, RepositoryResult},
+    domain::konto::SigningKeypair,
+    ports::{Clock, Drossel, MailSender, ObjectStore, PdfRenderer, RepositoryResult},
 };
 use tracing::instrument;
+
+use super::auth::AuthContext;
+use super::konfiguration::KontoKonfiguration;
 
 #[derive(Clone, Copy)]
 enum ExecutionSource<'a> {
@@ -15,41 +20,60 @@ enum ExecutionSource<'a> {
     Nested(&'a dyn UnitOfWorkImpl),
 }
 
-/// Fresh per `App::execute` / `execute_fn`. Holds ports + a UoW source (root provider or nested impl).
-/// Does not hold an active transaction — call [`ExecutionContext::enter`].
+/// Fresh per `App::execute` / `execute_fn`. Holds ports, the executing identity, and a UoW
+/// source (root provider or nested impl). Does not hold an active transaction — call
+/// [`ExecutionContext::enter`].
 pub struct ExecutionContext<'a> {
     source: ExecutionSource<'a>,
+    auth: AuthContext,
+    signing_key: &'a SigningKeypair,
     clock: Arc<dyn Clock>,
     object_store: Arc<dyn ObjectStore>,
     pdf_renderer: Arc<dyn PdfRenderer>,
+    drossel: Arc<dyn Drossel>,
+    mail_sender: Arc<dyn MailSender>,
+    konto: KontoKonfiguration,
+}
+
+/// Everything a context carries besides its UoW source, so `root`, `nested`, and `sub`
+/// cannot drift apart.
+pub(crate) struct ContextPorts<'a> {
+    pub(crate) auth: AuthContext,
+    pub(crate) signing_key: &'a SigningKeypair,
+    pub(crate) clock: Arc<dyn Clock>,
+    pub(crate) object_store: Arc<dyn ObjectStore>,
+    pub(crate) pdf_renderer: Arc<dyn PdfRenderer>,
+    pub(crate) drossel: Arc<dyn Drossel>,
+    pub(crate) mail_sender: Arc<dyn MailSender>,
+    pub(crate) konto: KontoKonfiguration,
 }
 
 impl<'a> ExecutionContext<'a> {
-    pub(super) fn root(
-        provider: &'a dyn UnitOfWorkProvider,
-        clock: Arc<dyn Clock>,
-        object_store: Arc<dyn ObjectStore>,
-        pdf_renderer: Arc<dyn PdfRenderer>,
-    ) -> Self {
+    pub(super) fn root(provider: &'a dyn UnitOfWorkProvider, ports: ContextPorts<'a>) -> Self {
         Self {
             source: ExecutionSource::Root(provider),
-            clock,
-            object_store: InstrumentedObjectStore::new(object_store),
-            pdf_renderer: InstrumentedPdfRenderer::new(pdf_renderer),
+            auth: ports.auth,
+            signing_key: ports.signing_key,
+            clock: ports.clock,
+            object_store: InstrumentedObjectStore::new(ports.object_store),
+            pdf_renderer: InstrumentedPdfRenderer::new(ports.pdf_renderer),
+            drossel: InstrumentedDrossel::new(ports.drossel),
+            mail_sender: InstrumentedMailSender::new(ports.mail_sender),
+            konto: ports.konto,
         }
     }
 
-    pub(super) fn nested(
-        uow: &'a dyn UnitOfWorkImpl,
-        clock: Arc<dyn Clock>,
-        object_store: Arc<dyn ObjectStore>,
-        pdf_renderer: Arc<dyn PdfRenderer>,
-    ) -> Self {
+    pub(super) fn nested(uow: &'a dyn UnitOfWorkImpl, ports: ContextPorts<'a>) -> Self {
         Self {
             source: ExecutionSource::Nested(uow),
-            clock,
-            object_store: InstrumentedObjectStore::new(object_store),
-            pdf_renderer: InstrumentedPdfRenderer::new(pdf_renderer),
+            auth: ports.auth,
+            signing_key: ports.signing_key,
+            clock: ports.clock,
+            object_store: InstrumentedObjectStore::new(ports.object_store),
+            pdf_renderer: InstrumentedPdfRenderer::new(ports.pdf_renderer),
+            drossel: InstrumentedDrossel::new(ports.drossel),
+            mail_sender: InstrumentedMailSender::new(ports.mail_sender),
+            konto: ports.konto,
         }
     }
 
@@ -65,14 +89,47 @@ impl<'a> ExecutionContext<'a> {
         self.pdf_renderer.as_ref()
     }
 
-    /// Nested context that joins `uow`'s transaction and copies this context's ports.
-    /// Nested `enter` returns a locked UoW; `commit` / `rollback` are no-ops.
-    pub fn sub<'u>(&self, uow: &'u UnitOfWork<'_>) -> ExecutionContext<'u> {
+    pub fn drossel(&self) -> &dyn Drossel {
+        self.drossel.as_ref()
+    }
+
+    pub fn mail_sender(&self) -> &dyn MailSender {
+        self.mail_sender.as_ref()
+    }
+
+    /// Mailed link targets and token identity of this deployment.
+    pub fn konto_konfiguration(&self) -> &KontoKonfiguration {
+        &self.konto
+    }
+
+    /// Who is executing this use case. Injected by the API layer, never by a use case.
+    pub fn auth(&self) -> AuthContext {
+        self.auth
+    }
+
+    /// The configured signing key. There is no signer port: the algorithm is domain code.
+    pub fn signing_key(&self) -> &SigningKeypair {
+        self.signing_key
+    }
+
+    /// Nested context that joins `uow`'s transaction and copies this context's ports and
+    /// identity.
+    pub fn sub<'u>(&self, uow: &'u UnitOfWork<'_>) -> ExecutionContext<'u>
+    where
+        'a: 'u,
+    {
         ExecutionContext::nested(
             uow.as_impl(),
-            Arc::clone(&self.clock),
-            Arc::clone(&self.object_store),
-            Arc::clone(&self.pdf_renderer),
+            ContextPorts {
+                auth: self.auth,
+                signing_key: self.signing_key,
+                clock: Arc::clone(&self.clock),
+                object_store: Arc::clone(&self.object_store),
+                pdf_renderer: Arc::clone(&self.pdf_renderer),
+                drossel: Arc::clone(&self.drossel),
+                mail_sender: Arc::clone(&self.mail_sender),
+                konto: self.konto.clone(),
+            },
         )
     }
 

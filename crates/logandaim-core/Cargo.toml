@@ -20,6 +20,15 @@ chrono = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["v4", "serde"] }
 rust_decimal = { workspace = true, features = ["serde"] }
 
+# `konto` subdomain crypto, deliberately concrete (see `domain/konto/mod.rs`).
+argon2 = { workspace = true }
+ed25519-dalek = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+subtle = { workspace = true }
+zeroize = { workspace = true }
+getrandom = { workspace = true }
+
 [dev-dependencies]
 pollster = { version = "0.4.0", features = ["macro"] }
 logandaim-fakes = { path = "../logandaim-fakes" }

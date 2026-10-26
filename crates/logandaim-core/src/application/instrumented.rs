@@ -8,8 +8,10 @@ use crate::ResultReport;
 use crate::application::instrumented_repos::RepoStorage;
 use crate::application::uow::UnitOfWorkImpl;
 use crate::ports::{
-    ObjectStore, ObjectStoreError, ObjectStream, PdfDokument, PdfRenderError, PdfRenderer,
-    RepositoryResult, SchussRepository,
+    BenutzerRepository, Drossel, DrosselAktion, DrosselFehler, EmailBestaetigungRepository,
+    KontoRepository, KundeSchluessel, Mail, MailFehler, MailSender, ObjectStore, ObjectStoreError,
+    ObjectStream, PasswortWiederherstellungRepository, PdfDokument, PdfRenderError, PdfRenderer,
+    RepositoryResult, SchussRepository, SessionRepository, SigningKeyRepository,
 };
 
 #[derive(Clone)]
@@ -60,6 +62,59 @@ impl PdfRenderer for InstrumentedPdfRenderer {
     }
 }
 
+#[derive(Clone)]
+pub struct InstrumentedDrossel {
+    inner: Arc<dyn Drossel>,
+}
+
+impl InstrumentedDrossel {
+    pub fn new(inner: Arc<dyn Drossel>) -> Arc<dyn Drossel> {
+        Arc::new(Self { inner })
+    }
+}
+
+#[async_trait]
+impl Drossel for InstrumentedDrossel {
+    #[instrument(skip(self, kunde), fields(aktion = aktion.as_str(), ip = %kunde.ip), level = "debug", err(Debug))]
+    async fn pruefe_und_zaehle(
+        &self,
+        kunde: &KundeSchluessel,
+        aktion: DrosselAktion,
+        jetzt: chrono::DateTime<chrono::Utc>,
+    ) -> ResultReport<(), DrosselFehler> {
+        self.inner.pruefe_und_zaehle(kunde, aktion, jetzt).await
+    }
+
+    #[instrument(skip(self, kunde), fields(aktion = aktion.as_str(), ip = %kunde.ip), level = "debug", err(Debug))]
+    async fn zuruecksetzen(
+        &self,
+        kunde: &KundeSchluessel,
+        aktion: DrosselAktion,
+    ) -> ResultReport<(), DrosselFehler> {
+        self.inner.zuruecksetzen(kunde, aktion).await
+    }
+}
+
+#[derive(Clone)]
+pub struct InstrumentedMailSender {
+    inner: Arc<dyn MailSender>,
+}
+
+impl InstrumentedMailSender {
+    pub fn new(inner: Arc<dyn MailSender>) -> Arc<dyn MailSender> {
+        Arc::new(Self { inner })
+    }
+}
+
+#[async_trait]
+impl MailSender for InstrumentedMailSender {
+    // The body carries a single-use token, so it is never recorded in a span.
+    #[instrument(skip(self, mail), fields(betreff = %mail.betreff), level = "debug", err(Debug))]
+    async fn senden(&self, mail: Mail) -> ResultReport<(), MailFehler> {
+        self.inner.senden(mail).await
+    }
+}
+
 pub struct InstrumentedUnitOfWork {
     storage: Pin<Box<RepoStorage>>,
 }
@@ -88,5 +143,29 @@ impl UnitOfWorkImpl for InstrumentedUnitOfWork {
 
     fn schüsse(&self) -> &dyn SchussRepository {
         &self.storage.schüsse
+    }
+
+    fn benutzer(&self) -> &dyn BenutzerRepository {
+        &self.storage.benutzer
+    }
+
+    fn konten(&self) -> &dyn KontoRepository {
+        &self.storage.konten
+    }
+
+    fn sessions(&self) -> &dyn SessionRepository {
+        &self.storage.sessions
+    }
+
+    fn signing_keys(&self) -> &dyn SigningKeyRepository {
+        &self.storage.signing_keys
+    }
+
+    fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository {
+        &self.storage.bestaetigungen
+    }
+
+    fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {
+        &self.storage.wiederherstellungen
     }
 }

@@ -2,18 +2,24 @@ use error_stack::Report;
 use futures::StreamExt;
 use http::StatusCode;
 use logandaim_core::{App, ThreadSafeError, ports::ObjectStream};
-use poem::{Body, IntoResponse, Response};
+use poem::{Body, IntoResponse, Request, Response};
 use poem_openapi::{
     OpenApi, OpenApiService, ServerObject,
+    param::Query,
     payload::{Json, Payload, PlainText},
     registry::{MetaSchema, MetaSchemaRef},
     types::ToJSON,
 };
+use uuid::Uuid;
 
 use crate::{
     api::{
         LogandaimAppApi,
-        requests::{SchussErstellung, WertungsAnfrage},
+        requests::{
+            AnmeldeAnfrage, BenutzerLoeschungAnfrage, PasswortVergessenAnfrage,
+            PasswortWiederherstellenAnfrage, RegistrierungAbschlussAnfrage,
+            RegistrierungStartAnfrage, SchussErstellung, WertungsAnfrage,
+        },
     },
     errors::{HttpStatusMapping, InternalServerError, StructuredError, status_from_report},
     schema::{Schuss, Wertung},
@@ -26,6 +32,11 @@ pub struct LogandaimApiSpec {
 impl LogandaimApiSpec {
     pub fn new(app_api: LogandaimAppApi) -> Self {
         Self { app_api }
+    }
+
+    /// The facade, for the route impls that live in their own module.
+    pub(crate) fn api(&self) -> &LogandaimAppApi {
+        &self.app_api
     }
 }
 
@@ -133,6 +144,10 @@ impl<C: ThreadSafeError + HttpStatusMapping> From<Result<ObjectStream, Report<C>
     }
 }
 
+use crate::api::routes::konto as konto_routes;
+use crate::api::session::{BeendendeAntwort, KontoAntwort, SitzungAntwort};
+use crate::schema::{BenutzerAntwort, OkAntwort};
+
 #[OpenApi]
 impl LogandaimApiSpec {
     #[oai(path = "/health", method = "get")]
@@ -152,6 +167,84 @@ impl LogandaimApiSpec {
     #[oai(path = "/wertung", method = "post")]
     async fn wertung_berechnen(&self, body: Json<WertungsAnfrage>) -> TypicalJsonResponse<Wertung> {
         self.app_api.wertung_berechnen(body.0).await.into()
+    }
+
+    // ------------------------------------------------------------------ konto
+
+    /// Step 1 of registration. Answers `200` whether the address is free or taken, so the
+    /// endpoint is not an address oracle (AC-2).
+    #[oai(path = "/registrierung/start", method = "post")]
+    async fn registrierung_starten(
+        &self,
+        req: &Request,
+        body: Json<RegistrierungStartAnfrage>,
+    ) -> KontoAntwort<OkAntwort> {
+        konto_routes::registrierung_starten(self, req, body).await
+    }
+
+    /// Step 2: creates Benutzer + Konto and answers the first token pair.
+    #[oai(path = "/registrierung/abschluss", method = "post")]
+    async fn registrierung_abschliessen(
+        &self,
+        req: &Request,
+        body: Json<RegistrierungAbschlussAnfrage>,
+    ) -> SitzungAntwort {
+        konto_routes::registrierung_abschliessen(self, req, body).await
+    }
+
+    #[oai(path = "/anmeldung", method = "post")]
+    async fn anmelden(&self, req: &Request, body: Json<AnmeldeAnfrage>) -> SitzungAntwort {
+        konto_routes::anmelden(self, req, body).await
+    }
+
+    /// Rotate the refresh token from the cookie.
+    #[oai(path = "/anmeldung/erneuerung", method = "post")]
+    async fn erneuerung(&self, req: &Request) -> SitzungAntwort {
+        konto_routes::erneuerung(self, req).await
+    }
+
+    #[oai(path = "/anmeldung/abmeldung", method = "post")]
+    async fn abmelden(&self, req: &Request) -> BeendendeAntwort<OkAntwort> {
+        konto_routes::abmelden(self, req).await
+    }
+
+    #[oai(path = "/passwort-vergessen", method = "post")]
+    async fn passwort_vergessen(
+        &self,
+        req: &Request,
+        body: Json<PasswortVergessenAnfrage>,
+    ) -> KontoAntwort<OkAntwort> {
+        konto_routes::passwort_vergessen(self, req, body).await
+    }
+
+    /// Single use, and ends every session: the cookie is cleared with them.
+    #[oai(path = "/passwort-wiederherstellen", method = "post")]
+    async fn passwort_wiederherstellen(
+        &self,
+        body: Json<PasswortWiederherstellenAnfrage>,
+    ) -> BeendendeAntwort<OkAntwort> {
+        konto_routes::passwort_wiederherstellen(self, body).await
+    }
+
+    /// The caller's own Benutzer. `?benutzerId=` names another one and needs
+    /// `Systemadministrator`.
+    #[oai(path = "/benutzer", method = "get")]
+    async fn benutzer_anzeigen(
+        &self,
+        req: &Request,
+        #[oai(name = "benutzerId")] benutzer_id: Query<Option<Uuid>>,
+    ) -> KontoAntwort<BenutzerAntwort> {
+        konto_routes::benutzer_anzeigen(self, req, benutzer_id.0).await
+    }
+
+    /// Deletes the caller's own Benutzer. The cookie is cleared with the identity.
+    #[oai(path = "/benutzer/loeschung", method = "post")]
+    async fn benutzer_loeschen(
+        &self,
+        req: &Request,
+        body: Json<BenutzerLoeschungAnfrage>,
+    ) -> BeendendeAntwort<OkAntwort> {
+        konto_routes::benutzer_loeschen(self, req, body).await
     }
 }
 

@@ -6,8 +6,11 @@ use thiserror::Error;
 #[error("Ungültige E-Mail-Adresse: {0}")]
 pub struct EmailAdresseValidierungsfehler(String);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EmailAdresse(String);
+
+/// Longest address accepted (RFC 5321 path limit).
+const MAX_EMAIL_LAENGE: usize = 254;
 
 impl EmailAdresse {
     pub fn new<S: AsRef<str>>(s: S) -> Result<Self, EmailAdresseValidierungsfehler> {
@@ -17,6 +20,22 @@ impl EmailAdresse {
         } else {
             Err(EmailAdresseValidierungsfehler(s_ref.to_string()))
         }
+    }
+
+    /// The login identifier of a [`Konto`](crate::domain::konto::Konto): trimmed, lowercase,
+    /// and unique across all Konten (SPEC-konto rule 2).
+    ///
+    /// Folding stops at case: dots and `+` suffixes stay, because they are different
+    /// mailboxes on providers other than Gmail, and merging them would hand one person
+    /// another person's account.
+    pub fn normalisiert<S: AsRef<str>>(s: S) -> Result<Self, EmailAdresseValidierungsfehler> {
+        let roh = s.as_ref();
+        let getrimmt = roh.trim();
+        let normalisiert = getrimmt.to_lowercase();
+        if normalisiert.len() > MAX_EMAIL_LAENGE {
+            return Err(EmailAdresseValidierungsfehler(roh.to_string()));
+        }
+        EmailAdresse::new(normalisiert)
     }
 }
 
@@ -104,6 +123,38 @@ mod tests {
     #[test_log::test]
     fn email_rejects_missing_dot() {
         assert!(EmailAdresse::new("anna@musterde").is_err());
+    }
+
+    #[test_log::test]
+    fn normalisiert_trimmt_und_senkt() {
+        let email = EmailAdresse::normalisiert("  Anna.Muster@Example.AT  ").unwrap();
+        assert_eq!(email.as_ref(), "anna.muster@example.at");
+    }
+
+    #[test_log::test]
+    fn normalisiert_faltet_weder_punkte_noch_plus_suffixe() {
+        let mit_punkt = EmailAdresse::normalisiert("anna.muster@example.at").unwrap();
+        let ohne_punkt = EmailAdresse::normalisiert("annamuster@example.at").unwrap();
+        assert_ne!(mit_punkt, ohne_punkt);
+
+        let mit_plus = EmailAdresse::normalisiert("anna+konto@example.at").unwrap();
+        let ohne_plus = EmailAdresse::normalisiert("anna@example.at").unwrap();
+        assert_ne!(mit_plus, ohne_plus);
+    }
+
+    #[test_log::test]
+    fn normalisiert_ist_idempotent() {
+        let einmal = EmailAdresse::normalisiert("Anna@Example.AT").unwrap();
+        let zweimal =
+            EmailAdresse::normalisiert(einmal.as_ref()).expect("a normalized address is valid");
+        assert_eq!(einmal, zweimal);
+    }
+
+    #[test_log::test]
+    fn normalisiert_lehnt_zu_lange_adresse_ab() {
+        let lokal = "a".repeat(MAX_EMAIL_LAENGE);
+        let adresse = format!("{lokal}@example.at");
+        assert!(EmailAdresse::normalisiert(&adresse).is_err());
     }
 
     #[test_log::test]

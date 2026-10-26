@@ -7,7 +7,11 @@ use std::cmp::Ordering;
 use std::fmt::Debug;
 
 use crate::application::ThreadSafeError;
-use crate::ports::{RepositoryError, RepositoryResult, SchussRepository};
+use crate::ports::{
+    BenutzerRepository, EmailBestaetigungRepository, KontoRepository,
+    PasswortWiederherstellungRepository, RepositoryError, RepositoryResult, SchussRepository,
+    SessionRepository, SigningKeyRepository,
+};
 
 /// Active unit of work. `commit` / `rollback` consume it.
 ///
@@ -100,6 +104,30 @@ impl UnitOfWork<'_> {
         self.as_impl().schüsse()
     }
 
+    pub fn benutzer(&self) -> &dyn BenutzerRepository {
+        self.as_impl().benutzer()
+    }
+
+    pub fn konten(&self) -> &dyn KontoRepository {
+        self.as_impl().konten()
+    }
+
+    pub fn sessions(&self) -> &dyn SessionRepository {
+        self.as_impl().sessions()
+    }
+
+    pub fn signing_keys(&self) -> &dyn SigningKeyRepository {
+        self.as_impl().signing_keys()
+    }
+
+    pub fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository {
+        self.as_impl().bestaetigungen()
+    }
+
+    pub fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {
+        self.as_impl().wiederherstellungen()
+    }
+
     fn take_impl(&mut self) -> Box<dyn UnitOfWorkImpl + '_> {
         self.implementation
             .take()
@@ -132,6 +160,30 @@ impl UnitOfWorkImpl for LockedUnitOfWorkImpl<'_> {
     fn schüsse(&self) -> &dyn SchussRepository {
         self.inner.schüsse()
     }
+
+    fn benutzer(&self) -> &dyn BenutzerRepository {
+        self.inner.benutzer()
+    }
+
+    fn konten(&self) -> &dyn KontoRepository {
+        self.inner.konten()
+    }
+
+    fn sessions(&self) -> &dyn SessionRepository {
+        self.inner.sessions()
+    }
+
+    fn signing_keys(&self) -> &dyn SigningKeyRepository {
+        self.inner.signing_keys()
+    }
+
+    fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository {
+        self.inner.bestaetigungen()
+    }
+
+    fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {
+        self.inner.wiederherstellungen()
+    }
 }
 
 /// UoW Provider
@@ -142,6 +194,18 @@ pub trait UnitOfWorkImpl: Send + Sync {
 
     /// One accessor per repository. Each feature slice adds exactly one.
     fn schüsse(&self) -> &dyn SchussRepository;
+
+    fn benutzer(&self) -> &dyn BenutzerRepository;
+
+    fn konten(&self) -> &dyn KontoRepository;
+
+    fn sessions(&self) -> &dyn SessionRepository;
+
+    fn signing_keys(&self) -> &dyn SigningKeyRepository;
+
+    fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository;
+
+    fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository;
 }
 
 #[async_trait]

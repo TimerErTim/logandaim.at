@@ -5,13 +5,22 @@ use async_trait::async_trait;
 use libsql::Transaction;
 use logandaim_core::{
     ErrorReportExt, ResultReport,
-    ports::{RepositoryError, RepositoryResult, SchussRepository},
+    ports::{
+        BenutzerRepository, EmailBestaetigungRepository, KontoRepository,
+        PasswortWiederherstellungRepository, RepositoryError, RepositoryResult, SchussRepository,
+        SessionRepository, SigningKeyRepository,
+    },
     uow::{UnitOfWorkImpl, UnitOfWorkProvider},
 };
 
 use crate::{
-    SQLiteConnection, SQLiteInstance, errors::libsql_error_to_persistence_error,
-    repos::SQLiteSchussRepository,
+    SQLiteConnection, SQLiteInstance,
+    errors::libsql_error_to_persistence_error,
+    repos::{
+        SQLiteBenutzerRepository, SQLiteEmailBestaetigungRepository, SQLiteKontoRepository,
+        SQLitePasswortWiederherstellungRepository, SQLiteSchussRepository, SQLiteSessionRepository,
+        SQLiteSigningKeyRepository,
+    },
 };
 
 pub struct SQLiteUnitOfWork {
@@ -21,6 +30,12 @@ pub struct SQLiteUnitOfWork {
     connection: SQLiteConnection,
     pub(crate) tx: Arc<Mutex<Option<Transaction>>>,
     schuss_repo: SQLiteSchussRepository,
+    benutzer_repo: SQLiteBenutzerRepository,
+    konto_repo: SQLiteKontoRepository,
+    session_repo: SQLiteSessionRepository,
+    signing_key_repo: SQLiteSigningKeyRepository,
+    bestaetigung_repo: SQLiteEmailBestaetigungRepository,
+    wiederherstellung_repo: SQLitePasswortWiederherstellungRepository,
 }
 
 #[async_trait]
@@ -32,11 +47,16 @@ impl UnitOfWorkProvider for SQLiteInstance {
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;
         let tx = Arc::new(Mutex::new(Some(tx)));
-        let schuss_repo = SQLiteSchussRepository { tx: tx.clone() };
         Ok(Box::new(SQLiteUnitOfWork {
             connection,
+            schuss_repo: SQLiteSchussRepository { tx: tx.clone() },
+            benutzer_repo: SQLiteBenutzerRepository { tx: tx.clone() },
+            konto_repo: SQLiteKontoRepository { tx: tx.clone() },
+            session_repo: SQLiteSessionRepository { tx: tx.clone() },
+            signing_key_repo: SQLiteSigningKeyRepository { tx: tx.clone() },
+            bestaetigung_repo: SQLiteEmailBestaetigungRepository { tx: tx.clone() },
+            wiederherstellung_repo: SQLitePasswortWiederherstellungRepository { tx: tx.clone() },
             tx,
-            schuss_repo,
         }))
     }
 }
@@ -64,5 +84,29 @@ impl UnitOfWorkImpl for SQLiteUnitOfWork {
 
     fn schüsse(&self) -> &dyn SchussRepository {
         &self.schuss_repo
+    }
+
+    fn benutzer(&self) -> &dyn BenutzerRepository {
+        &self.benutzer_repo
+    }
+
+    fn konten(&self) -> &dyn KontoRepository {
+        &self.konto_repo
+    }
+
+    fn sessions(&self) -> &dyn SessionRepository {
+        &self.session_repo
+    }
+
+    fn signing_keys(&self) -> &dyn SigningKeyRepository {
+        &self.signing_key_repo
+    }
+
+    fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository {
+        &self.bestaetigung_repo
+    }
+
+    fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {
+        &self.wiederherstellung_repo
     }
 }

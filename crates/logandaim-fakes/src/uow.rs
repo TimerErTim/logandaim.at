@@ -2,11 +2,15 @@ use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use logandaim_core::{
-    ports::{RepositoryResult, SchussRepository},
+    ports::{
+        BenutzerRepository, EmailBestaetigungRepository, KontoRepository,
+        PasswortWiederherstellungRepository, RepositoryResult, SchussRepository, SessionRepository,
+        SigningKeyRepository,
+    },
     uow::{UnitOfWorkImpl, UnitOfWorkProvider},
 };
 
-use crate::repository::{FakeDatastore, FakeSchussRepository};
+use crate::repository::{FakeDatastore, FakeSchussRepository, KontoRepositories};
 
 /// Fake UoW with real transaction semantics: `begin` snapshots the backing datastore,
 /// repositories write into the snapshot, `commit` publishes the snapshot back.
@@ -52,17 +56,20 @@ pub struct FakeUnitOfWork {
     /// Snapshot the repositories write into; discarded on rollback.
     transaction_datastore: Arc<FakeDatastore>,
     schüsse: FakeSchussRepository,
+    konto: KontoRepositories,
 }
 
 impl FakeUnitOfWork {
     pub fn new(log: Arc<Mutex<Vec<UoWEvent>>>, datastore: Arc<FakeDatastore>) -> Self {
         let transaction_datastore = Arc::new(FakeDatastore::clone(datastore.as_ref()));
         let schüsse = FakeSchussRepository::new(Arc::clone(&transaction_datastore));
+        let konto = KontoRepositories::new(Arc::clone(&transaction_datastore));
         Self {
             log,
             backing_datastore: datastore,
             transaction_datastore,
             schüsse,
+            konto,
         }
     }
 }
@@ -83,6 +90,30 @@ impl UnitOfWorkImpl for FakeUnitOfWork {
 
     fn schüsse(&self) -> &dyn SchussRepository {
         &self.schüsse
+    }
+
+    fn benutzer(&self) -> &dyn BenutzerRepository {
+        &self.konto.benutzer
+    }
+
+    fn konten(&self) -> &dyn KontoRepository {
+        &self.konto.konten
+    }
+
+    fn sessions(&self) -> &dyn SessionRepository {
+        &self.konto.sessions
+    }
+
+    fn signing_keys(&self) -> &dyn SigningKeyRepository {
+        &self.konto.signing_keys
+    }
+
+    fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository {
+        &self.konto.bestaetigungen
+    }
+
+    fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {
+        &self.konto.wiederherstellungen
     }
 }
 

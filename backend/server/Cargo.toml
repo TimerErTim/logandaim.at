@@ -11,6 +11,7 @@ logandaim-core = { path = "../../crates/logandaim-core" }
 logandaim-sqlite = { path = "../../crates/logandaim-sqlite" }
 logandaim-api = { path = "../../crates/logandaim-api" }
 logandaim-filesystemstore = { path = "../../crates/logandaim-filesystemstore" }
+logandaim-smtp = { path = "../../crates/logandaim-smtp" }
 
 thiserror = { workspace = true }
 error-stack = { workspace = true }

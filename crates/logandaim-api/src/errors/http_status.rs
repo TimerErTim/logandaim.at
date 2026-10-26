@@ -4,7 +4,7 @@ use logandaim_core::ThreadSafeError;
 use logandaim_core::domain::schuss::SchussFehler;
 use logandaim_core::domain::zeitraum::ZeitraumFehler;
 use logandaim_core::ports::{ObjectStoreError, RepositoryError};
-use logandaim_core::service::{SchussRegistrierenFehler, WertungFehler};
+use logandaim_core::service::{KontoDienstFehler, SchussRegistrierenFehler, WertungFehler};
 
 use super::ValidationError;
 
@@ -41,6 +41,7 @@ fn nested_http_status<C: ThreadSafeError>(error: &Report<C>) -> Option<StatusCod
         .or_else(|| mapped::<C, SchussRegistrierenFehler>(error))
         .or_else(|| mapped::<C, WertungFehler>(error))
         .or_else(|| mapped::<C, ZeitraumFehler>(error))
+        .or_else(|| mapped::<C, KontoDienstFehler>(error))
         .or_else(|| mapped::<C, RepositoryError>(error))
         .or_else(|| mapped::<C, ObjectStoreError>(error))
         .or_else(|| mapped::<C, ValidationError>(error))
@@ -95,6 +96,28 @@ impl HttpStatusMapping for SchussRegistrierenFehler {
         match self {
             SchussRegistrierenFehler::Erstellung => None,
         }
+    }
+}
+
+/// Every `konto` refusal has exactly one HTTP meaning, and none of them is 500: a
+/// failure that reaches here is a decision the use case made, not an internal fault.
+///
+/// `NichtErlaubt` is 403, never 404: the caller proved who it is and is simply not
+/// allowed, and pretending the record does not exist would only confuse a legitimate
+/// administrator debugging their own account.
+impl HttpStatusMapping for KontoDienstFehler {
+    fn http_status(&self) -> Option<StatusCode> {
+        Some(match self {
+            // A bad token, a short Passwort, a missing confirmation flag.
+            KontoDienstFehler::UngueltigeAnfrage => StatusCode::BAD_REQUEST,
+            KontoDienstFehler::NichtAngemeldet
+            | KontoDienstFehler::ZugangsdatenFalsch
+            | KontoDienstFehler::SitzungUngueltig => StatusCode::UNAUTHORIZED,
+            KontoDienstFehler::NichtErlaubt => StatusCode::FORBIDDEN,
+            KontoDienstFehler::Gedrosselt => StatusCode::TOO_MANY_REQUESTS,
+            KontoDienstFehler::Konflikt => StatusCode::CONFLICT,
+            KontoDienstFehler::Speicher => StatusCode::INTERNAL_SERVER_ERROR,
+        })
     }
 }
 

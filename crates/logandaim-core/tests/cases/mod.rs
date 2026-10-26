@@ -4,4 +4,7 @@
 // (`business_conform.rs` in core) and against SQLite (`business_conform.rs` in
 // `logandaim-sqlite`), which is how adapter conformance is proven.
 
+pub mod helpers;
+
+mod konto;
 mod schuss;
