@@ -1,26 +1,26 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use super::{KontoFehler, KontoId, PASSWORT_WIEDERHERSTELLUNG_GÜLTIGKEIT, TokenHash};
+use super::{KontoId, PASSWORT_WIEDERHERSTELLUNG_GÜLTIGKEIT, SecretTokenHash};
 
 /// Identity of one Passwort-Wiederherstellung token.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct WiederherstellungId(pub Uuid);
+pub struct PasswortWiederherstellungId(pub Uuid);
 
 /// Creation input of a Passwort-Wiederherstellung.
 #[derive(Debug, Clone)]
-pub struct NeueWiederherstellung {
+pub struct NeuePasswortWiederherstellung {
     konto_id: KontoId,
-    token_hash: TokenHash,
-    erstellt_am: DateTime<Utc>,
+    token_hash: SecretTokenHash,
+    created_at: DateTime<Utc>,
 }
 
-impl NeueWiederherstellung {
-    pub fn neu(konto_id: KontoId, token_hash: TokenHash, erstellt_am: DateTime<Utc>) -> Self {
+impl NeuePasswortWiederherstellung {
+    pub fn neu(konto_id: KontoId, token_hash: SecretTokenHash, created_at: DateTime<Utc>) -> Self {
         Self {
             konto_id,
             token_hash,
-            erstellt_am,
+            created_at,
         }
     }
 
@@ -28,16 +28,16 @@ impl NeueWiederherstellung {
         self.konto_id
     }
 
-    pub fn token_hash(&self) -> &TokenHash {
+    pub fn token_hash(&self) -> &SecretTokenHash {
         &self.token_hash
     }
 
-    pub fn erstellt_am(&self) -> DateTime<Utc> {
-        self.erstellt_am
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
     }
 
     pub fn expires_at(&self) -> DateTime<Utc> {
-        self.erstellt_am + PASSWORT_WIEDERHERSTELLUNG_GÜLTIGKEIT
+        self.created_at + PASSWORT_WIEDERHERSTELLUNG_GÜLTIGKEIT
     }
 }
 
@@ -47,15 +47,15 @@ impl NeueWiederherstellung {
 /// previous (SPEC-konto rule 7).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PasswortWiederherstellung {
-    id: WiederherstellungId,
+    id: PasswortWiederherstellungId,
     konto_id: KontoId,
-    token_hash: TokenHash,
+    token_hash: SecretTokenHash,
     expires_at: DateTime<Utc>,
     spent_at: Option<DateTime<Utc>>,
 }
 
 impl PasswortWiederherstellung {
-    pub fn neu(id: WiederherstellungId, neu: NeueWiederherstellung) -> Self {
+    pub fn neu(id: PasswortWiederherstellungId, neu: NeuePasswortWiederherstellung) -> Self {
         let expires_at = neu.expires_at();
         Self {
             id,
@@ -67,9 +67,9 @@ impl PasswortWiederherstellung {
     }
 
     pub fn from_parts(
-        id: WiederherstellungId,
+        id: PasswortWiederherstellungId,
         konto_id: KontoId,
-        token_hash: TokenHash,
+        token_hash: SecretTokenHash,
         expires_at: DateTime<Utc>,
         spent_at: Option<DateTime<Utc>>,
     ) -> Self {
@@ -82,7 +82,7 @@ impl PasswortWiederherstellung {
         }
     }
 
-    pub fn id(&self) -> WiederherstellungId {
+    pub fn id(&self) -> PasswortWiederherstellungId {
         self.id
     }
 
@@ -90,7 +90,7 @@ impl PasswortWiederherstellung {
         self.konto_id
     }
 
-    pub fn token_hash(&self) -> &TokenHash {
+    pub fn token_hash(&self) -> &SecretTokenHash {
         &self.token_hash
     }
 
@@ -114,12 +114,10 @@ impl PasswortWiederherstellung {
         !self.ist_verbraucht() && !self.ist_abgelaufen(jetzt)
     }
 
-    pub fn verbrauchen(&mut self, jetzt: DateTime<Utc>) -> Result<(), KontoFehler> {
-        if self.spent_at.is_some() {
-            return Err(KontoFehler::TokenVerbraucht);
-        }
-        self.spent_at = Some(jetzt);
-        Ok(())
+    /// Spend this row. Idempotent, so spending every open row of a Konto keeps the first
+    /// timestamp of each instead of failing on one that was already spent.
+    pub fn verbrauchen(&mut self, jetzt: DateTime<Utc>) {
+        self.spent_at.get_or_insert(jetzt);
     }
 }
 
@@ -135,10 +133,10 @@ mod tests {
 
     fn wiederherstellung() -> PasswortWiederherstellung {
         PasswortWiederherstellung::neu(
-            WiederherstellungId(Uuid::nil()),
-            NeueWiederherstellung::neu(
+            PasswortWiederherstellungId(Uuid::nil()),
+            NeuePasswortWiederherstellung::neu(
                 KontoId(Uuid::nil()),
-                TokenHash::from_hex("b".repeat(64)).unwrap(),
+                SecretTokenHash::from_hex("b".repeat(64)).unwrap(),
                 jetzt(),
             ),
         )
@@ -155,11 +153,10 @@ mod tests {
     #[test_log::test]
     fn zweite_verwendung_wird_abgelehnt() {
         let mut token = wiederherstellung();
-        token.verbrauchen(jetzt()).unwrap();
-        assert!(matches!(
-            token.verbrauchen(jetzt()),
-            Err(KontoFehler::TokenVerbraucht)
-        ));
+        token.verbrauchen(jetzt());
+        token.verbrauchen(jetzt() + Duration::minutes(1));
+        assert_eq!(token.spent_at(), Some(jetzt()));
+        assert!(!token.ist_gültig(jetzt()));
     }
 
     #[test_log::test]

@@ -18,7 +18,7 @@ pub const REFRESH_COOKIE: &str = "__Host-logandaim_refresh";
 
 /// `Set-Cookie` value that stores a fresh refresh token.
 pub fn setzen(token: &RefreshToken) -> String {
-    setzen_raw(token.as_str())
+    setzen_raw(token.base64url().as_str())
 }
 
 /// The same builder for a token that arrived as a string.
@@ -46,7 +46,7 @@ mod tests {
     use super::*;
 
     fn token() -> RefreshToken {
-        RefreshToken::neu().expect("the CSPRNG works")
+        RefreshToken::random().expect("the CSPRNG works")
     }
 
     #[test_log::test]
@@ -90,7 +90,9 @@ mod tests {
     #[test_log::test]
     fn das_token_steht_nur_im_cookie_und_hat_256_bit() {
         let token = token();
-        assert_eq!(token.as_str().len(), 43);
-        assert!(setzen(&token).starts_with(&format!("{REFRESH_COOKIE}={}", token.as_str())));
+        assert_eq!(token.base64url().as_str().len(), 43);
+        assert!(
+            setzen(&token).starts_with(&format!("{REFRESH_COOKIE}={}", token.base64url().as_str()))
+        );
     }
 }

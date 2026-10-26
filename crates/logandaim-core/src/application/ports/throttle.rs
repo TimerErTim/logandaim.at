@@ -5,8 +5,11 @@ use chrono::{DateTime, Duration, Utc};
 use crate::application::ResultReport;
 
 /// What a client is trying to do, so each action has its own budget.
+///
+/// Variants keep the German use-case nouns they name (`Anmeldung`, `RegistrierungStart`,
+/// …): those are domain language. The type itself is application code and is English.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum DrosselAktion {
+pub enum ThrottleAction {
     /// Failed logins: 20 per 15 minutes (SPEC-konto rule 5, AC-15).
     Anmeldung,
     /// Registration step 1: 5 per hour (rule 5, AC-16).
@@ -19,9 +22,9 @@ pub enum DrosselAktion {
     Erneuerung,
 }
 
-impl DrosselAktion {
+impl ThrottleAction {
     /// Failed attempts allowed inside one window.
-    pub fn schwelle(self) -> u32 {
+    pub fn threshold(self) -> u32 {
         match self {
             Self::Anmeldung => 20,
             Self::RegistrierungStart
@@ -32,7 +35,7 @@ impl DrosselAktion {
     }
 
     /// Length of the window the threshold applies to.
-    pub fn fenster(self) -> Duration {
+    pub fn window(self) -> Duration {
         match self {
             Self::Anmeldung => Duration::minutes(15),
             Self::RegistrierungStart
@@ -42,6 +45,7 @@ impl DrosselAktion {
         }
     }
 
+    /// Stable key of one action's counter, for a log line and a store key.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Anmeldung => "anmeldung",
@@ -58,13 +62,13 @@ impl DrosselAktion {
 /// Never an E-Mail-Adresse. A per-address limit would let anyone lock an owner out by
 /// guessing their address (SPEC-konto rule 5, Q-16).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct KundeSchlüssel {
+pub struct ClientKey {
     pub ip: IpAddr,
     pub fingerprint: String,
 }
 
-impl KundeSchlüssel {
-    pub fn neu(ip: IpAddr, fingerprint: impl Into<String>) -> Self {
+impl ClientKey {
+    pub fn new(ip: IpAddr, fingerprint: impl Into<String>) -> Self {
         Self {
             ip,
             fingerprint: fingerprint.into(),
@@ -73,33 +77,33 @@ impl KundeSchlüssel {
 }
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
-pub enum DrosselFehler {
+pub enum ThrottleError {
     #[error("zu viele Versuche; bitte später erneut versuchen")]
-    ZuVieleVersuche,
+    TooManyAttempts,
     #[error("die Drossel ist nicht erreichbar")]
-    NichtVerfügbar,
+    Unavailable,
 }
 
 /// Client-scoped rate limiting. An infrastructure port, not domain behaviour: the
 /// thresholds above are the product rule, the store is an adapter choice.
 #[async_trait::async_trait]
-pub trait Drossel: Send + Sync {
-    /// Count one attempt. `Err(ZuVieleVersuche)` once the budget is spent; the caller
+pub trait Throttle: Send + Sync {
+    /// Count one attempt. `Err(TooManyAttempts)` once the budget is spent; the caller
     /// answers 429 and does the work only on `Ok`.
-    async fn prüfe_und_zähle(
+    async fn check_and_count(
         &self,
-        kunde: &KundeSchlüssel,
-        aktion: DrosselAktion,
-        jetzt: DateTime<Utc>,
-    ) -> ResultReport<(), DrosselFehler>;
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: DateTime<Utc>,
+    ) -> ResultReport<(), ThrottleError>;
 
     /// Forget one action's counter for this client. Called on a successful login, so an
     /// owner who mistyped is not punished for the rest of the window (rule 5).
-    async fn zurücksetzen(
+    async fn reset(
         &self,
-        kunde: &KundeSchlüssel,
-        aktion: DrosselAktion,
-    ) -> ResultReport<(), DrosselFehler>;
+        client: &ClientKey,
+        action: ThrottleAction,
+    ) -> ResultReport<(), ThrottleError>;
 }
 
 #[cfg(test)]
@@ -108,16 +112,16 @@ mod tests {
 
     #[test_log::test]
     fn schwellen_entsprechen_der_spezifikation() {
-        assert_eq!(DrosselAktion::Anmeldung.schwelle(), 20);
-        assert_eq!(DrosselAktion::Anmeldung.fenster(), Duration::minutes(15));
+        assert_eq!(ThrottleAction::Anmeldung.threshold(), 20);
+        assert_eq!(ThrottleAction::Anmeldung.window(), Duration::minutes(15));
         for aktion in [
-            DrosselAktion::RegistrierungStart,
-            DrosselAktion::RegistrierungAbschluss,
-            DrosselAktion::Wiederherstellung,
-            DrosselAktion::Erneuerung,
+            ThrottleAction::RegistrierungStart,
+            ThrottleAction::RegistrierungAbschluss,
+            ThrottleAction::Wiederherstellung,
+            ThrottleAction::Erneuerung,
         ] {
-            assert_eq!(aktion.schwelle(), 5);
-            assert_eq!(aktion.fenster(), Duration::hours(1));
+            assert_eq!(aktion.threshold(), 5);
+            assert_eq!(aktion.window(), Duration::hours(1));
         }
     }
 }

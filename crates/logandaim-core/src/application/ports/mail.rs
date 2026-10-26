@@ -99,7 +99,7 @@ impl Mail {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum MailFehler {
+pub enum MailError {
     #[error("die Mail konnte nicht zugestellt werden")]
     Zustellung,
     #[error("der Mailversand ist nicht konfiguriert")]
@@ -113,7 +113,7 @@ pub enum MailFehler {
 /// unit of work commits and log the failure instead of propagating it (NFR-5).
 #[async_trait::async_trait]
 pub trait MailSender: Send + Sync {
-    async fn senden(&self, mail: Mail) -> ResultReport<(), MailFehler>;
+    async fn send(&self, mail: Mail) -> ResultReport<(), MailError>;
 }
 
 #[cfg(test)]
@@ -121,7 +121,7 @@ mod tests {
     use super::*;
 
     fn adresse() -> EmailAdresse {
-        EmailAdresse::new("anna@muster.at").expect("static address is valid")
+        EmailAdresse::normalisiert("anna@muster.at").expect("static address is valid")
     }
 
     #[test_log::test]

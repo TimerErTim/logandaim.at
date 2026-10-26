@@ -15,7 +15,7 @@ pub struct NeuesKonto {
     email: EmailAdresse,
     password_hash: PasswordHash,
     bestätigt_am: DateTime<Utc>,
-    erstellt_am: DateTime<Utc>,
+    created_at: DateTime<Utc>,
 }
 
 impl NeuesKonto {
@@ -25,14 +25,14 @@ impl NeuesKonto {
         benutzer_id: BenutzerId,
         email: EmailAdresse,
         password_hash: PasswordHash,
-        erstellt_am: DateTime<Utc>,
+        created_at: DateTime<Utc>,
     ) -> Self {
         Self {
             benutzer_id,
             email,
             password_hash,
-            bestätigt_am: erstellt_am,
-            erstellt_am,
+            bestätigt_am: created_at,
+            created_at,
         }
     }
 
@@ -52,8 +52,8 @@ impl NeuesKonto {
         self.bestätigt_am
     }
 
-    pub fn erstellt_am(&self) -> DateTime<Utc> {
-        self.erstellt_am
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
     }
 }
 
@@ -65,7 +65,7 @@ pub struct Konto {
     email: EmailAdresse,
     password_hash: PasswordHash,
     bestätigt_am: DateTime<Utc>,
-    erstellt_am: DateTime<Utc>,
+    created_at: DateTime<Utc>,
 }
 
 impl Konto {
@@ -76,7 +76,7 @@ impl Konto {
             email: neu.email,
             password_hash: neu.password_hash,
             bestätigt_am: neu.bestätigt_am,
-            erstellt_am: neu.erstellt_am,
+            created_at: neu.created_at,
         }
     }
 
@@ -86,7 +86,7 @@ impl Konto {
         email: EmailAdresse,
         password_hash: PasswordHash,
         bestätigt_am: DateTime<Utc>,
-        erstellt_am: DateTime<Utc>,
+        created_at: DateTime<Utc>,
     ) -> Self {
         Self {
             id,
@@ -94,7 +94,7 @@ impl Konto {
             email,
             password_hash,
             bestätigt_am,
-            erstellt_am,
+            created_at,
         }
     }
 
@@ -118,8 +118,8 @@ impl Konto {
         self.bestätigt_am
     }
 
-    pub fn erstellt_am(&self) -> DateTime<Utc> {
-        self.erstellt_am
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
     }
 
     /// Replace the credential. Used by `PasswortWiederherstellen`; every Anmelde-Sitzung
@@ -168,7 +168,7 @@ mod tests {
             original.email().clone(),
             original.password_hash().clone(),
             original.bestätigt_am(),
-            original.erstellt_am(),
+            original.created_at(),
         );
         assert_eq!(original, geladen);
     }

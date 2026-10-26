@@ -32,18 +32,18 @@ mise sets environment variables for the server suitable for a dev environment au
 
 | Source | Keys |
 |--------|------|
-| File (camelCase JSON) | `bindAddress`, `bindPort`, `subpath`, `databaseUrl`, `objectStoreDir`, `logDir`, `signingKeyPath`, `signingKeyId`, `tokenIssuer`, `tokenAudience`, `frontendBasisUrl`, `smtpHost`, `smtpPort`, `smtpVerschlüsselung`, `smtpBenutzername`, `smtpPasswort`, `smtpAbsender` |
-| Env / CLI | `LOGANDAIM_BIND_ADDRESS` / `--bind-address`, `LOGANDAIM_BIND_PORT` / `--bind-port`, `SUBPATH` / `--subpath`, `LOGANDAIM_DATABASE_URL` / `--database-url`, `LOGANDAIM_OBJECT_STORE_DIR` / `--object-store-dir`, `LOGANDAIM_LOG_DIR` / `--log-dir`, `LOGANDAIM_SIGNING_KEY_PATH` / `--signing-key-path`, `LOGANDAIM_SIGNING_KEY_ID` / `--signing-key-id`, `LOGANDAIM_TOKEN_ISSUER` / `--token-issuer`, `LOGANDAIM_TOKEN_AUDIENCE` / `--token-audience`, `LOGANDAIM_FRONTEND_BASIS_URL` / `--frontend-basis-url`, `LOGANDAIM_SMTP_HOST` / `--smtp-host`, `LOGANDAIM_SMTP_PORT` / `--smtp-port`, `LOGANDAIM_SMTP_VERSCHLUESSELUNG` / `--smtp-verschlüsselung`, `LOGANDAIM_SMTP_BENUTZERNAME` / `--smtp-benutzername`, `LOGANDAIM_SMTP_PASSWORT` / `--smtp-passwort`, `LOGANDAIM_SMTP_ABSENDER` / `--smtp-absender` |
+| File (camelCase JSON) | `bindAddress`, `bindPort`, `subpath`, `databaseUrl`, `objectStoreDir`, `logDir`, `signingKeyId`, `tokenIssuer`, `tokenAudience`, `frontendBasisUrl`, `smtpHost`, `smtpPort`, `smtpVerschlüsselung`, `smtpBenutzername`, `smtpPasswort`, `smtpAbsender` |
+| Env / CLI | `LOGANDAIM_BIND_ADDRESS` / `--bind-address`, `LOGANDAIM_BIND_PORT` / `--bind-port`, `SUBPATH` / `--subpath`, `LOGANDAIM_DATABASE_URL` / `--database-url`, `LOGANDAIM_OBJECT_STORE_DIR` / `--object-store-dir`, `LOGANDAIM_LOG_DIR` / `--log-dir`, `LOGANDAIM_SIGNING_KEY_ID` / `--signing-key-id`, `LOGANDAIM_TOKEN_ISSUER` / `--token-issuer`, `LOGANDAIM_TOKEN_AUDIENCE` / `--token-audience`, `LOGANDAIM_FRONTEND_BASIS_URL` / `--frontend-basis-url`, `LOGANDAIM_SMTP_HOST` / `--smtp-host`, `LOGANDAIM_SMTP_PORT` / `--smtp-port`, `LOGANDAIM_SMTP_VERSCHLUESSELUNG` / `--smtp-verschlüsselung`, `LOGANDAIM_SMTP_BENUTZERNAME` / `--smtp-benutzername`, `LOGANDAIM_SMTP_PASSWORT` / `--smtp-passwort`, `LOGANDAIM_SMTP_ABSENDER` / `--smtp-absender` |
 | Accounts (env only) | `LOGANDAIM_SUPERUSER_EMAIL` — the address promoted to `Systemadministrator` at startup |
 | Tracing | `LOGANDAIM_LOG_LEVEL` (default `info`) |
 
 Notes on the account keys:
 
-- `signingKeyPath` is a PKCS#8 PEM Ed25519 private key. There is no generated fallback: a key
-  invented at startup would invalidate every session on restart. Generate one with
-  `openssl genpkey -algorithm ed25519 -out signing-key.pem`.
-- `signingKeyId` is the `kid` the key is published under. Rotating means running two keys side by
-  side: add the new row, point the id at it, and retire the old one once its tokens expire (AC-17).
+- `signingKeyId` is the `kid` access tokens are published under. Each session row stores the
+  public key it was issued under, so verification needs no key table (AC-17).
+- `signingKeyPath` is optional. Absent, the server generates a throwaway Ed25519 key per
+  process — convenient locally, and it invalidates every issued token on restart. A long-lived
+  deployment sets a PKCS#8 PEM path instead.
 - `tokenIssuer` and `tokenAudience` are the `iss` and `aud` claims, verified on every request.
 - `frontendBasisUrl` is where the browser app is served (`http://localhost:3000` by default). Mailed
   links are this origin plus the product's own route — `/registrierung` and `/passwort` — so a
@@ -59,7 +59,7 @@ Development and tests use [Mailpit](https://mailpit.axllent.org), a local SMTP c
 UI, so no real address receives anything:
 
 ```bash
-mise run run:mailpit   # SMTP 127.0.0.1:1025, web UI http://127.0.0.1:8025
+mise daemons start mailpit   # SMTP 127.0.0.1:1025, web UI http://127.0.0.1:8025
 ```
 
 The e2e suite does the same through the mise `mailpit` daemon. Confirmation and recovery mails open

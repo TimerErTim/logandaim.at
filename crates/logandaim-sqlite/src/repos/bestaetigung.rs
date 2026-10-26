@@ -8,22 +8,23 @@ use uuid::Uuid;
 
 use logandaim_core::{
     ErrorReportExt,
+    application::uow::Versioned,
     domain::{
         EmailAdresse,
-        konto::{BestätigungId, EmailBestätigung, NeueBestätigung, TokenHash},
+        konto::{BestätigungId, EmailBestätigung, NeueBestätigung, SecretTokenHash},
     },
     ports::{EmailBestätigungRepository, RepositoryError, RepositoryResult},
 };
 
 use crate::{
     errors::libsql_error_to_persistence_error,
-    repos::common::{format_datetime, parse_datetime, parse_uuid},
+    repos::common::{format_datetime, parse_datetime, parse_uuid, parse_version},
 };
 
 const SELECT: &str =
-    r#"SELECT id, email, token_hash, expires_at, spent_at FROM "email_bestätigungen""#;
+    r#"SELECT id, email, token_hash, expires_at, spent_at, _version FROM "email_bestätigungen""#;
 
-fn bestätigung_from_row(row: &Row) -> RepositoryResult<EmailBestätigung> {
+fn bestätigung_from_row(row: &Row) -> RepositoryResult<Versioned<EmailBestätigung>> {
     let id_raw: String = row.get(0).contextualize(RepositoryError::Data)?;
     let email_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
     let token_hash_raw: String = row.get(2).contextualize(RepositoryError::Data)?;
@@ -31,19 +32,17 @@ fn bestätigung_from_row(row: &Row) -> RepositoryResult<EmailBestätigung> {
     let spent_at_raw: Option<String> = row.get(4).contextualize(RepositoryError::Data)?;
 
     let id = parse_uuid(&id_raw).contextualize(RepositoryError::Data)?;
-    let email = EmailAdresse::new(email_raw).change_context(RepositoryError::Data)?;
-    let token_hash = TokenHash::from_hex(token_hash_raw).change_context(RepositoryError::Data)?;
+    let email = EmailAdresse::normalisiert(email_raw).change_context(RepositoryError::Data)?;
+    let token_hash =
+        SecretTokenHash::from_hex(token_hash_raw).change_context(RepositoryError::Data)?;
     let expires_at = parse_datetime(&expires_at_raw).contextualize(RepositoryError::Data)?;
     let spent_at = spent_at_raw
         .map(|wert| parse_datetime(&wert).contextualize(RepositoryError::Data))
         .transpose()?;
 
-    Ok(EmailBestätigung::from_parts(
-        BestätigungId(id),
-        email,
-        token_hash,
-        expires_at,
-        spent_at,
+    Ok(Versioned::new(
+        parse_version(row, 5)?,
+        EmailBestätigung::from_parts(BestätigungId(id), email, token_hash, expires_at, spent_at),
     ))
 }
 
@@ -53,7 +52,10 @@ pub struct SQLiteEmailBestätigungRepository {
 
 #[async_trait]
 impl EmailBestätigungRepository for SQLiteEmailBestätigungRepository {
-    async fn create(&self, bestätigung: NeueBestätigung) -> RepositoryResult<EmailBestätigung> {
+    async fn create(
+        &self,
+        bestätigung: NeueBestätigung,
+    ) -> RepositoryResult<Versioned<EmailBestätigung>> {
         let id = BestätigungId(Uuid::new_v4());
         let domain = EmailBestätigung::neu(id, bestätigung.clone());
 
@@ -73,10 +75,13 @@ impl EmailBestätigungRepository for SQLiteEmailBestätigungRepository {
         .await
         .contextualize_with(libsql_error_to_persistence_error)?;
 
-        Ok(domain)
+        Ok(Versioned::init(domain))
     }
 
-    async fn find_by_hash(&self, hash: &TokenHash) -> RepositoryResult<Option<EmailBestätigung>> {
+    async fn find_by_hash(
+        &self,
+        hash: &SecretTokenHash,
+    ) -> RepositoryResult<Option<Versioned<EmailBestätigung>>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
@@ -99,50 +104,111 @@ impl EmailBestätigungRepository for SQLiteEmailBestätigungRepository {
         bestätigung_from_row(&row).map(Some)
     }
 
-    async fn consume(
+    async fn find_by_id(
         &self,
         id: BestätigungId,
-        jetzt: chrono::DateTime<chrono::Utc>,
-    ) -> RepositoryResult<()> {
+    ) -> RepositoryResult<Versioned<EmailBestätigung>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        // Conditional update: the second spender matches no row, so `Conflict` is the
-        // honest answer even when two requests interleave (AC-4, AC-13).
+        let mut rows = tx
+            .query(&format!(r#"{SELECT} WHERE id = ?1"#), [id.0.to_string()])
+            .await
+            .contextualize_with(libsql_error_to_persistence_error)?;
+
+        let Some(row) = rows
+            .next()
+            .await
+            .contextualize_with(libsql_error_to_persistence_error)?
+        else {
+            return Err(RepositoryError::NotFound.into());
+        };
+
+        bestätigung_from_row(&row)
+    }
+
+    async fn find_by_email(
+        &self,
+        email: &EmailAdresse,
+    ) -> RepositoryResult<Vec<Versioned<EmailBestätigung>>> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
+
+        let mut rows = tx
+            .query(
+                &format!(r#"{SELECT} WHERE email = ?1"#),
+                [email.as_ref().to_string()],
+            )
+            .await
+            .contextualize_with(libsql_error_to_persistence_error)?;
+
+        let mut bestätigungen = Vec::new();
+        while let Some(row) = rows
+            .next()
+            .await
+            .contextualize_with(libsql_error_to_persistence_error)?
+        {
+            bestätigungen.push(bestätigung_from_row(&row)?);
+        }
+        Ok(bestätigungen)
+    }
+
+    async fn update(
+        &self,
+        bestätigung: &Versioned<EmailBestätigung>,
+    ) -> RepositoryResult<Versioned<EmailBestätigung>> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
+
+        // Conditional on the version *and* on `spent_at IS NULL`, so two concurrent
+        // completes cannot both look at an unspent row and both create a Benutzer.
         let betroffen = tx
             .execute(
-                r#"UPDATE "email_bestätigungen" SET spent_at = ?2, _version = _version + 1
-                   WHERE id = ?1 AND spent_at IS NULL"#,
-                (id.0.to_string(), format_datetime(jetzt)),
+                r#"UPDATE "email_bestätigungen" SET email = ?2, token_hash = ?3,
+                       expires_at = ?4, spent_at = ?5, _version = ?6 + 1
+                   WHERE id = ?1 AND _version = ?6"#,
+                (
+                    bestätigung.id().0.to_string(),
+                    bestätigung.email().as_ref().to_string(),
+                    bestätigung.token_hash().as_str().to_string(),
+                    format_datetime(bestätigung.expires_at()),
+                    bestätigung.spent_at().map(format_datetime),
+                    bestätigung.v() as i64,
+                ),
             )
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;
 
         if betroffen == 0 {
-            return Err(RepositoryError::Conflict.into());
+            return Err(RepositoryError::VersionMismatch {
+                expected: bestätigung.v(),
+                actual: None,
+            }
+            .into());
+        }
+
+        Ok(bestätigung.clone().incremented())
+    }
+
+    async fn delete(&self, id: BestätigungId) -> RepositoryResult<()> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
+
+        let betroffen = tx
+            .execute(
+                r#"DELETE FROM "email_bestätigungen" WHERE id = ?1"#,
+                [id.0.to_string()],
+            )
+            .await
+            .contextualize_with(libsql_error_to_persistence_error)?;
+
+        if betroffen == 0 {
+            return Err(RepositoryError::NotFound.into());
         }
         Ok(())
     }
 
-    async fn invalidate_open_for_email(
-        &self,
-        email: &EmailAdresse,
-        jetzt: chrono::DateTime<chrono::Utc>,
-    ) -> RepositoryResult<()> {
-        let mut guard = self.tx.lock().await;
-        let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
-
-        tx.execute(
-            r#"UPDATE "email_bestätigungen" SET spent_at = ?2, _version = _version + 1
-               WHERE email = ?1 AND spent_at IS NULL"#,
-            (email.as_ref().to_string(), format_datetime(jetzt)),
-        )
-        .await
-        .contextualize_with(libsql_error_to_persistence_error)?;
-        Ok(())
-    }
-
-    async fn delete_alle_fuer_email(&self, email: &EmailAdresse) -> RepositoryResult<()> {
+    async fn delete_by_email(&self, email: &EmailAdresse) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 

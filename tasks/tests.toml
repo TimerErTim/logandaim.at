@@ -1,27 +1,17 @@
 ["test:unit"]
 description = "Tests every isolated piece: no daemon, no network, no real SMTP"
-# `binary_id` selects a whole test binary (one `tests/*.rs` root), so the exclusion is the
-# existing naming convention rather than a hand-written list: `logandaim-api::e2e` is the
-# only target that needs a live Mailpit, and every other binary is self-contained.
 run = "cargo nextest run --workspace --filter-expr 'not binary_id(logandaim-api::e2e)'"
 
-["test:mailpit"]
-description = "Run the Mailpit-backed e2e suite against a real SMTP relay"
+["test:e2e"]
+description = "Run every test that needs a real external service"
 daemons = ["mailpit"]
 run = """
 #!/usr/bin/env bash
 set -eu
-# AC-19 asserts that mail really travelled over SMTP, so a dead Mailpit must fail the
-# run rather than skip the case.
-export LOGANDAIM_MAILPIT_URL="${LOGANDAIM_MAILPIT_URL:-http://127.0.0.1:8025}"
+# Port of [daemons.mailpit] in mise.toml.
+export LOGANDAIM_MAILPIT_URL=http://127.0.0.1:8025
 cargo nextest run -p logandaim-api --test e2e
 """
-
-["test:e2e"]
-description = "Run every test that needs a real external service"
-# One target today (Mailpit). A second external service is a second dependency here, not
-# a second task: the point of the name is "this needs something running beside it".
-depends = ["test:mailpit"]
 
 ["test"]
 description = "Run all project tests"

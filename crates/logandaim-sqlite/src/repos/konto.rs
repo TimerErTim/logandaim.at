@@ -8,46 +8,51 @@ use uuid::Uuid;
 
 use logandaim_core::{
     ErrorReportExt,
+    application::uow::Versioned,
     domain::{
         EmailAdresse,
-        konto::{Konto, KontoId, NeuesKonto, PasswordHash},
+        konto::{BenutzerId, Konto, KontoId, NeuesKonto, PasswordHash},
     },
     ports::{KontoRepository, RepositoryError, RepositoryResult},
 };
 
 use crate::{
     errors::libsql_error_to_persistence_error,
-    repos::common::{format_datetime, parse_datetime, parse_uuid},
+    repos::common::{format_datetime, parse_datetime, parse_uuid, parse_version},
 };
 
-fn konto_from_row(row: &Row) -> RepositoryResult<Konto> {
+const SELECT: &str = r#"SELECT id, benutzer_id, email, password_hash, bestätigt_am, created_at,
+    _version FROM "konten""#;
+
+fn konto_from_row(row: &Row) -> RepositoryResult<Versioned<Konto>> {
     let id_raw: String = row.get(0).contextualize(RepositoryError::Data)?;
     let benutzer_id_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
     let email_raw: String = row.get(2).contextualize(RepositoryError::Data)?;
     let password_hash_raw: String = row.get(3).contextualize(RepositoryError::Data)?;
     let bestätigt_am_raw: String = row.get(4).contextualize(RepositoryError::Data)?;
-    let erstellt_am_raw: String = row.get(5).contextualize(RepositoryError::Data)?;
+    let created_at_raw: String = row.get(5).contextualize(RepositoryError::Data)?;
 
     let id = parse_uuid(&id_raw).contextualize(RepositoryError::Data)?;
     let benutzer_id = parse_uuid(&benutzer_id_raw).contextualize(RepositoryError::Data)?;
-    let email = EmailAdresse::new(email_raw).change_context(RepositoryError::Data)?;
+    // The one constructor: a stored address is normalised on the way in too.
+    let email = EmailAdresse::normalisiert(email_raw).change_context(RepositoryError::Data)?;
     let password_hash =
         PasswordHash::from_phc(password_hash_raw).change_context(RepositoryError::Data)?;
     let bestätigt_am = parse_datetime(&bestätigt_am_raw).contextualize(RepositoryError::Data)?;
-    let erstellt_am = parse_datetime(&erstellt_am_raw).contextualize(RepositoryError::Data)?;
+    let created_at = parse_datetime(&created_at_raw).contextualize(RepositoryError::Data)?;
 
-    Ok(Konto::from_parts(
-        KontoId(id),
-        logandaim_core::domain::konto::BenutzerId(benutzer_id),
-        email,
-        password_hash,
-        bestätigt_am,
-        erstellt_am,
+    Ok(Versioned::new(
+        parse_version(row, 6)?,
+        Konto::from_parts(
+            KontoId(id),
+            BenutzerId(benutzer_id),
+            email,
+            password_hash,
+            bestätigt_am,
+            created_at,
+        ),
     ))
 }
-
-const SELECT: &str =
-    r#"SELECT id, benutzer_id, email, password_hash, bestätigt_am, erstellt_am FROM "konten""#;
 
 pub struct SQLiteKontoRepository {
     pub(crate) tx: Arc<Mutex<Option<Transaction>>>,
@@ -55,7 +60,7 @@ pub struct SQLiteKontoRepository {
 
 #[async_trait]
 impl KontoRepository for SQLiteKontoRepository {
-    async fn create(&self, konto: NeuesKonto) -> RepositoryResult<Konto> {
+    async fn create(&self, konto: NeuesKonto) -> RepositoryResult<Versioned<Konto>> {
         let id = KontoId(Uuid::new_v4());
         let domain = Konto::neu(id, konto.clone());
 
@@ -63,7 +68,7 @@ impl KontoRepository for SQLiteKontoRepository {
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         tx.execute(
-            r#"INSERT INTO "konten" (id, benutzer_id, email, password_hash, bestätigt_am, erstellt_am, _version)
+            r#"INSERT INTO "konten" (id, benutzer_id, email, password_hash, bestätigt_am, created_at, _version)
                VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)"#,
             (
                 id.0.to_string(),
@@ -71,16 +76,16 @@ impl KontoRepository for SQLiteKontoRepository {
                 konto.email().as_ref().to_string(),
                 konto.password_hash().as_str().to_string(),
                 format_datetime(konto.bestätigt_am()),
-                format_datetime(konto.erstellt_am()),
+                format_datetime(konto.created_at()),
             ),
         )
         .await
         .contextualize_with(libsql_error_to_persistence_error)?;
 
-        Ok(domain)
+        Ok(Versioned::init(domain))
     }
 
-    async fn find_by_id(&self, id: KontoId) -> RepositoryResult<Konto> {
+    async fn find_by_id(&self, id: KontoId) -> RepositoryResult<Versioned<Konto>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
@@ -100,7 +105,10 @@ impl KontoRepository for SQLiteKontoRepository {
         konto_from_row(&row)
     }
 
-    async fn find_by_email(&self, email: &EmailAdresse) -> RepositoryResult<Option<Konto>> {
+    async fn find_by_email(
+        &self,
+        email: &EmailAdresse,
+    ) -> RepositoryResult<Option<Versioned<Konto>>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
@@ -125,8 +133,8 @@ impl KontoRepository for SQLiteKontoRepository {
 
     async fn find_by_benutzer(
         &self,
-        benutzer_id: logandaim_core::domain::konto::BenutzerId,
-    ) -> RepositoryResult<Vec<Konto>> {
+        benutzer_id: BenutzerId,
+    ) -> RepositoryResult<Vec<Versioned<Konto>>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
@@ -149,25 +157,37 @@ impl KontoRepository for SQLiteKontoRepository {
         Ok(konten)
     }
 
-    async fn speichere(&self, konto: &Konto) -> RepositoryResult<()> {
+    async fn update(&self, konto: &Versioned<Konto>) -> RepositoryResult<Versioned<Konto>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         let betroffen = tx
             .execute(
-                r#"UPDATE "konten" SET password_hash = ?2, _version = _version + 1 WHERE id = ?1"#,
+                r#"UPDATE "konten" SET benutzer_id = ?2, email = ?3, password_hash = ?4,
+                       bestätigt_am = ?5, created_at = ?6, _version = ?7 + 1
+                   WHERE id = ?1 AND _version = ?7"#,
                 (
                     konto.id().0.to_string(),
+                    konto.benutzer_id().0.to_string(),
+                    konto.email().as_ref().to_string(),
                     konto.password_hash().as_str().to_string(),
+                    format_datetime(konto.bestätigt_am()),
+                    format_datetime(konto.created_at()),
+                    konto.v() as i64,
                 ),
             )
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;
 
         if betroffen == 0 {
-            return Err(RepositoryError::NotFound.into());
+            return Err(RepositoryError::VersionMismatch {
+                expected: konto.v(),
+                actual: None,
+            }
+            .into());
         }
-        Ok(())
+
+        Ok(konto.clone().incremented())
     }
 
     async fn delete(&self, id: KontoId) -> RepositoryResult<()> {

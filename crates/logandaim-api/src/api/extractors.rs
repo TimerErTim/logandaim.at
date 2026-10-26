@@ -7,7 +7,7 @@
 //!   [`AuthContext`] and **refuses with 401** rather than handing `Anonymous` to a
 //!   protected use case (SPEC-konto AC-13). A route that wants the anonymous case as well
 //!   uses [`LogandaimAppApi::auth_context_from`] instead.
-//! - [`LogandaimAppApi::kunde`] builds the throttle key from the real IP and a header
+//! - [`LogandaimAppApi::client_key`] builds the throttle key from the real IP and a header
 //!   fingerprint — never from the body, so a caller cannot choose its own budget.
 //!
 //! Core checks the identity *again* in each use case's body. That is deliberate: the edge
@@ -18,8 +18,8 @@ use std::net::{IpAddr, Ipv4Addr};
 use error_stack::Report;
 use logandaim_core::{
     ResultReport,
-    application::{AuthContext, ZugriffFehler},
-    ports::KundeSchlüssel,
+    application::{AccessError, AuthContext},
+    ports::ClientKey,
 };
 use poem::{FromRequest, Request};
 
@@ -32,7 +32,7 @@ impl LogandaimAppApi {
     pub async fn auth_context_from(
         &self,
         request: &Request,
-    ) -> ResultReport<AuthContext, ZugriffFehler> {
+    ) -> ResultReport<AuthContext, AccessError> {
         let header = request
             .headers()
             .get("authorization")
@@ -44,17 +44,17 @@ impl LogandaimAppApi {
     pub async fn require_authenticated(
         &self,
         request: &Request,
-    ) -> ResultReport<AuthContext, ZugriffFehler> {
+    ) -> ResultReport<AuthContext, AccessError> {
         let auth = self.auth_context_from(request).await?;
-        if auth.ist_angemeldet() {
+        if auth.is_authenticated() {
             Ok(auth)
         } else {
-            Err(Report::new(ZugriffFehler::NichtAngemeldet))
+            Err(Report::new(AccessError::NotAuthenticated))
         }
     }
 
     /// The throttle key of the client behind this request.
-    pub async fn kunde(&self, request: &Request) -> KundeSchlüssel {
+    pub async fn client_key(&self, request: &Request) -> ClientKey {
         let mut leib = poem::RequestBody::default();
         let real_ip = poem::web::RealIp::from_request(request, &mut leib)
             .await
@@ -71,6 +71,6 @@ impl LogandaimAppApi {
                 .and_then(|value| value.to_str().ok())
         };
 
-        kunde::kunde(real_ip, header("user-agent"), header("accept-language"))
+        kunde::client_key(real_ip, header("user-agent"), header("accept-language"))
     }
 }

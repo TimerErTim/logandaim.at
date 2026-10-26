@@ -14,12 +14,10 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration};
 use logandaim_api::openapi_service;
 use logandaim_core::{
-    App,
-    application::KontoKonfiguration,
-    domain::konto::{SigningKeyId, SigningKeypair},
+    App, adapters::InMemorySigning, application::KontoKonfiguration, domain::konto::SigningKeyId,
     ports::Clock,
 };
-use logandaim_fakes::{FakeMailSender, FixedClock, InMemoryDrossel};
+use logandaim_fakes::{FakeMailSender, FixedClock, InMemoryThrottle};
 use logandaim_filesystemstore::FileSystemObjectStore;
 use logandaim_smtp::{SmtpKonfiguration, SmtpMailSender};
 use logandaim_sqlite::SQLiteInstance;
@@ -41,8 +39,8 @@ pub const PASSWORT: &str = "korrekt-pferd-batterie";
 
 /// The key every test signs with. A fixed seed, so a token from one run is verifiable in
 /// another and a test failure is reproducible.
-pub fn test_signing_key() -> SigningKeypair {
-    SigningKeypair::from_secret_bytes(
+pub fn test_signing_key() -> InMemorySigning {
+    InMemorySigning::from_secret_bytes(
         SigningKeyId::new("test-key").expect("static kid is valid"),
         &[7u8; 32],
     )
@@ -72,16 +70,12 @@ impl E2eHarness {
         let app = App::builder()
             .uow_provider(Box::new(sqlite))
             .object_store(Arc::new(FileSystemObjectStore::in_temp_dir().unwrap()))
-            .signing_key(test_signing_key())
-            .drossel(Arc::new(InMemoryDrossel::new()))
+            .signing(Arc::new(test_signing_key()))
+            .throttle(Arc::new(InMemoryThrottle::new()))
             .mail_sender(Arc::clone(&mail) as Arc<dyn logandaim_core::ports::MailSender>)
             .konto(test_konfiguration())
             .clock(Arc::clone(&clock) as Arc<dyn Clock>)
             .build();
-
-        app.signing_key_registrieren()
-            .await
-            .expect("the key row is registered at startup");
 
         Self {
             client: LogandaimApiTestClient::new(app),
@@ -106,7 +100,7 @@ impl E2eHarness {
         ));
         let mail = Arc::new(FakeMailSender::new());
 
-        let absender = logandaim_core::domain::EmailAdresse::new("noreply@logandaim.at")
+        let absender = logandaim_core::domain::EmailAdresse::normalisiert("noreply@logandaim.at")
             .expect("static address");
         let mut konfiguration = SmtpKonfiguration::mailpit(absender);
         konfiguration.frontend_basis_url = FRONTEND_BASIS_URL.to_owned();
@@ -121,16 +115,12 @@ impl E2eHarness {
         let app = App::builder()
             .uow_provider(Box::new(sqlite))
             .object_store(Arc::new(FileSystemObjectStore::in_temp_dir().unwrap()))
-            .signing_key(test_signing_key())
-            .drossel(Arc::new(InMemoryDrossel::new()))
+            .signing(Arc::new(test_signing_key()))
+            .throttle(Arc::new(InMemoryThrottle::new()))
             .mail_sender(smtp as Arc<dyn logandaim_core::ports::MailSender>)
             .konto(test_konfiguration())
             .clock(Arc::clone(&clock) as Arc<dyn Clock>)
             .build();
-
-        app.signing_key_registrieren()
-            .await
-            .expect("the key row is registered at startup");
 
         Self {
             client: LogandaimApiTestClient::new(app),
@@ -340,8 +330,8 @@ pub async fn base_app_builder() -> App {
     App::builder()
         .uow_provider(Box::new(sqlite))
         .object_store(Arc::new(FileSystemObjectStore::in_temp_dir().unwrap()))
-        .signing_key(test_signing_key())
-        .drossel(Arc::new(InMemoryDrossel::new()))
+        .signing(Arc::new(test_signing_key()))
+        .throttle(Arc::new(InMemoryThrottle::new()))
         .mail_sender(Arc::new(FakeMailSender::new()))
         .konto(test_konfiguration())
         .build()

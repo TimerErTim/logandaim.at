@@ -3,18 +3,50 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration, Utc};
 use logandaim_core::{
     App,
+    adapters::InMemorySigning,
     application::{AppBuilder, AuthContext, KontoKonfiguration, SetUowProvider},
-    domain::konto::{SigningKeyId, SigningKeypair},
-    ports::Clock,
+    domain::konto::{AccessTokenClaims, SigningKeyId},
+    ports::{Clock, Signing},
+    service::SitzungPrüfen,
 };
-use logandaim_fakes::{FakeMailSender, FixedClock, InMemoryDrossel};
+use logandaim_fakes::{FakeMailSender, FixedClock, InMemoryThrottle};
 
 /// Key every shared case signs and verifies with. A test-only constant seed.
-pub fn test_signing_key() -> SigningKeypair {
-    SigningKeypair::from_secret_bytes(
+pub fn test_signing_key() -> InMemorySigning {
+    InMemorySigning::from_secret_bytes(
         SigningKeyId::new("test-key").expect("static test kid is valid"),
         &[7u8; 32],
     )
+}
+
+/// A key that is valid on its own but is not the one a case's sessions were issued
+/// under. Used by AC-17 to prove that the stored public key — not the configured key
+/// alone — decides whether a token verifies.
+pub fn fremder_schluessel() -> InMemorySigning {
+    InMemorySigning::from_secret_bytes(
+        SigningKeyId::new("test-key").expect("static test kid is valid"),
+        &[9u8; 32],
+    )
+}
+
+/// The ASCII `header.payload` every case signs. Its content is irrelevant in core: only
+/// that the bytes were signed by some key, and that the session row carries that key's
+/// public half.
+const SIGNIERTE_NACHRICHT: &str = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJ0ZXN0In0";
+
+/// A `SitzungPrüfen` whose signature was made by `signing`, over the same message every
+/// case uses.
+pub fn pruefen_mit(signing: &dyn Signing, claims: AccessTokenClaims) -> SitzungPrüfen {
+    SitzungPrüfen {
+        claims,
+        signed_message: SIGNIERTE_NACHRICHT.to_owned(),
+        signature: signing.sign(SIGNIERTE_NACHRICHT.as_bytes()),
+    }
+}
+
+/// The common case: signed by the key the harness was built with.
+pub fn pruefen(_harness: &Harness, claims: AccessTokenClaims) -> SitzungPrüfen {
+    pruefen_mit(&test_signing_key(), claims)
 }
 
 /// Token identity every shared case runs with.
@@ -79,8 +111,8 @@ pub fn build(builder: AppBuilder<SetUowProvider>) -> Harness {
     let clock = Arc::new(FixedClock::new(jetzt()));
     let mail = Arc::new(FakeMailSender::new());
     let app = builder
-        .signing_key(test_signing_key())
-        .drossel(Arc::new(InMemoryDrossel::new()))
+        .signing(Arc::new(test_signing_key()))
+        .throttle(Arc::new(InMemoryThrottle::new()))
         .mail_sender(mail.clone())
         .konto(test_konfiguration())
         .clock(clock.clone())

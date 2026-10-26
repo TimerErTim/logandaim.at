@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use super::{EMAIL_BESTÄTIGUNG_GÜLTIGKEIT, KontoFehler, TokenHash};
+use super::{EMAIL_BESTÄTIGUNG_GÜLTIGKEIT, SecretTokenHash};
 use crate::domain::EmailAdresse;
 
 /// Identity of one E-Mail-Adresse-Bestätigung.
@@ -12,16 +12,20 @@ pub struct BestätigungId(pub Uuid);
 #[derive(Debug, Clone)]
 pub struct NeueBestätigung {
     email: EmailAdresse,
-    token_hash: TokenHash,
-    erstellt_am: DateTime<Utc>,
+    token_hash: SecretTokenHash,
+    created_at: DateTime<Utc>,
 }
 
 impl NeueBestätigung {
-    pub fn neu(email: EmailAdresse, token_hash: TokenHash, erstellt_am: DateTime<Utc>) -> Self {
+    pub fn neu(
+        email: EmailAdresse,
+        token_hash: SecretTokenHash,
+        created_at: DateTime<Utc>,
+    ) -> Self {
         Self {
             email,
             token_hash,
-            erstellt_am,
+            created_at,
         }
     }
 
@@ -29,16 +33,16 @@ impl NeueBestätigung {
         &self.email
     }
 
-    pub fn token_hash(&self) -> &TokenHash {
+    pub fn token_hash(&self) -> &SecretTokenHash {
         &self.token_hash
     }
 
-    pub fn erstellt_am(&self) -> DateTime<Utc> {
-        self.erstellt_am
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
     }
 
     pub fn expires_at(&self) -> DateTime<Utc> {
-        self.erstellt_am + EMAIL_BESTÄTIGUNG_GÜLTIGKEIT
+        self.created_at + EMAIL_BESTÄTIGUNG_GÜLTIGKEIT
     }
 }
 
@@ -51,7 +55,7 @@ impl NeueBestätigung {
 pub struct EmailBestätigung {
     id: BestätigungId,
     email: EmailAdresse,
-    token_hash: TokenHash,
+    token_hash: SecretTokenHash,
     expires_at: DateTime<Utc>,
     spent_at: Option<DateTime<Utc>>,
 }
@@ -71,7 +75,7 @@ impl EmailBestätigung {
     pub fn from_parts(
         id: BestätigungId,
         email: EmailAdresse,
-        token_hash: TokenHash,
+        token_hash: SecretTokenHash,
         expires_at: DateTime<Utc>,
         spent_at: Option<DateTime<Utc>>,
     ) -> Self {
@@ -92,7 +96,7 @@ impl EmailBestätigung {
         &self.email
     }
 
-    pub fn token_hash(&self) -> &TokenHash {
+    pub fn token_hash(&self) -> &SecretTokenHash {
         &self.token_hash
     }
 
@@ -117,12 +121,10 @@ impl EmailBestätigung {
         !self.ist_verbraucht() && !self.ist_abgelaufen(jetzt)
     }
 
-    pub fn verbrauchen(&mut self, jetzt: DateTime<Utc>) -> Result<(), KontoFehler> {
-        if self.spent_at.is_some() {
-            return Err(KontoFehler::TokenVerbraucht);
-        }
-        self.spent_at = Some(jetzt);
-        Ok(())
+    /// Spend this row. Idempotent, so a resend loop that spends every open row of an
+    /// address does not fail on one that was already spent.
+    pub fn verbrauchen(&mut self, jetzt: DateTime<Utc>) {
+        self.spent_at.get_or_insert(jetzt);
     }
 }
 
@@ -141,7 +143,7 @@ mod tests {
             BestätigungId(Uuid::nil()),
             NeueBestätigung::neu(
                 EmailAdresse::normalisiert("anna@muster.de").unwrap(),
-                TokenHash::from_hex("a".repeat(64)).unwrap(),
+                SecretTokenHash::from_hex("a".repeat(64)).unwrap(),
                 jetzt(),
             ),
         )
@@ -158,18 +160,18 @@ mod tests {
     #[test_log::test]
     fn zweite_verwendung_wird_abgelehnt() {
         let mut bestätigung = bestätigung();
-        assert!(bestätigung.verbrauchen(jetzt()).is_ok());
-        assert!(matches!(
-            bestätigung.verbrauchen(jetzt()),
-            Err(KontoFehler::TokenVerbraucht)
-        ));
+        bestätigung.verbrauchen(jetzt());
+        // Spending twice keeps the first timestamp instead of failing.
+        bestätigung.verbrauchen(jetzt() + Duration::minutes(1));
+        assert_eq!(bestätigung.spent_at(), Some(jetzt()));
+        assert!(bestätigung.ist_verbraucht());
         assert!(!bestätigung.ist_gültig(jetzt()));
     }
 
     #[test_log::test]
     fn from_parts_roundtrip() {
         let mut original = bestätigung();
-        original.verbrauchen(jetzt()).unwrap();
+        original.verbrauchen(jetzt());
         let geladen = EmailBestätigung::from_parts(
             original.id(),
             original.email().clone(),

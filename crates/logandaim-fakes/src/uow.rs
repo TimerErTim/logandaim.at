@@ -5,7 +5,6 @@ use logandaim_core::{
     ports::{
         BenutzerRepository, EmailBestätigungRepository, KontoRepository,
         PasswortWiederherstellungRepository, RepositoryResult, SchussRepository, SessionRepository,
-        SigningKeyRepository,
     },
     uow::{UnitOfWorkImpl, UnitOfWorkProvider},
 };
@@ -102,10 +101,6 @@ impl UnitOfWorkImpl for FakeUnitOfWork {
 
     fn sessions(&self) -> &dyn SessionRepository {
         &self.konto.sessions
-    }
-
-    fn signing_keys(&self) -> &dyn SigningKeyRepository {
-        &self.konto.signing_keys
     }
 
     fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {

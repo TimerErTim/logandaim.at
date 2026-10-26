@@ -8,25 +8,31 @@ use uuid::Uuid;
 
 use logandaim_core::{
     ErrorReportExt,
+    application::uow::Versioned,
     domain::konto::{Benutzer, BenutzerId, NeuerBenutzer, Rolle},
     ports::{BenutzerRepository, RepositoryError, RepositoryResult},
 };
 
 use crate::{
     errors::libsql_error_to_persistence_error,
-    repos::common::{format_datetime, parse_datetime, parse_uuid},
+    repos::common::{format_datetime, parse_datetime, parse_uuid, parse_version},
 };
 
-fn benutzer_from_row(row: &Row) -> RepositoryResult<Benutzer> {
+const SELECT: &str = r#"SELECT id, rolle, created_at, _version FROM "benutzer""#;
+
+fn benutzer_from_row(row: &Row) -> RepositoryResult<Versioned<Benutzer>> {
     let id_raw: String = row.get(0).contextualize(RepositoryError::Data)?;
     let rolle_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
-    let erstellt_am_raw: String = row.get(2).contextualize(RepositoryError::Data)?;
+    let created_at_raw: String = row.get(2).contextualize(RepositoryError::Data)?;
 
     let id = parse_uuid(&id_raw).contextualize(RepositoryError::Data)?;
     let rolle: Rolle = rolle_raw.parse().change_context(RepositoryError::Data)?;
-    let erstellt_am = parse_datetime(&erstellt_am_raw).contextualize(RepositoryError::Data)?;
+    let created_at = parse_datetime(&created_at_raw).contextualize(RepositoryError::Data)?;
 
-    Ok(Benutzer::from_parts(BenutzerId(id), rolle, erstellt_am))
+    Ok(Versioned::new(
+        parse_version(row, 3)?,
+        Benutzer::from_parts(BenutzerId(id), rolle, created_at),
+    ))
 }
 
 pub struct SQLiteBenutzerRepository {
@@ -35,7 +41,7 @@ pub struct SQLiteBenutzerRepository {
 
 #[async_trait]
 impl BenutzerRepository for SQLiteBenutzerRepository {
-    async fn create(&self, benutzer: NeuerBenutzer) -> RepositoryResult<Benutzer> {
+    async fn create(&self, benutzer: NeuerBenutzer) -> RepositoryResult<Versioned<Benutzer>> {
         let id = BenutzerId(Uuid::new_v4());
         let domain = Benutzer::neu(id, benutzer);
 
@@ -43,28 +49,25 @@ impl BenutzerRepository for SQLiteBenutzerRepository {
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         tx.execute(
-            r#"INSERT INTO "benutzer" (id, rolle, erstellt_am, _version) VALUES (?1, ?2, ?3, 0)"#,
+            r#"INSERT INTO "benutzer" (id, rolle, created_at, _version) VALUES (?1, ?2, ?3, 0)"#,
             (
                 id.0.to_string(),
                 domain.rolle().as_str(),
-                format_datetime(domain.erstellt_am()),
+                format_datetime(domain.created_at()),
             ),
         )
         .await
         .contextualize_with(libsql_error_to_persistence_error)?;
 
-        Ok(domain)
+        Ok(Versioned::init(domain))
     }
 
-    async fn find_by_id(&self, id: BenutzerId) -> RepositoryResult<Benutzer> {
+    async fn find_by_id(&self, id: BenutzerId) -> RepositoryResult<Versioned<Benutzer>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         let mut rows = tx
-            .query(
-                r#"SELECT id, rolle, erstellt_am FROM "benutzer" WHERE id = ?1"#,
-                [id.0.to_string()],
-            )
+            .query(&format!(r#"{SELECT} WHERE id = ?1"#), [id.0.to_string()])
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;
 
@@ -79,22 +82,36 @@ impl BenutzerRepository for SQLiteBenutzerRepository {
         benutzer_from_row(&row)
     }
 
-    async fn setze_rolle(&self, id: BenutzerId, rolle: Rolle) -> RepositoryResult<()> {
+    async fn update(
+        &self,
+        benutzer: &Versioned<Benutzer>,
+    ) -> RepositoryResult<Versioned<Benutzer>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         let betroffen = tx
             .execute(
-                r#"UPDATE "benutzer" SET rolle = ?2, _version = _version + 1 WHERE id = ?1"#,
-                (id.0.to_string(), rolle.as_str()),
+                r#"UPDATE "benutzer" SET rolle = ?2, created_at = ?3, _version = ?4 + 1
+                   WHERE id = ?1 AND _version = ?4"#,
+                (
+                    benutzer.id().0.to_string(),
+                    benutzer.rolle().as_str(),
+                    format_datetime(benutzer.created_at()),
+                    benutzer.v() as i64,
+                ),
             )
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;
 
         if betroffen == 0 {
-            return Err(RepositoryError::NotFound.into());
+            return Err(RepositoryError::VersionMismatch {
+                expected: benutzer.v(),
+                actual: None,
+            }
+            .into());
         }
-        Ok(())
+
+        Ok(benutzer.clone().incremented())
     }
 
     async fn delete(&self, id: BenutzerId) -> RepositoryResult<()> {

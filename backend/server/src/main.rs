@@ -7,11 +7,9 @@ use error_stack::{Report, ResultExt};
 use logandaim_api::{errors::InternalServerError, openapi_service};
 use logandaim_core::{
     App,
+    adapters::InMemorySigning,
     application::{AuthContext, KontoKonfiguration},
-    domain::{
-        EmailAdresse,
-        konto::{SigningKeyId, SigningKeypair},
-    },
+    domain::{EmailAdresse, konto::SigningKeyId},
     ports::MailSender,
     service::{Beförderung, SystemadministratorBefördern},
 };
@@ -29,23 +27,16 @@ use tracing_setup::init_tracing;
 #[error("Backend server fatal error")]
 pub struct BackendServerError;
 
-/// Load the signing key from disk.
+/// Build the signing key: read the configured PEM, or generate a throwaway one.
 ///
-/// A missing or malformed key is fatal. The alternative — inventing one — would invalidate
-/// every issued access token on the next restart, and a key committed to the repo would be
-/// a key every checkout shares.
-fn lade_signing_key(
+/// A configured path is honoured and a malformed file is fatal — a deployment that points
+/// at a key expects that key. Without a path the process generates a fresh keypair, which
+/// is what a throwaway run wants: nothing to generate beforehand, and every restart simply
+/// invalidates the sessions it issued. Each session row stores the public key it was issued
+/// under, so verification never needs a key table (AC-17).
+fn build_signing_key(
     config: &config::ServerConfig,
-) -> Result<SigningKeypair, Report<BackendServerError>> {
-    let pem = std::fs::read_to_string(&config.signing_key_path).map_err(|source| {
-        Report::new(BackendServerError).attach(format!(
-            "signing key `{}` cannot be read ({source}); generate one with \
-             `openssl genpkey -algorithm ed25519 -out {}`",
-            config.signing_key_path.display(),
-            config.signing_key_path.display()
-        ))
-    })?;
-
+) -> Result<InMemorySigning, Report<BackendServerError>> {
     let kid = SigningKeyId::new(config.signing_key_id.clone()).map_err(|_| {
         Report::new(BackendServerError).attach(format!(
             "signing key id `{}` is not a valid row id",
@@ -53,12 +44,29 @@ fn lade_signing_key(
         ))
     })?;
 
-    SigningKeypair::from_pkcs8_pem(kid, &pem).map_err(|_| {
+    let Some(path) = &config.signing_key_path else {
+        tracing::info!(
+            kid = %kid.as_str(),
+            "no signing key configured; generated a throwaway key for this process"
+        );
+        return Ok(InMemorySigning::random(kid));
+    };
+
+    let pem = std::fs::read_to_string(path).map_err(|source| {
         Report::new(BackendServerError).attach(format!(
-            "signing key `{}` is not a valid PKCS#8 Ed25519 key",
-            config.signing_key_path.display()
+            "signing key `{}` cannot be read ({source})",
+            path.display()
         ))
-    })
+    })?;
+
+    let keypair = logandaim_core::domain::konto::SigningKeypair::from_pkcs8_pem(kid, &pem)
+        .map_err(|_| {
+            Report::new(BackendServerError).attach(format!(
+                "signing key `{}` is not a valid PKCS#8 Ed25519 key",
+                path.display()
+            ))
+        })?;
+    Ok(InMemorySigning::new(keypair))
 }
 
 fn catch_panic() -> CatchPanic<impl poem::middleware::PanicHandler> {
@@ -87,7 +95,7 @@ fn lade_mail_sender(
         return Ok(Arc::new(KeinVersand));
     };
 
-    let absender = EmailAdresse::new(&config.smtp_absender).map_err(|_| {
+    let absender = EmailAdresse::normalisiert(&config.smtp_absender).map_err(|_| {
         Report::new(BackendServerError).attach(format!(
             "SMTP sender `{}` is not an address",
             config.smtp_absender
@@ -230,25 +238,19 @@ async fn main() -> Result<(), Report<BackendServerError>> {
     let object_store = FileSystemObjectStore::new(config.object_store_dir.clone())
         .change_context(BackendServerError)?;
 
-    let signing_key = lade_signing_key(&config)?;
+    let signing_key = build_signing_key(&config)?;
     let mail_sender = lade_mail_sender(&config)?;
     let konto = KontoKonfiguration::neu(config.token_issuer.clone(), config.token_audience.clone());
 
     let app = App::builder()
         .uow_provider(Box::new(sqlite.clone()))
         .object_store(Arc::new(object_store))
-        .signing_key(signing_key)
-        .drossel(Arc::new(logandaim_core::adapters::InMemoryDrossel::new()))
+        .signing(Arc::new(signing_key))
+        .throttle(Arc::new(logandaim_core::adapters::InMemoryThrottle::new()))
         .mail_sender(mail_sender)
         .konto(konto)
         .build();
 
-    // Publish the key row and check it matches what is stored. A stored row with the same
-    // `kid` but different material is a rotation done wrong, and it refuses rather than
-    // silently invalidating every token in circulation (AC-17).
-    app.signing_key_registrieren()
-        .await
-        .change_context(BackendServerError)?;
     bootstrap_superuser(&app).await?;
 
     let base_path = config.subpath.trim_matches('/');

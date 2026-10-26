@@ -49,7 +49,6 @@ argon2 = { version = "0.6.0", default-features = false, features = ["alloc", "pa
 ed25519-dalek = { version = "3.0.0", default-features = false, features = ["fast", "zeroize", "pem"] }
 sha2 = "0.11.1"
 hex = "0.4.3"
-subtle = "2.6.1"
 base64 = "0.22.1"
 lettre = { version = "0.11.20", default-features = false, features = ["builder", "smtp-transport", "tokio1", "tokio1-rustls-tls", "pool"] }
 zeroize = { version = "1", features = ["alloc"] }

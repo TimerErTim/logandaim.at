@@ -2,12 +2,11 @@ use std::sync::Arc;
 
 use crate::{
     application::instrumented::{
-        InstrumentedDrossel, InstrumentedMailSender, InstrumentedObjectStore,
-        InstrumentedPdfRenderer, InstrumentedUnitOfWork,
+        InstrumentedMailSender, InstrumentedObjectStore, InstrumentedPdfRenderer,
+        InstrumentedThrottle, InstrumentedUnitOfWork,
     },
     application::uow::{UnitOfWork, UnitOfWorkImpl, UnitOfWorkProvider},
-    domain::konto::SigningKeypair,
-    ports::{Clock, Drossel, MailSender, ObjectStore, PdfRenderer, RepositoryResult},
+    ports::{Clock, MailSender, ObjectStore, PdfRenderer, RepositoryResult, Signing, Throttle},
 };
 use tracing::instrument;
 
@@ -26,52 +25,55 @@ enum ExecutionSource<'a> {
 pub struct ExecutionContext<'a> {
     source: ExecutionSource<'a>,
     auth: AuthContext,
-    signing_key: &'a SigningKeypair,
+    signing: Arc<dyn Signing>,
     clock: Arc<dyn Clock>,
     object_store: Arc<dyn ObjectStore>,
     pdf_renderer: Arc<dyn PdfRenderer>,
-    drossel: Arc<dyn Drossel>,
+    throttle: Arc<dyn Throttle>,
     mail_sender: Arc<dyn MailSender>,
     konto: KontoKonfiguration,
 }
 
 /// Everything a context carries besides its UoW source, so `root`, `nested`, and `sub`
 /// cannot drift apart.
-pub(crate) struct ContextPorts<'a> {
+pub(crate) struct ContextPorts {
     pub(crate) auth: AuthContext,
-    pub(crate) signing_key: &'a SigningKeypair,
+    pub(crate) signing: Arc<dyn Signing>,
     pub(crate) clock: Arc<dyn Clock>,
     pub(crate) object_store: Arc<dyn ObjectStore>,
     pub(crate) pdf_renderer: Arc<dyn PdfRenderer>,
-    pub(crate) drossel: Arc<dyn Drossel>,
+    pub(crate) throttle: Arc<dyn Throttle>,
     pub(crate) mail_sender: Arc<dyn MailSender>,
     pub(crate) konto: KontoKonfiguration,
 }
 
 impl<'a> ExecutionContext<'a> {
-    pub(super) fn root(provider: &'a dyn UnitOfWorkProvider, ports: ContextPorts<'a>) -> Self {
+    pub(super) fn root(
+        provider: &'a dyn UnitOfWorkProvider,
+        ports: ContextPorts,
+    ) -> ExecutionContext<'a> {
         Self {
             source: ExecutionSource::Root(provider),
             auth: ports.auth,
-            signing_key: ports.signing_key,
+            signing: ports.signing,
             clock: ports.clock,
             object_store: InstrumentedObjectStore::new(ports.object_store),
             pdf_renderer: InstrumentedPdfRenderer::new(ports.pdf_renderer),
-            drossel: InstrumentedDrossel::new(ports.drossel),
+            throttle: InstrumentedThrottle::new(ports.throttle),
             mail_sender: InstrumentedMailSender::new(ports.mail_sender),
             konto: ports.konto,
         }
     }
 
-    pub(super) fn nested(uow: &'a dyn UnitOfWorkImpl, ports: ContextPorts<'a>) -> Self {
+    pub(super) fn nested(uow: &'a dyn UnitOfWorkImpl, ports: ContextPorts) -> ExecutionContext<'a> {
         Self {
             source: ExecutionSource::Nested(uow),
             auth: ports.auth,
-            signing_key: ports.signing_key,
+            signing: ports.signing,
             clock: ports.clock,
             object_store: InstrumentedObjectStore::new(ports.object_store),
             pdf_renderer: InstrumentedPdfRenderer::new(ports.pdf_renderer),
-            drossel: InstrumentedDrossel::new(ports.drossel),
+            throttle: InstrumentedThrottle::new(ports.throttle),
             mail_sender: InstrumentedMailSender::new(ports.mail_sender),
             konto: ports.konto,
         }
@@ -89,8 +91,10 @@ impl<'a> ExecutionContext<'a> {
         self.pdf_renderer.as_ref()
     }
 
-    pub fn drossel(&self) -> &dyn Drossel {
-        self.drossel.as_ref()
+    /// Client-scoped rate limiting. Use cases call it directly and map a refusal to their
+    /// own `Throttled` variant.
+    pub fn throttle(&self) -> &dyn Throttle {
+        self.throttle.as_ref()
     }
 
     pub fn mail_sender(&self) -> &dyn MailSender {
@@ -107,26 +111,24 @@ impl<'a> ExecutionContext<'a> {
         self.auth
     }
 
-    /// The configured signing key. There is no signer port: the algorithm is domain code.
-    pub fn signing_key(&self) -> &SigningKeypair {
-        self.signing_key
+    /// The configured signing key as a port. The algorithm below it is domain code; this
+    /// accessor is how the application composes and checks a token.
+    pub fn signing(&self) -> &dyn Signing {
+        self.signing.as_ref()
     }
 
     /// Nested context that joins `uow`'s transaction and copies this context's ports and
     /// identity.
-    pub fn sub<'u>(&self, uow: &'u UnitOfWork<'_>) -> ExecutionContext<'u>
-    where
-        'a: 'u,
-    {
+    pub fn sub<'b>(&self, uow: &'b UnitOfWork<'b>) -> ExecutionContext<'b> {
         ExecutionContext::nested(
             uow.as_impl(),
             ContextPorts {
                 auth: self.auth,
-                signing_key: self.signing_key,
+                signing: Arc::clone(&self.signing),
                 clock: Arc::clone(&self.clock),
                 object_store: Arc::clone(&self.object_store),
                 pdf_renderer: Arc::clone(&self.pdf_renderer),
-                drossel: Arc::clone(&self.drossel),
+                throttle: Arc::clone(&self.throttle),
                 mail_sender: Arc::clone(&self.mail_sender),
                 konto: self.konto.clone(),
             },

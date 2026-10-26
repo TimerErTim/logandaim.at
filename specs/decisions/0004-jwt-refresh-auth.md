@@ -57,14 +57,13 @@ on reuse.
 4. **Revocation is a row update, never a delete.** `revoked_at` is set; rows are cleaned up after
    their refresh expiry. Deleting rows would make a replayed token indistinguishable from an unknown
    one and would lose the audit trail.
-5. **Signing keys are rows, not validity windows.** Signing is Ed25519 behind a `SigningKey`
-   port. A `signing_keys` table holds each key's id, public key, and active flag, and each
-   `sessions` row records which key signed its access token. Verification looks up the
-   token's `kid`: an unknown or inactive row means 401 (AC-17). Retiring a key is therefore a row
-   update with no overlap period to reason about — a token signed before retirement stops being
-   accepted the moment the row is deactivated, and the only time-based concern is cleaning up rows
-   whose sessions have all expired. The private key itself comes from deployment configuration and
-   is never stored in the database.
+5. **The public key travels on the session row.** Signing is Ed25519 behind a `Signing`
+   port; the private key comes from deployment configuration (or is generated per process when
+   none is configured) and never reaches the database. Each `sessions` row stores the hex public
+   key its access token was issued under, so verification loads the session and checks the
+   signature against that row's key. There is no key table and no join, which means a token whose
+   session row is gone is a 401 without a second lookup (AC-17). Rotating a key therefore means a
+   new session per client, and old sessions stop verifying once their rows are purged.
 6. **Transport and storage.** `Authorization: Bearer` over HTTPS only; no token in a URL, no token in
    a query string, no token in a log line. The access token stays in frontend memory and is never
    written to `localStorage` or a cookie. The refresh token travels in a `__Host-` cookie scoped to
@@ -95,10 +94,11 @@ on reuse.
 - The long-lived credential is not visible to JavaScript, so XSS cannot exfiltrate a one-month
   token; it can still act as the user for the current access token's lifetime. The frontend stays a
   static bundle from one origin to keep that surface small.
-- Deployment gains key management: an Ed25519 private key in configuration and a key table with an
-  active flag, retired by row update (rule 15, decision 5).
-- The database gains `signing_keys` and `sessions` rows per renewed session, plus
-  cleanup for expired ones.
+- Deployment gains key management: an Ed25519 private key in configuration, or a generated
+  per-process key for a throwaway run (decision 5).
+- The database gains one `sessions` row per renewal, each carrying its own public key, plus
+  cleanup for expired ones. Rows are never deleted before their refresh lifetime ends, because
+  replay detection needs to find a spent token's row.
 - Refresh rotation costs one row insert per renewal, so a long-lived tab writes one row per month
   per device at a 30-day refresh lifetime and a rotation per renewal.
 
@@ -131,10 +131,9 @@ and is not part of the contract; the contract lives in SPEC-konto's rules and ac
 
 | Store | Fields |
 |-------|--------|
-| `benutzer` | `id`, `rolle` (`Benutzer` \| `Systemadministrator`), `erstellt_am` |
-| `konten` | `id`, `benutzer_id`, `email` (unique, normalized), `password_hash`, `bestätigt_am`, `erstellt_am` |
-| `signing_keys` | `kid`, `öffentlicher_schlüssel`, `aktiv`, `erstellt_am`, `außer_betrieb_am` |
-| `sessions` | `id`, `benutzer_id`, `refresh_token_hash`, `signing_key_id`, `erstellt_am`, `expires_at`, `spent_at`, `revoked_at` |
+| `benutzer` | `id`, `rolle` (`Benutzer` \| `Systemadministrator`), `created_at` |
+| `konten` | `id`, `benutzer_id`, `email` (unique, normalized), `password_hash`, `bestätigt_am`, `created_at` |
+| `sessions` | `id`, `benutzer_id`, `refresh_token_hash`, `public_key`, `created_at`, `expires_at`, `spent_at`, `revoked_at` |
 | `email_bestätigungen` | `id`, `email` (normalized, **not** a `konto_id` — the `Konto` does not exist yet), `token_hash`, `expires_at`, `spent_at` |
 | `passwort_wiederherstellungen` | `id`, `konto_id`, `token_hash`, `expires_at`, `spent_at` |
 

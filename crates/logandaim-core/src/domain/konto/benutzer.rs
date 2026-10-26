@@ -46,25 +46,25 @@ use super::KontoFehler;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NeuerBenutzer {
     rolle: Rolle,
-    erstellt_am: DateTime<Utc>,
+    created_at: DateTime<Utc>,
 }
 
 impl NeuerBenutzer {
-    pub fn neu(rolle: Rolle, erstellt_am: DateTime<Utc>) -> Self {
-        Self { rolle, erstellt_am }
+    pub fn neu(rolle: Rolle, created_at: DateTime<Utc>) -> Self {
+        Self { rolle, created_at }
     }
 
     /// The only role a registration may produce (rule 9: no self-service elevation).
-    pub fn registrierung(erstellt_am: DateTime<Utc>) -> Self {
-        Self::neu(Rolle::Benutzer, erstellt_am)
+    pub fn registrierung(created_at: DateTime<Utc>) -> Self {
+        Self::neu(Rolle::Benutzer, created_at)
     }
 
     pub fn rolle(&self) -> Rolle {
         self.rolle
     }
 
-    pub fn erstellt_am(&self) -> DateTime<Utc> {
-        self.erstellt_am
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
     }
 }
 
@@ -76,7 +76,7 @@ impl NeuerBenutzer {
 pub struct Benutzer {
     id: BenutzerId,
     rolle: Rolle,
-    erstellt_am: DateTime<Utc>,
+    created_at: DateTime<Utc>,
 }
 
 impl Benutzer {
@@ -85,16 +85,16 @@ impl Benutzer {
         Self {
             id,
             rolle: neu.rolle,
-            erstellt_am: neu.erstellt_am,
+            created_at: neu.created_at,
         }
     }
 
     /// Rebuild a persisted Benutzer.
-    pub fn from_parts(id: BenutzerId, rolle: Rolle, erstellt_am: DateTime<Utc>) -> Self {
+    pub fn from_parts(id: BenutzerId, rolle: Rolle, created_at: DateTime<Utc>) -> Self {
         Self {
             id,
             rolle,
-            erstellt_am,
+            created_at,
         }
     }
 
@@ -106,12 +106,19 @@ impl Benutzer {
         self.rolle
     }
 
-    pub fn erstellt_am(&self) -> DateTime<Utc> {
-        self.erstellt_am
+    pub fn created_at(&self) -> DateTime<Utc> {
+        self.created_at
     }
 
     pub fn ist_systemadministrator(&self) -> bool {
         self.rolle == Rolle::Systemadministrator
+    }
+
+    /// Grant the account-level authority. The only caller is the startup bootstrap
+    /// (rule 9): no API path reaches this, and the resulting row is written back with a
+    /// plain `update` so optimistic concurrency applies like any other mutation.
+    pub fn befördere_zu_systemadministrator(&mut self) {
+        self.rolle = Rolle::Systemadministrator;
     }
 }
 
@@ -147,10 +154,21 @@ mod tests {
     }
 
     #[test_log::test]
+    fn befoerderung_ist_eine_domain_mutation() {
+        let mut benutzer = Benutzer::neu(
+            BenutzerId(Uuid::nil()),
+            NeuerBenutzer::registrierung(jetzt()),
+        );
+        benutzer.befördere_zu_systemadministrator();
+        assert!(benutzer.ist_systemadministrator());
+        assert_eq!(benutzer.created_at(), jetzt());
+    }
+
+    #[test_log::test]
     fn from_parts_roundtrip() {
         let neu = NeuerBenutzer::neu(Rolle::Systemadministrator, jetzt());
         let original = Benutzer::neu(BenutzerId(Uuid::nil()), neu);
-        let geladen = Benutzer::from_parts(original.id(), original.rolle(), original.erstellt_am());
+        let geladen = Benutzer::from_parts(original.id(), original.rolle(), original.created_at());
         assert_eq!(original, geladen);
         assert!(geladen.ist_systemadministrator());
     }

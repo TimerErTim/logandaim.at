@@ -19,11 +19,14 @@ use std::sync::Arc;
 use error_stack::Report;
 use logandaim_core::{
     App, ResultReport,
-    application::{AuthContext, ZugriffFehler},
-    domain::konto::SigningKeypair,
-    ports::KundeSchlüssel,
+    application::{AccessError, AuthContext},
+    ports::ClientKey,
     service::{
-        Abmeldung, BenutzerAnzeigen, Erneuerung, KontoDienstFehler, SchussRegistrieren,
+        Abmeldung, AbmeldungFehler, Anmeldung, AnmeldungFehler, BenutzerAnzeigen,
+        BenutzerAnzeigenFehler, BenutzerLoeschenFehler, BenutzerLöschen, Erneuerung,
+        ErneuerungFehler, PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen,
+        PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
+        RegistrierungStarten, RegistrierungStartenFehler, SchussRegistrieren,
         SchussRegistrierenFehler, SitzungAusgestellt, SitzungPrüfen, WertungBerechnen,
         WertungFehler,
     },
@@ -55,17 +58,17 @@ pub struct AusgestellteSitzung {
 impl AusgestellteSitzung {
     fn aus(
         ausgestellt: SitzungAusgestellt,
-        signing_key: &SigningKeypair,
-    ) -> ResultReport<Self, KontoDienstFehler> {
-        let access_token = jwt::encode(&ausgestellt.claims, signing_key)
-            .map_err(|_| Report::new(KontoDienstFehler::Speicher))?;
-        Ok(Self {
+        signing_key: &dyn logandaim_core::ports::Signing,
+    ) -> Self {
+        let access_token =
+            jwt::encode(&ausgestellt.claims, signing_key).expect("the JOSE header serialises");
+        Self {
             antwort: AnmeldeAntwort {
                 access_token: access_token.as_str().to_owned(),
                 benutzer: SchemaBenutzer::from(ausgestellt.benutzer),
             },
-            refresh_token: ausgestellt.refresh_token.as_str().to_owned(),
-        })
+            refresh_token: ausgestellt.refresh_token.base64url().as_str().to_owned(),
+        }
     }
 }
 
@@ -83,9 +86,12 @@ impl LogandaimAppApi {
         self.app.clone()
     }
 
-    /// The configured signing key, for a caller that has to encode or decode a token.
-    pub fn signing_key(&self) -> &SigningKeypair {
-        self.app.signing_key()
+    /// The configured signing key, for the edge that assembles a JOSE envelope.
+    ///
+    /// Verification does **not** come from here: a token is checked against the public key
+    /// stored on its session row, inside `SitzungPrüfen`.
+    pub fn signing_key(&self) -> &dyn logandaim_core::ports::Signing {
+        self.app.signing()
     }
 
     // ---------------------------------------------------------------- Schuss slice
@@ -122,18 +128,25 @@ impl LogandaimAppApi {
     pub async fn auth_context(
         &self,
         authorization: Option<&str>,
-    ) -> ResultReport<AuthContext, ZugriffFehler> {
+    ) -> ResultReport<AuthContext, AccessError> {
         let Some(wert) = authorization else {
             return Ok(AuthContext::Anonymous);
         };
         let token =
-            jwt::bearer_token(wert).ok_or_else(|| Report::new(ZugriffFehler::NichtAngemeldet))?;
+            jwt::bearer_token(wert).ok_or_else(|| Report::new(AccessError::NotAuthenticated))?;
 
-        let claims = jwt::decode(token, self.signing_key())?;
+        let gelesen = jwt::decode(token)?;
         self.app
-            .execute(AuthContext::Anonymous, SitzungPrüfen { claims })
+            .execute(
+                AuthContext::Anonymous,
+                SitzungPrüfen {
+                    claims: gelesen.claims,
+                    signed_message: gelesen.signed_message,
+                    signature: gelesen.signature,
+                },
+            )
             .await
-            .map_err(|_| Report::new(ZugriffFehler::NichtAngemeldet))
+            .map_err(|_| Report::new(AccessError::NotAuthenticated))
     }
 
     // ---------------------------------------------------------------- Registration
@@ -142,24 +155,21 @@ impl LogandaimAppApi {
     pub async fn registrierung_starten(
         &self,
         anfrage: requests::RegistrierungStartAnfrage,
-        kunde: KundeSchlüssel,
-    ) -> ResultReport<(), KontoDienstFehler> {
-        self.app
-            .execute(AuthContext::Anonymous, anfrage.in_use_case(kunde))
-            .await
+        client_key: ClientKey,
+    ) -> ResultReport<(), RegistrierungStartenFehler> {
+        let use_case: RegistrierungStarten = anfrage.in_use_case(client_key)?;
+        self.app.execute(AuthContext::Anonymous, use_case).await
     }
 
     /// Step 2. Creates the Benutzer, its Konto, and the first session.
     pub async fn registrierung_abschließen(
         &self,
         anfrage: requests::RegistrierungAbschlussAnfrage,
-        kunde: KundeSchlüssel,
-    ) -> ResultReport<AusgestellteSitzung, KontoDienstFehler> {
-        let ausgestellt = self
-            .app
-            .execute(AuthContext::Anonymous, anfrage.in_use_case(kunde))
-            .await?;
-        AusgestellteSitzung::aus(ausgestellt, self.signing_key())
+        client_key: ClientKey,
+    ) -> ResultReport<AusgestellteSitzung, RegistrierungAbschliessenFehler> {
+        let use_case: RegistrierungAbschließen = anfrage.in_use_case(client_key)?;
+        let ausgestellt = self.app.execute(AuthContext::Anonymous, use_case).await?;
+        Ok(AusgestellteSitzung::aus(ausgestellt, self.signing_key()))
     }
 
     // ---------------------------------------------------------------- Login
@@ -167,33 +177,34 @@ impl LogandaimAppApi {
     pub async fn anmelden(
         &self,
         anfrage: requests::AnmeldeAnfrage,
-        kunde: KundeSchlüssel,
-    ) -> ResultReport<AusgestellteSitzung, KontoDienstFehler> {
-        let ausgestellt = self
-            .app
-            .execute(AuthContext::Anonymous, anfrage.in_use_case(kunde))
-            .await?;
-        AusgestellteSitzung::aus(ausgestellt, self.signing_key())
+        client_key: ClientKey,
+    ) -> ResultReport<AusgestellteSitzung, AnmeldungFehler> {
+        let use_case: Anmeldung = anfrage.in_use_case(client_key)?;
+        let ausgestellt = self.app.execute(AuthContext::Anonymous, use_case).await?;
+        Ok(AusgestellteSitzung::aus(ausgestellt, self.signing_key()))
     }
 
     /// Rotate the refresh token. The presented one is spent; a replay ends the family.
     pub async fn erneuerung(
         &self,
         refresh_token: String,
-        kunde: KundeSchlüssel,
-    ) -> ResultReport<AusgestellteSitzung, KontoDienstFehler> {
+        client_key: ClientKey,
+    ) -> ResultReport<AusgestellteSitzung, ErneuerungFehler> {
+        let refresh_token = logandaim_core::domain::konto::RefreshToken::try_from(refresh_token)
+            .map_err(|_| Report::new(ErneuerungFehler::SitzungUngültig))?;
+
         let ausgestellt = self
             .app
             .execute(
                 AuthContext::Anonymous,
                 Erneuerung {
                     refresh_token,
-                    kunde,
+                    client_key,
                 },
             )
             .await?;
         let access_token = jwt::encode(&ausgestellt.claims, self.signing_key())
-            .map_err(|_| Report::new(KontoDienstFehler::Speicher))?;
+            .expect("the JOSE header serialises");
         Ok(AusgestellteSitzung {
             antwort: AnmeldeAntwort {
                 access_token: access_token.as_str().to_owned(),
@@ -204,11 +215,11 @@ impl LogandaimAppApi {
                     rolle: crate::schema::SchemaRolle::Benutzer,
                 },
             },
-            refresh_token: ausgestellt.refresh_token.as_str().to_owned(),
+            refresh_token: ausgestellt.refresh_token.base64url().as_str().to_owned(),
         })
     }
 
-    pub async fn abmelden(&self, auth: AuthContext) -> ResultReport<(), KontoDienstFehler> {
+    pub async fn abmelden(&self, auth: AuthContext) -> ResultReport<(), AbmeldungFehler> {
         self.app.execute(auth, Abmeldung).await
     }
 
@@ -217,21 +228,19 @@ impl LogandaimAppApi {
     pub async fn passwort_vergessen(
         &self,
         anfrage: requests::PasswortVergessenAnfrage,
-        kunde: KundeSchlüssel,
-    ) -> ResultReport<(), KontoDienstFehler> {
-        self.app
-            .execute(AuthContext::Anonymous, anfrage.in_use_case(kunde))
-            .await
+        client_key: ClientKey,
+    ) -> ResultReport<(), PasswortVergessenFehler> {
+        let use_case: PasswortVergessen = anfrage.in_use_case(client_key)?;
+        self.app.execute(AuthContext::Anonymous, use_case).await
     }
 
     /// Single use, and ends every session of the Benutzer.
     pub async fn passwort_wiederherstellen(
         &self,
         anfrage: requests::PasswortWiederherstellenAnfrage,
-    ) -> ResultReport<(), KontoDienstFehler> {
-        self.app
-            .execute(AuthContext::Anonymous, anfrage.in_use_case())
-            .await
+    ) -> ResultReport<(), PasswortWiederherstellenFehler> {
+        let use_case: PasswortWiederherstellen = anfrage.in_use_case()?;
+        self.app.execute(AuthContext::Anonymous, use_case).await
     }
 
     // ---------------------------------------------------------------- Benutzer
@@ -241,7 +250,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         benutzer_id: Option<uuid::Uuid>,
-    ) -> ResultReport<BenutzerAntwort, KontoDienstFehler> {
+    ) -> ResultReport<BenutzerAntwort, BenutzerAnzeigenFehler> {
         let ansicht = self
             .app
             .execute(
@@ -263,7 +272,8 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         anfrage: requests::BenutzerLöschungAnfrage,
-    ) -> ResultReport<(), KontoDienstFehler> {
-        self.app.execute(auth, anfrage.in_use_case()).await
+    ) -> ResultReport<(), BenutzerLoeschenFehler> {
+        let use_case: BenutzerLöschen = anfrage.in_use_case()?;
+        self.app.execute(auth, use_case).await
     }
 }

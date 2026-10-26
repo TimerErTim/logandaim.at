@@ -30,10 +30,10 @@ pub struct ServerConfig {
     pub log_dir: Option<PathBuf>,
     /// Path to the PKCS#8 PEM private key that signs access tokens.
     ///
-    /// There is no generated fallback: a key invented at startup would invalidate every
-    /// session on the next restart, and a key stored in the repo would be a key every
-    /// checkout shares.
-    pub signing_key_path: PathBuf,
+    /// Absent means "generate a throwaway key for this process", which is what a local run
+    /// wants. A production deployment sets one: a generated key invalidates every issued
+    /// access token on the next restart.
+    pub signing_key_path: Option<PathBuf>,
     /// Row id the key is published under, so a rotation can run two keys side by side
     /// while old tokens expire (AC-17).
     pub signing_key_id: String,
@@ -63,7 +63,7 @@ impl Default for ServerConfig {
             database_url: "logandaim.db".into(),
             object_store_dir: PathBuf::from("storage/"),
             log_dir: None,
-            signing_key_path: PathBuf::from("signing-key.pem"),
+            signing_key_path: None,
             signing_key_id: "k1".into(),
             token_issuer: "logandaim.at".into(),
             token_audience: "logandaim-api".into(),
@@ -122,7 +122,7 @@ pub struct Cli {
     #[arg(long, env = "LOGANDAIM_LOG_DIR")]
     pub log_dir: Option<PathBuf>,
 
-    /// PKCS#8 PEM private key that signs access tokens
+    /// PKCS#8 PEM private key that signs access tokens; omit to generate one per process
     #[arg(long, env = "LOGANDAIM_SIGNING_KEY_PATH")]
     pub signing_key_path: Option<PathBuf>,
 
@@ -240,8 +240,8 @@ fn overlay(mut config: ServerConfig, cli: &Cli) -> ServerConfig {
     if let Some(log_dir) = &cli.log_dir {
         config.log_dir = Some(log_dir.clone());
     }
-    if let Some(signing_key_path) = &cli.signing_key_path {
-        config.signing_key_path = signing_key_path.clone();
+    if cli.signing_key_path.is_some() {
+        config.signing_key_path = cli.signing_key_path.clone();
     }
     if let Some(signing_key_id) = &cli.signing_key_id {
         config.signing_key_id = signing_key_id.clone();

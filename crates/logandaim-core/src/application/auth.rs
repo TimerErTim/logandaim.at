@@ -25,12 +25,14 @@ pub enum AuthContext {
     },
 }
 
+/// Why an identity check refused. Application vocabulary, not domain vocabulary: an
+/// endpoint maps these to 401 and 403, and neither is a rule of the `konto` subdomain.
 #[derive(Debug, thiserror::Error)]
-pub enum ZugriffFehler {
+pub enum AccessError {
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
-    NichtAngemeldet,
+    NotAuthenticated,
     #[error("dieser Benutzer darf diese Aktion nicht ausführen")]
-    NichtErlaubt,
+    NotPermitted,
 }
 
 impl AuthContext {
@@ -48,15 +50,15 @@ impl AuthContext {
         }
     }
 
-    pub fn ist_angemeldet(&self) -> bool {
+    pub fn is_authenticated(&self) -> bool {
         matches!(self, Self::Authenticated { .. })
     }
 
     /// The identity pair, or a refusal. Every use case that acts on personal data starts
     /// with this call, in its own body.
-    pub fn require_authenticated(&self) -> ResultReport<(BenutzerId, SessionId), ZugriffFehler> {
+    pub fn require_authenticated(&self) -> ResultReport<(BenutzerId, SessionId), AccessError> {
         match self {
-            Self::Anonymous => Err(Report::new(ZugriffFehler::NichtAngemeldet)),
+            Self::Anonymous => Err(Report::new(AccessError::NotAuthenticated)),
             Self::Authenticated {
                 benutzer_id,
                 session_id,
@@ -65,7 +67,7 @@ impl AuthContext {
     }
 
     /// The signed-in Benutzer, or a refusal.
-    pub fn require_benutzer(&self) -> ResultReport<BenutzerId, ZugriffFehler> {
+    pub fn require_benutzer_id(&self) -> ResultReport<BenutzerId, AccessError> {
         self.require_authenticated()
             .map(|(benutzer_id, _)| benutzer_id)
     }
@@ -84,10 +86,10 @@ mod tests {
     #[test_log::test]
     fn anonym_verweigert() {
         let auth = AuthContext::Anonymous;
-        assert!(!auth.ist_angemeldet());
+        assert!(!auth.is_authenticated());
         assert_eq!(auth.benutzer_id(), None);
         assert!(auth.require_authenticated().is_err());
-        assert!(auth.require_benutzer().is_err());
+        assert!(auth.require_benutzer_id().is_err());
     }
 
     #[test_log::test]
@@ -97,12 +99,13 @@ mod tests {
             benutzer_id,
             session_id,
         };
-        assert!(auth.ist_angemeldet());
+        assert!(auth.is_authenticated());
         assert_eq!(auth.benutzer_id(), Some(benutzer_id));
         assert_eq!(auth.session_id(), Some(session_id));
         assert_eq!(
             auth.require_authenticated().unwrap(),
             (benutzer_id, session_id)
         );
+        assert_eq!(auth.require_benutzer_id().unwrap(), benutzer_id);
     }
 }

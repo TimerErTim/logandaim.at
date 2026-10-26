@@ -13,8 +13,12 @@
 //! - **Protected handlers answer 401 instead of running with `Anonymous`.** The identity
 //!   comes from `require_authenticated`, and each use case checks it again.
 
+use error_stack::Report;
 use logandaim_core::ResultReport;
-use logandaim_core::service::KontoDienstFehler;
+use logandaim_core::service::{
+    AbmeldungFehler, BenutzerAnzeigenFehler, BenutzerLoeschenFehler, ErneuerungFehler,
+    PasswortWiederherstellenFehler,
+};
 use poem::Request;
 use poem_openapi::payload::Json;
 
@@ -27,21 +31,15 @@ use crate::{
     schema::{BenutzerAntwort, OkAntwort},
 };
 
-/// An edge-level refusal (401) expressed in the same error type the use cases answer with,
-/// so one response enum covers both layers without a second DTO.
-fn nicht_angemeldet<T>() -> ResultReport<T, KontoDienstFehler> {
-    Err(error_stack::Report::new(KontoDienstFehler::NichtAngemeldet))
-}
-
 pub async fn registrierung_starten(
     spec: &LogandaimApiSpec,
     req: &Request,
     body: Json<requests::RegistrierungStartAnfrage>,
 ) -> KontoAntwort<OkAntwort> {
-    let kunde = spec.api().kunde(req).await;
+    let client_key = spec.api().client_key(req).await;
     KontoAntwort::from(
         spec.api()
-            .registrierung_starten(body.0, kunde)
+            .registrierung_starten(body.0, client_key)
             .await
             .map(|()| OkAntwort { ok: true }),
     )
@@ -52,8 +50,12 @@ pub async fn registrierung_abschließen(
     req: &Request,
     body: Json<requests::RegistrierungAbschlussAnfrage>,
 ) -> SitzungAntwort {
-    let kunde = spec.api().kunde(req).await;
-    SitzungAntwort::neu(spec.api().registrierung_abschließen(body.0, kunde).await)
+    let client_key = spec.api().client_key(req).await;
+    SitzungAntwort::neu(
+        spec.api()
+            .registrierung_abschließen(body.0, client_key)
+            .await,
+    )
 }
 
 pub async fn anmelden(
@@ -61,24 +63,24 @@ pub async fn anmelden(
     req: &Request,
     body: Json<requests::AnmeldeAnfrage>,
 ) -> SitzungAntwort {
-    let kunde = spec.api().kunde(req).await;
-    SitzungAntwort::neu(spec.api().anmelden(body.0, kunde).await)
+    let client_key = spec.api().client_key(req).await;
+    SitzungAntwort::neu(spec.api().anmelden(body.0, client_key).await)
 }
 
 pub async fn erneuerung(spec: &LogandaimApiSpec, req: &Request) -> SitzungAntwort {
-    let kunde = spec.api().kunde(req).await;
+    let client_key = spec.api().client_key(req).await;
     let ergebnis = match refresh_aus_cookie(req) {
-        Some(token) => spec.api().erneuerung(token, kunde).await,
-        None => nicht_angemeldet(),
+        Some(token) => spec.api().erneuerung(token, client_key).await,
+        None => Err(Report::new(ErneuerungFehler::SitzungUngültig)),
     };
     SitzungAntwort::neu(ergebnis)
 }
 
 pub async fn abmelden(spec: &LogandaimApiSpec, req: &Request) -> BeendendeAntwort<OkAntwort> {
-    let ergebnis: ResultReport<(), KontoDienstFehler> =
+    let ergebnis: ResultReport<(), AbmeldungFehler> =
         match spec.api().require_authenticated(req).await {
             Ok(auth) => spec.api().abmelden(auth).await,
-            Err(_) => nicht_angemeldet(),
+            Err(_) => Err(Report::new(AbmeldungFehler::NichtAngemeldet)),
         };
     BeendendeAntwort::neu(ergebnis.map(|()| OkAntwort { ok: true }))
 }
@@ -88,10 +90,10 @@ pub async fn passwort_vergessen(
     req: &Request,
     body: Json<requests::PasswortVergessenAnfrage>,
 ) -> KontoAntwort<OkAntwort> {
-    let kunde = spec.api().kunde(req).await;
+    let client_key = spec.api().client_key(req).await;
     KontoAntwort::from(
         spec.api()
-            .passwort_vergessen(body.0, kunde)
+            .passwort_vergessen(body.0, client_key)
             .await
             .map(|()| OkAntwort { ok: true }),
     )
@@ -101,7 +103,8 @@ pub async fn passwort_wiederherstellen(
     spec: &LogandaimApiSpec,
     body: Json<requests::PasswortWiederherstellenAnfrage>,
 ) -> BeendendeAntwort<OkAntwort> {
-    let ergebnis = spec.api().passwort_wiederherstellen(body.0).await;
+    let ergebnis: ResultReport<(), PasswortWiederherstellenFehler> =
+        spec.api().passwort_wiederherstellen(body.0).await;
     BeendendeAntwort::neu(ergebnis.map(|()| OkAntwort { ok: true }))
 }
 
@@ -110,10 +113,10 @@ pub async fn benutzer_anzeigen(
     req: &Request,
     benutzer_id: Option<uuid::Uuid>,
 ) -> KontoAntwort<BenutzerAntwort> {
-    let ergebnis: ResultReport<BenutzerAntwort, KontoDienstFehler> =
+    let ergebnis: ResultReport<BenutzerAntwort, BenutzerAnzeigenFehler> =
         match spec.api().require_authenticated(req).await {
             Ok(auth) => spec.api().benutzer_anzeigen(auth, benutzer_id).await,
-            Err(_) => nicht_angemeldet(),
+            Err(_) => Err(Report::new(BenutzerAnzeigenFehler::NichtAngemeldet)),
         };
     KontoAntwort::from(ergebnis)
 }
@@ -123,10 +126,10 @@ pub async fn benutzer_löschen(
     req: &Request,
     body: Json<requests::BenutzerLöschungAnfrage>,
 ) -> BeendendeAntwort<OkAntwort> {
-    let ergebnis: ResultReport<(), KontoDienstFehler> =
+    let ergebnis: ResultReport<(), BenutzerLoeschenFehler> =
         match spec.api().require_authenticated(req).await {
             Ok(auth) => spec.api().benutzer_löschen(auth, body.0).await,
-            Err(_) => nicht_angemeldet(),
+            Err(_) => Err(Report::new(BenutzerLoeschenFehler::NichtAngemeldet)),
         };
     BeendendeAntwort::neu(ergebnis.map(|()| OkAntwort { ok: true }))
 }

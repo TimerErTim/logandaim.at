@@ -5,7 +5,7 @@
 
 use std::net::IpAddr;
 
-use logandaim_core::ports::KundeSchlüssel;
+use logandaim_core::ports::ClientKey;
 
 /// Build the key of the client behind one request.
 ///
@@ -15,11 +15,11 @@ use logandaim_core::ports::KundeSchlüssel;
 ///
 /// `real_ip` is what a reverse proxy forwards; the caller supplies it, so this module
 /// never guesses at `X-Forwarded-For` on its own.
-pub fn kunde(
+pub fn client_key(
     real_ip: IpAddr,
     user_agent: Option<&str>,
     accept_language: Option<&str>,
-) -> KundeSchlüssel {
+) -> ClientKey {
     use sha2::{Digest, Sha256};
 
     let mut hasher = Sha256::new();
@@ -29,7 +29,7 @@ pub fn kunde(
     // First 16 hex chars: enough to tell clients apart, short enough to read in a log.
     let fingerprint = hex::encode(hasher.finalize())[..16].to_owned();
 
-    KundeSchlüssel::neu(real_ip, fingerprint)
+    ClientKey::new(real_ip, fingerprint)
 }
 
 #[cfg(test)]
@@ -42,25 +42,25 @@ mod tests {
 
     #[test_log::test]
     fn gleiche_kennung_ergibt_gleichen_schlüssel() {
-        let a = kunde(ip(), Some("Mozilla/5.0"), Some("de-AT"));
-        let b = kunde(ip(), Some("Mozilla/5.0"), Some("de-AT"));
+        let a = client_key(ip(), Some("Mozilla/5.0"), Some("de-AT"));
+        let b = client_key(ip(), Some("Mozilla/5.0"), Some("de-AT"));
         assert_eq!(a, b);
     }
 
     #[test_log::test]
     fn andere_ip_oder_anderer_client_ergeben_andere_schlüssel() {
-        let basis = kunde(ip(), Some("Mozilla/5.0"), None);
+        let basis = client_key(ip(), Some("Mozilla/5.0"), None);
 
-        let andere_ip = kunde("198.51.100.1".parse().unwrap(), Some("Mozilla/5.0"), None);
+        let andere_ip = client_key("198.51.100.1".parse().unwrap(), Some("Mozilla/5.0"), None);
         assert_ne!(basis, andere_ip);
 
-        let anderer_client = kunde(ip(), Some("curl/8"), None);
+        let anderer_client = client_key(ip(), Some("curl/8"), None);
         assert_ne!(basis, anderer_client);
     }
 
     #[test_log::test]
     fn fehlende_header_sind_kein_fehler() {
-        let a = kunde(ip(), None, None);
+        let a = client_key(ip(), None, None);
         assert_eq!(a.fingerprint.len(), 16);
     }
 }

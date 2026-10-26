@@ -8,71 +8,84 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use chrono::Duration;
 use logandaim_core::{
-    application::AuthContext,
+    application::{AuthContext, uow::Versioned},
     domain::{
         EmailAdresse,
         konto::{
             ACCESS_TOKEN_LIFETIME, BenutzerId, KlartextPasswort, NeuerBenutzer, NeuesKonto, Rolle,
-            hash_password,
+            SecretToken, SessionId, hash_password,
         },
     },
-    ports::{KundeSchlüssel, RepositoryError},
+    ports::{ClientKey, RepositoryError},
     service::{
-        Abmeldung, Anmeldung, BenutzerAnzeigen, BenutzerLöschen, Erneuerung, KontoDienstFehler,
-        PasswortVergessen, PasswortWiederherstellen, RegistrierungAbschließen,
-        RegistrierungStarten, SitzungAusgestellt, SitzungPrüfen,
+        Abmeldung, Anmeldung, AnmeldungFehler, BenutzerAnzeigen, BenutzerAnzeigenFehler,
+        BenutzerLöschen, Erneuerung, PasswortVergessen, PasswortWiederherstellen,
+        RegistrierungAbschliessenFehler, RegistrierungAbschließen, RegistrierungStarten,
+        RegistrierungStartenFehler, SitzungAusgestellt,
     },
 };
 
 use super::{
     super::base_app_builder,
-    helpers::{FRONTEND_BASIS_URL, Harness},
+    helpers::{FRONTEND_BASIS_URL, Harness, fremder_schluessel, pruefen, pruefen_mit},
 };
 
 const PASSWORT: &str = "korrekt-pferd-batterie";
 
-fn kunde(ip: u8) -> KundeSchlüssel {
-    KundeSchlüssel::neu(IpAddr::V4(Ipv4Addr::new(10, 0, 0, ip)), "test-client")
+fn client_key(ip: u8) -> ClientKey {
+    ClientKey::new(IpAddr::V4(Ipv4Addr::new(10, 0, 0, ip)), "test-client")
+}
+
+fn passwort() -> KlartextPasswort {
+    KlartextPasswort::neu(PASSWORT).expect("Testpasswort ist gültig")
+}
+
+fn passwort_wie(wert: &str) -> KlartextPasswort {
+    KlartextPasswort::neu(wert).expect("Testpasswort ist gültig")
+}
+
+fn adresse(wert: &str) -> EmailAdresse {
+    EmailAdresse::normalisiert(wert).expect("Testadresse ist gültig")
 }
 
 async fn harness() -> Harness {
-    let harness = super::helpers::build(base_app_builder().await);
-    // Every case needs the key row, exactly as a real startup registers it.
-    harness
-        .app()
-        .signing_key_registrieren()
-        .await
-        .expect("signing key row is registered at startup");
-    harness
+    // No key registration: the session row itself carries the public key its access token
+    // must verify against (AC-17).
+    super::helpers::build(base_app_builder().await)
 }
 
 /// Run registration step 1 and return the mailed token.
-async fn registrierung_starten(harness: &Harness, email: &str, kunde: KundeSchlüssel) -> String {
+async fn registrierung_starten(
+    harness: &Harness,
+    email: &str,
+    client_key: ClientKey,
+) -> SecretToken {
     harness
         .app()
         .execute(
             AuthContext::Anonymous,
             RegistrierungStarten {
-                email: email.to_owned(),
-                kunde,
+                email: adresse(email),
+                client_key,
             },
         )
         .await
         .expect("registration step 1 answers Ok");
-    harness.letztes_token()
+    let text = harness.letztes_token();
+    SecretToken::try_from(text.as_str()).expect("die Mail trägt ein SecretToken")
 }
 
 /// Register fully and return the issued session.
 async fn registriere(harness: &Harness, email: &str) -> SitzungAusgestellt {
-    let token = registrierung_starten(harness, email, kunde(1)).await;
+    let token = registrierung_starten(harness, email, client_key(1)).await;
     harness
         .app()
         .execute(
             AuthContext::Anonymous,
             RegistrierungAbschließen {
                 token,
-                passwort: PASSWORT.to_owned(),
-                kunde: kunde(1),
+                passwort: passwort(),
+                client_key: client_key(1),
             },
         )
         .await
@@ -85,9 +98,9 @@ async fn anmelden(harness: &Harness, email: &str) -> SitzungAusgestellt {
         .execute(
             AuthContext::Anonymous,
             Anmeldung {
-                email: email.to_owned(),
-                passwort: PASSWORT.to_owned(),
-                kunde: kunde(2),
+                email: adresse(email),
+                passwort: passwort(),
+                client_key: client_key(2),
             },
         )
         .await
@@ -102,15 +115,12 @@ fn auth_aus(ausgestellt: &SitzungAusgestellt) -> AuthContext {
     }
 }
 
-fn fehler<E>(report: &error_stack::Report<E>) -> String
+/// The message of an error report, whatever the use case's own error enum is.
+fn text<E>(report: error_stack::Report<E>) -> String
 where
     E: std::error::Error + Send + Sync + 'static,
 {
     report.current_context().to_string()
-}
-
-fn fehler_von(report: error_stack::Report<KontoDienstFehler>) -> String {
-    fehler(&report)
 }
 
 // ---------------------------------------------------------------- AC-1, AC-2, AC-20
@@ -119,10 +129,14 @@ fn fehler_von(report: error_stack::Report<KontoDienstFehler>) -> String {
 async fn ac1_registrierung_startet_ohne_benutzer_und_mailt_genau_einmal() {
     let harness = harness().await;
 
-    let token = registrierung_starten(&harness, "anna@muster.at", kunde(1)).await;
+    let token = registrierung_starten(&harness, "anna@muster.at", client_key(1)).await;
 
     assert_eq!(harness.mail().gesendete().len(), 1);
-    assert_eq!(token.len(), 43, "das gemailte Token ist ein 256-bit Secret");
+    assert_eq!(
+        token.base64url().len(),
+        43,
+        "das gemailte Token ist ein 256-bit Secret"
+    );
 
     // AC-20: at this point no Benutzer exists, so nothing can be unconfirmed.
     harness
@@ -154,8 +168,8 @@ async fn ac2_vergebene_adresse_antwortet_gleich_und_mailt_nicht() {
         .execute(
             AuthContext::Anonymous,
             RegistrierungStarten {
-                email: "belegt@muster.at".to_owned(),
-                kunde: kunde(3),
+                email: adresse("belegt@muster.at"),
+                client_key: client_key(3),
             },
         )
         .await;
@@ -185,28 +199,20 @@ async fn ac3_abschluss_erzeugt_benutzer_konto_und_erste_sitzung() {
         "das Access-Token gehört dem neuen Benutzer"
     );
     assert_eq!(ausgestellt.claims.sid, ausgestellt.session_id);
-    assert_ne!(ausgestellt.refresh_token.as_str().len(), 0);
+    assert_eq!(ausgestellt.refresh_token.base64url().len(), 43);
 }
 
 #[test_log::test(pollster::test)]
 async fn ac4_ungültiges_token_oder_kurzes_passwort_erzeugt_nichts() {
     let harness = harness().await;
-    let token = registrierung_starten(&harness, "anna@muster.at", kunde(4)).await;
+    let token = registrierung_starten(&harness, "anna@muster.at", client_key(4)).await;
 
-    // Too short: refused, and the usable token is not spent by the attempt.
-    let kurz = harness
-        .app()
-        .execute(
-            AuthContext::Anonymous,
-            RegistrierungAbschließen {
-                token: token.clone(),
-                passwort: "kurz".to_owned(),
-                kunde: kunde(5),
-            },
-        )
-        .await;
-    assert!(kurz.is_err());
-    assert_eq!(fehler_von(kurz.unwrap_err()), fehler_ungültig());
+    // Too short: the DTO layer refuses it before the use case runs, so a usable token is
+    // never spent by the attempt.
+    assert!(
+        KlartextPasswort::neu("kurz").is_err(),
+        "die Längenregel greift bei der Konstruktion"
+    );
 
     // An unknown token is refused too.
     let unbekannt = harness
@@ -214,23 +220,24 @@ async fn ac4_ungültiges_token_oder_kurzes_passwort_erzeugt_nichts() {
         .execute(
             AuthContext::Anonymous,
             RegistrierungAbschließen {
-                token: "A".repeat(43),
-                passwort: PASSWORT.to_owned(),
-                kunde: kunde(6),
+                token: SecretToken::try_from("A".repeat(43).as_str())
+                    .expect("ein geformtes, aber unbekanntes Token"),
+                passwort: passwort(),
+                client_key: client_key(6),
             },
         )
         .await;
     assert!(unbekannt.is_err());
 
-    // The real token still works: neither refusal spent it.
+    // The real token still works: the refusal spent nothing.
     harness
         .app()
         .execute(
             AuthContext::Anonymous,
             RegistrierungAbschließen {
                 token,
-                passwort: PASSWORT.to_owned(),
-                kunde: kunde(7),
+                passwort: passwort(),
+                client_key: client_key(7),
             },
         )
         .await
@@ -240,35 +247,31 @@ async fn ac4_ungültiges_token_oder_kurzes_passwort_erzeugt_nichts() {
 #[test_log::test(pollster::test)]
 async fn ac4_verbrauchtes_token_wird_beim_zweiten_mal_abgelehnt() {
     let harness = harness().await;
-    let token = registrierung_starten(&harness, "anna@muster.at", kunde(8)).await;
-    registriere_abschließen(&harness, &token, kunde(8))
+    let token = registrierung_starten(&harness, "anna@muster.at", client_key(8)).await;
+    registriere_abschließen(&harness, &token, client_key(8))
         .await
         .expect("erster Abschluss gelingt");
 
-    let zweiter = registriere_abschließen(&harness, &token, kunde(9)).await;
+    let zweiter = registriere_abschließen(&harness, &token, client_key(9)).await;
     assert!(zweiter.is_err(), "ein verbrauchtes Token ist unbrauchbar");
 }
 
 async fn registriere_abschließen(
     harness: &Harness,
-    token: &str,
-    kunde: KundeSchlüssel,
-) -> Result<SitzungAusgestellt, error_stack::Report<KontoDienstFehler>> {
+    token: &SecretToken,
+    client_key: ClientKey,
+) -> Result<SitzungAusgestellt, error_stack::Report<RegistrierungAbschliessenFehler>> {
     harness
         .app()
         .execute(
             AuthContext::Anonymous,
             RegistrierungAbschließen {
-                token: token.to_owned(),
-                passwort: PASSWORT.to_owned(),
-                kunde,
+                token: token.clone(),
+                passwort: passwort(),
+                client_key,
             },
         )
         .await
-}
-
-fn fehler_ungültig() -> String {
-    KontoDienstFehler::UngültigeAnfrage.to_string()
 }
 
 // ------------------------------------------------------------------------- AC-5, AC-6
@@ -284,9 +287,7 @@ async fn ac5_anmeldung_eröffnet_eine_gültige_sitzung() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPrüfen {
-                claims: ausgestellt.claims.clone(),
-            },
+            pruefen(&harness, ausgestellt.claims.clone()),
         )
         .await
         .expect("ein frisches Access-Token wird akzeptiert");
@@ -304,9 +305,9 @@ async fn ac6_falsches_passwort_und_unbekannte_adresse_sind_ununterscheidbar() {
         .execute(
             AuthContext::Anonymous,
             Anmeldung {
-                email: "anna@muster.at".to_owned(),
-                passwort: "falsches-passwort".to_owned(),
-                kunde: kunde(10),
+                email: adresse("anna@muster.at"),
+                passwort: passwort_wie("falsches-passwort"),
+                client_key: client_key(10),
             },
         )
         .await;
@@ -315,27 +316,30 @@ async fn ac6_falsches_passwort_und_unbekannte_adresse_sind_ununterscheidbar() {
         .execute(
             AuthContext::Anonymous,
             Anmeldung {
-                email: "niemand@muster.at".to_owned(),
-                passwort: PASSWORT.to_owned(),
-                kunde: kunde(11),
+                email: adresse("niemand@muster.at"),
+                passwort: passwort(),
+                client_key: client_key(11),
             },
         )
         .await;
 
     assert_eq!(
-        fehler_von(falsch.unwrap_err()),
-        fehler_von(unbekannt.unwrap_err()),
+        text(falsch.unwrap_err()),
+        text(unbekannt.unwrap_err()),
         "die Antwort darf die Existenz der Adresse nicht verraten"
     );
+
+    // A token naming a session that does not exist is refused, never accepted.
     assert!(
         harness
             .app()
             .execute(
                 AuthContext::Anonymous,
-                SitzungPrüfen {
-                    claims: logandaim_core::domain::konto::AccessTokenClaims {
+                pruefen(
+                    &harness,
+                    logandaim_core::domain::konto::AccessTokenClaims {
                         sub: BenutzerId(uuid::Uuid::nil()),
-                        sid: logandaim_core::domain::konto::SessionId(uuid::Uuid::nil()),
+                        sid: SessionId(uuid::Uuid::nil()),
                         kid: logandaim_core::domain::konto::SigningKeyId::new("kein").unwrap(),
                         iss: "logandaim.at".into(),
                         aud: "logandaim-api".into(),
@@ -343,7 +347,7 @@ async fn ac6_falsches_passwort_und_unbekannte_adresse_sind_ununterscheidbar() {
                         exp: harness.jetzt() + ACCESS_TOKEN_LIFETIME,
                         jti: "test".into(),
                     }
-                }
+                )
             )
             .await
             .is_err()
@@ -362,23 +366,24 @@ async fn ac7_erneuerung_rotiert_und_das_alte_access_token_lebt_weiter() {
         .execute(
             AuthContext::Anonymous,
             Erneuerung {
-                refresh_token: alt.refresh_token.as_str().to_owned(),
-                kunde: kunde(12),
+                refresh_token: alt.refresh_token.clone(),
+                client_key: client_key(12),
             },
         )
         .await
         .expect("die Erneuerung liefert ein neues Paar");
 
-    assert_ne!(neu.refresh_token.as_str(), alt.refresh_token.as_str());
+    assert_ne!(
+        neu.refresh_token.base64url().as_str(),
+        alt.refresh_token.base64url().as_str()
+    );
 
     // The pre-rotation access token still works: only revocation ends it (AC-9, AC-17).
     harness
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPrüfen {
-                claims: alt.claims.clone(),
-            },
+            pruefen(&harness, alt.claims.clone()),
         )
         .await
         .expect("das alte Access-Token bleibt bis zum Ablauf gültig");
@@ -388,9 +393,7 @@ async fn ac7_erneuerung_rotiert_und_das_alte_access_token_lebt_weiter() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPrüfen {
-                claims: neu.claims.clone(),
-            },
+            pruefen(&harness, neu.claims.clone()),
         )
         .await
         .expect("das neue Access-Token ist gültig");
@@ -406,8 +409,8 @@ async fn ac8_verbrauchtes_refresh_token_wird_abgelehnt_und_beendet_die_familie()
         .execute(
             AuthContext::Anonymous,
             Erneuerung {
-                refresh_token: alt.refresh_token.as_str().to_owned(),
-                kunde: kunde(13),
+                refresh_token: alt.refresh_token.clone(),
+                client_key: client_key(13),
             },
         )
         .await
@@ -419,8 +422,8 @@ async fn ac8_verbrauchtes_refresh_token_wird_abgelehnt_und_beendet_die_familie()
         .execute(
             AuthContext::Anonymous,
             Erneuerung {
-                refresh_token: alt.refresh_token.as_str().to_owned(),
-                kunde: kunde(14),
+                refresh_token: alt.refresh_token.clone(),
+                client_key: client_key(14),
             },
         )
         .await;
@@ -432,8 +435,8 @@ async fn ac8_verbrauchtes_refresh_token_wird_abgelehnt_und_beendet_die_familie()
         .execute(
             AuthContext::Anonymous,
             Erneuerung {
-                refresh_token: neu.refresh_token.as_str().to_owned(),
-                kunde: kunde(15),
+                refresh_token: neu.refresh_token.clone(),
+                client_key: client_key(15),
             },
         )
         .await;
@@ -455,8 +458,8 @@ async fn ac8_abgelaufenes_refresh_token_wird_abgelehnt() {
         .execute(
             AuthContext::Anonymous,
             Erneuerung {
-                refresh_token: alt.refresh_token.as_str().to_owned(),
-                kunde: kunde(16),
+                refresh_token: alt.refresh_token.clone(),
+                client_key: client_key(16),
             },
         )
         .await;
@@ -480,9 +483,7 @@ async fn ac9_abmeldung_widerruft_und_das_access_token_fällt_sofort() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPrüfen {
-                claims: ausgestellt.claims.clone(),
-            },
+            pruefen(&harness, ausgestellt.claims.clone()),
         )
         .await;
     assert!(
@@ -494,7 +495,7 @@ async fn ac9_abmeldung_widerruft_und_das_access_token_fällt_sofort() {
 // ------------------------------------------------------------------------ AC-10, AC-11
 
 #[test_log::test(pollster::test)]
-async fn ac10_wiederherstellung_antwortet_fuer_jede_adresse_gleich() {
+async fn ac10_wiederherstellung_antwortet_für_jede_adresse_gleich() {
     let harness = harness().await;
     registriere(&harness, "anna@muster.at").await;
     harness.mail().leeren();
@@ -504,8 +505,8 @@ async fn ac10_wiederherstellung_antwortet_fuer_jede_adresse_gleich() {
         .execute(
             AuthContext::Anonymous,
             PasswortVergessen {
-                email: "anna@muster.at".to_owned(),
-                kunde: kunde(17),
+                email: adresse("anna@muster.at"),
+                client_key: client_key(17),
             },
         )
         .await;
@@ -514,8 +515,8 @@ async fn ac10_wiederherstellung_antwortet_fuer_jede_adresse_gleich() {
         .execute(
             AuthContext::Anonymous,
             PasswortVergessen {
-                email: "niemand@muster.at".to_owned(),
-                kunde: kunde(18),
+                email: adresse("niemand@muster.at"),
+                client_key: client_key(18),
             },
         )
         .await;
@@ -540,13 +541,14 @@ async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
         .execute(
             AuthContext::Anonymous,
             PasswortVergessen {
-                email: "anna@muster.at".to_owned(),
-                kunde: kunde(19),
+                email: adresse("anna@muster.at"),
+                client_key: client_key(19),
             },
         )
         .await
         .expect("die Wiederherstellung wird angefordert");
-    let token = harness.letztes_token();
+    let token = SecretToken::try_from(harness.letztes_token().as_str())
+        .expect("die Mail trägt ein SecretToken");
 
     harness
         .app()
@@ -554,7 +556,7 @@ async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
             AuthContext::Anonymous,
             PasswortWiederherstellen {
                 token: token.clone(),
-                neues_passwort: "ein-ganz-neues-passwort".to_owned(),
+                neues_passwort: passwort_wie("ein-ganz-neues-passwort"),
             },
         )
         .await
@@ -565,9 +567,7 @@ async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPrüfen {
-                claims: ausgestellt.claims.clone(),
-            },
+            pruefen(&harness, ausgestellt.claims.clone()),
         )
         .await;
     assert!(alte_sitzung.is_err(), "alle Sitzungen sind beendet");
@@ -579,7 +579,7 @@ async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
             AuthContext::Anonymous,
             PasswortWiederherstellen {
                 token,
-                neues_passwort: "noch-ein-passwort".to_owned(),
+                neues_passwort: passwort_wie("noch-ein-passwort"),
             },
         )
         .await;
@@ -594,9 +594,9 @@ async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
         .execute(
             AuthContext::Anonymous,
             Anmeldung {
-                email: "anna@muster.at".to_owned(),
-                passwort: "ein-ganz-neues-passwort".to_owned(),
-                kunde: kunde(20),
+                email: adresse("anna@muster.at"),
+                passwort: passwort_wie("ein-ganz-neues-passwort"),
+                client_key: client_key(20),
             },
         )
         .await
@@ -615,7 +615,7 @@ async fn ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei() {
         .execute(
             auth_aus(&ausgestellt),
             BenutzerLöschen {
-                passwort: PASSWORT.to_owned(),
+                passwort: passwort(),
                 bestätigt: true,
             },
         )
@@ -636,9 +636,9 @@ async fn ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei() {
         .execute(
             AuthContext::Anonymous,
             Anmeldung {
-                email: "anna@muster.at".to_owned(),
-                passwort: PASSWORT.to_owned(),
-                kunde: kunde(21),
+                email: adresse("anna@muster.at"),
+                passwort: passwort(),
+                client_key: client_key(21),
             },
         )
         .await;
@@ -648,8 +648,8 @@ async fn ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei() {
     );
 
     // The freed address can register again (rule 8).
-    let token = registrierung_starten(&harness, "anna@muster.at", kunde(22)).await;
-    registriere_abschließen(&harness, &token, kunde(23))
+    let token = registrierung_starten(&harness, "anna@muster.at", client_key(22)).await;
+    registriere_abschließen(&harness, &token, client_key(23))
         .await
         .expect("die freigegebene Adresse kann sich neu registrieren");
 }
@@ -664,7 +664,7 @@ async fn ac12_löschung_ohne_bestätigung_oder_mit_falschem_passwort_scheitert()
         .execute(
             auth_aus(&ausgestellt),
             BenutzerLöschen {
-                passwort: PASSWORT.to_owned(),
+                passwort: passwort(),
                 bestätigt: false,
             },
         )
@@ -676,7 +676,7 @@ async fn ac12_löschung_ohne_bestätigung_oder_mit_falschem_passwort_scheitert()
         .execute(
             auth_aus(&ausgestellt),
             BenutzerLöschen {
-                passwort: "falsch-falsch".to_owned(),
+                passwort: passwort_wie("falsch-falsch"),
                 bestätigt: true,
             },
         )
@@ -718,7 +718,7 @@ async fn ac13_anonymer_zugriff_wird_verweigert() {
 #[test_log::test(pollster::test)]
 async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
     let harness = harness().await;
-    let client = kunde(30);
+    let client = client_key(30);
 
     for _ in 0..20 {
         let ergebnis = harness
@@ -726,16 +726,16 @@ async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
             .execute(
                 AuthContext::Anonymous,
                 Anmeldung {
-                    email: "niemand@muster.at".to_owned(),
-                    passwort: PASSWORT.to_owned(),
-                    kunde: client.clone(),
+                    email: adresse("niemand@muster.at"),
+                    passwort: passwort(),
+                    client_key: client.clone(),
                 },
             )
             .await;
         assert!(ergebnis.is_err());
         assert_ne!(
-            fehler_von(ergebnis.unwrap_err()),
-            fehler_gedrosselt(),
+            text(ergebnis.unwrap_err()),
+            AnmeldungFehler::Gedrosselt.to_string(),
             "innerhalb des Budgets ist die Antwort ein Zugangsfehler, keine Drosselung"
         );
     }
@@ -745,15 +745,15 @@ async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
         .execute(
             AuthContext::Anonymous,
             Anmeldung {
-                email: "niemand@muster.at".to_owned(),
-                passwort: PASSWORT.to_owned(),
-                kunde: client.clone(),
+                email: adresse("niemand@muster.at"),
+                passwort: passwort(),
+                client_key: client.clone(),
             },
         )
         .await;
     assert_eq!(
-        fehler_von(einundzwanzigster.unwrap_err()),
-        fehler_gedrosselt()
+        text(einundzwanzigster.unwrap_err()),
+        AnmeldungFehler::Gedrosselt.to_string()
     );
 
     // Another client is unaffected: the limit is never per address.
@@ -762,19 +762,22 @@ async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
         .execute(
             AuthContext::Anonymous,
             Anmeldung {
-                email: "niemand@muster.at".to_owned(),
-                passwort: PASSWORT.to_owned(),
-                kunde: kunde(31),
+                email: adresse("niemand@muster.at"),
+                passwort: passwort(),
+                client_key: client_key(31),
             },
         )
         .await;
-    assert_ne!(fehler_von(anderer_client.unwrap_err()), fehler_gedrosselt());
+    assert_ne!(
+        text(anderer_client.unwrap_err()),
+        AnmeldungFehler::Gedrosselt.to_string()
+    );
 }
 
 #[test_log::test(pollster::test)]
 async fn ac16_registrierung_ist_auf_fünf_pro_stunde_gedrosselt() {
     let harness = harness().await;
-    let client = kunde(32);
+    let client = client_key(32);
 
     for nummer in 0..5 {
         harness
@@ -782,8 +785,8 @@ async fn ac16_registrierung_ist_auf_fünf_pro_stunde_gedrosselt() {
             .execute(
                 AuthContext::Anonymous,
                 RegistrierungStarten {
-                    email: format!("person{nummer}@muster.at"),
-                    kunde: client.clone(),
+                    email: adresse(&format!("person{nummer}@muster.at")),
+                    client_key: client.clone(),
                 },
             )
             .await
@@ -795,66 +798,57 @@ async fn ac16_registrierung_ist_auf_fünf_pro_stunde_gedrosselt() {
         .execute(
             AuthContext::Anonymous,
             RegistrierungStarten {
-                email: "person6@muster.at".to_owned(),
-                kunde: client,
+                email: adresse("person6@muster.at"),
+                client_key: client,
             },
         )
         .await;
-    assert_eq!(fehler_von(sechste.unwrap_err()), fehler_gedrosselt());
-}
-
-fn fehler_gedrosselt() -> String {
-    KontoDienstFehler::Gedrosselt.to_string()
+    assert_eq!(
+        text(sechste.unwrap_err()),
+        RegistrierungStartenFehler::Gedrosselt.to_string()
+    );
 }
 
 // ------------------------------------------------------------------------------- AC-17
 
+/// AC-17: a token is checked against the public key stored **on its own session row**.
+///
+/// Deleting the row is not a way out either: an unknown `sid` is a 401, never a 500 and
+/// never an implicit acceptance.
 #[test_log::test(pollster::test)]
-async fn ac17_außer_betrieb_gesetzter_schlüssel_wird_abgelehnt() {
-    let harness = harness().await;
-    let ausgestellt = registriere(&harness, "anna@muster.at").await;
-
-    harness
-        .app()
-        .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
-            let uow = ctx.enter().await?;
-            uow.signing_keys()
-                .außer_betrieb_nehmen(&helpers_kid(), ctx.clock().now())
-                .await?;
-            uow.commit().await
-        })
-        .await
-        .expect("der Schlüssel wird außer Betrieb genommen");
-
-    let danach = harness
-        .app()
-        .execute(
-            AuthContext::Anonymous,
-            SitzungPrüfen {
-                claims: ausgestellt.claims.clone(),
-            },
-        )
-        .await;
-    assert!(danach.is_err(), "ein stillgelegter kid ist ein 401");
-}
-
-fn helpers_kid() -> logandaim_core::domain::konto::SigningKeyId {
-    super::helpers::test_signing_key().kid().clone()
-}
-
-#[test_log::test(pollster::test)]
-async fn ac17_unbekannter_kid_wird_abgelehnt() {
+async fn ac17_unbekannte_sitzung_wird_abgelehnt() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
 
     let mut claims = ausgestellt.claims.clone();
-    claims.kid = logandaim_core::domain::konto::SigningKeyId::new("fremd").unwrap();
+    claims.sid = SessionId(uuid::Uuid::new_v4());
 
     let danach = harness
         .app()
-        .execute(AuthContext::Anonymous, SitzungPrüfen { claims })
+        .execute(AuthContext::Anonymous, pruefen(&harness, claims))
         .await;
-    assert!(danach.is_err(), "ein unbekannter kid ist ein 401");
+    assert!(danach.is_err(), "eine unbekannte Sitzung ist ein 401");
+}
+
+/// A signature that is well-formed but was made by another key does not verify against
+/// the public key the row carries — even when it names the same `kid`.
+#[test_log::test(pollster::test)]
+async fn ac17_fremder_schlüssel_passt_nicht_zur_sitzungszeile() {
+    let harness = harness().await;
+    let ausgestellt = registriere(&harness, "anna@muster.at").await;
+
+    let fremd = fremder_schluessel();
+    let danach = harness
+        .app()
+        .execute(
+            AuthContext::Anonymous,
+            pruefen_mit(&fremd, ausgestellt.claims.clone()),
+        )
+        .await;
+    assert!(
+        danach.is_err(),
+        "die Signatur muss zum gespeicherten public_key passen"
+    );
 }
 
 #[test_log::test(pollster::test)]
@@ -872,12 +866,13 @@ async fn ac17_widerrufene_sitzung_wird_trotz_gültigem_schlüssel_abgelehnt() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPrüfen {
-                claims: ausgestellt.claims.clone(),
-            },
+            pruefen(&harness, ausgestellt.claims.clone()),
         )
         .await;
-    assert!(danach.is_err());
+    assert!(
+        danach.is_err(),
+        "ein widerrufenes Sitzungs-Token ist ein 401, auch mit gültiger Signatur"
+    );
 }
 
 // ------------------------------------------------------------------------------- AC-18
@@ -893,9 +888,7 @@ async fn ac18_abgelaufenes_access_token_wird_abgelehnt() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPrüfen {
-                claims: ausgestellt.claims.clone(),
-            },
+            pruefen(&harness, ausgestellt.claims.clone()),
         )
         .await;
     assert!(danach.is_err(), "nach 24 Stunden ist das Token abgelaufen");
@@ -914,9 +907,10 @@ async fn ac14_fremden_benutzer_liest_nur_ein_systemadministrator() {
             let uow = ctx.enter().await?;
             let anna_id = uow
                 .konten()
-                .find_by_email(&EmailAdresse::new("anna@muster.at").unwrap())
+                .find_by_email(&adresse("anna@muster.at"))
                 .await?
                 .expect("die Adresse hat ein Konto")
+                .cloned_data()
                 .benutzer_id();
             // A Benutzer never exists without its Konto (rule 3), so the foreign identity
             // is seeded as a complete pair — otherwise the fixture, not the use case,
@@ -925,12 +919,11 @@ async fn ac14_fremden_benutzer_liest_nur_ein_systemadministrator() {
                 .benutzer()
                 .create(NeuerBenutzer::registrierung(ctx.clock().now()))
                 .await?;
-            let passwort = KlartextPasswort::neu(PASSWORT).expect("Testpasswort ist gültig");
-            let hash = hash_password(&passwort).expect("Passwort wird gehasht");
+            let hash = hash_password(&passwort()).expect("Passwort wird gehasht");
             uow.konten()
                 .create(NeuesKonto::neu(
                     fremd.id(),
-                    EmailAdresse::new("fremd@muster.at").unwrap(),
+                    adresse("fremd@muster.at"),
                     hash,
                     ctx.clock().now(),
                 ))
@@ -954,17 +947,21 @@ async fn ac14_fremden_benutzer_liest_nur_ein_systemadministrator() {
         )
         .await;
     assert_eq!(
-        fehler_von(fremd_als_benutzer.unwrap_err()),
-        KontoDienstFehler::NichtErlaubt.to_string()
+        text(fremd_als_benutzer.unwrap_err()),
+        BenutzerAnzeigenFehler::NichtErlaubt.to_string()
     );
 
-    // Promote Anna, then the same request succeeds.
+    // Promote Anna, then the same request succeeds. A plain domain mutation written back
+    // with `update`, so the repository stays a store and optimistic concurrency applies.
     harness
         .app()
         .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
             let uow = ctx.enter().await?;
+            let benutzer = uow.benutzer().find_by_id(anna_id).await?;
+            let mut neu = benutzer.cloned_data();
+            neu.befördere_zu_systemadministrator();
             uow.benutzer()
-                .setze_rolle(anna_id, Rolle::Systemadministrator)
+                .update(&Versioned::new(benutzer.v(), neu))
                 .await?;
             uow.commit().await
         })
@@ -992,7 +989,7 @@ async fn ac14_fremden_benutzer_liest_nur_ein_systemadministrator() {
 async fn ac19_die_mail_trägt_einen_aufrufbaren_link() {
     let harness = harness().await;
 
-    registrierung_starten(&harness, "anna@muster.at", kunde(40)).await;
+    registrierung_starten(&harness, "anna@muster.at", client_key(40)).await;
 
     let mail = harness.mail().einzige();
     assert_eq!(mail.betreff(), "Bestätige deine E-Mail-Adresse");

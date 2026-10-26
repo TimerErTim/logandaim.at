@@ -70,6 +70,7 @@ Three things stay ASCII, because something outside the compiler consumes them:
 3. **Words borrowed from English** (`Request`, `Issuer`, `Value`) are not transliterations, and
    the check ignores them.
 
-`mise run check:identifiers` (part of `mise run check`) enforces the rule in both directions:
-it fails on a transliterated German word, on a non-ASCII `mod` name, and on an umlaut inside an
-`env = "…"` literal.
+The rule is enforced by review, not by a task: no reliable scanner distinguishes a German word
+from a transliteration, so an automated check would pass the mistakes it exists to catch. The
+three ASCII exceptions above are named in `.cursor/AGENTS.md`, where every contributor and agent
+reads them.

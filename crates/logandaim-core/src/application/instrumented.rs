@@ -8,10 +8,10 @@ use crate::ResultReport;
 use crate::application::instrumented_repos::RepoStorage;
 use crate::application::uow::UnitOfWorkImpl;
 use crate::ports::{
-    BenutzerRepository, Drossel, DrosselAktion, DrosselFehler, EmailBestätigungRepository,
-    KontoRepository, KundeSchlüssel, Mail, MailFehler, MailSender, ObjectStore, ObjectStoreError,
-    ObjectStream, PasswortWiederherstellungRepository, PdfDokument, PdfRenderError, PdfRenderer,
-    RepositoryResult, SchussRepository, SessionRepository, SigningKeyRepository,
+    BenutzerRepository, ClientKey, EmailBestätigungRepository, KontoRepository, Mail, MailError,
+    MailSender, ObjectStore, ObjectStoreError, ObjectStream, PasswortWiederherstellungRepository,
+    PdfDokument, PdfRenderError, PdfRenderer, RepositoryResult, SchussRepository,
+    SessionRepository, Throttle, ThrottleAction, ThrottleError,
 };
 
 #[derive(Clone)]
@@ -63,35 +63,35 @@ impl PdfRenderer for InstrumentedPdfRenderer {
 }
 
 #[derive(Clone)]
-pub struct InstrumentedDrossel {
-    inner: Arc<dyn Drossel>,
+pub struct InstrumentedThrottle {
+    inner: Arc<dyn Throttle>,
 }
 
-impl InstrumentedDrossel {
-    pub fn new(inner: Arc<dyn Drossel>) -> Arc<dyn Drossel> {
+impl InstrumentedThrottle {
+    pub fn new(inner: Arc<dyn Throttle>) -> Arc<dyn Throttle> {
         Arc::new(Self { inner })
     }
 }
 
 #[async_trait]
-impl Drossel for InstrumentedDrossel {
-    #[instrument(skip(self, kunde), fields(aktion = aktion.as_str(), ip = %kunde.ip), level = "debug", err(Debug))]
-    async fn prüfe_und_zähle(
+impl Throttle for InstrumentedThrottle {
+    #[instrument(skip(self, client), fields(action = action.as_str(), ip = %client.ip), level = "debug", err(Debug))]
+    async fn check_and_count(
         &self,
-        kunde: &KundeSchlüssel,
-        aktion: DrosselAktion,
-        jetzt: chrono::DateTime<chrono::Utc>,
-    ) -> ResultReport<(), DrosselFehler> {
-        self.inner.prüfe_und_zähle(kunde, aktion, jetzt).await
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> ResultReport<(), ThrottleError> {
+        self.inner.check_and_count(client, action, now).await
     }
 
-    #[instrument(skip(self, kunde), fields(aktion = aktion.as_str(), ip = %kunde.ip), level = "debug", err(Debug))]
-    async fn zurücksetzen(
+    #[instrument(skip(self, client), fields(action = action.as_str(), ip = %client.ip), level = "debug", err(Debug))]
+    async fn reset(
         &self,
-        kunde: &KundeSchlüssel,
-        aktion: DrosselAktion,
-    ) -> ResultReport<(), DrosselFehler> {
-        self.inner.zurücksetzen(kunde, aktion).await
+        client: &ClientKey,
+        action: ThrottleAction,
+    ) -> ResultReport<(), ThrottleError> {
+        self.inner.reset(client, action).await
     }
 }
 
@@ -110,8 +110,8 @@ impl InstrumentedMailSender {
 impl MailSender for InstrumentedMailSender {
     // The body carries a single-use token, so it is never recorded in a span.
     #[instrument(skip(self, mail), fields(betreff = mail.betreff()), level = "debug", err(Debug))]
-    async fn senden(&self, mail: Mail) -> ResultReport<(), MailFehler> {
-        self.inner.senden(mail).await
+    async fn send(&self, mail: Mail) -> ResultReport<(), MailError> {
+        self.inner.send(mail).await
     }
 }
 
@@ -155,10 +155,6 @@ impl UnitOfWorkImpl for InstrumentedUnitOfWork {
 
     fn sessions(&self) -> &dyn SessionRepository {
         &self.storage.sessions
-    }
-
-    fn signing_keys(&self) -> &dyn SigningKeyRepository {
-        &self.storage.signing_keys
     }
 
     fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {

@@ -17,8 +17,9 @@
 //!
 //! Product nouns stay German (`Benutzer`, `Konto`, `EmailBestätigung`,
 //! `PasswortWiederherstellung`). Auth-technical terms are English, as German engineering
-//! usage has them: `Session`, `AccessToken`, `RefreshToken`, `SecretToken`, `TokenHash`,
-//! `SigningKey`, `PasswordHash`, `Signature`.
+//! usage has them: `Session`, `AccessToken`, `RefreshToken`, `SecretToken`,
+//! `SecretTokenHash`, `SigningKey`, `PasswordHash`, `Signature`. Timestamps are English too
+//! (`created_at`, `expires_at`, `spent_at`, `revoked_at`), matching the column names.
 //!
 //! ## The API owns the JWT envelope
 //!
@@ -26,6 +27,11 @@
 //! ([`AccessTokenClaims`]). It never writes or reads JSON, base64url, or a JOSE header:
 //! all of that is transport, it is only used at the HTTP edge, and it lives in
 //! `logandaim-api`. `logandaim-core` therefore depends on no serialization crate.
+//!
+//! ## Session rows are retained
+//!
+//! A session row is never deleted when it is spent, revoked, or expired: replay detection
+//! depends on still finding the row a spent refresh token names. See [`SessionIn`].
 
 use chrono::Duration;
 
@@ -34,27 +40,26 @@ mod bestaetigung;
 mod claims;
 mod konto;
 mod passwort;
+mod passwort_wiederherstellung;
 mod session;
 mod signing;
-mod signing_key;
+mod sitzung_ausgestellt;
 mod token;
-mod wiederherstellung;
 
 pub use benutzer::{Benutzer, BenutzerId, NeuerBenutzer, Rolle};
 pub use bestaetigung::{BestätigungId, EmailBestätigung, NeueBestätigung};
 pub use claims::AccessTokenClaims;
 pub use konto::{Konto, KontoId, NeuesKonto};
 pub use passwort::{KlartextPasswort, PasswordHash, dummy_verify, hash_password, verify_password};
-pub use session::{NeueSession, Session, SessionId};
-pub use signing::{SIGNATURE_BYTES, Signature, SigningKeypair};
-pub use signing_key::{SigningKey, SigningKeyId};
-pub use token::{
-    AccessToken, RefreshToken, SecretToken, TokenHash, generate_secret_token, hash_token,
-    token_hashes_equal,
+pub use passwort_wiederherstellung::{
+    NeuePasswortWiederherstellung, PasswortWiederherstellung, PasswortWiederherstellungId,
 };
-pub use wiederherstellung::{
-    NeueWiederherstellung, PasswortWiederherstellung, WiederherstellungId,
+pub use session::{
+    NeueSession, Session, SessionId, SessionIn, SessionNotLive, SessionState, state,
 };
+pub use signing::{SIGNATURE_BYTES, Signature, SigningKeyId, SigningKeypair};
+pub use sitzung_ausgestellt::{SitzungAusgestellt, claims_fuer};
+pub use token::{AccessToken, RefreshToken, SecretToken, SecretTokenHash};
 
 /// Shortest accepted Passwort, in characters.
 pub const MIN_PASSWORT_LÄNGE: usize = 8;

@@ -15,7 +15,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use super::{
-    BESTÄTIGUNG_LINK, E2eHarness, FRONTEND_BASIS_URL, ISSUER, PASSWORT, WIEDERHERSTELLUNG_LINK,
+    BESTÄTIGUNG_LINK, E2eHarness, FRONTEND_BASIS_URL, PASSWORT, WIEDERHERSTELLUNG_LINK,
     cookie_pair, mailpit,
 };
 
@@ -682,48 +682,69 @@ async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
 
 // ------------------------------------------------------------------ AC-17, AC-18, AC-19
 
-/// The harness clock's current instant, without importing the `Clock` trait at the call
-/// site.
-fn hardware_clock_now(harness: &E2eHarness) -> chrono::DateTime<chrono::Utc> {
-    use logandaim_core::ports::Clock;
-    harness.clock.now()
-}
-
-/// AC-17: an unexpired, correctly signed token is rejected once its `kid` row is retired or
-/// unknown. The signature is still valid — the *row* is what fails.
+/// AC-17: an access token is checked against the public key stored on its own session row.
+///
+/// Two failures, both 401: an unknown session, and a signature that does not verify with
+/// the key that row carries — even though the token's `kid` matches the configuration.
 #[test_log::test(pollster::test)]
-async fn ac17_außer_betrieb_gesetzter_oder_unbekannter_kid_wird_abgelehnt() {
+async fn ac17_signatur_wird_gegen_den_schlüssel_der_sitzungszeile_geprüft() {
     let harness = E2eHarness::new().await;
-    let (access, _, _, _) = registriere(&harness, "anna@muster.at").await;
+    let (access, _, benutzer_id, _) = registriere(&harness, "anna@muster.at").await;
 
     let (status, _) = harness.client.get_json_auth("/api/benutzer", &access).await;
     assert_eq!(status, StatusCode::OK);
 
-    // A token from another key with a different kid: refused at the envelope, before any
-    // database read.
-    let fremd = logandaim_api::auth::jwt::encode(
-        &logandaim_core::domain::konto::AccessTokenClaims {
-            sub: logandaim_core::domain::konto::BenutzerId(Uuid::nil()),
-            sid: logandaim_core::domain::konto::SessionId(Uuid::nil()),
-            kid: logandaim_core::domain::konto::SigningKeyId::new("unbekannt").unwrap(),
-            iss: ISSUER.into(),
-            aud: "logandaim-api".into(),
-            iat: hardware_clock_now(&harness),
-            exp: hardware_clock_now(&harness) + ACCESS_TOKEN_LIFETIME,
-            jti: "jti".into(),
-        },
-        &logandaim_core::domain::konto::SigningKeypair::from_secret_bytes(
-            logandaim_core::domain::konto::SigningKeyId::new("unbekannt").unwrap(),
-            &[9u8; 32],
-        ),
-    )
-    .expect("encoding succeeds");
+    // Take the live token apart and re-sign its claims with different key material under
+    // the *same* `kid`. The envelope is valid, so only the row's public key can reject it.
+    let gelesen = logandaim_api::auth::jwt::decode(&access).expect("unser Token parst");
+    let fremd = logandaim_core::adapters::InMemorySigning::from_secret_bytes(
+        gelesen.claims.kid.clone(),
+        &[9u8; 32],
+    );
+    let gefälscht =
+        logandaim_api::auth::jwt::encode(&gelesen.claims, &fremd).expect("encoding succeeds");
 
     let (status, _) = harness
         .client
-        .get_json_auth("/api/benutzer", fremd.as_str())
+        .get_json_auth("/api/benutzer", gefälscht.as_str())
         .await;
-    assert_eq!(status, StatusCode::UNAUTHORIZED, "unbekannter kid");
+    assert_eq!(
+        status,
+        StatusCode::UNAUTHORIZED,
+        "fremde Signatur unter demselben kid"
+    );
+
+    // An unknown session id (`sid`) is refused just as flatly: no row, no identity.
+    let mut unbekannt = gelesen.claims.clone();
+    unbekannt.sid = logandaim_core::domain::konto::SessionId(Uuid::nil());
+    let token = logandaim_api::auth::jwt::encode(&unbekannt, &super::test_signing_key())
+        .expect("encoding succeeds");
+    let (status, _) = harness
+        .client
+        .get_json_auth("/api/benutzer", token.as_str())
+        .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "unbekannte Sitzung");
+    assert!(!benutzer_id.is_empty());
+}
+
+/// AC-17: a revoked session fails even though its signature still verifies.
+#[test_log::test(pollster::test)]
+async fn ac17_widerrufene_sitzung_wird_abgelehnt() {
+    let harness = E2eHarness::new().await;
+    let (access, cookie, _, _) = registriere(&harness, "anna@muster.at").await;
+
+    let (status, _) = harness.client.get_json_auth("/api/benutzer", &access).await;
+    assert_eq!(status, StatusCode::OK);
+
+    // Logout names its session through the access token; the cookie is only cleared.
+    let (status, _, _) = harness
+        .client
+        .post_cookie_auth("/api/anmeldung/abmeldung", Some(&cookie), &access)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, _) = harness.client.get_json_auth("/api/benutzer", &access).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "die Sitzung ist beendet");
 }
 
 /// AC-18: a correctly signed, unrevoked token whose `exp` has passed is refused.

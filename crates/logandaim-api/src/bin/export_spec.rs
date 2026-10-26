@@ -12,11 +12,12 @@ use error_stack::Report;
 use logandaim_api::openapi_service;
 use logandaim_core::{
     App,
-    application::KontoKonfiguration,
-    domain::konto::{SigningKeyId, SigningKeypair},
+    adapters::InMemorySigning,
+    application::{KontoKonfiguration, ResultReport},
+    domain::konto::SigningKeyId,
     ports::{
-        Drossel, DrosselAktion, DrosselFehler, KundeSchlüssel, Mail, MailFehler, MailSender,
-        RepositoryResult,
+        ClientKey, Mail, MailError, MailSender, RepositoryResult, Throttle, ThrottleAction,
+        ThrottleError,
     },
     uow::{UnitOfWorkImpl, UnitOfWorkProvider},
 };
@@ -32,47 +33,47 @@ impl UnitOfWorkProvider for Unimplemented {
 
 /// Refuses every throttle check, so an accidental use during export fails loudly instead of
 /// silently pretending the port works.
-struct KeineDrossel;
+struct NoThrottle;
 
 #[async_trait]
-impl Drossel for KeineDrossel {
-    async fn prüfe_und_zähle(
+impl Throttle for NoThrottle {
+    async fn check_and_count(
         &self,
-        _kunde: &KundeSchlüssel,
-        _aktion: DrosselAktion,
-        _jetzt: DateTime<Utc>,
-    ) -> Result<(), Report<DrosselFehler>> {
-        Err(Report::new(DrosselFehler::NichtVerfügbar))
+        _client: &ClientKey,
+        _action: ThrottleAction,
+        _now: DateTime<Utc>,
+    ) -> ResultReport<(), ThrottleError> {
+        Err(Report::new(ThrottleError::Unavailable))
     }
 
-    async fn zurücksetzen(
+    async fn reset(
         &self,
-        _kunde: &KundeSchlüssel,
-        _aktion: DrosselAktion,
-    ) -> Result<(), Report<DrosselFehler>> {
-        Err(Report::new(DrosselFehler::NichtVerfügbar))
+        _client: &ClientKey,
+        _action: ThrottleAction,
+    ) -> ResultReport<(), ThrottleError> {
+        Err(Report::new(ThrottleError::Unavailable))
     }
 }
 
 /// Accepts nothing: the document is built from types, never by sending mail.
-struct KeinVersand;
+struct NoMailSender;
 
 #[async_trait]
-impl MailSender for KeinVersand {
-    async fn senden(&self, _mail: Mail) -> Result<(), Report<MailFehler>> {
-        Err(Report::new(MailFehler::NichtKonfiguriert))
+impl MailSender for NoMailSender {
+    async fn send(&self, _mail: Mail) -> ResultReport<(), MailError> {
+        Err(Report::new(MailError::NichtKonfiguriert))
     }
 }
 
 fn main() {
     let dummy_app = App::builder()
         .uow_provider(Box::new(Unimplemented))
-        .signing_key(SigningKeypair::from_secret_bytes(
+        .signing(Arc::new(InMemorySigning::from_secret_bytes(
             SigningKeyId::new("spec-export").expect("static kid is valid"),
             &[0u8; 32],
-        ))
-        .drossel(Arc::new(KeineDrossel))
-        .mail_sender(Arc::new(KeinVersand))
+        )))
+        .throttle(Arc::new(NoThrottle))
+        .mail_sender(Arc::new(NoMailSender))
         .konto(KontoKonfiguration::neu("logandaim.at", "logandaim-api"))
         .build();
 

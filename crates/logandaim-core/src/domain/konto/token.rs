@@ -11,7 +11,6 @@
 use std::fmt;
 
 use sha2::{Digest, Sha256};
-use subtle::ConstantTimeEq;
 use zeroize::Zeroizing;
 
 use super::KontoFehler;
@@ -19,37 +18,33 @@ use super::KontoFehler;
 /// Number of random bytes behind every mailed or cookie-borne token.
 const SECRET_TOKEN_BYTES: usize = 32;
 
+/// 32 random bytes encode to 43 base64url characters without padding.
+const BASIS64URL_LÄNGE: usize = 43;
+
 /// A token as it exists in the mail or in the cookie. Never logged, never stored.
+///
+/// The value is held as raw bytes, not as text: the base64url spelling is derived on
+/// demand, so no parse step can leave a half-decoded token behind, and the byte buffer is
+/// zeroized when the token is dropped.
 #[derive(Clone)]
-pub struct SecretToken(Zeroizing<String>);
+pub struct SecretToken(Zeroizing<[u8; SECRET_TOKEN_BYTES]>);
 
 impl SecretToken {
-    fn aus_basis64url(wert: String) -> Self {
-        Self(Zeroizing::new(wert))
+    /// Fresh 256-bit secret.
+    pub fn random() -> Result<Self, KontoFehler> {
+        let mut bytes = [0u8; SECRET_TOKEN_BYTES];
+        getrandom::fill(&mut bytes).map_err(|_| KontoFehler::ZufallFehlgeschlagen)?;
+        Ok(Self(Zeroizing::new(bytes)))
     }
 
-    /// Parse a token that arrived from the outside (mail link, cookie, request body).
-    ///
-    /// Only shape is checked here; whether it names a live row is the use case's job.
-    pub fn parse(wert: impl Into<String>) -> Result<Self, KontoFehler> {
-        let wert = wert.into();
-        let plausibel = wert.len() == BASIS64URL_LÄNGE
-            && wert
-                .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_');
-        if !plausibel {
-            return Err(KontoFehler::TokenUngültig);
-        }
-        Ok(Self::aus_basis64url(wert))
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
+    /// The base64url (unpadded) spelling a client sees in a link or a cookie.
+    pub fn base64url(&self) -> Zeroizing<String> {
+        Zeroizing::new(basis64url(&self.0[..]))
     }
 
     /// SHA-256 of the token, as stored.
-    pub fn hash(&self) -> TokenHash {
-        hash_token(self)
+    pub fn hash(&self) -> SecretTokenHash {
+        SecretTokenHash::from(self)
     }
 }
 
@@ -59,14 +54,39 @@ impl fmt::Debug for SecretToken {
     }
 }
 
-/// 32 random bytes encode to 43 base64url characters without padding.
-const BASIS64URL_LÄNGE: usize = 43;
+impl TryFrom<&str> for SecretToken {
+    type Error = KontoFehler;
+
+    /// Parse a token that arrived from the outside (mail link, cookie, request body).
+    ///
+    /// Only shape is checked here; whether it names a live row is the use case's job.
+    fn try_from(wert: &str) -> Result<Self, Self::Error> {
+        if wert.len() != BASIS64URL_LÄNGE
+            || !wert
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
+        {
+            return Err(KontoFehler::TokenUngültig);
+        }
+        let mut bytes = [0u8; SECRET_TOKEN_BYTES];
+        basis64url_decode(wert, &mut bytes)?;
+        Ok(Self(Zeroizing::new(bytes)))
+    }
+}
+
+impl TryFrom<String> for SecretToken {
+    type Error = KontoFehler;
+
+    fn try_from(wert: String) -> Result<Self, Self::Error> {
+        Self::try_from(wert.as_str())
+    }
+}
 
 /// SHA-256 digest of a [`SecretToken`], hex encoded: the only form that is stored.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct TokenHash(String);
+pub struct SecretTokenHash(String);
 
-impl TokenHash {
+impl SecretTokenHash {
     pub fn from_hex(hex: impl Into<String>) -> Result<Self, KontoFehler> {
         let hex = hex.into();
         let plausibel = hex.len() == 64 && hex.bytes().all(|byte| byte.is_ascii_hexdigit());
@@ -79,30 +99,43 @@ impl TokenHash {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+
+    /// Constant-time comparison, so a lookup that compares hashes leaks no timing signal.
+    ///
+    /// Every byte is visited and the differences are accumulated; there is no early return
+    /// and no branch on the value, which is what a plain `==` on `str` would introduce.
+    pub fn constant_time_eq(&self, other: &Self) -> bool {
+        constant_time_eq(self.0.as_bytes(), other.0.as_bytes())
+    }
 }
 
-/// Constant-time comparison, so a lookup that compares hashes leaks no timing signal.
-pub fn token_hashes_equal(links: &TokenHash, rechts: &TokenHash) -> bool {
-    links.0.as_bytes().ct_eq(rechts.0.as_bytes()).into()
+impl From<&SecretToken> for SecretTokenHash {
+    fn from(token: &SecretToken) -> Self {
+        // SHA-256 over the token text. Microseconds, unlike a Passwort.
+        let digest = Sha256::digest(basis64url(&token.0[..]).as_bytes());
+        Self(hex::encode(digest))
+    }
 }
 
-/// Fresh 256-bit secret, base64url encoded without padding.
-pub fn generate_secret_token() -> Result<SecretToken, KontoFehler> {
-    let mut bytes = [0u8; SECRET_TOKEN_BYTES];
-    getrandom::fill(&mut bytes).map_err(|_| KontoFehler::ZufallFehlgeschlagen)?;
-    Ok(SecretToken::aus_basis64url(basis64url(&bytes)))
-}
-
-/// SHA-256 over the token text. Microseconds, unlike a Passwort.
-pub fn hash_token(token: &SecretToken) -> TokenHash {
-    let digest = Sha256::digest(token.as_str().as_bytes());
-    TokenHash(hex::encode(digest))
-}
-
-/// An access token already assembled at the HTTP edge.
+/// Compare two byte slices without leaking where they differ.
 ///
-/// Opaque to core by design: JWT envelope, base64url, and JSON are transport, and only
-/// the API layer ever touches them (see the module doc of `signing.rs`).
+/// Lengths of stored hashes are public (every one is 64 hex characters), so a length
+/// mismatch may return early; the byte comparison itself accumulates every difference
+/// instead of returning at the first one.
+fn constant_time_eq(links: &[u8], rechts: &[u8]) -> bool {
+    if links.len() != rechts.len() {
+        return false;
+    }
+    let mut unterschied = 0u8;
+    for (links, rechts) in links.iter().zip(rechts) {
+        unterschied |= links ^ rechts;
+    }
+    unterschied == 0
+}
+
+/// A complete compact JWS: `header.payload.signature`, already base64url-encoded and
+/// assembled by the API edge, which owns the JOSE envelope. Core treats it as opaque text
+/// and never reads or writes its parts.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AccessToken(String);
 
@@ -119,25 +152,37 @@ impl AccessToken {
 /// The refresh token of one Anmelde-Sitzung, as handed to the client.
 ///
 /// The client sees this only through the `__Host-` cookie; core hands it out and takes it
-/// back, and stores nothing but its [`TokenHash`].
+/// back, and stores nothing but its [`SecretTokenHash`].
 #[derive(Debug, Clone)]
 pub struct RefreshToken(SecretToken);
 
 impl RefreshToken {
-    pub fn neu() -> Result<Self, KontoFehler> {
-        Ok(Self(generate_secret_token()?))
+    pub fn random() -> Result<Self, KontoFehler> {
+        Ok(Self(SecretToken::random()?))
     }
 
-    pub fn parse(wert: impl Into<String>) -> Result<Self, KontoFehler> {
-        Ok(Self(SecretToken::parse(wert)?))
+    pub fn base64url(&self) -> Zeroizing<String> {
+        self.0.base64url()
     }
 
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
-    }
-
-    pub fn hash(&self) -> TokenHash {
+    pub fn hash(&self) -> SecretTokenHash {
         self.0.hash()
+    }
+}
+
+impl TryFrom<&str> for RefreshToken {
+    type Error = KontoFehler;
+
+    fn try_from(wert: &str) -> Result<Self, Self::Error> {
+        Ok(Self(SecretToken::try_from(wert)?))
+    }
+}
+
+impl TryFrom<String> for RefreshToken {
+    type Error = KontoFehler;
+
+    fn try_from(wert: String) -> Result<Self, Self::Error> {
+        Self::try_from(wert.as_str())
     }
 }
 
@@ -161,67 +206,120 @@ fn basis64url(bytes: &[u8]) -> String {
     out
 }
 
+/// Decode 43 unpadded base64url characters into exactly 32 bytes.
+fn basis64url_decode(text: &str, out: &mut [u8; SECRET_TOKEN_BYTES]) -> Result<(), KontoFehler> {
+    let mut puffer: u32 = 0;
+    let mut bits = 0u32;
+    let mut index = 0usize;
+    for byte in text.bytes() {
+        let wert = match byte {
+            b'A'..=b'Z' => byte - b'A',
+            b'a'..=b'z' => byte - b'a' + 26,
+            b'0'..=b'9' => byte - b'0' + 52,
+            b'-' => 62,
+            b'_' => 63,
+            _ => return Err(KontoFehler::TokenUngültig),
+        };
+        puffer = (puffer << 6) | u32::from(wert);
+        bits += 6;
+        if bits >= 8 {
+            bits -= 8;
+            if index >= out.len() {
+                return Err(KontoFehler::TokenUngültig);
+            }
+            out[index] = ((puffer >> bits) & 0xff) as u8;
+            index += 1;
+        }
+    }
+    if index == out.len() {
+        Ok(())
+    } else {
+        Err(KontoFehler::TokenUngültig)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test_log::test]
     fn secret_token_hat_256_bit_und_basis64url_form() {
-        let token = generate_secret_token().unwrap();
-        assert_eq!(token.as_str().len(), BASIS64URL_LÄNGE);
-        assert!(SecretToken::parse(token.as_str()).is_ok());
+        let token = SecretToken::random().unwrap();
+        assert_eq!(token.base64url().len(), BASIS64URL_LÄNGE);
+        assert!(SecretToken::try_from(token.base64url().as_str()).is_ok());
     }
 
     #[test_log::test]
     fn zwei_tokens_sind_verschieden() {
-        let erster = generate_secret_token().unwrap();
-        let zweiter = generate_secret_token().unwrap();
-        assert_ne!(erster.as_str(), zweiter.as_str());
+        let erster = SecretToken::random().unwrap();
+        let zweiter = SecretToken::random().unwrap();
+        assert_ne!(erster.base64url().as_str(), zweiter.base64url().as_str());
+    }
+
+    #[test_log::test]
+    fn parsing_ist_ein_roundtrip_über_die_bytes() {
+        let token = SecretToken::random().unwrap();
+        let geladen = SecretToken::try_from(token.base64url().as_str()).unwrap();
+        assert_eq!(
+            token.base64url().as_str(),
+            geladen.base64url().as_str(),
+            "die Bytes überleben Kodierung und Dekodierung"
+        );
+        assert_eq!(token.hash(), geladen.hash());
     }
 
     #[test_log::test]
     fn token_hash_ist_sha256_hex() {
-        let token = SecretToken::parse("A".repeat(43)).unwrap();
-        let hash = hash_token(&token);
+        let token = SecretToken::try_from("A".repeat(43)).unwrap();
+        let hash = SecretTokenHash::from(&token);
         assert_eq!(hash.as_str().len(), 64);
-        // SHA-256 of 43 ASCII 'A's.
         let erwartet = hex::encode(Sha256::digest("A".repeat(43).as_bytes()));
         assert_eq!(hash.as_str(), erwartet);
     }
 
     #[test_log::test]
     fn hash_ist_stabil_und_vergleicht_konstantzeitig() {
-        let token = generate_secret_token().unwrap();
+        let token = SecretToken::random().unwrap();
         let erster = token.hash();
         let zweiter = token.hash();
-        assert!(token_hashes_equal(&erster, &zweiter));
-        assert!(!token_hashes_equal(
-            &erster,
-            &TokenHash::from_hex("0".repeat(64)).unwrap()
-        ));
+        assert!(erster.constant_time_eq(&zweiter));
+        assert!(!erster.constant_time_eq(&SecretTokenHash::from_hex("0".repeat(64)).unwrap()));
+    }
+
+    #[test_log::test]
+    fn konstantzeit_vergleich_erkennt_jedes_gekippte_byte() {
+        let basis = SecretTokenHash::from_hex("a".repeat(64)).unwrap();
+        for stelle in [0usize, 31, 63] {
+            let mut bytes = basis.as_str().as_bytes().to_vec();
+            bytes[stelle] = b'b';
+            let anders = SecretTokenHash::from_hex(String::from_utf8(bytes).unwrap()).unwrap();
+            assert!(!basis.constant_time_eq(&anders), "Byte {stelle}");
+        }
+        // Different lengths are unequal, and the comparison never panics.
+        assert!(!constant_time_eq(b"abc", b"abcd"));
     }
 
     #[test_log::test]
     fn falsch_geformte_tokens_werden_abgelehnt() {
-        assert!(SecretToken::parse("zu-kurz").is_err());
-        assert!(SecretToken::parse("!".repeat(43)).is_err());
-        assert!(SecretToken::parse("A".repeat(44)).is_err());
-        assert!(TokenHash::from_hex("zz".repeat(32)).is_err());
+        assert!(SecretToken::try_from("zu-kurz").is_err());
+        assert!(SecretToken::try_from("!".repeat(43).as_str()).is_err());
+        assert!(SecretToken::try_from("A".repeat(44).as_str()).is_err());
+        assert!(SecretTokenHash::from_hex("zz".repeat(32)).is_err());
     }
 
     #[test_log::test]
     fn debug_gibt_das_token_nicht_preis() {
-        let token = generate_secret_token().unwrap();
+        let token = SecretToken::random().unwrap();
         let text = format!("{token:?}");
-        assert!(!text.contains(token.as_str()));
+        assert!(!text.contains(token.base64url().as_str()));
         assert!(text.contains("redacted"));
     }
 
     #[test_log::test]
     fn refresh_token_roundtrip() {
-        let token = RefreshToken::neu().unwrap();
-        let geladen = RefreshToken::parse(token.as_str()).unwrap();
-        assert_eq!(token.as_str(), geladen.as_str());
+        let token = RefreshToken::random().unwrap();
+        let geladen = RefreshToken::try_from(token.base64url().as_str()).unwrap();
+        assert_eq!(token.base64url().as_str(), geladen.base64url().as_str());
         assert_eq!(token.hash(), geladen.hash());
     }
 }

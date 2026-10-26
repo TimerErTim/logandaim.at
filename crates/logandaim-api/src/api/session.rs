@@ -11,10 +11,13 @@
 //!   response that fails to touch the cookie leaves the previous one in the jar.
 //! - **`Cache-Control: no-store` on every variant**, including errors: an error body can
 //!   echo a token, and a cache keyed on the URL would serve it to the next caller.
+//!
+//! The error type is a generic parameter, not one shared enum: each use case owns its own
+//! error enum, and `HttpStatusMapping` is what turns any of them into a status.
 
+use error_stack::Report;
 use http::StatusCode;
-use logandaim_core::ResultReport;
-use logandaim_core::service::KontoDienstFehler;
+use logandaim_core::{ResultReport, ThreadSafeError};
 use poem_openapi::{
     ApiResponse,
     payload::{Json, PlainText},
@@ -23,7 +26,7 @@ use poem_openapi::{
 use crate::{
     api::AusgestellteSitzung,
     auth::cookie,
-    errors::{InternalServerError, StructuredError, status_from_report},
+    errors::{HttpStatusMapping, InternalServerError, StructuredError, status_from_report},
     schema::AnmeldeAntwort,
 };
 
@@ -57,7 +60,10 @@ pub enum SitzungAntwort {
 }
 
 impl SitzungAntwort {
-    pub fn neu(ergebnis: ResultReport<AusgestellteSitzung, KontoDienstFehler>) -> Self {
+    pub fn neu<E>(ergebnis: ResultReport<AusgestellteSitzung, E>) -> Self
+    where
+        E: ThreadSafeError + HttpStatusMapping,
+    {
         match ergebnis {
             Ok(ausgestellt) => Self::Ok(
                 Json(ausgestellt.antwort),
@@ -97,8 +103,12 @@ pub enum KontoAntwort<T: poem_openapi::types::ToJSON> {
     ),
 }
 
-impl<T: poem_openapi::types::ToJSON> From<ResultReport<T, KontoDienstFehler>> for KontoAntwort<T> {
-    fn from(ergebnis: ResultReport<T, KontoDienstFehler>) -> Self {
+impl<T, E> From<Result<T, Report<E>>> for KontoAntwort<T>
+where
+    T: poem_openapi::types::ToJSON,
+    E: ThreadSafeError + HttpStatusMapping,
+{
+    fn from(ergebnis: Result<T, Report<E>>) -> Self {
         match ergebnis {
             Ok(wert) => Self::Ok(Json(wert), NO_STORE.to_owned()),
             Err(fehler) => {
@@ -142,7 +152,10 @@ pub enum BeendendeAntwort<T: poem_openapi::types::ToJSON> {
 }
 
 impl<T: poem_openapi::types::ToJSON> BeendendeAntwort<T> {
-    pub fn neu(ergebnis: ResultReport<T, KontoDienstFehler>) -> Self {
+    pub fn neu<E>(ergebnis: ResultReport<T, E>) -> Self
+    where
+        E: ThreadSafeError + HttpStatusMapping,
+    {
         let gelöscht = cookie::löschen();
         match ergebnis {
             Ok(wert) => Self::Ok(Json(wert), gelöscht, NO_STORE.to_owned()),

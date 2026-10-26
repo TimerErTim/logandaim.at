@@ -52,16 +52,22 @@ Dependency rule: **inward only**. Core knows nothing about HTTP or SQLite.
 ## Language & naming
 
 Docs, comments, commit messages, and all non-domain source are **English**. German is reserved for
-the ubiquitous language: Rust types and modules, SQLite tables and columns, HTTP paths, JSON keys,
-and spec prose all use the spec's German term (`Anlage`, `Parcours`, `Ziel`, `Pflock`, `Runde`,
-`Schuss`, `Wertung`, `Wertungszone`).
+the ubiquitous language: domain types and fields (`Anlage`, `Parcours`, `Ziel`, `Pflock`, `Runde`,
+`Schuss`, `Wertung`, `Wertungszone`, `Benutzer`, `Konto`, `PasswortWiederherstellung`), SQLite
+tables and columns, HTTP paths, JSON keys, and spec prose.
 
-Naming ladder: `NeuerSchuss` (domain) → `SchussRegistrieren` (use case) → request DTO. German
-feature-slice file names (`schuss.rs`, not `model.rs` or `shot.rs`).
+Naming ladder: `NeuerSchuss` (domain) → `SchussRegistrieren` (use case) → request DTO. A use-case
+type keeps its German domain noun; the module it lives in does not.
+
+The application and infrastructure layers are English, because they are structure, not
+vocabulary: ports (`UserRepository`-style methods — `get_by_id`, `update`, `delete`), adapters,
+throttling, mail, and the use-case module files (`login.rs`, `registration.rs`, `password.rs`,
+`session.rs`, `user.rs`). A file is named for the English journey it covers, never for its German
+type.
 
 Use **proper UTF-8** in identifiers and persisted names. Never transliterate umlauts to
-`ae`/`oe`/`ue` (`naechste`, `strasse`). Prefer UTF-8 field names in schema types over ASCII fields
-plus `serde(rename)`.
+`ae`/`oe`/`ue` (`naechste`, `strasse`); never paper over it with `serde(rename)`. This is enforced
+by review, not by a task.
 
 ## Patterns an agent can silently break
 

@@ -8,7 +8,7 @@ use logandaim_core::{
     ports::{
         BenutzerRepository, EmailBestätigungRepository, KontoRepository,
         PasswortWiederherstellungRepository, RepositoryError, RepositoryResult, SchussRepository,
-        SessionRepository, SigningKeyRepository,
+        SessionRepository,
     },
     uow::{UnitOfWorkImpl, UnitOfWorkProvider},
 };
@@ -19,7 +19,6 @@ use crate::{
     repos::{
         SQLiteBenutzerRepository, SQLiteEmailBestätigungRepository, SQLiteKontoRepository,
         SQLitePasswortWiederherstellungRepository, SQLiteSchussRepository, SQLiteSessionRepository,
-        SQLiteSigningKeyRepository,
     },
 };
 
@@ -33,7 +32,6 @@ pub struct SQLiteUnitOfWork {
     benutzer_repo: SQLiteBenutzerRepository,
     konto_repo: SQLiteKontoRepository,
     session_repo: SQLiteSessionRepository,
-    signing_key_repo: SQLiteSigningKeyRepository,
     bestätigung_repo: SQLiteEmailBestätigungRepository,
     wiederherstellung_repo: SQLitePasswortWiederherstellungRepository,
 }
@@ -53,7 +51,6 @@ impl UnitOfWorkProvider for SQLiteInstance {
             benutzer_repo: SQLiteBenutzerRepository { tx: tx.clone() },
             konto_repo: SQLiteKontoRepository { tx: tx.clone() },
             session_repo: SQLiteSessionRepository { tx: tx.clone() },
-            signing_key_repo: SQLiteSigningKeyRepository { tx: tx.clone() },
             bestätigung_repo: SQLiteEmailBestätigungRepository { tx: tx.clone() },
             wiederherstellung_repo: SQLitePasswortWiederherstellungRepository { tx: tx.clone() },
             tx,
@@ -96,10 +93,6 @@ impl UnitOfWorkImpl for SQLiteUnitOfWork {
 
     fn sessions(&self) -> &dyn SessionRepository {
         &self.session_repo
-    }
-
-    fn signing_keys(&self) -> &dyn SigningKeyRepository {
-        &self.signing_key_repo
     }
 
     fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {

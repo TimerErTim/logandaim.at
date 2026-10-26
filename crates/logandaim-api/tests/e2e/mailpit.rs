@@ -32,8 +32,7 @@ pub async fn erreichbar() -> bool {
 pub async fn verlange_mailpit() {
     assert!(
         erreichbar().await,
-        "Mailpit ist unter {} nicht erreichbar. Starte ihn mit `mise daemons start mailpit` \
-         (oder `mise run run:mailpit`).",
+        "Mailpit ist unter {} nicht erreichbar. Starte ihn mit `mise daemons start mailpit`.",
         basis_url()
     );
 }

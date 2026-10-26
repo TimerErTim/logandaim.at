@@ -5,12 +5,12 @@
 use lettre::message::header::Subject;
 use logandaim_core::{
     domain::EmailAdresse,
-    ports::{Mail, MailFehler},
+    ports::{Mail, MailError},
 };
 use logandaim_smtp::{SmtpKonfiguration, SmtpMailSender};
 
 fn absender() -> EmailAdresse {
-    EmailAdresse::new("noreply@logandaim.at").expect("static address is valid")
+    EmailAdresse::normalisiert("noreply@logandaim.at").expect("static address is valid")
 }
 
 fn sender() -> SmtpMailSender {
@@ -23,7 +23,7 @@ fn sender() -> SmtpMailSender {
 async fn die_nachricht_trägt_empfänger_betreff_und_klartext_rumpf() {
     let sender = sender();
     let mail = Mail::email_bestätigung(
-        EmailAdresse::new("anna@muster.at").expect("address is valid"),
+        EmailAdresse::normalisiert("anna@muster.at").expect("address is valid"),
         "abc",
     );
 
@@ -67,14 +67,14 @@ async fn eine_ungültige_adresse_ist_ein_zustellungsfehler() {
     let sender = sender();
     // `EmailAdresse` only checks for `@` and `.`; the space makes the mailbox unparseable.
     let mail = Mail::email_bestätigung(
-        EmailAdresse::new("anna muster@muster.at").expect("domain address is lenient"),
+        EmailAdresse::normalisiert("anna muster@muster.at").expect("domain address is lenient"),
         "abc",
     );
 
     let fehler = sender
         .baue_nachricht(&mail)
         .expect_err("die Adresse lässt sich nicht als Mailbox parsen");
-    assert!(matches!(fehler.current_context(), MailFehler::Zustellung));
+    assert!(matches!(fehler.current_context(), MailError::Zustellung));
 }
 
 /// Undo `quoted-printable`: soft line breaks and `=XX` escapes both have to go before a

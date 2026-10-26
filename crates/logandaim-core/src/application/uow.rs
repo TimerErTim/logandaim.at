@@ -10,7 +10,7 @@ use crate::application::ThreadSafeError;
 use crate::ports::{
     BenutzerRepository, EmailBestätigungRepository, KontoRepository,
     PasswortWiederherstellungRepository, RepositoryError, RepositoryResult, SchussRepository,
-    SessionRepository, SigningKeyRepository,
+    SessionRepository,
 };
 
 /// Active unit of work. `commit` / `rollback` consume it.
@@ -116,10 +116,6 @@ impl UnitOfWork<'_> {
         self.as_impl().sessions()
     }
 
-    pub fn signing_keys(&self) -> &dyn SigningKeyRepository {
-        self.as_impl().signing_keys()
-    }
-
     pub fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {
         self.as_impl().bestätigungen()
     }
@@ -173,10 +169,6 @@ impl UnitOfWorkImpl for LockedUnitOfWorkImpl<'_> {
         self.inner.sessions()
     }
 
-    fn signing_keys(&self) -> &dyn SigningKeyRepository {
-        self.inner.signing_keys()
-    }
-
     fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {
         self.inner.bestätigungen()
     }
@@ -200,8 +192,6 @@ pub trait UnitOfWorkImpl: Send + Sync {
     fn konten(&self) -> &dyn KontoRepository;
 
     fn sessions(&self) -> &dyn SessionRepository;
-
-    fn signing_keys(&self) -> &dyn SigningKeyRepository;
 
     fn bestätigungen(&self) -> &dyn EmailBestätigungRepository;
 

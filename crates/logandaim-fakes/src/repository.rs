@@ -13,7 +13,7 @@ use logandaim_core::{
 use crate::konto::KontoDatastore;
 use crate::konto::{
     FakeBenutzerRepository, FakeEmailBestätigungRepository, FakeKontoRepository,
-    FakePasswortWiederherstellungRepository, FakeSessionRepository, FakeSigningKeyRepository,
+    FakePasswortWiederherstellungRepository, FakeSessionRepository,
 };
 
 /// In-memory backing store. One map per aggregate; feature slices add a field — or, when
@@ -103,7 +103,6 @@ pub struct KontoRepositories {
     pub benutzer: FakeBenutzerRepository,
     pub konten: FakeKontoRepository,
     pub sessions: FakeSessionRepository,
-    pub signing_keys: FakeSigningKeyRepository,
     pub bestätigungen: FakeEmailBestätigungRepository,
     pub wiederherstellungen: FakePasswortWiederherstellungRepository,
 }
@@ -114,7 +113,6 @@ impl KontoRepositories {
             benutzer: FakeBenutzerRepository::new(Arc::clone(&datastore)),
             konten: FakeKontoRepository::new(Arc::clone(&datastore)),
             sessions: FakeSessionRepository::new(Arc::clone(&datastore)),
-            signing_keys: FakeSigningKeyRepository::new(Arc::clone(&datastore)),
             bestätigungen: FakeEmailBestätigungRepository::new(Arc::clone(&datastore)),
             wiederherstellungen: FakePasswortWiederherstellungRepository::new(datastore),
         }

@@ -6,7 +6,7 @@
 //!
 //! Configuration is data, not behaviour: credentials arrive from deployment configuration
 //! and the relay is either Mailpit on loopback (development, tests) or the production
-//! relay. A send failure is returned as [`MailFehler::Zustellung`]; the calling use case
+//! relay. A send failure is returned as [`MailError::Zustellung`]; the calling use case
 //! logs it instead of failing the request that triggered it (SPEC-konto NFR-5).
 
 use async_trait::async_trait;
@@ -19,7 +19,7 @@ use lettre::{
 use logandaim_core::{
     ResultReport,
     domain::EmailAdresse,
-    ports::{Mail, MailFehler, MailSender},
+    ports::{Mail, MailError, MailSender},
 };
 
 /// How the adapter talks to the relay.
@@ -72,7 +72,7 @@ pub struct SmtpMailSender {
 
 impl SmtpMailSender {
     /// Build the transport once and reuse its connection pool across sends.
-    pub fn neu(konfiguration: SmtpKonfiguration) -> ResultReport<Self, MailFehler> {
+    pub fn neu(konfiguration: SmtpKonfiguration) -> ResultReport<Self, MailError> {
         let mut builder = match konfiguration.verschlüsselung {
             Verschlüsselung::Klar => {
                 AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(konfiguration.host.clone())
@@ -81,12 +81,12 @@ impl SmtpMailSender {
             Verschlüsselung::StartTls => {
                 let builder =
                     AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&konfiguration.host)
-                        .change_context(MailFehler::NichtKonfiguriert)?;
+                        .change_context(MailError::NichtKonfiguriert)?;
                 builder.port(konfiguration.port)
             }
             Verschlüsselung::Implizit => {
                 let builder = AsyncSmtpTransport::<Tokio1Executor>::relay(&konfiguration.host)
-                    .change_context(MailFehler::NichtKonfiguriert)?;
+                    .change_context(MailError::NichtKonfiguriert)?;
                 builder.port(konfiguration.port)
             }
         };
@@ -107,20 +107,20 @@ impl SmtpMailSender {
     /// Build the wire message. Separate from sending so a unit test can assert recipient,
     /// subject, and body without a relay. This is where a token becomes a link: the
     /// use case does not know the frontend origin and must not know the route table.
-    pub fn baue_nachricht(&self, mail: &Mail) -> ResultReport<Message, MailFehler> {
+    pub fn baue_nachricht(&self, mail: &Mail) -> ResultReport<Message, MailError> {
         let von = Mailbox::new(
             self.konfiguration.absender_name.clone(),
             self.konfiguration
                 .absender
                 .as_ref()
                 .parse()
-                .change_context(MailFehler::Zustellung)?,
+                .change_context(MailError::Zustellung)?,
         );
         let an = mail
             .empfänger
             .as_ref()
             .parse()
-            .change_context(MailFehler::Zustellung)?;
+            .change_context(MailError::Zustellung)?;
 
         Message::builder()
             .from(von)
@@ -129,19 +129,19 @@ impl SmtpMailSender {
             .header(ContentType::TEXT_PLAIN)
             .body(mail.text(&self.konfiguration.frontend_basis_url))
             .map_err(IntoReport::into_report)
-            .change_context(MailFehler::Zustellung)
+            .change_context(MailError::Zustellung)
     }
 }
 
 #[async_trait]
 impl MailSender for SmtpMailSender {
-    async fn senden(&self, mail: Mail) -> ResultReport<(), MailFehler> {
+    async fn send(&self, mail: Mail) -> ResultReport<(), MailError> {
         let nachricht = self.baue_nachricht(&mail)?;
         self.transport
             .send(nachricht)
             .await
             .map_err(IntoReport::into_report)
-            .change_context(MailFehler::Zustellung)?;
+            .change_context(MailError::Zustellung)?;
         Ok(())
     }
 }
@@ -156,7 +156,7 @@ pub struct KeinVersand;
 
 #[async_trait]
 impl MailSender for KeinVersand {
-    async fn senden(&self, _mail: Mail) -> ResultReport<(), MailFehler> {
-        Err(error_stack::Report::new(MailFehler::NichtKonfiguriert))
+    async fn send(&self, _mail: Mail) -> ResultReport<(), MailError> {
+        Err(error_stack::Report::new(MailError::NichtKonfiguriert))
     }
 }

@@ -1,4 +1,4 @@
-//! Ed25519 signing over raw bytes.
+//! Ed25519 signing over raw bytes, and the key id a token header names.
 //!
 //! The domain owns the algorithm, the key material, and the claim *semantics*. It does not
 //! own the token's envelope: base64url, JOSE headers, and JSON are transport, they are only
@@ -10,7 +10,9 @@
 //!
 //! - `logandaim-core` gains no `serde_json`, no `base64`, and no JOSE dependency.
 //! - There is no `Signer` port. Swapping the algorithm invalidates every issued token, so
-//!   it must be a domain refactor, not a wiring line.
+//!   it must be a domain refactor, not a wiring line. Applications reach the algorithm
+//!   through the [`Signing`](crate::ports::Signing) port, which wraps *key material*, not
+//!   the algorithm.
 
 use std::fmt;
 
@@ -18,10 +20,36 @@ use ed25519_dalek::pkcs8::DecodePrivateKey;
 use ed25519_dalek::{Signer, Verifier};
 use zeroize::Zeroizing;
 
-use super::{KontoFehler, SigningKeyId};
+use super::KontoFehler;
 
 /// Length of a raw Ed25519 signature.
 pub const SIGNATURE_BYTES: usize = 64;
+
+/// Identity of a signing key: the `kid` an access token header names.
+///
+/// Ids come from configuration and are published in the token header, so the shape is
+/// constrained to something that is safe in a JOSE header and readable in a log line.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SigningKeyId(String);
+
+impl SigningKeyId {
+    pub fn new(wert: impl Into<String>) -> Result<Self, KontoFehler> {
+        let wert = wert.into();
+        let plausibel = !wert.is_empty()
+            && wert.len() <= 64
+            && wert
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_');
+        if !plausibel {
+            return Err(KontoFehler::SigningKeyUngültig);
+        }
+        Ok(Self(wert))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
 
 /// A raw 64-byte Ed25519 signature. The API base64url-encodes it; core never does.
 #[derive(Clone, PartialEq, Eq)]
@@ -52,7 +80,7 @@ impl fmt::Debug for Signature {
     }
 }
 
-/// The configured private key plus the row id it is published under.
+/// The configured private key plus the id it is published under.
 ///
 /// Built once at startup from deployment configuration. The private half never reaches a
 /// database, a log line, or an error: `Debug` prints the `kid` only, and the seed is
@@ -96,7 +124,8 @@ impl SigningKeypair {
         &self.kid
     }
 
-    /// Hex-encoded 32-byte public key, exactly what the `signing_keys` row stores.
+    /// Hex-encoded 32-byte public key. Every session row stores this, so an access token is
+    /// verified against the key its own session was issued under.
     pub fn public_key_hex(&self) -> String {
         hex::encode(self.schlüssel.verifying_key().to_bytes())
     }
@@ -115,7 +144,7 @@ impl SigningKeypair {
             .map_err(|_| KontoFehler::SignaturUngültig)
     }
 
-    /// Verify with a public key that arrived from a key row, so a request signed by a
+    /// Verify with a public key that arrived from a stored row, so a request signed by a
     /// different key is rejected even when that key is valid on its own.
     pub fn verify_with_public_key_hex(
         öffentlicher_schlüssel_hex: &str,
@@ -183,7 +212,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn public_key_verifikation_über_die_schlüsselzeile() {
+    fn public_key_verifikation_über_die_gespeicherte_zeile() {
         let signierer = keypair(6);
         let signatur = signierer.sign(b"header.payload");
         let hex = signierer.public_key_hex();
@@ -221,5 +250,12 @@ mod tests {
             "-----BEGIN PRIVATE KEY-----\nnope\n-----END PRIVATE KEY-----",
         );
         assert!(matches!(ergebnis, Err(KontoFehler::SigningKeyUngültig)));
+    }
+
+    #[test_log::test]
+    fn signing_key_id_wird_geprüft() {
+        assert!(SigningKeyId::new("").is_err());
+        assert!(SigningKeyId::new("mit leerzeichen").is_err());
+        assert!(SigningKeyId::new("k-2026_10").is_ok());
     }
 }

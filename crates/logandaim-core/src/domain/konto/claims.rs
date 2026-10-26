@@ -16,7 +16,8 @@ pub struct AccessTokenClaims {
     pub sub: BenutzerId,
     /// The Anmelde-Sitzung whose revoked state decides acceptance.
     pub sid: SessionId,
-    /// The signing key row that must be active.
+    /// The key id the token was signed under. It must equal the `kid` stored on the
+    /// session row, and the signature must verify against that row's `public_key`.
     pub kid: SigningKeyId,
     pub iss: String,
     pub aud: String,

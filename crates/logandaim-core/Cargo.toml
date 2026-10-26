@@ -25,7 +25,6 @@ argon2 = { workspace = true }
 ed25519-dalek = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
-subtle = { workspace = true }
 zeroize = { workspace = true }
 getrandom = { workspace = true }
 

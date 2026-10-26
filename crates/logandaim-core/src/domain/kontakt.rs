@@ -13,43 +13,42 @@ pub struct EmailAdresse(String);
 const MAX_EMAIL_LÄNGE: usize = 254;
 
 impl EmailAdresse {
-    pub fn new<S: AsRef<str>>(s: S) -> Result<Self, EmailAdresseValidierungsfehler> {
-        let s_ref = s.as_ref();
-        if s_ref.contains('@') && s_ref.contains('.') {
-            Ok(Self(s_ref.to_string()))
-        } else {
-            Err(EmailAdresseValidierungsfehler(s_ref.to_string()))
-        }
-    }
-
-    /// The login identifier of a [`Konto`](crate::domain::konto::Konto): trimmed, lowercase,
-    /// and unique across all Konten (SPEC-konto rule 2).
+    /// The one constructor: trimmed, lowercased, and validated.
     ///
-    /// Folding stops at case: dots and `+` suffixes stay, because they are different
-    /// mailboxes on providers other than Gmail, and merging them would hand one person
-    /// another person's account.
+    /// This is the login identifier of a [`Konto`](crate::domain::konto::Konto). Folding
+    /// stops at case: dots and `+` suffixes stay, because they are different mailboxes on
+    /// providers other than Gmail, and merging them would hand one person another person's
+    /// account.
+    ///
+    /// Every adapter loads a stored address through this constructor too, so a value that
+    /// reaches the domain is normalised no matter which path it took. There is no second
+    /// constructor and no unchecked variant: a bypass would be the one way to get an
+    /// unnormalised address into the product.
     pub fn normalisiert<S: AsRef<str>>(s: S) -> Result<Self, EmailAdresseValidierungsfehler> {
         let roh = s.as_ref();
-        let getrimmt = roh.trim();
-        let normalisiert = getrimmt.to_lowercase();
+        let normalisiert = roh.trim().to_lowercase();
         if normalisiert.len() > MAX_EMAIL_LÄNGE {
             return Err(EmailAdresseValidierungsfehler(roh.to_string()));
         }
-        EmailAdresse::new(normalisiert)
+        if normalisiert.contains('@') && normalisiert.contains('.') {
+            Ok(Self(normalisiert))
+        } else {
+            Err(EmailAdresseValidierungsfehler(roh.to_string()))
+        }
     }
 }
 
 impl TryFrom<String> for EmailAdresse {
     type Error = EmailAdresseValidierungsfehler;
     fn try_from(s: String) -> Result<Self, Self::Error> {
-        EmailAdresse::new(s)
+        EmailAdresse::normalisiert(s)
     }
 }
 
 impl TryFrom<&str> for EmailAdresse {
     type Error = EmailAdresseValidierungsfehler;
     fn try_from(s: &str) -> Result<Self, Self::Error> {
-        EmailAdresse::new(s)
+        EmailAdresse::normalisiert(s)
     }
 }
 
@@ -111,18 +110,26 @@ mod tests {
 
     #[test_log::test]
     fn email_accepts_valid_address() {
-        let email = EmailAdresse::new("anna@muster.de").unwrap();
+        let email = EmailAdresse::normalisiert("anna@muster.de").unwrap();
         assert_eq!(email.as_ref(), "anna@muster.de");
     }
 
     #[test_log::test]
     fn email_rejects_missing_at() {
-        assert!(EmailAdresse::new("anna.muster.de").is_err());
+        assert!(EmailAdresse::normalisiert("anna.muster.de").is_err());
     }
 
     #[test_log::test]
     fn email_rejects_missing_dot() {
-        assert!(EmailAdresse::new("anna@musterde").is_err());
+        assert!(EmailAdresse::normalisiert("anna@musterde").is_err());
+    }
+
+    #[test_log::test]
+    fn try_from_normalisiert_ebenfalls() {
+        let aus_string = EmailAdresse::try_from(" Anna@Example.AT ".to_owned()).unwrap();
+        let aus_str = EmailAdresse::try_from(" Anna@Example.AT ").unwrap();
+        assert_eq!(aus_string, aus_str);
+        assert_eq!(aus_str.as_ref(), "anna@example.at");
     }
 
     #[test_log::test]
