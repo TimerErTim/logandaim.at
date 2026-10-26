@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const actions = navActionsForPathname(pathname);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-100 dark:bg-zinc-950">
+    <div className="flex h-screen overflow-hidden bg-canvas">
       <input id="main-drawer" type="checkbox" className="peer hidden" />
 
       <Sidebar
@@ -37,13 +37,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       />
 
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80">
+        <header className="sticky top-0 z-30 border-b border-subtle bg-surface">
           <div className="flex h-14 items-center gap-3 px-4">
             <label
               htmlFor="main-drawer"
-              className="cursor-pointer rounded-lg p-2 hover:bg-zinc-100 lg:hidden dark:hover:bg-zinc-900"
+              className="inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-ink hover:bg-surface-muted lg:hidden"
             >
               <Menu className="size-5" />
+              <span className="sr-only">Navigation öffnen</span>
             </label>
 
             <nav
@@ -56,17 +57,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className="flex items-center"
                 >
                   {index > 0 ? (
-                    <span className="mx-1 text-zinc-400">/</span>
+                    <span className="mx-1 text-secondary">/</span>
                   ) : null}
                   {crumb.href ? (
                     <Link
                       href={crumb.href}
-                      className="rounded-md px-2 py-1 font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                      className="rounded-sm px-2 py-1 font-medium text-ink hover:bg-surface-muted"
                     >
                       {crumb.label}
                     </Link>
                   ) : (
-                    <span className="px-2 py-1 font-semibold text-zinc-900 dark:text-zinc-100">
+                    <span className="px-2 py-1 font-semibold text-ink">
                       {crumb.label}
                     </span>
                   )}

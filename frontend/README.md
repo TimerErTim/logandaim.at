@@ -16,6 +16,42 @@ mise run dev:frontend+server
 npm run build
 ```
 
+Dev-only routes are gated by the Next phase in `next.config.ts`: `.dev.tsx` / `.dev.ts` page
+extensions are added only for `next dev`, so a route written as `page.dev.tsx` cannot reach the
+static export.
+
+## Design system
+
+**Read [`.cursor/rules/design-system.mdc`](../.cursor/rules/design-system.mdc) before changing UI.**
+It is the operative rulebook — tokens, components, accessibility, screen composition. Rationale and
+history are in [`specs/product/visual-identity.md`](../specs/product/visual-identity.md); do not
+restate either document here.
+
+Three things this README adds:
+
+- **Values**: every colour, radius, shadow, and font lives in `src/app/globals.css`. Raw palette
+  classes and hex values in a component are rejected by `mise run check:design`.
+- **Primitives**: `src/components/ui/`, variants declared via `class-variance-authority`. Add
+  variants there, not at call sites.
+- **Gallery**: `mise run dev:frontend`, then open `/dev`. Light and dark side by side, per-token
+  contrast checks, a touch-target overlay, and one composed page. It needs no backend.
+
+## Metadata and icons
+
+The favicon set and the web manifest are the single copy in `public/`
+(`favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png`,
+`android-chrome-*.png`, `site.webmanifest`). They live there rather than in `src/app/` so the
+brand assets are one set, not a second file-convention copy.
+
+`src/app/layout.tsx` links them explicitly and prefixes every URL with
+`NEXT_PUBLIC_LOGANDAIM_BASE_PATH`. Next applies the base path to file-convention metadata it
+generates itself, but not to hand-written `metadata.icons` / `metadata.manifest` URLs, so the
+prefix has to be added by hand. Manifest icon and `start_url` entries are relative on purpose:
+they resolve against the manifest's own URL and follow the deployment prefix without help.
+The manifest's `background_color` / `theme_color` mirror `--bg-canvas` and `--color-primary`;
+JSON cannot hold a `var()`, so those two are the only literal palette values outside
+`globals.css`. Change them only together with the tokens.
+
 ## Configuration
 
 There is no runtime configuration file: every value is a `NEXT_PUBLIC_*` variable read at build time.

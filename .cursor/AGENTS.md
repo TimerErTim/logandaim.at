@@ -260,62 +260,60 @@ Next.js in `frontend/`. OpenAPI types at `frontend/src/api/schema.ts` (`mise run
 
 ### API layer
 
-- **`YamsApi`** (`src/api/yams-api.ts`) — framework-agnostic interface mirroring `YamsAppApi`.
-- **Adapter** — `HttpYamsApi` (openapi-fetch + schema paths) calls `yams-server`. In the browser the base URL comes from `NEXT_PUBLIC_LOGANDAIM_API_URL`; there is no runtime config file.
-- **Bootstrap** — `YamsApiProvider` creates the HTTP adapter; components never choose transport themselves.
+- **`LogandaimApi`** (`src/api/logandaim-api.ts`) — framework-agnostic interface; components never see HTTP. The adapter in `src/api/index.ts` is the seam for a wasm/embedded core later.
+- **Bootstrap** — `LogandaimApiProvider` (`src/api/provider.tsx`) creates the adapter once; `useLogandaimApi()` exposes it.
+- **Config** — `src/lib/config.ts` reads `NEXT_PUBLIC_*` at build time. There is no runtime config file.
 
 ### TanStack Query (server state)
 
-**All backend reads and writes go through TanStack Query hooks** in `frontend/src/api/hooks/` — not raw `useEffect` + `fetch`, not direct `YamsApi` calls in components.
+**All backend reads and writes go through the hooks in `frontend/src/api/hooks/`** — never raw `useEffect` + `fetch`, never a direct API call in a component.
 
 | Layer | Responsibility |
 |-------|----------------|
-| `YamsApi` + HTTP adapter | Transport only |
-| `api/hooks/queries.ts` | `useQuery` for reads (`useAlleHaustiereQuery`, …) |
-| `api/hooks/mutations.ts` | `useMutation` for writes; invalidate or update `query-keys` on success |
+| `LogandaimApi` + adapter | Transport only |
+| `api/hooks/queries.ts` | `useQuery` for reads |
+| `api/hooks/mutations.ts` | `useMutation` for writes; invalidate `query-keys` on success |
 | `api/query-keys.ts` | Hierarchical keys for targeted invalidation |
-| Components | Consume hooks; render `isPending` / `error` / `data` |
+| Components | Consume hooks; render `isPending` / `isError` / `data` |
 
-**Rules:**
+1. **New endpoint** — add the method to `LogandaimApi`, a key in `query-keys.ts`, and a hook in `queries.ts` or `mutations.ts`; use the hook in UI.
+2. **Mutations** invalidate the smallest matching key prefix. **No duplicate server state** — use `queryClient.setQueryData` for optimistic updates instead of copying data into `useState`.
+3. **Defaults** — `createQueryClient()` (`src/lib/query-client.ts`): 30s `staleTime`, refetch on window focus, no mutation retries.
 
-1. **Queries** — `enabled: isReady` from `useYamsApiReady()` so nothing runs before the adapter exists.
-2. **Mutations** — call `YamsApi` inside `mutationFn`; on success invalidate the smallest matching key prefix (e.g. `yamsKeys.haustiere.all()` after create).
-3. **No duplicate server state** — do not copy query results into local `useState`; use `queryClient.setQueryData` when optimistically updating cache.
-4. **New endpoint** — add method to `YamsApi` and `HttpYamsApi`, a key in `query-keys.ts`, and a hook in `queries.ts` or `mutations.ts`; use the hook in UI.
-5. **Defaults** — `createQueryClient()` (`src/lib/query-client.ts`): 30s `staleTime`, refetch on window focus, mutations do not retry.
+**Remote dev** — Next and the API need different ports (`mise run dev:frontend+server` gives API `:3000`, Next `:3001`). Cross-origin fetch needs CORS on the server; use matching hostnames (`localhost` vs `127.0.0.1`) in both URLs.
 
-`QueryClientProvider` wraps `YamsApiProvider` in `src/app/providers.tsx`.
+### UI: read the design rule first
 
-**Remote dev (browser + `yams-server`)** — Next and the API must use different ports (`mise run dev:frontend+server`: API `:3000`, Next `:3001`). Cross-origin fetch requires CORS on `yams-server` (localhost / 127.0.0.1). Set `NEXT_PUBLIC_LOGANDAIM_API_URL` when the API is not at `http://127.0.0.1:3000/api` (the value `mise run dev:frontend` sets). Use matching hostnames (`localhost` vs `127.0.0.1`) in the browser URL and API URL.
+**UI work starts by reading [`.cursor/rules/design-system.mdc`](rules/design-system.mdc).** It is the
+operative rulebook: tokens, components, accessibility, screen composition, and the gallery. Do not
+restate or second-guess it here; if the rule and this file disagree, the rule wins for appearance and
+this file wins for architecture.
 
-### UI design (legacy parity)
+The short version an agent must not get wrong:
 
-Recreate **workflow and visual language** from the legacy frontend, not its stack (MobX, HeroUI, Pages Router).
-
-| Legacy pattern | New frontend |
-|----------------|--------------|
-| Sidebar categories (Management) | `components/layout/sidebar.tsx` + `lib/navigation.ts` |
-| Top navbar breadcrumbs + page actions | `components/layout/app-shell.tsx` |
-| Entity tables with expandable rows | `components/klient/klient-table.tsx`, `components/ui/table.tsx` |
-| Card forms for create flows | `components/klient/klient-register-form.tsx` + workflow cards |
-| Events overview (filter/search/list) | `components/seminar/seminar-overview.tsx` |
-| Open Leistungen + Tagesabschluss | `components/abrechnung/abrechnung-panel.tsx` |
-
-**Philosophy**
-
-1. **Route = task** — `/klient`, `/katalog`, `/seminar`, `/abrechnung`, `/objekte`; home redirects to `/klient`. Dynamic entity views use query params (`/klient/detail?id=…`) — no `[param]` segments (static export).
-2. **Shell first** — every page renders inside `AppShell` via root `layout.tsx` + `AppChrome`; page-specific actions come from `navActionsForPathname`.
-3. **German UL in UI** — labels match domain (`Klient`, `Behandlung`, `Tagesabschluss`); English only in code/comments.
-4. **Lists are scannable** — prefer sticky-header tables + inline expansion over card stacks for master data.
-5. **Workflows stay focused** — Abrechnung: offene Leistungen + Tagesabschluss. Leistung buchen, Katalog, Seminar, Klient/Haustier sind eigenständige Verwaltungsseiten (kein linearer Wizard).
-6. **Server state via TanStack Query only** — pages consume hooks; no MobX/local mirrors of API lists.
-7. **No theme/language pickers** — single default styling; KIS over personalization chrome.
+- **Values live in `frontend/src/app/globals.css` only.** Use semantic utilities (`bg-surface`,
+  `text-ink`, `text-secondary`, `border-subtle`, `bg-primary`), never raw palette classes, never hex.
+  `mise run check:design` fails the gate otherwise.
+- **Review surface**: `/dev` (`page.dev.tsx`, dev phase only) shows every component in light and dark
+  with live contrast checks, a touch-target overlay, and one composed page. Look at it before claiming
+  a UI change is fine; a page can fail where every specimen passes.
+- **Identity is the PO's.** Propose changes by editing tokens and looking at `/dev`; never invent
+  brand direction, and put a superseded direction in the spec decision log, not on the page.
+- **Same-commit obligation**: a new token, changed pairing, new variant, or changed convention updates
+  the rule and [`specs/product/visual-identity.md`](../specs/product/visual-identity.md) in the same
+  commit.
+- **Accessibility**: 44×44 px targets (verified by hit-testing, not by reading computed styles),
+  visible focus, no colour-only meaning, contrast as a gate. See the rule.
 
 **Key paths**
 
-- Layout shell: `frontend/src/app/layout.tsx`, `frontend/src/components/layout/app-chrome.tsx`
+- Root layout and `<head>` metadata: `frontend/src/app/layout.tsx`
+- Layout shell: `frontend/src/components/layout/` (`app-chrome`, `app-shell`, `sidebar`, `page-chrome`)
 - Navigation config: `frontend/src/lib/navigation.ts`
-- Klient management: `frontend/src/app/klient/**`, `frontend/src/components/klient/**`
+- Design tokens and paper patterns: `frontend/src/app/globals.css`
+- UI primitives and paper furniture: `frontend/src/components/ui/`
+- Component gallery: `frontend/src/app/dev/page.dev.tsx`, `frontend/src/components/dev-gallery/`
+- Brand assets: `assets/` (source), `frontend/public/` (served)
 
 ## Version Control
 

@@ -1,43 +1,406 @@
 @import "tailwindcss";
 
-:root {
-  --background: #fafafa;
-  --foreground: #171717;
-  --surface: #ffffff;
-  --surface-muted: #f4f4f5;
-  --border: #e4e4e7;
-  --primary: #059669;
+/*
+ * Design tokens — Sleek Paperstyle.
+ *
+ * A warm, tactile logbook on paper, rendered with the speed and precision of a web
+ * app: warm uncoated paper, fine pencil lines, one hunter green as the only accent,
+ * and generous white space. Paper is flat — surfaces and hairlines carry the
+ * structure, never leather, embossing, or 3D.
+ *
+ * This file is the single source of truth for every colour, radius, shadow, and font
+ * value in the app. The variable names are the design system's canonical names
+ * (`--bg-canvas`, `--text-primary`, `--semantic-impact`, …); the `@theme inline`
+ * block republishes them as Tailwind utilities (`bg-surface`, `text-muted-foreground`,
+ * `border-border`, …). Components use those utilities and never a raw palette class
+ * or a hex literal.
+ *
+ * The palette is strict and semantic. There are no decoration colours: every value
+ * below is paper, ink, the one brand green, or an explicit meaning. A new hue is not
+ * a design choice, it is a palette change, and it goes through this file and the
+ * rulebook together.
+ *
+ * Roles, at a glance:
+ *   --bg-canvas      the desk     --bg-surface      a sheet on it
+ *   --bg-elevated    a raised sheet (inputs, menus, modals)
+ *   --border-subtle  the pencil line   --border-strong  a field's contour
+ *   --color-primary  the one accent    --semantic-*     meaning, never decoration
+ *
+ * Contrast: values that carry text meet WCAG 2.2 AA (4.5:1). Three prescribed values
+ * do not meet it as text, so they are restricted to the roles the guide gives them
+ * and are never used for words on paper:
+ *   - `--text-muted` (#9E9A93, 2.48:1) is placeholders and disabled controls only.
+ *     Disabled text is exempt; placeholder contrast is a known, documented exception.
+ *   - `--semantic-warning` (#D97706, 3.08:1) is a mark, wash, and border. Where a
+ *     warning must be read as text, the label is ink on the amber wash, not amber.
+ *   - `--border-strong` (#CFCAC0, 1.58:1) is a 1px contour, not a text carrier.
+ *   - `--semantic-success` (#15803D) measures 4.45:1 on canvas and 4.85:1 on surface,
+ *     so it is only used for text on `--bg-surface`, never on the darker canvas.
+ */
+
+/* Class-based dark mode so the gallery can render light and dark side by side. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Light: paper on a desk. */
+:root,
+.light {
+  /* Surface & paper */
+  --bg-canvas: #f4f1ea;
+  --bg-surface: #fdfbf7;
+  --bg-elevated: #ffffff;
+  --border-subtle: #e6e2d8;
+  --border-strong: #cfcac0;
+  /* A drawn control's boundary. Needs 3:1 (WCAG 1.4.11), so it is ink-strong. */
+  --border-control: #6e6a64;
+
+  /* Typography & ink */
+  --text-primary: #2c2a29;
+  --text-secondary: #6e6a64;
+  --text-muted: #9e9a93;
+
+  /* The one accent */
+  --color-primary: #1b3b2b;
+  --color-primary-hover: #12291e;
+  --color-primary-subtle: #e8efea;
+  --primary-foreground: #fdfbf7;
+
+  /* Meaning only */
+  --semantic-impact: #a82b2b;
+  --semantic-warning: #d97706;
+  --semantic-success: #15803d;
+  --semantic-info: #3b6e8c;
+
+  /* A second sheet, one step off the desk */
+  --bg-surface-muted: #f0ece3;
+
+  --radius: 0.375rem;
+  --shadow-paper:
+    0 1px 2px rgba(44, 42, 41, 0.04), 0 4px 12px rgba(44, 42, 41, 0.03);
+  --shadow-overlay:
+    0 2px 4px rgba(44, 42, 41, 0.05), 0 12px 32px rgba(44, 42, 41, 0.08);
 }
 
+/*
+ * Dark: the same logbook read by lamplight. Warm charcoal, never pure black and
+ * never cold blue-grey. A raised sheet is lighter than the one beneath it, so
+ * elevation still reads without a shadow; the hunter green lightens to sage so it
+ * keeps its contrast instead of glowing, and paper shadows disappear because they
+ * only muddy a dark surface.
+ */
+.dark {
+  --bg-canvas: #16130f;
+  --bg-surface: #1e1b16;
+  --bg-elevated: #262219;
+  --border-subtle: #3a3630;
+  --border-strong: #4a453d;
+  /* A drawn control's boundary. Needs 3:1 (WCAG 1.4.11), so it is ink-strong. */
+  --border-control: #7d766a;
+
+  --text-primary: #ede8de;
+  --text-secondary: #a8a297;
+  --text-muted: #6e6960;
+
+  --color-primary: #7fb08c;
+  --color-primary-hover: #8fbf9b;
+  --color-primary-subtle: #232e26;
+  --primary-foreground: #12100d;
+
+  --semantic-impact: #e8908a;
+  --semantic-warning: #e0a94f;
+  --semantic-success: #7fbf8f;
+  --semantic-info: #7fa8c4;
+
+  --bg-surface-muted: #24201a;
+
+  --radius: 0.375rem;
+  --shadow-paper: none;
+  --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* System preference is the default; `.light` opts a subtree back out. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --bg-canvas: #16130f;
+    --bg-surface: #1e1b16;
+    --bg-elevated: #262219;
+    --border-subtle: #3a3630;
+    --border-strong: #4a453d;
+    --border-control: #7d766a;
+
+    --text-primary: #ede8de;
+    --text-secondary: #a8a297;
+    --text-muted: #6e6960;
+
+    --color-primary: #7fb08c;
+    --color-primary-hover: #8fbf9b;
+    --color-primary-subtle: #232e26;
+    --primary-foreground: #12100d;
+
+    --semantic-impact: #e8908a;
+    --semantic-warning: #e0a94f;
+    --semantic-success: #7fbf8f;
+    --semantic-info: #7fa8c4;
+
+    --bg-surface-muted: #24201a;
+
+    --radius: 0.375rem;
+    --shadow-paper: none;
+    --shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/*
+ * Tokens to Tailwind utilities, one to one. There is exactly one name per colour
+ * across the whole app: the utility suffix is the token suffix, with `--color-` and
+ * `--bg-` stripped. No aliases, no second vocabulary.
+ *
+ *   --bg-canvas          → bg-canvas
+ *   --bg-surface         → bg-surface
+ *   --bg-elevated        → bg-elevated
+ *   --bg-surface-muted   → bg-surface-muted
+ *   --border-subtle      → border-subtle
+ *   --border-strong      → border-strong
+ *   --text-primary       → text-ink        (ink is called ink; primary is the brand)
+ *   --text-secondary     → text-secondary
+ *   --text-muted         → text-muted
+ *   --color-primary      → bg-primary, text-primary, border-primary, …
+ *   --semantic-impact    → text-impact, bg-impact, border-impact, …
+ *
+ * The `text-primary` collision is why ink is `text-ink`: the design system gives
+ * "primary" to the one brand colour, so the brand owns every `primary` utility.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-surface: var(--surface);
-  --color-surface-muted: var(--surface-muted);
-  --color-border: var(--border);
-  --color-primary: var(--primary);
-  --font-sans: var(--font-geist-sans);
+  /* Surface & paper */
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-surface-muted: var(--bg-surface-muted);
+
+  /* Ruling: `subtle`, `strong`, and `control` are border-only names. */
+  --color-subtle: var(--border-subtle);
+  --color-strong: var(--border-strong);
+  --color-control: var(--border-control);
+  /* Ink */
+  --color-ink: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+
+  /* The one accent */
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-subtle: var(--color-primary-subtle);
+  --color-primary-foreground: var(--primary-foreground);
+
+  /* Meaning only */
+  --color-impact: var(--semantic-impact);
+  --color-warning: var(--semantic-warning);
+  --color-success: var(--semantic-success);
+  --color-info: var(--semantic-info);
+
+  /* 4 px to 6 px: angular paper, never a pill. */
+  --radius-sm: calc(var(--radius) - 0.125rem);
+  --radius-md: calc(var(--radius) - 0.0625rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.125rem);
+
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-lora);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  /* Paper has tooth: slightly tighter text and tabular figures everywhere by default. */
+  font-feature-settings: "cv05", "tnum";
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #09090b;
-    --foreground: #fafafa;
-    --surface: #09090b;
-    --surface-muted: #18181b;
-    --border: #27272a;
-    --primary: #10b981;
-  }
+/*
+ * A sheet of paper: a hairline and a whisper of shadow. In dark mode the shadow is
+ * `none`, so the hairline alone separates the sheet from the desk.
+ */
+.paper {
+  box-shadow: var(--shadow-paper);
 }
 
-.table-shell {
-  box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.04),
-    0 4px 12px rgb(0 0 0 / 0.04);
+/* An overlay that genuinely floats above the page: dialog, menu, tooltip. */
+.paper-overlay {
+  box-shadow: var(--shadow-overlay);
+}
+
+/*
+ * The ruled line: small ticks along a hairline, like the printed ruling of a form.
+ * Sections are divided by this, never by empty space alone.
+ */
+.rule-ticks {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--border-subtle) 0 1px,
+    transparent 1px 8px
+  );
+}
+
+/* The same ruling at reduced strength, for the rule under a header. */
+.rule-ticks-quiet {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--border-subtle) 0 1px,
+    transparent 1px 8px
+  );
+  opacity: 0.9;
+}
+
+/*
+ * The select chevron, drawn as a masked shape so it takes `currentColor` and flips
+ * with the theme. A data-URI background cannot read a CSS variable; a mask can.
+ */
+.select-chevron {
+  position: relative;
+}
+.select-chevron::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  width: 0.625rem;
+  height: 0.375rem;
+  transform: translateY(-50%);
+  background-color: currentColor;
+  opacity: 0.75;
+  pointer-events: none;
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/*
+ * The checkbox tick. Drawn as a mask in `--primary-foreground`, so it sits on the
+ * filled hunter-green box and flips with the theme instead of hardcoding white.
+ */
+.checkbox-tick:checked {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  background-image: none;
+}
+.checkbox-tick:checked::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: var(--primary-foreground);
+  -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+/*
+ * The hachure wall: diagonal `///////` strokes, the cartographer's way of filling a
+ * slope and the logbook's way of resting the eye between two blocks. Unintrusive by
+ * construction — a hairline at 55 % and generous gaps — so it separates without
+ * becoming an ornament. Never used as a border on content.
+ */
+.hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--border-subtle) 0 1px,
+    transparent 1px 7px
+  );
+  opacity: 0.75;
+}
+
+/* The same strokes at a heavier weight, for a wall that must hold a full section. */
+.hatch-dense {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--border-strong) 0 1.5px,
+    transparent 1.5px 5px
+  );
+  opacity: 0.5;
+}
+
+/*
+ * A perforation: the tear line of a bound page, drawn as short dashes so it reads as
+ * "this sheet can be separated" rather than as a rule between sections.
+ */
+.perforation {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--border-strong) 0 2px,
+    transparent 2px 7px
+  );
+  opacity: 0.65;
+}
+
+/*
+ * A ruler edge: a graduated scale along one side of a block, subdividing every
+ * 5 px with a taller line every fourth. The page is a measuring surface, so a block
+ * may state its own scale instead of borrowing an icon that means "measure".
+ *
+ * Drawn from `--border-subtle`; the marks are structure, never emphasis.
+ */
+.ruler-edge {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--border-subtle) 0 1px,
+    transparent 1px 5px
+  );
+  background-size: 4px 100%;
+  background-repeat: no-repeat;
+}
+
+/*
+ * A dog-eared corner: the page has been turned down, so the sheet remembers it was
+ * read. A folded triangle in the top corner, drawn with borders so it takes the
+ * paper colour and the hairline from tokens and needs no image.
+ *
+ * Purely decorative — never the only sign that something is new or unread.
+ */
+.dog-ear::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0.75rem 0.75rem 0;
+  border-color: transparent var(--bg-canvas) transparent transparent;
+  filter: drop-shadow(-1px 1px 0 var(--border-subtle));
+}
+
+/* A dotted leader between a label and its value, as in a printed index. */
+.leader {
+  background-image: radial-gradient(
+    circle,
+    var(--border-subtle) 1px,
+    transparent 1px
+  );
+  background-size: 6px 6px;
+  background-position: bottom;
+  background-repeat: repeat-x;
+}
+
+/*
+ * The millimetre grid: fine graph paper drawn from `--border-strong` at reduced
+ * strength, with a heavier line every fifth division. Used behind data drawings.
+ */
+.millimetre-grid {
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      var(--border-strong) 0 1px,
+      transparent 1px 6px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      var(--border-strong) 0 1px,
+      transparent 1px 6px
+    );
+  opacity: 0.35;
 }

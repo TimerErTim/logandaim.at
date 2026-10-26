@@ -22,7 +22,7 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-zinc-200 bg-white transition-transform dark:border-zinc-800 dark:bg-zinc-950",
+        "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-subtle bg-surface transition-transform",
         "-translate-x-full lg:static lg:translate-x-0",
         "peer-checked:translate-x-0",
       )}
@@ -32,10 +32,10 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
           <Link
             href={homeItem.href}
             className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "flex min-h-11 w-full items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition-colors",
               homeActive
-                ? "bg-emerald-600 text-white"
-                : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900",
+                ? "bg-primary text-primary-foreground"
+                : "text-ink hover:bg-surface-muted",
             )}
           >
             <HomeIcon className="size-5" />
@@ -46,7 +46,7 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
         <div className="flex-1 space-y-8">
           {categories.map((category) => (
             <div key={category.label} className="space-y-2">
-              <h3 className="px-2 text-xs font-semibold tracking-wider text-zinc-500 uppercase">
+              <h3 className="px-2 text-xs font-semibold tracking-wider text-secondary uppercase">
                 {category.label}
               </h3>
               <div className="space-y-1">
@@ -57,10 +57,17 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
             </div>
           ))}
         </div>
-
-        <BrandFooter />
       </div>
     </aside>
+  );
+}
+
+function NavMarkierung() {
+  return (
+    <span
+      aria-hidden="true"
+      className="h-4 w-0.5 shrink-0 rounded-sm bg-primary"
+    />
   );
 }
 
@@ -71,33 +78,17 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
   return (
     <Link
       href={item.href}
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+        "flex min-h-11 w-full items-center gap-3 rounded-sm px-3 py-2 text-sm transition-colors",
         active
-          ? "bg-emerald-50 font-semibold text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
-          : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900",
+          ? "bg-primary/10 font-semibold text-ink"
+          : "text-ink hover:bg-surface-muted",
       )}
     >
+      {active ? <NavMarkierung /> : null}
       <Icon className="size-5" />
       {item.label}
     </Link>
-  );
-}
-
-function BrandFooter() {
-  return (
-    <div className="mt-auto border-t border-zinc-200 pt-6 dark:border-zinc-800">
-      <div className="px-2">
-        <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-emerald-600 text-lg font-bold text-white">
-          EP
-        </div>
-        <div className="text-xs leading-tight text-zinc-500">
-          <p className="font-semibold text-zinc-800 dark:text-zinc-200">
-            Energetik Sabine Petschl
-          </p>
-          <p>Wohlfühlen für Mensch und Tier</p>
-        </div>
-      </div>
-    </div>
   );
 }

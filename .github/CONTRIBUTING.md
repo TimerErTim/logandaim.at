@@ -244,6 +244,22 @@ Agent session loop:
 6. Update `CHANGELOG.md` and the spec's `issues:` list.
 7. Open a pull request from the template, targeting `dev`. Report commands and results.
 
+## Code comments
+
+Comments are an **information source, not a log of decisions**. They exist to explain the technical
+*why* a reader cannot derive from the code: a non-obvious constraint, a platform or browser quirk, a
+workaround for a defect elsewhere, an invariant that must hold. They are not a place to record that a
+decision was made, that a review asked for something, or what an earlier version did.
+
+- **Keep** the reason something surprising is the way it is, especially when the obvious alternative
+  is wrong.
+- **Omit** restatements of the code, "as discussed", review provenance, change history, and
+  explanations of a choice that is already evident. History belongs in the commit message, PR, spec
+  decision log, or ADR.
+- **Prefer deleting** an obsolete comment over rewriting it; a stale comment is worse than none.
+- The same bar applies to `mise` task files, `.mdc` rules, and READMEs: state the constraint, not the
+  decision trail.
+
 ## Commits
 
 Conventional commits (`feat(backend): …`, `fix(frontend): …`, `docs(specs): …`, `chore(ci): …`).
