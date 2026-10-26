@@ -7501,7 +7501,7 @@
       "node_kind": "heading",
       "norm_label": "alternatives considered",
       "source_file": "specs/decisions/0002-session-cookie-auth.md",
-      "source_location": "L81"
+      "source_location": "L87"
     },
     {
       "id": "specs_decisions_0002_session_cookie_auth_api_surface_sketch",
@@ -7513,7 +7513,7 @@
       "node_kind": "heading",
       "norm_label": "api surface (sketch)",
       "source_file": "specs/decisions/0002-session-cookie-auth.md",
-      "source_location": "L119"
+      "source_location": "L125"
     },
     {
       "id": "specs_decisions_0002_session_cookie_auth_appendix_implementation_sketch_non_normative",
@@ -7525,7 +7525,7 @@
       "node_kind": "heading",
       "norm_label": "appendix: implementation sketch (non-normative)",
       "source_file": "specs/decisions/0002-session-cookie-auth.md",
-      "source_location": "L100"
+      "source_location": "L106"
     },
     {
       "id": "specs_decisions_0002_session_cookie_auth_consequences",
@@ -7537,7 +7537,7 @@
       "node_kind": "heading",
       "norm_label": "consequences",
       "source_file": "specs/decisions/0002-session-cookie-auth.md",
-      "source_location": "L63"
+      "source_location": "L69"
     },
     {
       "id": "specs_decisions_0002_session_cookie_auth_context",
@@ -7561,7 +7561,7 @@
       "node_kind": "heading",
       "norm_label": "data model (sketch)",
       "source_file": "specs/decisions/0002-session-cookie-auth.md",
-      "source_location": "L106"
+      "source_location": "L112"
     },
     {
       "id": "specs_decisions_0002_session_cookie_auth_decision",
@@ -12021,7 +12021,7 @@
       "node_kind": "heading",
       "norm_label": "acceptance criteria",
       "source_file": "specs/product/konto.md",
-      "source_location": "L163"
+      "source_location": "L172"
     },
     {
       "id": "specs_product_konto_account_security",
@@ -12033,7 +12033,7 @@
       "node_kind": "heading",
       "norm_label": "account security",
       "source_file": "specs/product/konto.md",
-      "source_location": "L273"
+      "source_location": "L285"
     },
     {
       "id": "specs_product_konto_administration",
@@ -12045,7 +12045,7 @@
       "node_kind": "heading",
       "norm_label": "administration",
       "source_file": "specs/product/konto.md",
-      "source_location": "L353"
+      "source_location": "L365"
     },
     {
       "id": "specs_product_konto_auth_audit",
@@ -12057,7 +12057,7 @@
       "node_kind": "heading",
       "norm_label": "auth audit",
       "source_file": "specs/product/konto.md",
-      "source_location": "L370"
+      "source_location": "L382"
     },
     {
       "id": "specs_product_konto_decision_log",
@@ -12069,7 +12069,7 @@
       "node_kind": "heading",
       "norm_label": "decision log",
       "source_file": "specs/product/konto.md",
-      "source_location": "L423"
+      "source_location": "L442"
     },
     {
       "id": "specs_product_konto_deferred_capabilities",
@@ -12081,7 +12081,7 @@
       "node_kind": "heading",
       "norm_label": "deferred capabilities",
       "source_file": "specs/product/konto.md",
-      "source_location": "L206"
+      "source_location": "L218"
     },
     {
       "id": "specs_product_konto_domain_terms_and_business_rules",
@@ -12093,7 +12093,7 @@
       "node_kind": "heading",
       "norm_label": "domain terms and business rules",
       "source_file": "specs/product/konto.md",
-      "source_location": "L73"
+      "source_location": "L74"
     },
     {
       "id": "specs_product_konto_email_change",
@@ -12105,7 +12105,7 @@
       "node_kind": "heading",
       "norm_label": "email change",
       "source_file": "specs/product/konto.md",
-      "source_location": "L256"
+      "source_location": "L268"
     },
     {
       "id": "specs_product_konto_email_delivery",
@@ -12117,7 +12117,7 @@
       "node_kind": "heading",
       "norm_label": "email delivery",
       "source_file": "specs/product/konto.md",
-      "source_location": "L213"
+      "source_location": "L225"
     },
     {
       "id": "specs_product_konto_email_verification",
@@ -12129,7 +12129,7 @@
       "node_kind": "heading",
       "norm_label": "email verification",
       "source_file": "specs/product/konto.md",
-      "source_location": "L237"
+      "source_location": "L249"
     },
     {
       "id": "specs_product_konto_external_identity_providers",
@@ -12141,7 +12141,7 @@
       "node_kind": "heading",
       "norm_label": "external identity providers",
       "source_file": "specs/product/konto.md",
-      "source_location": "L313"
+      "source_location": "L325"
     },
     {
       "id": "specs_product_konto_implementation_sketches",
@@ -12153,7 +12153,7 @@
       "node_kind": "heading",
       "norm_label": "implementation sketches",
       "source_file": "specs/product/konto.md",
-      "source_location": "L156"
+      "source_location": "L165"
     },
     {
       "id": "specs_product_konto_konto_accounts_and_login",
@@ -12177,7 +12177,7 @@
       "node_kind": "heading",
       "norm_label": "mfa",
       "source_file": "specs/product/konto.md",
-      "source_location": "L288"
+      "source_location": "L300"
     },
     {
       "id": "specs_product_konto_notifications",
@@ -12189,7 +12189,7 @@
       "node_kind": "heading",
       "norm_label": "notifications",
       "source_file": "specs/product/konto.md",
-      "source_location": "L388"
+      "source_location": "L400"
     },
     {
       "id": "specs_product_konto_outcome",
@@ -12213,7 +12213,7 @@
       "node_kind": "heading",
       "norm_label": "passkeys",
       "source_file": "specs/product/konto.md",
-      "source_location": "L339"
+      "source_location": "L351"
     },
     {
       "id": "specs_product_konto_problem",
@@ -12237,7 +12237,7 @@
       "node_kind": "heading",
       "norm_label": "requirements",
       "source_file": "specs/product/konto.md",
-      "source_location": "L123"
+      "source_location": "L132"
     },
     {
       "id": "specs_product_konto_revision_history",
@@ -12249,7 +12249,7 @@
       "node_kind": "heading",
       "norm_label": "revision history",
       "source_file": "specs/product/konto.md",
-      "source_location": "L436"
+      "source_location": "L458"
     },
     {
       "id": "specs_product_konto_risks_and_open_questions",
@@ -12261,7 +12261,7 @@
       "node_kind": "heading",
       "norm_label": "risks and open questions",
       "source_file": "specs/product/konto.md",
-      "source_location": "L406"
+      "source_location": "L418"
     },
     {
       "id": "specs_product_konto_roles",
@@ -12309,7 +12309,7 @@
       "node_kind": "heading",
       "norm_label": "verification",
       "source_file": "specs/product/konto.md",
-      "source_location": "L416"
+      "source_location": "L435"
     },
     {
       "id": "crates_logandaim_core_src_application_uow_rs_c",
@@ -53452,7 +53452,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/decisions/0002-session-cookie-auth.md",
-      "source_location": "L100",
+      "source_location": "L106",
       "weight": 1.0
     },
     {
@@ -53485,7 +53485,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/decisions/0002-session-cookie-auth.md",
-      "source_location": "L63",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -53496,7 +53496,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/decisions/0002-session-cookie-auth.md",
-      "source_location": "L81",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -53507,7 +53507,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/decisions/0002-session-cookie-auth.md",
-      "source_location": "L106",
+      "source_location": "L112",
       "weight": 1.0
     },
     {
@@ -53518,7 +53518,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/decisions/0002-session-cookie-auth.md",
-      "source_location": "L119",
+      "source_location": "L125",
       "weight": 1.0
     },
     {
@@ -54464,7 +54464,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L213",
+      "source_location": "L225",
       "weight": 1.0
     },
     {
@@ -54475,7 +54475,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L237",
+      "source_location": "L249",
       "weight": 1.0
     },
     {
@@ -54486,7 +54486,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L256",
+      "source_location": "L268",
       "weight": 1.0
     },
     {
@@ -54497,7 +54497,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L273",
+      "source_location": "L285",
       "weight": 1.0
     },
     {
@@ -54508,7 +54508,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L288",
+      "source_location": "L300",
       "weight": 1.0
     },
     {
@@ -54519,7 +54519,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L313",
+      "source_location": "L325",
       "weight": 1.0
     },
     {
@@ -54530,7 +54530,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L339",
+      "source_location": "L351",
       "weight": 1.0
     },
     {
@@ -54541,7 +54541,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L353",
+      "source_location": "L365",
       "weight": 1.0
     },
     {
@@ -54552,7 +54552,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L370",
+      "source_location": "L382",
       "weight": 1.0
     },
     {
@@ -54563,7 +54563,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L388",
+      "source_location": "L400",
       "weight": 1.0
     },
     {
@@ -54585,7 +54585,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L123",
+      "source_location": "L132",
       "weight": 1.0
     },
     {
@@ -54596,7 +54596,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L156",
+      "source_location": "L165",
       "weight": 1.0
     },
     {
@@ -54607,7 +54607,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L163",
+      "source_location": "L172",
       "weight": 1.0
     },
     {
@@ -54629,7 +54629,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L206",
+      "source_location": "L218",
       "weight": 1.0
     },
     {
@@ -54662,7 +54662,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L406",
+      "source_location": "L418",
       "weight": 1.0
     },
     {
@@ -54673,7 +54673,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L416",
+      "source_location": "L435",
       "weight": 1.0
     },
     {
@@ -54684,7 +54684,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L423",
+      "source_location": "L442",
       "weight": 1.0
     },
     {
@@ -54695,7 +54695,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L436",
+      "source_location": "L458",
       "weight": 1.0
     },
     {
@@ -54717,7 +54717,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "specs/product/konto.md",
-      "source_location": "L73",
+      "source_location": "L74",
       "weight": 1.0
     },
     {
@@ -60959,5 +60959,5 @@
       "source_file": ".cursor/AGENTS.md"
     }
   ],
-  "built_at_commit": "39f207c1e7d2f3f872234e32f3f8d9355c9498df"
+  "built_at_commit": "414303566fd6b3f9fa01d27f6c8687d16031706e"
 }

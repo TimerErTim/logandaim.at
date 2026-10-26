@@ -378,8 +378,8 @@
     "semantic_hash": ""
   },
   "frontend/src/api/schema.ts": {
-    "mtime": 1792976118.0372157,
-    "seen": 1792976128.9330084,
+    "mtime": 1793006391.1726105,
+    "seen": 1793006451.0447972,
     "ast_hash": "b280187c1159e8ef8c1bd9a59c55490b",
     "semantic_hash": ""
   },
@@ -456,9 +456,9 @@
     "semantic_hash": ""
   },
   "specs/README.md": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.005643,
-    "ast_hash": "7238557d69a755aea6c64bd7be9a0924",
+    "mtime": 1793006439.5521202,
+    "seen": 1793006451.0481915,
+    "ast_hash": "0f3556bfdcf3bf8e3c4d5225f9663485",
     "semantic_hash": ""
   },
   "specs/_template.md": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "specs/decisions/0002-session-cookie-auth.md": {
-    "mtime": 1792884143.3770666,
-    "seen": 1792941435.0056467,
-    "ast_hash": "47238a4bc0acbdf84c57f093714ea34a",
+    "mtime": 1792978385.1399512,
+    "seen": 1792978414.6239483,
+    "ast_hash": "81830fcf5d81678f6f23bfa3b7c0ba86",
     "semantic_hash": ""
   },
   "specs/product/betrieb.md": {
@@ -552,15 +552,15 @@
     "semantic_hash": ""
   },
   "specs/product/datenschutz.md": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0057828,
-    "ast_hash": "a9895b50b5119acf2447db531f705e3d",
+    "mtime": 1792978379.2119672,
+    "seen": 1792978414.6242557,
+    "ast_hash": "8162d34be2a28798ee409b95228fe0e4",
     "semantic_hash": ""
   },
   "specs/product/konto.md": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0057843,
-    "ast_hash": "b3dd0daddcaf8a16b62783a99d6269ea",
+    "mtime": 1792978398.3999565,
+    "seen": 1792978414.6242573,
+    "ast_hash": "c19cfd9c8d182e942378440daea16f73",
     "semantic_hash": ""
   },
   "crates/logandaim-api/Cargo.toml": {
@@ -924,9 +924,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/README.md": {
-    "mtime": 1792769427.5058548,
-    "seen": 1792769546.5245361,
-    "ast_hash": "314a3dbeb01ab916c386311fedf82fcf",
+    "mtime": 1793006353.5788877,
+    "seen": 1793006366.128173,
+    "ast_hash": "a5e13fcbea4a362734f501364b3fc61c",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/api/requests/schuss.rs": {
