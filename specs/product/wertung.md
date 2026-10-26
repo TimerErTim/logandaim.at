@@ -23,7 +23,7 @@ arrow counts). The UI can show either or both.
 
 ## Roles
 
-- Schütze: enters Schüsse per Ziel, sees points in both Wertungen.
+- `Benutzer`: enters Schüsse per Ziel, sees points in both Wertungen.
 
 ## Scope
 

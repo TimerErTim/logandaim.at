@@ -24,9 +24,9 @@ alert that reaches a human, and a support path a user can find. Each is checkabl
 
 ## Roles
 
-- [`System-Administrator`](charter.md#roles): suspends abusive accounts, executes runbooks.
+- [`Systemadministrator`](charter.md#roles): suspends abusive accounts, executes runbooks.
 - Operator (the PO, not a product role): owns the VPS, the backup target, and the alert channel.
-- [`Schütze`](charter.md#roles): needs support and a reachable help path.
+- [`Benutzer`](charter.md#roles): needs support and a reachable help path.
 
 ## Scope
 
@@ -48,7 +48,7 @@ alert that reaches a human, and a support path a user can find. Each is checkabl
 | Term | Meaning |
 |------|---------|
 | `Wiederherstellungsziel` | RTO/RPO: how long recovery may take and how much data may be lost. |
-| `Sperrung` | Account suspension: a `Konto` cannot log in, data is retained. |
+| `Sperrung` | Suspension: a `Benutzer` cannot log in, data is retained. |
 | `Sicherheitsbaseline` | The set of headers, scanning, and rate limits the deployment must satisfy. |
 
 Rules:
@@ -102,14 +102,14 @@ Issue: #46.
 
 Rules:
 
-1. A `Konto` can be suspended and reactivated with a mandatory reason and an audit entry naming the
+1. A `Benutzer` can be suspended and reactivated with a mandatory reason and an audit entry naming the
    actor.
-2. A suspended `Konto` cannot log in or use the API; its sessions are revoked.
+2. A suspended `Benutzer` cannot log in or use the API; its `Anmelde-Sitzungen` are revoked.
 3. Suspension retains data per the retention table in [`datenschutz.md`](datenschutz.md#retention)
-   and is distinct from `Konto-Löschung`.
+   and is distinct from `Benutzer-Löschung`.
 4. The suspended user sees an explanation and a support path, not a generic login failure.
 5. An appeal path and a review expectation are documented.
-6. Only a `System-Administrator` can suspend; no `Schütze` can suspend another `Konto` by any path.
+6. Only a `Systemadministrator` can suspend; no `Benutzer` can suspend another `Benutzer` by any path.
 
 Open questions:
 
