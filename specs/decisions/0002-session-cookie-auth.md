@@ -119,10 +119,10 @@ not part of the contract; the contract lives in SPEC-konto's rules and acceptanc
 
 | Store | Fields |
 |-------|--------|
-| `konten` | `id`, `e_mail_adresse` (unique, normalized), `passwort_hash`, `rolle` (`Benutzer` \| `Systemadministrator`), `e_mail_bestaetigt_am` (nullable), `erstellt_am` |
+| `konten` | `id`, `e_mail_adresse` (unique, normalized), `passwort_hash`, `rolle` (`Benutzer` \| `Systemadministrator`), `e_mail_bestätigt_am` (nullable), `erstellt_am` |
 | `anmelde_sitzungen` | `id`, `konto_id`, `token_hash`, `erstellt_am`, `läuft_ab_am`, `zuletzt_verwendet_am` |
 | `passwort_wiederherstellungen` | `id`, `konto_id`, `token_hash`, `läuft_ab_am`, `verbraucht_am` |
-| `e_mail_bestaetigungen` | `id`, `konto_id`, `token_hash`, `läuft_ab_am`, `verbraucht_am` |
+| `e_mail_bestätigungen` | `id`, `konto_id`, `token_hash`, `läuft_ab_am`, `verbraucht_am` |
 
 Session, recovery, and confirmation tokens are stored hashed; the raw token exists only in the
 cookie resp. the mailed link. `Runden` and `Schüsse` reference `konten.id` optionally. On
@@ -145,10 +145,10 @@ German domain paths as in ADR-0001, JSON keys `camelCase` UTF-8.
 | `POST /api/konto/abmeldung` | Log out → revokes the current `Anmelde-Sitzung`. |
 | `POST /api/konto/passwort-vergessen` | Request `Passwort-Wiederherstellung` email (`eMailAdresse`). Same response for unknown emails. |
 | `POST /api/konto/passwort-wiederherstellen` | Set new `Passwort` (`token`, `neuesPasswort`) → ends all sessions. |
-| `POST /api/konto/e-mail-bestaetigung` | Confirm the address with the mailed `token`; idempotent, 400 on expired or superseded (SPEC-konto rule 13). |
-| `POST /api/konto/e-mail-bestaetigung/anfordern` | Send a new confirmation mail; throttled per `Konto` and client (rule 14). |
-| `GET /api/konto` | The logged-in `Konto` (`id`, `eMailAdresse`, `rolle`, `eMailBestaetigt`). |
-| `POST /api/konto/loeschung` | `Konto-Löschung` (`passwort` re-entry + confirmation). |
+| `POST /api/konto/e-mail-bestätigung` | Confirm the address with the mailed `token`; idempotent, 400 on expired or superseded (SPEC-konto rule 13). |
+| `POST /api/konto/e-mail-bestätigung/anfordern` | Send a new confirmation mail; throttled per `Konto` and client (rule 14). |
+| `GET /api/konto` | The logged-in `Konto` (`id`, `eMailAdresse`, `rolle`, `eMailBestätigt`). |
+| `POST /api/konto/löschung` | `Konto-Löschung` (`passwort` re-entry + confirmation). |
 
 Registration needs no follow-up login call: the request that creates the `Konto` starts its first
 `Anmelde-Sitzung` in the response itself (SPEC-konto journey 1, rule 3, AC-1). A taken

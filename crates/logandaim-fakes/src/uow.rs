@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use logandaim_core::{
     ports::{
-        BenutzerRepository, EmailBestaetigungRepository, KontoRepository,
+        BenutzerRepository, EmailBestätigungRepository, KontoRepository,
         PasswortWiederherstellungRepository, RepositoryResult, SchussRepository, SessionRepository,
         SigningKeyRepository,
     },
@@ -108,8 +108,8 @@ impl UnitOfWorkImpl for FakeUnitOfWork {
         &self.konto.signing_keys
     }
 
-    fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository {
-        &self.konto.bestaetigungen
+    fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {
+        &self.konto.bestätigungen
     }
 
     fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {

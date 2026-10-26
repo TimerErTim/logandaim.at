@@ -17,7 +17,7 @@ use chrono::{DateTime, Utc};
 
 use crate::{
     ResultReport,
-    ports::{Drossel, DrosselAktion, DrosselFehler, KundeSchluessel},
+    ports::{Drossel, DrosselAktion, DrosselFehler, KundeSchlüssel},
 };
 
 /// One client's budget for one action.
@@ -27,7 +27,7 @@ struct Fenster {
 }
 
 pub struct InMemoryDrossel {
-    fenster: Mutex<HashMap<(KundeSchluessel, &'static str), Fenster>>,
+    fenster: Mutex<HashMap<(KundeSchlüssel, &'static str), Fenster>>,
 }
 
 impl InMemoryDrossel {
@@ -46,9 +46,9 @@ impl Default for InMemoryDrossel {
 
 #[async_trait::async_trait]
 impl Drossel for InMemoryDrossel {
-    async fn pruefe_und_zaehle(
+    async fn prüfe_und_zähle(
         &self,
-        kunde: &KundeSchluessel,
+        kunde: &KundeSchlüssel,
         aktion: DrosselAktion,
         jetzt: DateTime<Utc>,
     ) -> ResultReport<(), DrosselFehler> {
@@ -73,9 +73,9 @@ impl Drossel for InMemoryDrossel {
         Ok(())
     }
 
-    async fn zuruecksetzen(
+    async fn zurücksetzen(
         &self,
-        kunde: &KundeSchluessel,
+        kunde: &KundeSchlüssel,
         aktion: DrosselAktion,
     ) -> ResultReport<(), DrosselFehler> {
         self.fenster
@@ -92,8 +92,8 @@ mod tests {
 
     use super::*;
 
-    fn kunde(fingerprint: &str) -> KundeSchluessel {
-        KundeSchluessel::neu(
+    fn kunde(fingerprint: &str) -> KundeSchlüssel {
+        KundeSchlüssel::neu(
             "203.0.113.7".parse::<IpAddr>().expect("static address"),
             fingerprint,
         )
@@ -104,7 +104,7 @@ mod tests {
     }
 
     #[test_log::test(pollster::test)]
-    async fn das_budget_wird_genau_einmal_ausgeschoepft() {
+    async fn das_budget_wird_genau_einmal_ausgeschöpft() {
         let drossel = InMemoryDrossel::new();
         let kunde = kunde("a");
         let aktion = DrosselAktion::RegistrierungStart;
@@ -112,7 +112,7 @@ mod tests {
         for i in 0..aktion.schwelle() {
             assert!(
                 drossel
-                    .pruefe_und_zaehle(&kunde, aktion, jetzt())
+                    .prüfe_und_zähle(&kunde, aktion, jetzt())
                     .await
                     .is_ok(),
                 "Versuch {i} liegt im Budget"
@@ -120,7 +120,7 @@ mod tests {
         }
         assert!(
             drossel
-                .pruefe_und_zaehle(&kunde, aktion, jetzt())
+                .prüfe_und_zähle(&kunde, aktion, jetzt())
                 .await
                 .is_err()
         );
@@ -134,21 +134,21 @@ mod tests {
 
         for _ in 0..aktion.schwelle() {
             drossel
-                .pruefe_und_zaehle(&kunde, aktion, jetzt())
+                .prüfe_und_zähle(&kunde, aktion, jetzt())
                 .await
                 .unwrap();
         }
         assert!(
             drossel
-                .pruefe_und_zaehle(&kunde, aktion, jetzt())
+                .prüfe_und_zähle(&kunde, aktion, jetzt())
                 .await
                 .is_err()
         );
 
-        let spaeter = jetzt() + aktion.fenster();
+        let später = jetzt() + aktion.fenster();
         assert!(
             drossel
-                .pruefe_und_zaehle(&kunde, aktion, spaeter)
+                .prüfe_und_zähle(&kunde, aktion, später)
                 .await
                 .is_ok()
         );
@@ -162,13 +162,13 @@ mod tests {
 
         for _ in 0..DrosselAktion::RegistrierungStart.schwelle() {
             drossel
-                .pruefe_und_zaehle(&a, DrosselAktion::RegistrierungStart, jetzt())
+                .prüfe_und_zähle(&a, DrosselAktion::RegistrierungStart, jetzt())
                 .await
                 .unwrap();
         }
         assert!(
             drossel
-                .pruefe_und_zaehle(&a, DrosselAktion::RegistrierungStart, jetzt())
+                .prüfe_und_zähle(&a, DrosselAktion::RegistrierungStart, jetzt())
                 .await
                 .is_err()
         );
@@ -176,41 +176,41 @@ mod tests {
         // Another client, and another action of the same client, are unaffected.
         assert!(
             drossel
-                .pruefe_und_zaehle(&b, DrosselAktion::RegistrierungStart, jetzt())
+                .prüfe_und_zähle(&b, DrosselAktion::RegistrierungStart, jetzt())
                 .await
                 .is_ok()
         );
         assert!(
             drossel
-                .pruefe_und_zaehle(&a, DrosselAktion::Anmeldung, jetzt())
+                .prüfe_und_zähle(&a, DrosselAktion::Anmeldung, jetzt())
                 .await
                 .is_ok()
         );
     }
 
     #[test_log::test(pollster::test)]
-    async fn zuruecksetzen_gibt_das_budget_frei() {
+    async fn zurücksetzen_gibt_das_budget_frei() {
         let drossel = InMemoryDrossel::new();
         let kunde = kunde("a");
         let aktion = DrosselAktion::Anmeldung;
 
         for _ in 0..aktion.schwelle() {
             drossel
-                .pruefe_und_zaehle(&kunde, aktion, jetzt())
+                .prüfe_und_zähle(&kunde, aktion, jetzt())
                 .await
                 .unwrap();
         }
         assert!(
             drossel
-                .pruefe_und_zaehle(&kunde, aktion, jetzt())
+                .prüfe_und_zähle(&kunde, aktion, jetzt())
                 .await
                 .is_err()
         );
 
-        drossel.zuruecksetzen(&kunde, aktion).await.unwrap();
+        drossel.zurücksetzen(&kunde, aktion).await.unwrap();
         assert!(
             drossel
-                .pruefe_und_zaehle(&kunde, aktion, jetzt())
+                .prüfe_und_zähle(&kunde, aktion, jetzt())
                 .await
                 .is_ok()
         );

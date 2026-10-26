@@ -24,7 +24,7 @@ use logandaim_core::{
 
 /// How the adapter talks to the relay.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Verschluesselung {
+pub enum Verschlüsselung {
     /// Plain SMTP: Mailpit on loopback in development and tests.
     Klar,
     /// `STARTTLS` upgrade, requiring a valid certificate.
@@ -38,12 +38,15 @@ pub enum Verschluesselung {
 pub struct SmtpKonfiguration {
     pub host: String,
     pub port: u16,
-    pub verschluesselung: Verschluesselung,
+    pub verschlüsselung: Verschlüsselung,
     pub benutzername: Option<String>,
     pub passwort: Option<String>,
     pub absender: EmailAdresse,
     /// Display name shown in the mail client, e.g. "logandaim".
     pub absender_name: Option<String>,
+    /// Frontend origin the mailed links point at. The routes are the product's; only the
+    /// origin is deployment data (see [`logandaim_core::ports::Mail`]).
+    pub frontend_basis_url: String,
 }
 
 impl SmtpKonfiguration {
@@ -52,11 +55,12 @@ impl SmtpKonfiguration {
         Self {
             host: "127.0.0.1".to_owned(),
             port: 1025,
-            verschluesselung: Verschluesselung::Klar,
+            verschlüsselung: Verschlüsselung::Klar,
             benutzername: None,
             passwort: None,
             absender,
             absender_name: Some("logandaim".to_owned()),
+            frontend_basis_url: "http://localhost:3000".to_owned(),
         }
     }
 }
@@ -69,18 +73,18 @@ pub struct SmtpMailSender {
 impl SmtpMailSender {
     /// Build the transport once and reuse its connection pool across sends.
     pub fn neu(konfiguration: SmtpKonfiguration) -> ResultReport<Self, MailFehler> {
-        let mut builder = match konfiguration.verschluesselung {
-            Verschluesselung::Klar => {
+        let mut builder = match konfiguration.verschlüsselung {
+            Verschlüsselung::Klar => {
                 AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(konfiguration.host.clone())
                     .port(konfiguration.port)
             }
-            Verschluesselung::StartTls => {
+            Verschlüsselung::StartTls => {
                 let builder =
                     AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&konfiguration.host)
                         .change_context(MailFehler::NichtKonfiguriert)?;
                 builder.port(konfiguration.port)
             }
-            Verschluesselung::Implizit => {
+            Verschlüsselung::Implizit => {
                 let builder = AsyncSmtpTransport::<Tokio1Executor>::relay(&konfiguration.host)
                     .change_context(MailFehler::NichtKonfiguriert)?;
                 builder.port(konfiguration.port)
@@ -101,7 +105,8 @@ impl SmtpMailSender {
     }
 
     /// Build the wire message. Separate from sending so a unit test can assert recipient,
-    /// subject, and body without a relay.
+    /// subject, and body without a relay. This is where a token becomes a link: the
+    /// use case does not know the frontend origin and must not know the route table.
     pub fn baue_nachricht(&self, mail: &Mail) -> ResultReport<Message, MailFehler> {
         let von = Mailbox::new(
             self.konfiguration.absender_name.clone(),
@@ -112,7 +117,7 @@ impl SmtpMailSender {
                 .change_context(MailFehler::Zustellung)?,
         );
         let an = mail
-            .empfaenger
+            .empfänger
             .as_ref()
             .parse()
             .change_context(MailFehler::Zustellung)?;
@@ -120,9 +125,9 @@ impl SmtpMailSender {
         Message::builder()
             .from(von)
             .to(Mailbox::new(None, an))
-            .subject(mail.betreff.clone())
+            .subject(mail.betreff())
             .header(ContentType::TEXT_PLAIN)
-            .body(mail.text.clone())
+            .body(mail.text(&self.konfiguration.frontend_basis_url))
             .map_err(IntoReport::into_report)
             .change_context(MailFehler::Zustellung)
     }

@@ -36,9 +36,9 @@ pub struct KlartextPasswort(Zeroizing<String>);
 impl KlartextPasswort {
     pub fn neu(passwort: impl Into<String>) -> Result<Self, KontoFehler> {
         let passwort = passwort.into();
-        let laenge = passwort.chars().count();
-        if laenge < super::MIN_PASSWORT_LAENGE || laenge > super::MAX_PASSWORT_LAENGE {
-            return Err(KontoFehler::PasswortLaengeUngueltig { laenge });
+        let länge = passwort.chars().count();
+        if länge < super::MIN_PASSWORT_LÄNGE || länge > super::MAX_PASSWORT_LÄNGE {
+            return Err(KontoFehler::PasswortLängeUngültig { länge });
         }
         Ok(Self(Zeroizing::new(passwort)))
     }
@@ -79,9 +79,9 @@ impl PasswordHash {
     pub fn from_phc(phc: impl Into<String>) -> Result<Self, KontoFehler> {
         let phc = phc.into();
         let parsed =
-            PhcPasswordHash::from_str(&phc).map_err(|_| KontoFehler::PasswortHashUngueltig)?;
+            PhcPasswordHash::from_str(&phc).map_err(|_| KontoFehler::PasswortHashUngültig)?;
         if parsed.algorithm.as_str() != ALGORITHM_IDENT {
-            return Err(KontoFehler::PasswortHashUngueltig);
+            return Err(KontoFehler::PasswortHashUngültig);
         }
         Ok(Self(phc))
     }
@@ -116,7 +116,7 @@ fn argon2() -> Argon2<'static> {
 /// Hash a Passwort with a fresh random salt.
 ///
 /// Costs tens of milliseconds by design. Called only where a Passwort is written:
-/// `RegistrierungAbschliessen` and `PasswortWiederherstellen`.
+/// `RegistrierungAbschließen` and `PasswortWiederherstellen`.
 pub fn hash_password(passwort: &KlartextPasswort) -> Result<PasswordHash, KontoFehler> {
     let mut salt_bytes = [0u8; SALT_BYTES];
     getrandom::fill(&mut salt_bytes).map_err(|_| KontoFehler::ZufallFehlgeschlagen)?;
@@ -136,7 +136,7 @@ pub fn verify_password(
     hash: &PasswordHash,
 ) -> Result<bool, KontoFehler> {
     let parsed =
-        PhcPasswordHash::from_str(hash.as_str()).map_err(|_| KontoFehler::PasswortHashUngueltig)?;
+        PhcPasswordHash::from_str(hash.as_str()).map_err(|_| KontoFehler::PasswortHashUngültig)?;
     match argon2().verify_password(passwort.als_bytes(), &parsed) {
         Ok(()) => Ok(true),
         Err(argon2::password_hash::Error::PasswordInvalid) => Ok(false),
@@ -152,9 +152,9 @@ pub fn dummy_verify(passwort: &KlartextPasswort) -> Result<(), KontoFehler> {
     static DUMMY_HASH: std::sync::OnceLock<PasswordHash> = std::sync::OnceLock::new();
     let hash = DUMMY_HASH.get_or_init(|| {
         // A hash of a value nobody can type, computed once per process.
-        let unmoeglich = KlartextPasswort::neu("\u{0}logandaim-dummy-verify\u{0}")
+        let unmöglich = KlartextPasswort::neu("\u{0}logandaim-dummy-verify\u{0}")
             .expect("the dummy Passwort satisfies the length rule");
-        hash_password(&unmoeglich).expect("argon2 hashes the dummy Passwort")
+        hash_password(&unmöglich).expect("argon2 hashes the dummy Passwort")
     });
     let _ = verify_password(passwort, hash)?;
     Ok(())
@@ -165,7 +165,7 @@ mod tests {
     use super::*;
 
     #[test_log::test]
-    fn phc_string_traegt_die_owasp_parameter() {
+    fn phc_string_trägt_die_owasp_parameter() {
         let passwort = KlartextPasswort::neu("korrekt-pferd-batterie").unwrap();
         let hash = hash_password(&passwort).unwrap();
         assert!(
@@ -177,7 +177,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn hash_und_verify_stimmen_ueberein() {
+    fn hash_und_verify_stimmen_überein() {
         let passwort = KlartextPasswort::neu("korrekt-pferd-batterie").unwrap();
         let hash = hash_password(&passwort).unwrap();
         assert!(verify_password(&passwort, &hash).unwrap());
@@ -200,17 +200,17 @@ mod tests {
     }
 
     #[test_log::test]
-    fn laenge_zaehlt_zeichen_nicht_bytes() {
+    fn länge_zählt_zeichen_nicht_bytes() {
         // Eight umlauts are eight characters but sixteen bytes.
         assert!(KlartextPasswort::neu("ääääääää").is_ok());
         assert!(matches!(
             KlartextPasswort::neu("äääääää"),
-            Err(KontoFehler::PasswortLaengeUngueltig { laenge: 7 })
+            Err(KontoFehler::PasswortLängeUngültig { länge: 7 })
         ));
     }
 
     #[test_log::test]
-    fn laengengrenzen_werden_geprueft() {
+    fn längengrenzen_werden_geprüft() {
         assert!(KlartextPasswort::neu("a".repeat(8)).is_ok());
         assert!(KlartextPasswort::neu("a".repeat(128)).is_ok());
         assert!(KlartextPasswort::neu("a".repeat(129)).is_err());
@@ -229,16 +229,16 @@ mod tests {
     fn fremder_algorithmus_wird_abgelehnt() {
         assert!(matches!(
             PasswordHash::from_phc("$scrypt$v=1$m=1,t=1,p=1$c2FsdA$aGFzaA"),
-            Err(KontoFehler::PasswortHashUngueltig)
+            Err(KontoFehler::PasswortHashUngültig)
         ));
         assert!(matches!(
             PasswordHash::from_phc("kein phc string"),
-            Err(KontoFehler::PasswortHashUngueltig)
+            Err(KontoFehler::PasswortHashUngültig)
         ));
     }
 
     #[test_log::test]
-    fn dummy_verify_akzeptiert_jedes_gueltige_passwort() {
+    fn dummy_verify_akzeptiert_jedes_gültige_passwort() {
         let passwort = KlartextPasswort::neu("irgendwas-langes").unwrap();
         assert!(dummy_verify(&passwort).is_ok());
     }

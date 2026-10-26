@@ -13,7 +13,7 @@ mod signing_key;
 mod wiederherstellung;
 
 pub use benutzer::SQLiteBenutzerRepository;
-pub use bestaetigung::SQLiteEmailBestaetigungRepository;
+pub use bestaetigung::SQLiteEmailBestätigungRepository;
 pub use konto::SQLiteKontoRepository;
 pub use schuss::SQLiteSchussRepository;
 pub use session::SQLiteSessionRepository;

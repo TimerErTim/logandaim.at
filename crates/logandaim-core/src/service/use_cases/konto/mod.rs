@@ -35,7 +35,7 @@ use crate::{
 #[derive(Debug, thiserror::Error)]
 pub enum KontoDienstFehler {
     #[error("die Anfrage ist ungültig")]
-    UngueltigeAnfrage,
+    UngültigeAnfrage,
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
     NichtAngemeldet,
     #[error("E-Mail-Adresse oder Passwort ist falsch")]
@@ -43,7 +43,7 @@ pub enum KontoDienstFehler {
     #[error("dieser Benutzer darf diese Aktion nicht ausführen")]
     NichtErlaubt,
     #[error("die Sitzung ist nicht mehr gültig")]
-    SitzungUngueltig,
+    SitzungUngültig,
     #[error("zu viele Versuche; bitte später erneut versuchen")]
     Gedrosselt,
     #[error("der Datensatz wurde zwischenzeitlich geändert")]
@@ -55,17 +55,17 @@ pub enum KontoDienstFehler {
 impl From<KontoFehler> for KontoDienstFehler {
     fn from(fehler: KontoFehler) -> Self {
         match fehler {
-            KontoFehler::TokenUngueltig
+            KontoFehler::TokenUngültig
             | KontoFehler::TokenVerbraucht
             | KontoFehler::TokenAbgelaufen
-            | KontoFehler::TokenNochNichtGueltig
-            | KontoFehler::TokenHerkunftUngueltig
-            | KontoFehler::SignaturUngueltig
-            | KontoFehler::PasswortLaengeUngueltig { .. } => Self::UngueltigeAnfrage,
-            KontoFehler::SigningKeyUngueltig
+            | KontoFehler::TokenNochNichtGültig
+            | KontoFehler::TokenHerkunftUngültig
+            | KontoFehler::SignaturUngültig
+            | KontoFehler::PasswortLängeUngültig { .. } => Self::UngültigeAnfrage,
+            KontoFehler::SigningKeyUngültig
             | KontoFehler::RolleUnbekannt
             | KontoFehler::PasswortHashFehler
-            | KontoFehler::PasswortHashUngueltig
+            | KontoFehler::PasswortHashUngültig
             | KontoFehler::ZufallFehlgeschlagen => Self::Speicher,
         }
     }
@@ -122,12 +122,12 @@ pub(crate) async fn sende_mail(ctx: &ExecutionContext<'_>, mail: Mail) {
 /// Count one throttled attempt, or refuse.
 pub(crate) async fn drossle(
     ctx: &ExecutionContext<'_>,
-    kunde: &crate::ports::KundeSchluessel,
+    kunde: &crate::ports::KundeSchlüssel,
     aktion: crate::ports::DrosselAktion,
     jetzt: DateTime<Utc>,
 ) -> ResultReport<(), KontoDienstFehler> {
     ctx.drossel()
-        .pruefe_und_zaehle(kunde, aktion, jetzt)
+        .prüfe_und_zähle(kunde, aktion, jetzt)
         .await
         .change_context(KontoDienstFehler::Gedrosselt)
 }

@@ -37,7 +37,7 @@ pub fn setzen_raw(token: &str) -> String {
 ///
 /// Identical attributes with `Max-Age=0`: a clearing header that omits `Path` or `Secure`
 /// targets a different cookie, and the token stays in the jar.
-pub fn loeschen() -> String {
+pub fn löschen() -> String {
     format!("{REFRESH_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0")
 }
 
@@ -50,7 +50,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn die_attribute_sind_vollstaendig() {
+    fn die_attribute_sind_vollständig() {
         let kopf = setzen(&token());
         for attribut in [
             "Path=/",
@@ -68,9 +68,9 @@ mod tests {
     }
 
     #[test_log::test]
-    fn das_loeschen_trifft_dasselbe_cookie() {
+    fn das_löschen_trifft_dasselbe_cookie() {
         let gesetzt = setzen(&token());
-        let geloescht = loeschen();
+        let gelöscht = löschen();
 
         let attribute = |kopf: &str| -> Vec<String> {
             kopf.split(';')
@@ -81,10 +81,10 @@ mod tests {
         };
         assert_eq!(
             attribute(&gesetzt),
-            attribute(&geloescht),
+            attribute(&gelöscht),
             "sonst löscht der Browser ein anderes Cookie"
         );
-        assert!(geloescht.contains("Max-Age=0"));
+        assert!(gelöscht.contains("Max-Age=0"));
     }
 
     #[test_log::test]

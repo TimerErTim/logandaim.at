@@ -17,15 +17,16 @@ pub fn test_signing_key() -> SigningKeypair {
     )
 }
 
-/// Mailed link targets and token identity every shared case runs with.
+/// Token identity every shared case runs with.
 pub fn test_konfiguration() -> KontoKonfiguration {
-    KontoKonfiguration::neu(
-        "https://logandaim.at/registrierung",
-        "https://logandaim.at/passwort",
-        "logandaim.at",
-        "logandaim-api",
-    )
+    KontoKonfiguration::neu("logandaim.at", "logandaim-api")
 }
+
+/// The frontend origin a case's mailed links are spelled from.
+///
+/// The core never builds a URL, so a case that wants to read a link renders the mail body
+/// with the same base URL the real adapter would use.
+pub const FRONTEND_BASIS_URL: &str = "https://logandaim.at";
 
 /// A built app plus the infrastructure fakes a case has to reach into.
 ///
@@ -57,13 +58,13 @@ impl Harness {
     /// The token of the single most recent mail, for a link that was just mailed.
     pub fn letztes_token(&self) -> String {
         let mail = self.mail.letzte();
+        let text = mail.text(FRONTEND_BASIS_URL);
         let marker = "token=";
-        let start = mail
-            .text
+        let start = text
             .find(marker)
-            .unwrap_or_else(|| panic!("mail enthält keinen token-link: {}", mail.text))
+            .unwrap_or_else(|| panic!("mail enthält keinen token-link: {text}"))
             + marker.len();
-        mail.text[start..]
+        text[start..]
             .chars()
             .take_while(|zeichen| {
                 zeichen.is_ascii_alphanumeric() || *zeichen == '-' || *zeichen == '_'

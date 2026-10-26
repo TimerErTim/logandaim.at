@@ -16,20 +16,23 @@ use logandaim_core::{
             hash_password,
         },
     },
-    ports::{KundeSchluessel, RepositoryError},
+    ports::{KundeSchlüssel, RepositoryError},
     service::{
-        Abmeldung, Anmeldung, BenutzerAnzeigen, BenutzerLoeschen, Erneuerung, KontoDienstFehler,
-        PasswortVergessen, PasswortWiederherstellen, RegistrierungAbschliessen,
-        RegistrierungStarten, SitzungAusgestellt, SitzungPruefen,
+        Abmeldung, Anmeldung, BenutzerAnzeigen, BenutzerLöschen, Erneuerung, KontoDienstFehler,
+        PasswortVergessen, PasswortWiederherstellen, RegistrierungAbschließen,
+        RegistrierungStarten, SitzungAusgestellt, SitzungPrüfen,
     },
 };
 
-use super::{super::base_app_builder, helpers::Harness};
+use super::{
+    super::base_app_builder,
+    helpers::{FRONTEND_BASIS_URL, Harness},
+};
 
 const PASSWORT: &str = "korrekt-pferd-batterie";
 
-fn kunde(ip: u8) -> KundeSchluessel {
-    KundeSchluessel::neu(IpAddr::V4(Ipv4Addr::new(10, 0, 0, ip)), "test-client")
+fn kunde(ip: u8) -> KundeSchlüssel {
+    KundeSchlüssel::neu(IpAddr::V4(Ipv4Addr::new(10, 0, 0, ip)), "test-client")
 }
 
 async fn harness() -> Harness {
@@ -44,7 +47,7 @@ async fn harness() -> Harness {
 }
 
 /// Run registration step 1 and return the mailed token.
-async fn registrierung_starten(harness: &Harness, email: &str, kunde: KundeSchluessel) -> String {
+async fn registrierung_starten(harness: &Harness, email: &str, kunde: KundeSchlüssel) -> String {
     harness
         .app()
         .execute(
@@ -66,7 +69,7 @@ async fn registriere(harness: &Harness, email: &str) -> SitzungAusgestellt {
         .app()
         .execute(
             AuthContext::Anonymous,
-            RegistrierungAbschliessen {
+            RegistrierungAbschließen {
                 token,
                 passwort: PASSWORT.to_owned(),
                 kunde: kunde(1),
@@ -186,7 +189,7 @@ async fn ac3_abschluss_erzeugt_benutzer_konto_und_erste_sitzung() {
 }
 
 #[test_log::test(pollster::test)]
-async fn ac4_ungueltiges_token_oder_kurzes_passwort_erzeugt_nichts() {
+async fn ac4_ungültiges_token_oder_kurzes_passwort_erzeugt_nichts() {
     let harness = harness().await;
     let token = registrierung_starten(&harness, "anna@muster.at", kunde(4)).await;
 
@@ -195,7 +198,7 @@ async fn ac4_ungueltiges_token_oder_kurzes_passwort_erzeugt_nichts() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            RegistrierungAbschliessen {
+            RegistrierungAbschließen {
                 token: token.clone(),
                 passwort: "kurz".to_owned(),
                 kunde: kunde(5),
@@ -203,14 +206,14 @@ async fn ac4_ungueltiges_token_oder_kurzes_passwort_erzeugt_nichts() {
         )
         .await;
     assert!(kurz.is_err());
-    assert_eq!(fehler_von(kurz.unwrap_err()), fehler_ungueltig());
+    assert_eq!(fehler_von(kurz.unwrap_err()), fehler_ungültig());
 
     // An unknown token is refused too.
     let unbekannt = harness
         .app()
         .execute(
             AuthContext::Anonymous,
-            RegistrierungAbschliessen {
+            RegistrierungAbschließen {
                 token: "A".repeat(43),
                 passwort: PASSWORT.to_owned(),
                 kunde: kunde(6),
@@ -224,7 +227,7 @@ async fn ac4_ungueltiges_token_oder_kurzes_passwort_erzeugt_nichts() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            RegistrierungAbschliessen {
+            RegistrierungAbschließen {
                 token,
                 passwort: PASSWORT.to_owned(),
                 kunde: kunde(7),
@@ -238,24 +241,24 @@ async fn ac4_ungueltiges_token_oder_kurzes_passwort_erzeugt_nichts() {
 async fn ac4_verbrauchtes_token_wird_beim_zweiten_mal_abgelehnt() {
     let harness = harness().await;
     let token = registrierung_starten(&harness, "anna@muster.at", kunde(8)).await;
-    registriere_abschliessen(&harness, &token, kunde(8))
+    registriere_abschließen(&harness, &token, kunde(8))
         .await
         .expect("erster Abschluss gelingt");
 
-    let zweiter = registriere_abschliessen(&harness, &token, kunde(9)).await;
+    let zweiter = registriere_abschließen(&harness, &token, kunde(9)).await;
     assert!(zweiter.is_err(), "ein verbrauchtes Token ist unbrauchbar");
 }
 
-async fn registriere_abschliessen(
+async fn registriere_abschließen(
     harness: &Harness,
     token: &str,
-    kunde: KundeSchluessel,
+    kunde: KundeSchlüssel,
 ) -> Result<SitzungAusgestellt, error_stack::Report<KontoDienstFehler>> {
     harness
         .app()
         .execute(
             AuthContext::Anonymous,
-            RegistrierungAbschliessen {
+            RegistrierungAbschließen {
                 token: token.to_owned(),
                 passwort: PASSWORT.to_owned(),
                 kunde,
@@ -264,31 +267,31 @@ async fn registriere_abschliessen(
         .await
 }
 
-fn fehler_ungueltig() -> String {
-    KontoDienstFehler::UngueltigeAnfrage.to_string()
+fn fehler_ungültig() -> String {
+    KontoDienstFehler::UngültigeAnfrage.to_string()
 }
 
 // ------------------------------------------------------------------------- AC-5, AC-6
 
 #[test_log::test(pollster::test)]
-async fn ac5_anmeldung_eroeffnet_eine_gueltige_sitzung() {
+async fn ac5_anmeldung_eröffnet_eine_gültige_sitzung() {
     let harness = harness().await;
     registriere(&harness, "anna@muster.at").await;
 
     let ausgestellt = anmelden(&harness, "anna@muster.at").await;
 
-    let geprueft = harness
+    let geprüft = harness
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPruefen {
+            SitzungPrüfen {
                 claims: ausgestellt.claims.clone(),
             },
         )
         .await
         .expect("ein frisches Access-Token wird akzeptiert");
 
-    assert_eq!(geprueft, auth_aus(&ausgestellt));
+    assert_eq!(geprüft, auth_aus(&ausgestellt));
 }
 
 #[test_log::test(pollster::test)]
@@ -329,7 +332,7 @@ async fn ac6_falsches_passwort_und_unbekannte_adresse_sind_ununterscheidbar() {
             .app()
             .execute(
                 AuthContext::Anonymous,
-                SitzungPruefen {
+                SitzungPrüfen {
                     claims: logandaim_core::domain::konto::AccessTokenClaims {
                         sub: BenutzerId(uuid::Uuid::nil()),
                         sid: logandaim_core::domain::konto::SessionId(uuid::Uuid::nil()),
@@ -373,7 +376,7 @@ async fn ac7_erneuerung_rotiert_und_das_alte_access_token_lebt_weiter() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPruefen {
+            SitzungPrüfen {
                 claims: alt.claims.clone(),
             },
         )
@@ -385,7 +388,7 @@ async fn ac7_erneuerung_rotiert_und_das_alte_access_token_lebt_weiter() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPruefen {
+            SitzungPrüfen {
                 claims: neu.claims.clone(),
             },
         )
@@ -463,7 +466,7 @@ async fn ac8_abgelaufenes_refresh_token_wird_abgelehnt() {
 // ------------------------------------------------------------------------- AC-9
 
 #[test_log::test(pollster::test)]
-async fn ac9_abmeldung_widerruft_und_das_access_token_faellt_sofort() {
+async fn ac9_abmeldung_widerruft_und_das_access_token_fällt_sofort() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
 
@@ -477,7 +480,7 @@ async fn ac9_abmeldung_widerruft_und_das_access_token_faellt_sofort() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPruefen {
+            SitzungPrüfen {
                 claims: ausgestellt.claims.clone(),
             },
         )
@@ -562,7 +565,7 @@ async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPruefen {
+            SitzungPrüfen {
                 claims: ausgestellt.claims.clone(),
             },
         )
@@ -603,7 +606,7 @@ async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
 // ------------------------------------------------------------------------ AC-12, AC-13
 
 #[test_log::test(pollster::test)]
-async fn ac12_loeschung_entfernt_identitaet_und_gibt_die_adresse_frei() {
+async fn ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
 
@@ -611,9 +614,9 @@ async fn ac12_loeschung_entfernt_identitaet_und_gibt_die_adresse_frei() {
         .app()
         .execute(
             auth_aus(&ausgestellt),
-            BenutzerLoeschen {
+            BenutzerLöschen {
                 passwort: PASSWORT.to_owned(),
-                bestaetigt: true,
+                bestätigt: true,
             },
         )
         .await
@@ -646,13 +649,13 @@ async fn ac12_loeschung_entfernt_identitaet_und_gibt_die_adresse_frei() {
 
     // The freed address can register again (rule 8).
     let token = registrierung_starten(&harness, "anna@muster.at", kunde(22)).await;
-    registriere_abschliessen(&harness, &token, kunde(23))
+    registriere_abschließen(&harness, &token, kunde(23))
         .await
         .expect("die freigegebene Adresse kann sich neu registrieren");
 }
 
 #[test_log::test(pollster::test)]
-async fn ac12_loeschung_ohne_bestaetigung_oder_mit_falschem_passwort_scheitert() {
+async fn ac12_löschung_ohne_bestätigung_oder_mit_falschem_passwort_scheitert() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
 
@@ -660,9 +663,9 @@ async fn ac12_loeschung_ohne_bestaetigung_oder_mit_falschem_passwort_scheitert()
         .app()
         .execute(
             auth_aus(&ausgestellt),
-            BenutzerLoeschen {
+            BenutzerLöschen {
                 passwort: PASSWORT.to_owned(),
-                bestaetigt: false,
+                bestätigt: false,
             },
         )
         .await;
@@ -672,9 +675,9 @@ async fn ac12_loeschung_ohne_bestaetigung_oder_mit_falschem_passwort_scheitert()
         .app()
         .execute(
             auth_aus(&ausgestellt),
-            BenutzerLoeschen {
+            BenutzerLöschen {
                 passwort: "falsch-falsch".to_owned(),
-                bestaetigt: true,
+                bestätigt: true,
             },
         )
         .await;
@@ -769,7 +772,7 @@ async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
 }
 
 #[test_log::test(pollster::test)]
-async fn ac16_registrierung_ist_auf_fuenf_pro_stunde_gedrosselt() {
+async fn ac16_registrierung_ist_auf_fünf_pro_stunde_gedrosselt() {
     let harness = harness().await;
     let client = kunde(32);
 
@@ -807,7 +810,7 @@ fn fehler_gedrosselt() -> String {
 // ------------------------------------------------------------------------------- AC-17
 
 #[test_log::test(pollster::test)]
-async fn ac17_ausser_betrieb_gesetzter_schluessel_wird_abgelehnt() {
+async fn ac17_außer_betrieb_gesetzter_schlüssel_wird_abgelehnt() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
 
@@ -816,7 +819,7 @@ async fn ac17_ausser_betrieb_gesetzter_schluessel_wird_abgelehnt() {
         .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
             let uow = ctx.enter().await?;
             uow.signing_keys()
-                .ausser_betrieb_nehmen(&helpers_kid(), ctx.clock().now())
+                .außer_betrieb_nehmen(&helpers_kid(), ctx.clock().now())
                 .await?;
             uow.commit().await
         })
@@ -827,7 +830,7 @@ async fn ac17_ausser_betrieb_gesetzter_schluessel_wird_abgelehnt() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPruefen {
+            SitzungPrüfen {
                 claims: ausgestellt.claims.clone(),
             },
         )
@@ -849,13 +852,13 @@ async fn ac17_unbekannter_kid_wird_abgelehnt() {
 
     let danach = harness
         .app()
-        .execute(AuthContext::Anonymous, SitzungPruefen { claims })
+        .execute(AuthContext::Anonymous, SitzungPrüfen { claims })
         .await;
     assert!(danach.is_err(), "ein unbekannter kid ist ein 401");
 }
 
 #[test_log::test(pollster::test)]
-async fn ac17_widerrufene_sitzung_wird_trotz_gueltigem_schluessel_abgelehnt() {
+async fn ac17_widerrufene_sitzung_wird_trotz_gültigem_schlüssel_abgelehnt() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
 
@@ -869,7 +872,7 @@ async fn ac17_widerrufene_sitzung_wird_trotz_gueltigem_schluessel_abgelehnt() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPruefen {
+            SitzungPrüfen {
                 claims: ausgestellt.claims.clone(),
             },
         )
@@ -890,7 +893,7 @@ async fn ac18_abgelaufenes_access_token_wird_abgelehnt() {
         .app()
         .execute(
             AuthContext::Anonymous,
-            SitzungPruefen {
+            SitzungPrüfen {
                 claims: ausgestellt.claims.clone(),
             },
         )
@@ -986,18 +989,17 @@ async fn ac14_fremden_benutzer_liest_nur_ein_systemadministrator() {
 // ------------------------------------------------------------------------------ AC-19
 
 #[test_log::test(pollster::test)]
-async fn ac19_die_mail_traegt_einen_aufrufbaren_link() {
+async fn ac19_die_mail_trägt_einen_aufrufbaren_link() {
     let harness = harness().await;
 
     registrierung_starten(&harness, "anna@muster.at", kunde(40)).await;
 
     let mail = harness.mail().einzige();
-    assert_eq!(mail.betreff, "Bestätige deine E-Mail-Adresse");
+    assert_eq!(mail.betreff(), "Bestätige deine E-Mail-Adresse");
+    let text = mail.text(FRONTEND_BASIS_URL);
     assert!(
-        mail.text
-            .contains("https://logandaim.at/registrierung?token="),
-        "die Mail trägt den konfigurierten Frontend-Link: {}",
-        mail.text
+        text.contains("https://logandaim.at/registrierung?token="),
+        "die Mail trägt den Frontend-Link: {text}"
     );
-    assert_eq!(mail.empfaenger.as_ref(), "anna@muster.at");
+    assert_eq!(mail.empfänger.as_ref(), "anna@muster.at");
 }

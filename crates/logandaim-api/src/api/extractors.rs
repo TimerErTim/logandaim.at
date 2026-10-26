@@ -19,7 +19,7 @@ use error_stack::Report;
 use logandaim_core::{
     ResultReport,
     application::{AuthContext, ZugriffFehler},
-    ports::KundeSchluessel,
+    ports::KundeSchlüssel,
 };
 use poem::{FromRequest, Request};
 
@@ -54,7 +54,7 @@ impl LogandaimAppApi {
     }
 
     /// The throttle key of the client behind this request.
-    pub async fn kunde(&self, request: &Request) -> KundeSchluessel {
+    pub async fn kunde(&self, request: &Request) -> KundeSchlüssel {
         let mut leib = poem::RequestBody::default();
         let real_ip = poem::web::RealIp::from_request(request, &mut leib)
             .await

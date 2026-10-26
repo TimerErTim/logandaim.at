@@ -55,7 +55,7 @@ struct JoseHeader {
     typ: String,
 }
 
-fn ungueltig() -> Report<ZugriffFehler> {
+fn ungültig() -> Report<ZugriffFehler> {
     Report::new(ZugriffFehler::NichtAngemeldet)
 }
 
@@ -83,8 +83,8 @@ pub fn encode(
         jti: claims.jti.clone(),
     };
 
-    let header = serde_json::to_vec(&header).map_err(|_| ungueltig())?;
-    let payload = serde_json::to_vec(&dto).map_err(|_| ungueltig())?;
+    let header = serde_json::to_vec(&header).map_err(|_| ungültig())?;
+    let payload = serde_json::to_vec(&dto).map_err(|_| ungültig())?;
 
     let mut signierte_nachricht = String::with_capacity(header.len() + payload.len() + 1);
     signierte_nachricht.push_str(&URL_SAFE_NO_PAD.encode(&header));
@@ -109,46 +109,43 @@ pub fn decode(
     let (Some(header_b64), Some(payload_b64), Some(signatur_b64)) =
         (teile.next(), teile.next(), teile.next())
     else {
-        return Err(ungueltig());
+        return Err(ungültig());
     };
     if teile.next().is_some() {
-        return Err(ungueltig());
+        return Err(ungültig());
     }
 
-    let header_roh = URL_SAFE_NO_PAD
-        .decode(header_b64)
-        .map_err(|_| ungueltig())?;
-    let header: JoseHeader = serde_json::from_slice(&header_roh).map_err(|_| ungueltig())?;
+    let header_roh = URL_SAFE_NO_PAD.decode(header_b64).map_err(|_| ungültig())?;
+    let header: JoseHeader = serde_json::from_slice(&header_roh).map_err(|_| ungültig())?;
 
     // Step 2: pin the algorithm before anything in the payload is trusted. `none` and
     // every other value fail here, including a well-formed header naming HS256.
     if header.alg != SIGNATUR_ALGORITHMUS || header.typ != "JWT" {
-        return Err(ungueltig());
+        return Err(ungültig());
     }
 
     // Step 3: the header must name the key this deployment holds.
     if header.kid != signing_key.kid().as_str() {
-        return Err(ungueltig());
+        return Err(ungültig());
     }
 
     // Step 4: signature over the raw ASCII, verified by the domain.
     let signatur_bytes = URL_SAFE_NO_PAD
         .decode(signatur_b64)
-        .map_err(|_| ungueltig())?;
-    let signatur = Signature::from_bytes(&signatur_bytes).map_err(|_| ungueltig())?;
+        .map_err(|_| ungültig())?;
+    let signatur = Signature::from_bytes(&signatur_bytes).map_err(|_| ungültig())?;
     let signierte_nachricht = &token[..header_b64.len() + 1 + payload_b64.len()];
     signing_key
         .verify(signierte_nachricht.as_bytes(), &signatur)
-        .map_err(|_| ungueltig())?;
+        .map_err(|_| ungültig())?;
 
     // Step 5: only now is the payload parsed.
     let payload_roh = URL_SAFE_NO_PAD
         .decode(payload_b64)
-        .map_err(|_| ungueltig())?;
-    let dto: AccessTokenClaimsDto =
-        serde_json::from_slice(&payload_roh).map_err(|_| ungueltig())?;
+        .map_err(|_| ungültig())?;
+    let dto: AccessTokenClaimsDto = serde_json::from_slice(&payload_roh).map_err(|_| ungültig())?;
 
-    let kid = SigningKeyId::new(dto.kid).map_err(|_| ungueltig())?;
+    let kid = SigningKeyId::new(dto.kid).map_err(|_| ungültig())?;
 
     Ok(AccessTokenClaims {
         sub: BenutzerId(dto.sub),
@@ -269,7 +266,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn fremder_schluessel_wird_abgelehnt() {
+    fn fremder_schlüssel_wird_abgelehnt() {
         let keypair = keypair();
         let token = encode(&claims(), &keypair).expect("encoding succeeds");
 
@@ -301,7 +298,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn access_token_lebensdauer_fliesst_in_exp() {
+    fn access_token_lebensdauer_fließt_in_exp() {
         let claims = claims();
         assert_eq!(claims.exp - claims.iat, ACCESS_TOKEN_LIFETIME);
         assert_eq!(ACCESS_TOKEN_LIFETIME, Duration::hours(24));

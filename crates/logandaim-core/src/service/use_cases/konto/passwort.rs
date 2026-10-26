@@ -10,7 +10,7 @@ use crate::{
             hash_token,
         },
     },
-    ports::{DrosselAktion, KundeSchluessel, Mail},
+    ports::{DrosselAktion, KundeSchlüssel, Mail},
     service::UseCase,
 };
 
@@ -23,7 +23,7 @@ use super::{KontoDienstFehler, drossle, sende_mail, speicherfehler};
 #[derive(Debug, Clone)]
 pub struct PasswortVergessen {
     pub email: String,
-    pub kunde: KundeSchluessel,
+    pub kunde: KundeSchlüssel,
 }
 
 #[async_trait]
@@ -32,7 +32,7 @@ impl UseCase<()> for PasswortVergessen {
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
         let email = EmailAdresse::normalisiert(&self.email)
-            .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+            .change_context(KontoDienstFehler::UngültigeAnfrage)?;
         let jetzt = ctx.clock().now();
 
         drossle(&ctx, &self.kunde, DrosselAktion::Wiederherstellung, jetzt).await?;
@@ -82,23 +82,9 @@ impl UseCase<()> for PasswortVergessen {
             return Ok(());
         }
 
-        let link = ctx
-            .konto_konfiguration()
-            .wiederherstellung_url(token.as_str());
         sende_mail(
             &ctx,
-            Mail::neu(
-                email,
-                "Setze dein Passwort zurück",
-                format!(
-                    "Hallo,\n\n\
-                     über diesen Link kannst du ein neues Passwort für logandaim.at setzen:\n\n\
-                     {link}\n\n\
-                     Der Link ist 60 Minuten gültig und kann nur einmal verwendet werden.\n\
-                     Alle bestehenden Anmeldungen werden dabei beendet.\n\
-                     Wenn du ihn nicht angefordert hast, ignoriere diese Mail.\n"
-                ),
-            ),
+            Mail::passwort_wiederherstellung(email, token.as_str()),
         )
         .await;
         Ok(())
@@ -122,9 +108,9 @@ impl UseCase<()> for PasswortWiederherstellen {
         // Validate and hash before spending the token, so a too-short Passwort does not
         // burn the recipient's only link.
         let passwort = KlartextPasswort::neu(self.neues_passwort)
-            .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+            .change_context(KontoDienstFehler::UngültigeAnfrage)?;
         let token = crate::domain::konto::SecretToken::parse(self.token)
-            .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+            .change_context(KontoDienstFehler::UngültigeAnfrage)?;
         let password_hash = hash_password(&passwort).change_context(KontoDienstFehler::Speicher)?;
 
         let uow = ctx
@@ -141,25 +127,25 @@ impl UseCase<()> for PasswortWiederherstellen {
                 .change_context(KontoDienstFehler::Speicher)?;
 
             let Some(wiederherstellung) = wiederherstellung else {
-                return Err(Report::new(KontoDienstFehler::UngueltigeAnfrage));
+                return Err(Report::new(KontoDienstFehler::UngültigeAnfrage));
             };
 
-            if !wiederherstellung.ist_gueltig(jetzt) {
-                return Err(Report::new(KontoDienstFehler::UngueltigeAnfrage));
+            if !wiederherstellung.ist_gültig(jetzt) {
+                return Err(Report::new(KontoDienstFehler::UngültigeAnfrage));
             }
 
             uow.wiederherstellungen()
                 .consume(wiederherstellung.id(), jetzt)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+                .change_context(KontoDienstFehler::UngültigeAnfrage)?;
 
             let mut konto = uow
                 .konten()
                 .find_by_id(wiederherstellung.konto_id())
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+                .change_context(KontoDienstFehler::UngültigeAnfrage)?;
 
             konto.setze_password_hash(password_hash);
             uow.konten()

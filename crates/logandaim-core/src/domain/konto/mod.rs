@@ -15,7 +15,7 @@
 //!
 //! ## Vocabulary
 //!
-//! Product nouns stay German (`Benutzer`, `Konto`, `EmailBestaetigung`,
+//! Product nouns stay German (`Benutzer`, `Konto`, `EmailBestätigung`,
 //! `PasswortWiederherstellung`). Auth-technical terms are English, as German engineering
 //! usage has them: `Session`, `AccessToken`, `RefreshToken`, `SecretToken`, `TokenHash`,
 //! `SigningKey`, `PasswordHash`, `Signature`.
@@ -41,7 +41,7 @@ mod token;
 mod wiederherstellung;
 
 pub use benutzer::{Benutzer, BenutzerId, NeuerBenutzer, Rolle};
-pub use bestaetigung::{BestaetigungId, EmailBestaetigung, NeueBestaetigung};
+pub use bestaetigung::{BestätigungId, EmailBestätigung, NeueBestätigung};
 pub use claims::AccessTokenClaims;
 pub use konto::{Konto, KontoId, NeuesKonto};
 pub use passwort::{KlartextPasswort, PasswordHash, dummy_verify, hash_password, verify_password};
@@ -57,14 +57,14 @@ pub use wiederherstellung::{
 };
 
 /// Shortest accepted Passwort, in characters.
-pub const MIN_PASSWORT_LAENGE: usize = 8;
+pub const MIN_PASSWORT_LÄNGE: usize = 8;
 /// Longest accepted Passwort, in characters. Caps the argon2 input.
-pub const MAX_PASSWORT_LAENGE: usize = 128;
+pub const MAX_PASSWORT_LÄNGE: usize = 128;
 
 /// Lifetime of an E-Mail-Adresse-Bestätigung.
-pub const EMAIL_BESTAETIGUNG_GUELTIGKEIT: Duration = Duration::hours(24);
+pub const EMAIL_BESTÄTIGUNG_GÜLTIGKEIT: Duration = Duration::hours(24);
 /// Lifetime of a Passwort-Wiederherstellung token.
-pub const PASSWORT_WIEDERHERSTELLUNG_GUELTIGKEIT: Duration = Duration::minutes(60);
+pub const PASSWORT_WIEDERHERSTELLUNG_GÜLTIGKEIT: Duration = Duration::minutes(60);
 /// Lifetime of one access token.
 pub const ACCESS_TOKEN_LIFETIME: Duration = Duration::hours(24);
 /// Lifetime of one refresh token.
@@ -79,27 +79,27 @@ pub const CLOCK_SKEW: Duration = Duration::seconds(60);
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum KontoFehler {
     #[error(
-        "das Passwort muss zwischen {MIN_PASSWORT_LAENGE} und {MAX_PASSWORT_LAENGE} Zeichen lang sein, war aber {laenge}"
+        "das Passwort muss zwischen {MIN_PASSWORT_LÄNGE} und {MAX_PASSWORT_LÄNGE} Zeichen lang sein, war aber {länge}"
     )]
-    PasswortLaengeUngueltig { laenge: usize },
+    PasswortLängeUngültig { länge: usize },
     #[error("das Passwort konnte nicht geprüft werden")]
     PasswortHashFehler,
     #[error("der gespeicherte Passwort-Hash ist ungültig")]
-    PasswortHashUngueltig,
+    PasswortHashUngültig,
     #[error("das Token ist ungültig")]
-    TokenUngueltig,
+    TokenUngültig,
     #[error("das Token wurde bereits verwendet")]
     TokenVerbraucht,
     #[error("das Token ist abgelaufen")]
     TokenAbgelaufen,
     #[error("das Token ist noch nicht gültig")]
-    TokenNochNichtGueltig,
+    TokenNochNichtGültig,
     #[error("das Token stammt nicht von diesem Dienst")]
-    TokenHerkunftUngueltig,
+    TokenHerkunftUngültig,
     #[error("die Signatur ist ungültig")]
-    SignaturUngueltig,
+    SignaturUngültig,
     #[error("der Signaturschlüssel ist ungültig")]
-    SigningKeyUngueltig,
+    SigningKeyUngültig,
     #[error("die Rolle ist unbekannt")]
     RolleUnbekannt,
     #[error("es konnte kein Zufall erzeugt werden")]

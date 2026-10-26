@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 use crate::application::ThreadSafeError;
 use crate::ports::{
-    BenutzerRepository, EmailBestaetigungRepository, KontoRepository,
+    BenutzerRepository, EmailBestätigungRepository, KontoRepository,
     PasswortWiederherstellungRepository, RepositoryError, RepositoryResult, SchussRepository,
     SessionRepository, SigningKeyRepository,
 };
@@ -120,8 +120,8 @@ impl UnitOfWork<'_> {
         self.as_impl().signing_keys()
     }
 
-    pub fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository {
-        self.as_impl().bestaetigungen()
+    pub fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {
+        self.as_impl().bestätigungen()
     }
 
     pub fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {
@@ -177,8 +177,8 @@ impl UnitOfWorkImpl for LockedUnitOfWorkImpl<'_> {
         self.inner.signing_keys()
     }
 
-    fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository {
-        self.inner.bestaetigungen()
+    fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {
+        self.inner.bestätigungen()
     }
 
     fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {
@@ -203,7 +203,7 @@ pub trait UnitOfWorkImpl: Send + Sync {
 
     fn signing_keys(&self) -> &dyn SigningKeyRepository;
 
-    fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository;
+    fn bestätigungen(&self) -> &dyn EmailBestätigungRepository;
 
     fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository;
 }

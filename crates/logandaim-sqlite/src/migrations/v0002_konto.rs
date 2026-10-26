@@ -8,7 +8,7 @@ use molting::UpMigration;
 ///
 /// - There is **no unconfirmed Benutzer state** (SPEC-konto rule 3, AC-20): a `benutzer`
 ///   row only ever appears together with its confirmed `konten` row, in the same
-///   transaction. `email_bestaetigungen` is keyed by the address, not by a `benutzer_id`,
+///   transaction. `email_bestätigungen` is keyed by the address, not by a `benutzer_id`,
 ///   because no Benutzer exists while the confirmation is outstanding.
 /// - Revocation is a **row state** (rule 15): `sessions.verhindert_am` and
 ///   `signing_keys.aktiv` decide acceptance, so a logout is immediate even while an
@@ -41,7 +41,7 @@ impl UpMigration<libsql::Transaction, libsql::Error> for Migration {
                 benutzer_id TEXT NOT NULL REFERENCES "benutzer" (id) ON DELETE CASCADE,
                 email TEXT NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
-                bestaetigt_am TEXT NOT NULL,
+                bestätigt_am TEXT NOT NULL,
                 erstellt_am TEXT NOT NULL,
                 _version INTEGER NOT NULL DEFAULT 0
             );
@@ -66,14 +66,14 @@ impl UpMigration<libsql::Transaction, libsql::Error> for Migration {
 
             CREATE TABLE IF NOT EXISTS "signing_keys" (
                 kid TEXT PRIMARY KEY,
-                oeffentlicher_schluessel TEXT NOT NULL,
+                öffentlicher_schlüssel TEXT NOT NULL,
                 aktiv INTEGER NOT NULL,
                 erstellt_am TEXT NOT NULL,
-                ausser_betrieb_am TEXT,
+                außer_betrieb_am TEXT,
                 _version INTEGER NOT NULL DEFAULT 0
             );
 
-            CREATE TABLE IF NOT EXISTS "email_bestaetigungen" (
+            CREATE TABLE IF NOT EXISTS "email_bestätigungen" (
                 id TEXT PRIMARY KEY,
                 email TEXT NOT NULL,
                 token_hash TEXT NOT NULL UNIQUE,
@@ -82,8 +82,8 @@ impl UpMigration<libsql::Transaction, libsql::Error> for Migration {
                 _version INTEGER NOT NULL DEFAULT 0
             );
 
-            CREATE INDEX IF NOT EXISTS "idx_email_bestaetigungen_email"
-                ON "email_bestaetigungen" (email);
+            CREATE INDEX IF NOT EXISTS "idx_email_bestätigungen_email"
+                ON "email_bestätigungen" (email);
 
             CREATE TABLE IF NOT EXISTS "passwort_wiederherstellungen" (
                 id TEXT PRIMARY KEY,

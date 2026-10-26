@@ -52,3 +52,24 @@ suggestions, not requirements. The product needs are:
 - Frontend and backend are on different origins, so the backend needs CORS for the Pages origin and
   TLS on the VPS. Authentication must work cross-origin (decided in the accounts spec).
 - Deployment needs a Pages workflow for the frontend and a separate deployment path for the VPS.
+
+## Appendix: spelling German identifiers
+
+Domain identifiers are German, and they are spelled with their real letters:
+`Empfänger`, `Bestätigung`, `öffentlicher_schlüssel`, `MIN_PASSWORT_LÄNGE`. Rust accepts
+non-ASCII identifiers, and so do JSON keys, SQLite column names, and TypeScript names, so
+transliterating them into ASCII — shrinking the receiver to four letters plus an escape — is
+simply wrong here.
+
+Three things stay ASCII, because something outside the compiler consumes them:
+
+1. **Module names.** `mod x;` resolves to a file path, and Rust refuses a non-ASCII one. So
+   `mod bestaetigung;` in `domain/konto/mod.rs` is correct, and the file keeps that name.
+2. **Environment variables.** An operator types them, and a shell cannot be relied on to carry
+   an umlaut through every hop. `LOGANDAIM_SMTP_VERSCHLUESSELUNG` stays as it is.
+3. **Words borrowed from English** (`Request`, `Issuer`, `Value`) are not transliterations, and
+   the check ignores them.
+
+`mise run check:identifiers` (part of `mise run check`) enforces the rule in both directions:
+it fails on a transliterated German word, on a non-ASCII `mod` name, and on an umlaut inside an
+`env = "…"` literal.

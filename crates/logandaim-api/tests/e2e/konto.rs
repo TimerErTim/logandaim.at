@@ -15,7 +15,8 @@ use serde_json::json;
 use uuid::Uuid;
 
 use super::{
-    BESTAETIGUNG_LINK, E2eHarness, ISSUER, PASSWORT, WIEDERHERSTELLUNG_LINK, cookie_pair, mailpit,
+    BESTÄTIGUNG_LINK, E2eHarness, FRONTEND_BASIS_URL, ISSUER, PASSWORT, WIEDERHERSTELLUNG_LINK,
+    cookie_pair, mailpit,
 };
 
 /// The refresh cookie a client keeps.
@@ -111,7 +112,7 @@ async fn ac2_vergebene_adresse_antwortet_gleich_und_mailt_nicht() {
     // Only the free address was mailed.
     assert_eq!(harness.mail.gesendete().len(), 1);
     assert_eq!(
-        harness.mail.letzte().empfaenger.as_ref(),
+        harness.mail.letzte().empfänger.as_ref(),
         "neu@muster.at",
         "die vergebene Adresse bekommt keine Mail"
     );
@@ -138,7 +139,7 @@ async fn ac3_abschluss_erzeugt_benutzer_konto_und_erste_sitzung() {
 // ------------------------------------------------------------------------- AC-4, AC-5
 
 #[test_log::test(pollster::test)]
-async fn ac4_kurzes_passwort_oder_ungueltiges_token_erzeugt_nichts() {
+async fn ac4_kurzes_passwort_oder_ungültiges_token_erzeugt_nichts() {
     let harness = E2eHarness::new().await;
     harness
         .client
@@ -183,7 +184,7 @@ async fn ac4_kurzes_passwort_oder_ungueltiges_token_erzeugt_nichts() {
 }
 
 #[test_log::test(pollster::test)]
-async fn ac5_anmeldung_eroeffnet_eine_gueltige_sitzung() {
+async fn ac5_anmeldung_eröffnet_eine_gültige_sitzung() {
     let harness = E2eHarness::new().await;
     registriere(&harness, "anna@muster.at").await;
 
@@ -356,7 +357,7 @@ async fn ac8_abgelaufenes_refresh_token_wird_abgelehnt() {
 // ------------------------------------------------------------------------------- AC-9
 
 #[test_log::test(pollster::test)]
-async fn ac9_abmeldung_widerruft_und_das_access_token_faellt_sofort() {
+async fn ac9_abmeldung_widerruft_und_das_access_token_fällt_sofort() {
     let harness = E2eHarness::new().await;
     let (access, cookie, _, _) = registriere(&harness, "anna@muster.at").await;
 
@@ -413,7 +414,11 @@ async fn ac10_wiederherstellung_antwortet_fuer_jede_adresse_gleich() {
         "nur die bekannte Adresse"
     );
     assert!(
-        harness.mail.letzte().text.contains(WIEDERHERSTELLUNG_LINK),
+        harness
+            .mail
+            .letzte()
+            .text(FRONTEND_BASIS_URL)
+            .contains(WIEDERHERSTELLUNG_LINK),
         "der Link zeigt auf die Wiederherstellungsroute"
     );
 }
@@ -496,15 +501,15 @@ async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
 // ------------------------------------------------------------------------------ AC-12
 
 #[test_log::test(pollster::test)]
-async fn ac12_loeschung_entfernt_identitaet_und_gibt_die_adresse_frei() {
+async fn ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei() {
     let harness = E2eHarness::new().await;
     let (access, _, _, _) = registriere(&harness, "anna@muster.at").await;
 
     let (status, _) = harness
         .client
         .post_json(
-            "/api/benutzer/loeschung",
-            json!({ "passwort": PASSWORT, "bestaetigt": true }),
+            "/api/benutzer/löschung",
+            json!({ "passwort": PASSWORT, "bestätigt": true }),
         )
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "ohne Anmeldung");
@@ -516,8 +521,8 @@ async fn ac12_loeschung_entfernt_identitaet_und_gibt_die_adresse_frei() {
     let (status, _) = harness
         .client
         .post_json_auth(
-            "/api/benutzer/loeschung",
-            json!({ "passwort": PASSWORT, "bestaetigt": true }),
+            "/api/benutzer/löschung",
+            json!({ "passwort": PASSWORT, "bestätigt": true }),
             &access,
         )
         .await;
@@ -544,15 +549,15 @@ async fn ac12_loeschung_entfernt_identitaet_und_gibt_die_adresse_frei() {
 }
 
 #[test_log::test(pollster::test)]
-async fn ac12_loeschung_ohne_bestaetigung_oder_mit_falschem_passwort_scheitert() {
+async fn ac12_löschung_ohne_bestätigung_oder_mit_falschem_passwort_scheitert() {
     let harness = E2eHarness::new().await;
     let (access, _, _, _) = registriere(&harness, "anna@muster.at").await;
 
     let (status, _) = harness
         .client
         .post_json_auth(
-            "/api/benutzer/loeschung",
-            json!({ "passwort": PASSWORT, "bestaetigt": false }),
+            "/api/benutzer/löschung",
+            json!({ "passwort": PASSWORT, "bestätigt": false }),
             &access,
         )
         .await;
@@ -561,8 +566,8 @@ async fn ac12_loeschung_ohne_bestaetigung_oder_mit_falschem_passwort_scheitert()
     let (status, _) = harness
         .client
         .post_json_auth(
-            "/api/benutzer/loeschung",
-            json!({ "passwort": "falsch-falsch", "bestaetigt": true }),
+            "/api/benutzer/löschung",
+            json!({ "passwort": "falsch-falsch", "bestätigt": true }),
             &access,
         )
         .await;
@@ -622,7 +627,7 @@ async fn ac14_fremden_benutzer_liest_nur_ein_systemadministrator() {
 // ------------------------------------------------------------------------ AC-15, AC-16
 
 #[test_log::test(pollster::test)]
-async fn ac16_registrierung_ist_auf_fuenf_pro_stunde_gedrosselt() {
+async fn ac16_registrierung_ist_auf_fünf_pro_stunde_gedrosselt() {
     let harness = E2eHarness::new().await;
 
     for i in 0..5 {
@@ -687,7 +692,7 @@ fn hardware_clock_now(harness: &E2eHarness) -> chrono::DateTime<chrono::Utc> {
 /// AC-17: an unexpired, correctly signed token is rejected once its `kid` row is retired or
 /// unknown. The signature is still valid — the *row* is what fails.
 #[test_log::test(pollster::test)]
-async fn ac17_ausser_betrieb_gesetzter_oder_unbekannter_kid_wird_abgelehnt() {
+async fn ac17_außer_betrieb_gesetzter_oder_unbekannter_kid_wird_abgelehnt() {
     let harness = E2eHarness::new().await;
     let (access, _, _, _) = registriere(&harness, "anna@muster.at").await;
 
@@ -743,7 +748,7 @@ async fn ac18_abgelaufenes_access_token_wird_abgelehnt() {
 /// On Tokio, not `pollster`: the SMTP adapter resolves its relay through `tokio::net`, and
 /// a pollster-driven future has no reactor to do that on.
 #[test_log::test(tokio::test)]
-async fn ac19_die_mail_traegt_einen_aufrufbaren_link() {
+async fn ac19_die_mail_trägt_einen_aufrufbaren_link() {
     mailpit::leeren().await;
 
     let harness = E2eHarness::mit_smtp().await;
@@ -757,7 +762,7 @@ async fn ac19_die_mail_traegt_einen_aufrufbaren_link() {
 
     let text = mailpit::letzter_text_an("anna@muster.at").await;
     assert!(
-        text.contains(&format!("{BESTAETIGUNG_LINK}?token=")),
+        text.contains(&format!("{BESTÄTIGUNG_LINK}?token=")),
         "die Mail trägt den konfigurierten Frontend-Link: {text}"
     );
 

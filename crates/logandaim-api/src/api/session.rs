@@ -66,14 +66,14 @@ impl SitzungAntwort {
             ),
             Err(fehler) => {
                 let status = status_from_report(&fehler);
-                let geloescht = cookie::loeschen();
+                let gelöscht = cookie::löschen();
                 if status.is_server_error() {
                     return Self::InternalError(
                         PlainText(InternalServerError),
                         NO_STORE.to_owned(),
                     );
                 }
-                Self::ClientError(status, Json(fehler.into()), geloescht, NO_STORE.to_owned())
+                Self::ClientError(status, Json(fehler.into()), gelöscht, NO_STORE.to_owned())
             }
         }
     }
@@ -143,9 +143,9 @@ pub enum BeendendeAntwort<T: poem_openapi::types::ToJSON> {
 
 impl<T: poem_openapi::types::ToJSON> BeendendeAntwort<T> {
     pub fn neu(ergebnis: ResultReport<T, KontoDienstFehler>) -> Self {
-        let geloescht = cookie::loeschen();
+        let gelöscht = cookie::löschen();
         match ergebnis {
-            Ok(wert) => Self::Ok(Json(wert), geloescht, NO_STORE.to_owned()),
+            Ok(wert) => Self::Ok(Json(wert), gelöscht, NO_STORE.to_owned()),
             Err(fehler) => {
                 let status = status_from_report(&fehler);
                 if status.is_server_error() {
@@ -154,7 +154,7 @@ impl<T: poem_openapi::types::ToJSON> BeendendeAntwort<T> {
                         NO_STORE.to_owned(),
                     );
                 }
-                Self::ClientError(status, Json(fehler.into()), geloescht, NO_STORE.to_owned())
+                Self::ClientError(status, Json(fehler.into()), gelöscht, NO_STORE.to_owned())
             }
         }
     }

@@ -29,23 +29,23 @@ pub struct AccessTokenClaims {
 impl AccessTokenClaims {
     /// `exp` in the future and `iat` not implausibly ahead, both with [`CLOCK_SKEW`]
     /// tolerance so a slightly fast issuer and a slightly slow verifier agree.
-    pub fn pruefe_zeitfenster(&self, jetzt: DateTime<Utc>) -> Result<(), KontoFehler> {
+    pub fn prüfe_zeitfenster(&self, jetzt: DateTime<Utc>) -> Result<(), KontoFehler> {
         if jetzt - CLOCK_SKEW >= self.exp {
             return Err(KontoFehler::TokenAbgelaufen);
         }
         if self.iat - CLOCK_SKEW > jetzt {
-            return Err(KontoFehler::TokenNochNichtGueltig);
+            return Err(KontoFehler::TokenNochNichtGültig);
         }
         if self.exp <= self.iat {
-            return Err(KontoFehler::TokenUngueltig);
+            return Err(KontoFehler::TokenUngültig);
         }
         Ok(())
     }
 
     /// `iss` and `aud` must be exactly the configured pair; no prefix or suffix match.
-    pub fn pruefe_herkunft(&self, iss: &str, aud: &str) -> Result<(), KontoFehler> {
+    pub fn prüfe_herkunft(&self, iss: &str, aud: &str) -> Result<(), KontoFehler> {
         if self.iss != iss || self.aud != aud {
-            return Err(KontoFehler::TokenHerkunftUngueltig);
+            return Err(KontoFehler::TokenHerkunftUngültig);
         }
         Ok(())
     }
@@ -82,9 +82,9 @@ mod tests {
     }
 
     #[test_log::test]
-    fn gueltiges_fenster_wird_akzeptiert() {
+    fn gültiges_fenster_wird_akzeptiert() {
         let claims = claims(jetzt(), jetzt() + ACCESS_TOKEN_LIFETIME);
-        assert!(claims.pruefe_zeitfenster(jetzt()).is_ok());
+        assert!(claims.prüfe_zeitfenster(jetzt()).is_ok());
     }
 
     #[test_log::test]
@@ -92,7 +92,7 @@ mod tests {
         let claims = claims(jetzt(), jetzt() + ACCESS_TOKEN_LIFETIME);
         // Past `exp` by more than the tolerated skew.
         assert!(matches!(
-            claims.pruefe_zeitfenster(jetzt() + ACCESS_TOKEN_LIFETIME + CLOCK_SKEW),
+            claims.prüfe_zeitfenster(jetzt() + ACCESS_TOKEN_LIFETIME + CLOCK_SKEW),
             Err(KontoFehler::TokenAbgelaufen)
         ));
     }
@@ -103,7 +103,7 @@ mod tests {
         // A verifier whose clock runs CLOCK_SKEW behind still accepts.
         assert!(
             claims
-                .pruefe_zeitfenster(jetzt() + ACCESS_TOKEN_LIFETIME - CLOCK_SKEW)
+                .prüfe_zeitfenster(jetzt() + ACCESS_TOKEN_LIFETIME - CLOCK_SKEW)
                 .is_ok()
         );
     }
@@ -115,23 +115,23 @@ mod tests {
             jetzt() + ACCESS_TOKEN_LIFETIME,
         );
         assert!(matches!(
-            claims.pruefe_zeitfenster(jetzt()),
-            Err(KontoFehler::TokenNochNichtGueltig)
+            claims.prüfe_zeitfenster(jetzt()),
+            Err(KontoFehler::TokenNochNichtGültig)
         ));
     }
 
     #[test_log::test]
     fn iat_innerhalb_der_toleranz_wird_akzeptiert() {
         let claims = claims(jetzt() + CLOCK_SKEW, jetzt() + ACCESS_TOKEN_LIFETIME);
-        assert!(claims.pruefe_zeitfenster(jetzt()).is_ok());
+        assert!(claims.prüfe_zeitfenster(jetzt()).is_ok());
     }
 
     #[test_log::test]
     fn fenster_mit_exp_vor_iat_wird_abgelehnt() {
         let claims = claims(jetzt(), jetzt());
         assert!(matches!(
-            claims.pruefe_zeitfenster(jetzt()),
-            Err(KontoFehler::TokenUngueltig)
+            claims.prüfe_zeitfenster(jetzt()),
+            Err(KontoFehler::TokenUngültig)
         ));
     }
 
@@ -140,16 +140,16 @@ mod tests {
         let claims = claims(jetzt(), jetzt() + ACCESS_TOKEN_LIFETIME);
         assert!(
             claims
-                .pruefe_herkunft("logandaim.at", "logandaim-api")
+                .prüfe_herkunft("logandaim.at", "logandaim-api")
                 .is_ok()
         );
         assert!(matches!(
-            claims.pruefe_herkunft("logandaim.at.evil", "logandaim-api"),
-            Err(KontoFehler::TokenHerkunftUngueltig)
+            claims.prüfe_herkunft("logandaim.at.evil", "logandaim-api"),
+            Err(KontoFehler::TokenHerkunftUngültig)
         ));
         assert!(matches!(
-            claims.pruefe_herkunft("logandaim.at", "other"),
-            Err(KontoFehler::TokenHerkunftUngueltig)
+            claims.prüfe_herkunft("logandaim.at", "other"),
+            Err(KontoFehler::TokenHerkunftUngültig)
         ));
     }
 }

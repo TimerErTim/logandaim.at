@@ -13,10 +13,9 @@ API_PORT = "3311"
 [tools]
 node = "lts"
 "cargo:cargo-nextest" = "latest"
-# Supervises the verify:* daemons.
+# Supervises the daemons.
 pitchfork = "2.32.1"
 jq = "latest"
-# Catches transactional mail in development and CI; never a product runtime dependency.
 mailpit = "latest"
 
 [deps.npm]
@@ -55,7 +54,15 @@ ready_http = "http://127.0.0.1:4173/"
 # suite reads; SMTP on 1025 is what the server writes to. Disposable, so its database is
 # kept in `target/` and a `mise daemons stop` loses nothing.
 [daemons.mailpit]
-task = "run:mailpit"
+init = ["mkdir -p target/mailpit"]
+run = """
+exec mailpit \
+  --smtp 127.0.0.1:1025 \
+  --listen 127.0.0.1:$MAILPIT_PORT \
+  --smtp-auth-accept-any \
+  --smtp-auth-allow-insecure \
+  --database target/mailpit/mailpit.db
+"""
 port = 8025
 ready_http = "http://127.0.0.1:8025/api/v1/info"
 

@@ -8,14 +8,14 @@ use logandaim_core::{
     domain::{
         EmailAdresse,
         konto::{
-            Benutzer, BenutzerId, BestaetigungId, EmailBestaetigung, Konto, KontoId,
-            NeueBestaetigung, NeueSession, NeueWiederherstellung, NeuerBenutzer, NeuesKonto,
+            Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
+            NeueSession, NeueWiederherstellung, NeuerBenutzer, NeuesKonto,
             PasswortWiederherstellung, Rolle, Session, SessionId, SigningKey, SigningKeyId,
             TokenHash, WiederherstellungId,
         },
     },
     ports::{
-        BenutzerRepository, EmailBestaetigungRepository, KontoRepository, Mail, MailFehler,
+        BenutzerRepository, EmailBestätigungRepository, KontoRepository, Mail, MailFehler,
         MailSender, PasswortWiederherstellungRepository, RepositoryError, RepositoryResult,
         SessionRepository, SigningKeyRepository,
     },
@@ -35,7 +35,7 @@ pub struct KontoDatastore {
     pub konten: Mutex<FxHashMap<KontoId, Konto>>,
     pub sessions: Mutex<FxHashMap<SessionId, Session>>,
     pub signing_keys: Mutex<FxHashMap<SigningKeyId, SigningKey>>,
-    pub bestaetigungen: Mutex<FxHashMap<BestaetigungId, EmailBestaetigung>>,
+    pub bestätigungen: Mutex<FxHashMap<BestätigungId, EmailBestätigung>>,
     pub wiederherstellungen: Mutex<FxHashMap<WiederherstellungId, PasswortWiederherstellung>>,
 }
 
@@ -46,7 +46,7 @@ impl KontoDatastore {
             konten: Mutex::new(FxHashMap::default()),
             sessions: Mutex::new(FxHashMap::default()),
             signing_keys: Mutex::new(FxHashMap::default()),
-            bestaetigungen: Mutex::new(FxHashMap::default()),
+            bestätigungen: Mutex::new(FxHashMap::default()),
             wiederherstellungen: Mutex::new(FxHashMap::default()),
         }
     }
@@ -67,8 +67,8 @@ impl KontoDatastore {
         self.signing_keys.lock().unwrap()
     }
 
-    pub fn bestaetigungen(&self) -> MutexGuard<'_, FxHashMap<BestaetigungId, EmailBestaetigung>> {
-        self.bestaetigungen.lock().unwrap()
+    pub fn bestätigungen(&self) -> MutexGuard<'_, FxHashMap<BestätigungId, EmailBestätigung>> {
+        self.bestätigungen.lock().unwrap()
     }
 
     pub fn wiederherstellungen(
@@ -83,7 +83,7 @@ impl KontoDatastore {
         *self.konten() = other.konten().clone();
         *self.sessions() = other.sessions().clone();
         *self.signing_keys() = other.signing_keys().clone();
-        *self.bestaetigungen() = other.bestaetigungen().clone();
+        *self.bestätigungen() = other.bestätigungen().clone();
         *self.wiederherstellungen() = other.wiederherstellungen().clone();
     }
 }
@@ -95,7 +95,7 @@ impl Clone for KontoDatastore {
             konten: Mutex::new(self.konten().clone()),
             sessions: Mutex::new(self.sessions().clone()),
             signing_keys: Mutex::new(self.signing_keys().clone()),
-            bestaetigungen: Mutex::new(self.bestaetigungen().clone()),
+            bestätigungen: Mutex::new(self.bestätigungen().clone()),
             wiederherstellungen: Mutex::new(self.wiederherstellungen().clone()),
         }
     }
@@ -329,74 +329,74 @@ impl SigningKeyRepository for FakeSigningKeyRepository {
         Ok(self.datastore.konto.signing_keys().get(kid).cloned())
     }
 
-    async fn ensure(&self, schluessel: &SigningKey) -> RepositoryResult<()> {
+    async fn ensure(&self, schlüssel: &SigningKey) -> RepositoryResult<()> {
         let mut keys = self.datastore.konto.signing_keys();
-        match keys.get(schluessel.kid()) {
-            Some(vorhanden) if vorhanden == schluessel => Ok(()),
+        match keys.get(schlüssel.kid()) {
+            Some(vorhanden) if vorhanden == schlüssel => Ok(()),
             Some(_) => Err(Report::new(RepositoryError::Conflict)),
             None => {
-                keys.insert(schluessel.kid().clone(), schluessel.clone());
+                keys.insert(schlüssel.kid().clone(), schlüssel.clone());
                 Ok(())
             }
         }
     }
 
-    async fn ausser_betrieb_nehmen(
+    async fn außer_betrieb_nehmen(
         &self,
         kid: &SigningKeyId,
         jetzt: chrono::DateTime<chrono::Utc>,
     ) -> RepositoryResult<()> {
         let mut keys = self.datastore.konto.signing_keys();
-        let schluessel = keys
+        let schlüssel = keys
             .get_mut(kid)
             .ok_or_else(|| Report::new(RepositoryError::NotFound))?;
-        schluessel.ausser_betrieb_nehmen(jetzt);
+        schlüssel.außer_betrieb_nehmen(jetzt);
         Ok(())
     }
 }
 
-pub struct FakeEmailBestaetigungRepository {
+pub struct FakeEmailBestätigungRepository {
     datastore: Arc<FakeDatastore>,
 }
 
-impl FakeEmailBestaetigungRepository {
+impl FakeEmailBestätigungRepository {
     pub fn new(datastore: Arc<FakeDatastore>) -> Self {
         Self { datastore }
     }
 }
 
 #[async_trait]
-impl EmailBestaetigungRepository for FakeEmailBestaetigungRepository {
-    async fn create(&self, bestaetigung: NeueBestaetigung) -> RepositoryResult<EmailBestaetigung> {
-        let id = BestaetigungId(Uuid::new_v4());
-        let erstellt = EmailBestaetigung::neu(id, bestaetigung);
+impl EmailBestätigungRepository for FakeEmailBestätigungRepository {
+    async fn create(&self, bestätigung: NeueBestätigung) -> RepositoryResult<EmailBestätigung> {
+        let id = BestätigungId(Uuid::new_v4());
+        let erstellt = EmailBestätigung::neu(id, bestätigung);
         self.datastore
             .konto
-            .bestaetigungen()
+            .bestätigungen()
             .insert(id, erstellt.clone());
         Ok(erstellt)
     }
 
-    async fn find_by_hash(&self, hash: &TokenHash) -> RepositoryResult<Option<EmailBestaetigung>> {
+    async fn find_by_hash(&self, hash: &TokenHash) -> RepositoryResult<Option<EmailBestätigung>> {
         Ok(self
             .datastore
             .konto
-            .bestaetigungen()
+            .bestätigungen()
             .values()
-            .find(|bestaetigung| bestaetigung.token_hash() == hash)
+            .find(|bestätigung| bestätigung.token_hash() == hash)
             .cloned())
     }
 
     async fn consume(
         &self,
-        id: BestaetigungId,
+        id: BestätigungId,
         jetzt: chrono::DateTime<chrono::Utc>,
     ) -> RepositoryResult<()> {
-        let mut bestaetigungen = self.datastore.konto.bestaetigungen();
-        let bestaetigung = bestaetigungen
+        let mut bestätigungen = self.datastore.konto.bestätigungen();
+        let bestätigung = bestätigungen
             .get_mut(&id)
             .ok_or_else(|| Report::new(RepositoryError::NotFound))?;
-        bestaetigung
+        bestätigung
             .verbrauchen(jetzt)
             .map_err(|_| Report::new(RepositoryError::Conflict))?;
         Ok(())
@@ -407,10 +407,10 @@ impl EmailBestaetigungRepository for FakeEmailBestaetigungRepository {
         email: &EmailAdresse,
         jetzt: chrono::DateTime<chrono::Utc>,
     ) -> RepositoryResult<()> {
-        let mut bestaetigungen = self.datastore.konto.bestaetigungen();
-        for bestaetigung in bestaetigungen.values_mut() {
-            if bestaetigung.email() == email && !bestaetigung.ist_verbraucht() {
-                let _ = bestaetigung.verbrauchen(jetzt);
+        let mut bestätigungen = self.datastore.konto.bestätigungen();
+        for bestätigung in bestätigungen.values_mut() {
+            if bestätigung.email() == email && !bestätigung.ist_verbraucht() {
+                let _ = bestätigung.verbrauchen(jetzt);
             }
         }
         Ok(())
@@ -419,8 +419,8 @@ impl EmailBestaetigungRepository for FakeEmailBestaetigungRepository {
     async fn delete_alle_fuer_email(&self, email: &EmailAdresse) -> RepositoryResult<()> {
         self.datastore
             .konto
-            .bestaetigungen()
-            .retain(|_, bestaetigung| bestaetigung.email() != email);
+            .bestätigungen()
+            .retain(|_, bestätigung| bestätigung.email() != email);
         Ok(())
     }
 }

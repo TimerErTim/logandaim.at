@@ -14,29 +14,30 @@ fn absender() -> EmailAdresse {
 }
 
 fn sender() -> SmtpMailSender {
-    SmtpMailSender::neu(SmtpKonfiguration::mailpit(absender())).expect("mailpit relay builds")
+    let mut konfiguration = SmtpKonfiguration::mailpit(absender());
+    konfiguration.frontend_basis_url = "https://logandaim.at".to_owned();
+    SmtpMailSender::neu(konfiguration).expect("mailpit relay builds")
 }
 
 #[test_log::test(tokio::test)]
-async fn die_nachricht_traegt_empfaenger_betreff_und_klartext_rumpf() {
+async fn die_nachricht_trägt_empfänger_betreff_und_klartext_rumpf() {
     let sender = sender();
-    let mail = Mail::neu(
+    let mail = Mail::email_bestätigung(
         EmailAdresse::new("anna@muster.at").expect("address is valid"),
-        "Bestätige deine E-Mail-Adresse",
-        "Bitte bestätige deine Adresse: https://logandaim.at/registrierung?token=abc\n",
+        "abc",
     );
 
     let nachricht = sender.baue_nachricht(&mail).expect("the message builds");
 
     // The SMTP envelope is what the relay actually routes on, so assert it directly
     // rather than the `To:` header a client later renders.
-    let empfaenger: Vec<String> = nachricht
+    let empfänger: Vec<String> = nachricht
         .envelope()
         .to()
         .iter()
         .map(|adresse| adresse.to_string())
         .collect();
-    assert_eq!(empfaenger, vec!["anna@muster.at".to_owned()]);
+    assert_eq!(empfänger, vec!["anna@muster.at".to_owned()]);
 
     let betreff = nachricht
         .headers()
@@ -62,13 +63,12 @@ async fn die_nachricht_traegt_empfaenger_betreff_und_klartext_rumpf() {
 /// A message that cannot even be built is a delivery failure, never a panic and never a
 /// silent success: the use case logs it and the request still answers (NFR-5).
 #[test_log::test(tokio::test)]
-async fn eine_ungueltige_adresse_ist_ein_zustellungsfehler() {
+async fn eine_ungültige_adresse_ist_ein_zustellungsfehler() {
     let sender = sender();
     // `EmailAdresse` only checks for `@` and `.`; the space makes the mailbox unparseable.
-    let mail = Mail::neu(
+    let mail = Mail::email_bestätigung(
         EmailAdresse::new("anna muster@muster.at").expect("domain address is lenient"),
-        "Test",
-        "Rumpf",
+        "abc",
     );
 
     let fehler = sender

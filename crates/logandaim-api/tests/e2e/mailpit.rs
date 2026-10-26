@@ -58,9 +58,9 @@ pub async fn nachrichten() -> Vec<Value> {
     antwort["messages"].as_array().cloned().unwrap_or_default()
 }
 
-/// The body of the newest message addressed to `empfaenger`, decoded from Mailpit's
+/// The body of the newest message addressed to `empfänger`, decoded from Mailpit's
 /// base64-free `Text` field.
-pub async fn letzter_text_an(empfaenger: &str) -> String {
+pub async fn letzter_text_an(empfänger: &str) -> String {
     let nachrichten = nachrichten().await;
     let passend = nachrichten
         .iter()
@@ -68,11 +68,11 @@ pub async fn letzter_text_an(empfaenger: &str) -> String {
         .find(|nachricht| {
             nachricht["To"]
                 .as_array()
-                .map(|empfaenger_liste| {
-                    empfaenger_liste.iter().any(|eintrag| {
+                .map(|empfänger_liste| {
+                    empfänger_liste.iter().any(|eintrag| {
                         eintrag["Address"]
                             .as_str()
-                            .map(|adresse| adresse.eq_ignore_ascii_case(empfaenger))
+                            .map(|adresse| adresse.eq_ignore_ascii_case(empfänger))
                             .unwrap_or(false)
                     })
                 })
@@ -80,7 +80,7 @@ pub async fn letzter_text_an(empfaenger: &str) -> String {
         })
         .unwrap_or_else(|| {
             panic!(
-                "keine Mail an {empfaenger} in Mailpit; vorhanden: {}",
+                "keine Mail an {empfänger} in Mailpit; vorhanden: {}",
                 nachrichten.len()
             )
         });

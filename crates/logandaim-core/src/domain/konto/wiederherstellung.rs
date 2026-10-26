@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use super::{KontoFehler, KontoId, PASSWORT_WIEDERHERSTELLUNG_GUELTIGKEIT, TokenHash};
+use super::{KontoFehler, KontoId, PASSWORT_WIEDERHERSTELLUNG_GÜLTIGKEIT, TokenHash};
 
 /// Identity of one Passwort-Wiederherstellung token.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -37,7 +37,7 @@ impl NeueWiederherstellung {
     }
 
     pub fn expires_at(&self) -> DateTime<Utc> {
-        self.erstellt_am + PASSWORT_WIEDERHERSTELLUNG_GUELTIGKEIT
+        self.erstellt_am + PASSWORT_WIEDERHERSTELLUNG_GÜLTIGKEIT
     }
 }
 
@@ -110,7 +110,7 @@ impl PasswortWiederherstellung {
         self.expires_at <= jetzt
     }
 
-    pub fn ist_gueltig(&self, jetzt: DateTime<Utc>) -> bool {
+    pub fn ist_gültig(&self, jetzt: DateTime<Utc>) -> bool {
         !self.ist_verbraucht() && !self.ist_abgelaufen(jetzt)
     }
 
@@ -148,8 +148,8 @@ mod tests {
     fn gilt_60_minuten() {
         let token = wiederherstellung();
         assert_eq!(token.expires_at(), jetzt() + Duration::minutes(60));
-        assert!(token.ist_gueltig(jetzt() + Duration::minutes(59)));
-        assert!(!token.ist_gueltig(jetzt() + Duration::minutes(60)));
+        assert!(token.ist_gültig(jetzt() + Duration::minutes(59)));
+        assert!(!token.ist_gültig(jetzt() + Duration::minutes(60)));
     }
 
     #[test_log::test]

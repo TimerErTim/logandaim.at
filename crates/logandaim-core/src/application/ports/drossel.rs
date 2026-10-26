@@ -58,12 +58,12 @@ impl DrosselAktion {
 /// Never an E-Mail-Adresse. A per-address limit would let anyone lock an owner out by
 /// guessing their address (SPEC-konto rule 5, Q-16).
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct KundeSchluessel {
+pub struct KundeSchlüssel {
     pub ip: IpAddr,
     pub fingerprint: String,
 }
 
-impl KundeSchluessel {
+impl KundeSchlüssel {
     pub fn neu(ip: IpAddr, fingerprint: impl Into<String>) -> Self {
         Self {
             ip,
@@ -77,7 +77,7 @@ pub enum DrosselFehler {
     #[error("zu viele Versuche; bitte später erneut versuchen")]
     ZuVieleVersuche,
     #[error("die Drossel ist nicht erreichbar")]
-    NichtVerfuegbar,
+    NichtVerfügbar,
 }
 
 /// Client-scoped rate limiting. An infrastructure port, not domain behaviour: the
@@ -86,18 +86,18 @@ pub enum DrosselFehler {
 pub trait Drossel: Send + Sync {
     /// Count one attempt. `Err(ZuVieleVersuche)` once the budget is spent; the caller
     /// answers 429 and does the work only on `Ok`.
-    async fn pruefe_und_zaehle(
+    async fn prüfe_und_zähle(
         &self,
-        kunde: &KundeSchluessel,
+        kunde: &KundeSchlüssel,
         aktion: DrosselAktion,
         jetzt: DateTime<Utc>,
     ) -> ResultReport<(), DrosselFehler>;
 
     /// Forget one action's counter for this client. Called on a successful login, so an
     /// owner who mistyped is not punished for the rest of the window (rule 5).
-    async fn zuruecksetzen(
+    async fn zurücksetzen(
         &self,
-        kunde: &KundeSchluessel,
+        kunde: &KundeSchlüssel,
         aktion: DrosselAktion,
     ) -> ResultReport<(), DrosselFehler>;
 }

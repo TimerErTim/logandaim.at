@@ -10,7 +10,7 @@ use crate::{
             dummy_verify, hash_token, verify_password,
         },
     },
-    ports::{DrosselAktion, KundeSchluessel},
+    ports::{DrosselAktion, KundeSchlüssel},
     service::UseCase,
 };
 
@@ -28,7 +28,7 @@ pub struct Anmeldung {
     pub email: String,
     pub passwort: String,
     /// Throttle key. Never the address: that would let anybody lock an owner out.
-    pub kunde: KundeSchluessel,
+    pub kunde: KundeSchlüssel,
 }
 
 #[async_trait]
@@ -37,9 +37,9 @@ impl UseCase<SitzungAusgestellt> for Anmeldung {
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SitzungAusgestellt, Self::Error> {
         let email = EmailAdresse::normalisiert(&self.email)
-            .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+            .change_context(KontoDienstFehler::UngültigeAnfrage)?;
         let passwort = KlartextPasswort::neu(self.passwort)
-            .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+            .change_context(KontoDienstFehler::UngültigeAnfrage)?;
         let jetzt = ctx.clock().now();
 
         drossle(&ctx, &self.kunde, DrosselAktion::Anmeldung, jetzt).await?;
@@ -105,7 +105,7 @@ impl UseCase<SitzungAusgestellt> for Anmeldung {
         // Passwort is not held against it for the rest of the window (rule 5).
         let _ = ctx
             .drossel()
-            .zuruecksetzen(&self.kunde, DrosselAktion::Anmeldung)
+            .zurücksetzen(&self.kunde, DrosselAktion::Anmeldung)
             .await;
 
         tracing::info!(benutzer_id = ?ausgestellt.benutzer.id(), "angemeldet");
@@ -127,7 +127,7 @@ pub struct ErneuerungAusgestellt {
 #[derive(Debug, Clone)]
 pub struct Erneuerung {
     pub refresh_token: String,
-    pub kunde: KundeSchluessel,
+    pub kunde: KundeSchlüssel,
 }
 
 #[async_trait]
@@ -142,7 +142,7 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
         drossle(&ctx, &self.kunde, DrosselAktion::Erneuerung, jetzt).await?;
 
         let token = SecretToken::parse(self.refresh_token)
-            .change_context(KontoDienstFehler::SitzungUngueltig)?;
+            .change_context(KontoDienstFehler::SitzungUngültig)?;
 
         let uow = ctx
             .enter()
@@ -158,7 +158,7 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                 .change_context(KontoDienstFehler::Speicher)?;
 
             let Some(session) = session else {
-                return Err(Report::new(KontoDienstFehler::SitzungUngueltig));
+                return Err(Report::new(KontoDienstFehler::SitzungUngültig));
             };
 
             if session.ist_verbraucht() {
@@ -173,8 +173,8 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                 return Ok::<_, Report<KontoDienstFehler>>(Erneuerungsausgang::Wiederholung);
             }
 
-            if !session.ist_gueltig(jetzt) {
-                return Err(Report::new(KontoDienstFehler::SitzungUngueltig));
+            if !session.ist_gültig(jetzt) {
+                return Err(Report::new(KontoDienstFehler::SitzungUngültig));
             }
 
             let folge_refresh = RefreshToken::neu().change_context(KontoDienstFehler::Speicher)?;
@@ -202,7 +202,7 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
         match uow.finish_with(ergebnis, speicherfehler).await? {
             Erneuerungsausgang::Neu(ausgestellt) => Ok(ausgestellt),
             Erneuerungsausgang::Wiederholung => {
-                Err(Report::new(KontoDienstFehler::SitzungUngueltig))
+                Err(Report::new(KontoDienstFehler::SitzungUngültig))
             }
         }
     }
@@ -257,12 +257,12 @@ impl UseCase<()> for Abmeldung {
 /// This is where an unexpired token still gets rejected: the `kid` row must be active and
 /// the `sid` row must be unrevoked, both of which are database rows (rule 15, AC-17).
 #[derive(Debug, Clone)]
-pub struct SitzungPruefen {
+pub struct SitzungPrüfen {
     pub claims: AccessTokenClaims,
 }
 
 #[async_trait]
-impl UseCase<AuthContext> for SitzungPruefen {
+impl UseCase<AuthContext> for SitzungPrüfen {
     type Error = Report<KontoDienstFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<AuthContext, Self::Error> {
@@ -270,10 +270,10 @@ impl UseCase<AuthContext> for SitzungPruefen {
         let konfiguration = ctx.konto_konfiguration();
 
         self.claims
-            .pruefe_herkunft(&konfiguration.issuer, &konfiguration.audience)
+            .prüfe_herkunft(&konfiguration.issuer, &konfiguration.audience)
             .change_context(KontoDienstFehler::NichtAngemeldet)?;
         self.claims
-            .pruefe_zeitfenster(jetzt)
+            .prüfe_zeitfenster(jetzt)
             .change_context(KontoDienstFehler::NichtAngemeldet)?;
 
         let uow = ctx
@@ -282,17 +282,17 @@ impl UseCase<AuthContext> for SitzungPruefen {
             .change_context(KontoDienstFehler::Speicher)?;
 
         let ergebnis = async {
-            let schluessel = uow
+            let schlüssel = uow
                 .signing_keys()
                 .find_by_kid(&self.claims.kid)
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(KontoDienstFehler::NichtAngemeldet)?;
 
-            let Some(schluessel) = schluessel else {
+            let Some(schlüssel) = schlüssel else {
                 return Err(Report::new(KontoDienstFehler::NichtAngemeldet));
             };
-            if !schluessel.ist_aktiv() {
+            if !schlüssel.ist_aktiv() {
                 return Err(Report::new(KontoDienstFehler::NichtAngemeldet));
             }
 

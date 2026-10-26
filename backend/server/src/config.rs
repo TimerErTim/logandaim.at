@@ -41,14 +41,13 @@ pub struct ServerConfig {
     pub token_issuer: String,
     /// Audience claim of every access token.
     pub token_audience: String,
-    /// Frontend route a confirmation mail links to.
-    pub bestaetigung_link: String,
-    /// Frontend route a recovery mail links to.
-    pub wiederherstellung_link: String,
+    /// Frontend origin the mailed links point at. The routes are the product's; this is
+    /// only where the app is served.
+    pub frontend_basis_url: String,
     /// SMTP relay host. Absent means "no relay": every send fails and is logged.
     pub smtp_host: Option<String>,
     pub smtp_port: u16,
-    pub smtp_verschluesselung: SmtpVerschluesselung,
+    pub smtp_verschlüsselung: SmtpVerschlüsselung,
     pub smtp_benutzername: Option<String>,
     pub smtp_passwort: Option<String>,
     /// Envelope sender of every transactional mail.
@@ -68,11 +67,10 @@ impl Default for ServerConfig {
             signing_key_id: "k1".into(),
             token_issuer: "logandaim.at".into(),
             token_audience: "logandaim-api".into(),
-            bestaetigung_link: "http://localhost:4173/registrierung".into(),
-            wiederherstellung_link: "http://localhost:4173/passwort".into(),
+            frontend_basis_url: "http://localhost:3000".into(),
             smtp_host: None,
             smtp_port: 1025,
-            smtp_verschluesselung: SmtpVerschluesselung::Klar,
+            smtp_verschlüsselung: SmtpVerschlüsselung::Klar,
             smtp_benutzername: None,
             smtp_passwort: None,
             smtp_absender: "noreply@logandaim.at".into(),
@@ -83,7 +81,7 @@ impl Default for ServerConfig {
 /// How the SMTP adapter talks to its relay.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, clap::ValueEnum)]
 #[serde(rename_all = "camelCase")]
-pub enum SmtpVerschluesselung {
+pub enum SmtpVerschlüsselung {
     /// Plain SMTP: Mailpit on loopback in development and tests.
     #[default]
     Klar,
@@ -140,13 +138,9 @@ pub struct Cli {
     #[arg(long, env = "LOGANDAIM_TOKEN_AUDIENCE")]
     pub token_audience: Option<String>,
 
-    /// Frontend route a confirmation mail links to
-    #[arg(long, env = "LOGANDAIM_BESTAETIGUNG_LINK")]
-    pub bestaetigung_link: Option<String>,
-
-    /// Frontend route a recovery mail links to
-    #[arg(long, env = "LOGANDAIM_WIEDERHERSTELLUNG_LINK")]
-    pub wiederherstellung_link: Option<String>,
+    /// Frontend origin the mailed links point at
+    #[arg(long, env = "LOGANDAIM_FRONTEND_BASIS_URL")]
+    pub frontend_basis_url: Option<String>,
 
     /// SMTP relay host; omit to run without mail delivery
     #[arg(long, env = "LOGANDAIM_SMTP_HOST")]
@@ -158,7 +152,7 @@ pub struct Cli {
 
     /// SMTP transport: klar, starttls, or implizit
     #[arg(long, env = "LOGANDAIM_SMTP_VERSCHLUESSELUNG")]
-    pub smtp_verschluesselung: Option<SmtpVerschluesselung>,
+    pub smtp_verschlüsselung: Option<SmtpVerschlüsselung>,
 
     /// SMTP username
     #[arg(long, env = "LOGANDAIM_SMTP_BENUTZERNAME")]
@@ -258,11 +252,8 @@ fn overlay(mut config: ServerConfig, cli: &Cli) -> ServerConfig {
     if let Some(token_audience) = &cli.token_audience {
         config.token_audience = token_audience.clone();
     }
-    if let Some(bestaetigung_link) = &cli.bestaetigung_link {
-        config.bestaetigung_link = bestaetigung_link.clone();
-    }
-    if let Some(wiederherstellung_link) = &cli.wiederherstellung_link {
-        config.wiederherstellung_link = wiederherstellung_link.clone();
+    if let Some(frontend_basis_url) = &cli.frontend_basis_url {
+        config.frontend_basis_url = frontend_basis_url.clone();
     }
     if let Some(smtp_host) = &cli.smtp_host {
         config.smtp_host = Some(smtp_host.clone());
@@ -270,8 +261,8 @@ fn overlay(mut config: ServerConfig, cli: &Cli) -> ServerConfig {
     if let Some(smtp_port) = cli.smtp_port {
         config.smtp_port = smtp_port;
     }
-    if let Some(smtp_verschluesselung) = cli.smtp_verschluesselung {
-        config.smtp_verschluesselung = smtp_verschluesselung;
+    if let Some(smtp_verschlüsselung) = cli.smtp_verschlüsselung {
+        config.smtp_verschlüsselung = smtp_verschlüsselung;
     }
     if let Some(smtp_benutzername) = &cli.smtp_benutzername {
         config.smtp_benutzername = Some(smtp_benutzername.clone());

@@ -258,7 +258,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn wertung_ab_pfeil_vier_zaehlt_null() {
+    fn wertung_ab_pfeil_vier_zählt_null() {
         let schüsse = vec![
             schuss(1, 1, Wertungszone::Miss),
             schuss(1, 2, Wertungszone::Miss),

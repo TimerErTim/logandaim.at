@@ -22,12 +22,7 @@ async fn app() -> Arc<App> {
             ))
             .drossel(Arc::new(InMemoryDrossel::new()))
             .mail_sender(Arc::new(FakeMailSender::new()))
-            .konto(KontoKonfiguration::neu(
-                "https://logandaim.at/registrierung",
-                "https://logandaim.at/passwort",
-                "logandaim.at",
-                "logandaim-api",
-            ))
+            .konto(KontoKonfiguration::neu("logandaim.at", "logandaim-api"))
             .build(),
     )
 }

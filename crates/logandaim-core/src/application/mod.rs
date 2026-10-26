@@ -98,14 +98,14 @@ impl App {
         use crate::domain::konto::SigningKey;
 
         let ctx = self.new_execution_context(AuthContext::Anonymous);
-        let schluessel = SigningKey::neu(
+        let schlüssel = SigningKey::neu(
             self.signing_key.kid().clone(),
             self.signing_key.public_key_hex(),
             self.clock.now(),
         );
 
         let uow = ctx.enter().await?;
-        let ergebnis = uow.signing_keys().ensure(&schluessel).await;
+        let ergebnis = uow.signing_keys().ensure(&schlüssel).await;
         uow.finish(ergebnis, crate::ports::RepositoryError::Unknown)
             .await?;
         tracing::info!(kid = %self.signing_key.kid().as_str(), "signing key registriert");

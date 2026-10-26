@@ -613,7 +613,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/benutzer/loeschung": {
+    "/benutzer/l\u00F6schung": {
         parameters: {
             query?: never;
             header?: never;
@@ -632,7 +632,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["BenutzerLoeschungAnfrage"];
+                    "application/json; charset=utf-8": components["schemas"]["BenutzerL\u00F6schungAnfrage"];
                 };
             };
             responses: {
@@ -705,13 +705,13 @@ export interface components {
             rolle: components["schemas"]["SchemaRolle"];
         };
         /**
-         * BenutzerLoeschungAnfrage
+         * BenutzerLöschungAnfrage
          * @description Deleting one's own Benutzer: the Passwort is re-entered, and the intent is explicit.
          */
-        BenutzerLoeschungAnfrage: {
+        "BenutzerL\u00F6schungAnfrage": {
             passwort: string;
             /** @description Must be `true`; a missing flag is a refusal, never a default. */
-            bestaetigt: boolean;
+            "best\u00E4tigt": boolean;
         };
         /**
          * OkAntwort

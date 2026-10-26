@@ -13,10 +13,10 @@ use logandaim_core::{
         konto::{SigningKeyId, SigningKeypair},
     },
     ports::MailSender,
-    service::{Befoerderung, SystemadministratorBefoerdern},
+    service::{Beförderung, SystemadministratorBefördern},
 };
 use logandaim_filesystemstore::FileSystemObjectStore;
-use logandaim_smtp::{KeinVersand, SmtpKonfiguration, SmtpMailSender, Verschluesselung};
+use logandaim_smtp::{KeinVersand, SmtpKonfiguration, SmtpMailSender, Verschlüsselung};
 use logandaim_sqlite::SQLiteInstance;
 use poem::http::StatusCode;
 use poem::middleware::{CatchPanic, Compression, Cors, Middleware, RequestId, ReuseId, Tracing};
@@ -29,13 +29,36 @@ use tracing_setup::init_tracing;
 #[error("Backend server fatal error")]
 pub struct BackendServerError;
 
-/// Attach an operator-facing explanation to a fatal report.
+/// Load the signing key from disk.
 ///
-/// `attach_printable` belongs to error-stack's optional `anyhow` feature, which this
-/// workspace does not enable; `attach` renders any `Display` printable and is always
-/// available.
-fn mit_hinweis(report: Report<BackendServerError>, hinweis: String) -> Report<BackendServerError> {
-    report.attach(hinweis)
+/// A missing or malformed key is fatal. The alternative — inventing one — would invalidate
+/// every issued access token on the next restart, and a key committed to the repo would be
+/// a key every checkout shares.
+fn lade_signing_key(
+    config: &config::ServerConfig,
+) -> Result<SigningKeypair, Report<BackendServerError>> {
+    let pem = std::fs::read_to_string(&config.signing_key_path).map_err(|source| {
+        Report::new(BackendServerError).attach(format!(
+            "signing key `{}` cannot be read ({source}); generate one with \
+             `openssl genpkey -algorithm ed25519 -out {}`",
+            config.signing_key_path.display(),
+            config.signing_key_path.display()
+        ))
+    })?;
+
+    let kid = SigningKeyId::new(config.signing_key_id.clone()).map_err(|_| {
+        Report::new(BackendServerError).attach(format!(
+            "signing key id `{}` is not a valid row id",
+            config.signing_key_id
+        ))
+    })?;
+
+    SigningKeypair::from_pkcs8_pem(kid, &pem).map_err(|_| {
+        Report::new(BackendServerError).attach(format!(
+            "signing key `{}` is not a valid PKCS#8 Ed25519 key",
+            config.signing_key_path.display()
+        ))
+    })
 }
 
 fn catch_panic() -> CatchPanic<impl poem::middleware::PanicHandler> {
@@ -46,47 +69,6 @@ fn catch_panic() -> CatchPanic<impl poem::middleware::PanicHandler> {
             PlainText(InternalServerError),
         )
             .into_response()
-    })
-}
-
-/// Load the signing key from disk.
-///
-/// A missing or malformed key is fatal. The alternative — inventing one — would invalidate
-/// every issued access token on the next restart, and a key committed to the repo would be
-/// a key every checkout shares.
-fn lade_signing_key(
-    config: &config::ServerConfig,
-) -> Result<SigningKeypair, Report<BackendServerError>> {
-    let pem = std::fs::read_to_string(&config.signing_key_path).map_err(|source| {
-        mit_hinweis(
-            Report::new(BackendServerError),
-            format!(
-                "signing key `{}` cannot be read ({source}); generate one with \
-                 `openssl genpkey -algorithm ed25519 -out {}`",
-                config.signing_key_path.display(),
-                config.signing_key_path.display()
-            ),
-        )
-    })?;
-
-    let kid = SigningKeyId::new(config.signing_key_id.clone()).map_err(|_| {
-        mit_hinweis(
-            Report::new(BackendServerError),
-            format!(
-                "signing key id `{}` is not a valid row id",
-                config.signing_key_id
-            ),
-        )
-    })?;
-
-    SigningKeypair::from_pkcs8_pem(kid, &pem).map_err(|_| {
-        mit_hinweis(
-            Report::new(BackendServerError),
-            format!(
-                "signing key `{}` is not a valid PKCS#8 Ed25519 key",
-                config.signing_key_path.display()
-            ),
-        )
     })
 }
 
@@ -106,24 +88,25 @@ fn lade_mail_sender(
     };
 
     let absender = EmailAdresse::new(&config.smtp_absender).map_err(|_| {
-        mit_hinweis(
-            Report::new(BackendServerError),
-            format!("SMTP sender `{}` is not an address", config.smtp_absender),
-        )
+        Report::new(BackendServerError).attach(format!(
+            "SMTP sender `{}` is not an address",
+            config.smtp_absender
+        ))
     })?;
 
     let smtp = SmtpKonfiguration {
         host: host.clone(),
         port: config.smtp_port,
-        verschluesselung: match config.smtp_verschluesselung {
-            config::SmtpVerschluesselung::Klar => Verschluesselung::Klar,
-            config::SmtpVerschluesselung::StartTls => Verschluesselung::StartTls,
-            config::SmtpVerschluesselung::Implizit => Verschluesselung::Implizit,
+        verschlüsselung: match config.smtp_verschlüsselung {
+            config::SmtpVerschlüsselung::Klar => Verschlüsselung::Klar,
+            config::SmtpVerschlüsselung::StartTls => Verschlüsselung::StartTls,
+            config::SmtpVerschlüsselung::Implizit => Verschlüsselung::Implizit,
         },
         benutzername: config.smtp_benutzername.clone(),
         passwort: config.smtp_passwort.clone(),
         absender,
         absender_name: Some("logandaim".to_owned()),
+        frontend_basis_url: config.frontend_basis_url.clone(),
     };
 
     let sender = SmtpMailSender::neu(smtp).change_context(BackendServerError)?;
@@ -134,19 +117,18 @@ fn lade_mail_sender(
 ///
 /// An allowlist, not a prefix match on `http://localhost:`: an origin that merely *starts*
 /// with a loopback prefix is a different origin, and the old prefix test let one through.
-/// The dev server's documented ports and the production origin are named explicitly.
-fn erlaubte_herkuenfte(config: &config::ServerConfig) -> Vec<poem::http::HeaderValue> {
-    let mut origins: Vec<String> = [4173u16, 3000u16]
-        .into_iter()
-        .flat_map(|port| {
-            [
-                format!("http://127.0.0.1:{port}"),
-                format!("http://localhost:{port}"),
-            ]
-        })
-        .collect();
+/// The frontend origin is deployment data, so it comes from configuration; the dev server's
+/// documented ports are added for a developer machine that runs the app on another port.
+fn allowed_origins(config: &config::ServerConfig) -> Vec<poem::http::HeaderValue> {
+    let mut origins = vec![config.frontend_basis_url.clone()];
 
-    origins.push("https://logandaim.at".to_owned());
+    origins.extend([4173u16, 3000u16].into_iter().flat_map(|port| {
+        [
+            format!("http://127.0.0.1:{port}"),
+            format!("http://localhost:{port}"),
+        ]
+    }));
+
     origins.push(format!(
         "http://{}:{}",
         config.bind_address, config.bind_port
@@ -177,7 +159,7 @@ fn erlaubte_herkuenfte(config: &config::ServerConfig) -> Vec<poem::http::HeaderV
 fn cors(config: &config::ServerConfig) -> Cors {
     Cors::new()
         .allow_credentials(true)
-        .allow_origins(erlaubte_herkuenfte(config))
+        .allow_origins(allowed_origins(config))
         .allow_methods([
             poem::http::Method::GET,
             poem::http::Method::POST,
@@ -213,17 +195,17 @@ async fn bootstrap_superuser(app: &App) -> Result<(), Report<BackendServerError>
     let ergebnis = app
         .execute(
             AuthContext::Anonymous,
-            SystemadministratorBefoerdern { email: adresse },
+            SystemadministratorBefördern { email: adresse },
         )
         .await
         .change_context(BackendServerError)?;
 
     match ergebnis {
-        Befoerderung::Befoerdert => tracing::info!("superuser befördert"),
-        Befoerderung::BereitsBefoerdert => {
+        Beförderung::Befördert => tracing::info!("superuser befördert"),
+        Beförderung::BereitsBefördert => {
             tracing::info!("superuser war bereits befördert")
         }
-        Befoerderung::KeinKonto => {
+        Beförderung::KeinKonto => {
             tracing::warn!("superuser-adresse hat noch kein konto; beim nächsten start erneut")
         }
     }
@@ -250,12 +232,7 @@ async fn main() -> Result<(), Report<BackendServerError>> {
 
     let signing_key = lade_signing_key(&config)?;
     let mail_sender = lade_mail_sender(&config)?;
-    let konto = KontoKonfiguration::neu(
-        config.bestaetigung_link.clone(),
-        config.wiederherstellung_link.clone(),
-        config.token_issuer.clone(),
-        config.token_audience.clone(),
-    );
+    let konto = KontoKonfiguration::neu(config.token_issuer.clone(), config.token_audience.clone());
 
     let app = App::builder()
         .uow_provider(Box::new(sqlite.clone()))

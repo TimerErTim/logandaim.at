@@ -16,7 +16,7 @@ use crate::{
     api::{
         LogandaimAppApi,
         requests::{
-            AnmeldeAnfrage, BenutzerLoeschungAnfrage, PasswortVergessenAnfrage,
+            AnmeldeAnfrage, BenutzerLöschungAnfrage, PasswortVergessenAnfrage,
             PasswortWiederherstellenAnfrage, RegistrierungAbschlussAnfrage,
             RegistrierungStartAnfrage, SchussErstellung, WertungsAnfrage,
         },
@@ -184,12 +184,12 @@ impl LogandaimApiSpec {
 
     /// Step 2: creates Benutzer + Konto and answers the first token pair.
     #[oai(path = "/registrierung/abschluss", method = "post")]
-    async fn registrierung_abschliessen(
+    async fn registrierung_abschließen(
         &self,
         req: &Request,
         body: Json<RegistrierungAbschlussAnfrage>,
     ) -> SitzungAntwort {
-        konto_routes::registrierung_abschliessen(self, req, body).await
+        konto_routes::registrierung_abschließen(self, req, body).await
     }
 
     #[oai(path = "/anmeldung", method = "post")]
@@ -238,13 +238,13 @@ impl LogandaimApiSpec {
     }
 
     /// Deletes the caller's own Benutzer. The cookie is cleared with the identity.
-    #[oai(path = "/benutzer/loeschung", method = "post")]
-    async fn benutzer_loeschen(
+    #[oai(path = "/benutzer/löschung", method = "post")]
+    async fn benutzer_löschen(
         &self,
         req: &Request,
-        body: Json<BenutzerLoeschungAnfrage>,
+        body: Json<BenutzerLöschungAnfrage>,
     ) -> BeendendeAntwort<OkAntwort> {
-        konto_routes::benutzer_loeschen(self, req, body).await
+        konto_routes::benutzer_löschen(self, req, body).await
     }
 }
 

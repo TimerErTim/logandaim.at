@@ -10,7 +10,7 @@ pub struct EmailAdresseValidierungsfehler(String);
 pub struct EmailAdresse(String);
 
 /// Longest address accepted (RFC 5321 path limit).
-const MAX_EMAIL_LAENGE: usize = 254;
+const MAX_EMAIL_LÄNGE: usize = 254;
 
 impl EmailAdresse {
     pub fn new<S: AsRef<str>>(s: S) -> Result<Self, EmailAdresseValidierungsfehler> {
@@ -32,7 +32,7 @@ impl EmailAdresse {
         let roh = s.as_ref();
         let getrimmt = roh.trim();
         let normalisiert = getrimmt.to_lowercase();
-        if normalisiert.len() > MAX_EMAIL_LAENGE {
+        if normalisiert.len() > MAX_EMAIL_LÄNGE {
             return Err(EmailAdresseValidierungsfehler(roh.to_string()));
         }
         EmailAdresse::new(normalisiert)
@@ -152,7 +152,7 @@ mod tests {
 
     #[test_log::test]
     fn normalisiert_lehnt_zu_lange_adresse_ab() {
-        let lokal = "a".repeat(MAX_EMAIL_LAENGE);
+        let lokal = "a".repeat(MAX_EMAIL_LÄNGE);
         let adresse = format!("{lokal}@example.at");
         assert!(EmailAdresse::normalisiert(&adresse).is_err());
     }

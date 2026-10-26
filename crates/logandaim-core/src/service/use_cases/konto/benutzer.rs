@@ -108,14 +108,14 @@ impl UseCase<BenutzerAnsicht> for BenutzerAnzeigen {
 /// (rule 8, AC-12). The `Runden`-anonymisation half of AC-12 is deferred until `Runde`
 /// exists (tracked on issue #11).
 #[derive(Debug, Clone)]
-pub struct BenutzerLoeschen {
+pub struct BenutzerLöschen {
     pub passwort: String,
     /// Explicit confirmation, so a stray request cannot destroy an account.
-    pub bestaetigt: bool,
+    pub bestätigt: bool,
 }
 
 #[async_trait]
-impl UseCase<()> for BenutzerLoeschen {
+impl UseCase<()> for BenutzerLöschen {
     type Error = Report<KontoDienstFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
@@ -124,12 +124,12 @@ impl UseCase<()> for BenutzerLoeschen {
             .require_authenticated()
             .change_context(KontoDienstFehler::NichtAngemeldet)?;
 
-        if !self.bestaetigt {
-            return Err(Report::new(KontoDienstFehler::UngueltigeAnfrage));
+        if !self.bestätigt {
+            return Err(Report::new(KontoDienstFehler::UngültigeAnfrage));
         }
 
         let passwort = KlartextPasswort::neu(self.passwort)
-            .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+            .change_context(KontoDienstFehler::UngültigeAnfrage)?;
 
         let uow = ctx
             .enter()
@@ -165,7 +165,7 @@ impl UseCase<()> for BenutzerLoeschen {
                     .await
                     .map_err(IntoReport::into_report)
                     .change_context(KontoDienstFehler::Speicher)?;
-                uow.bestaetigungen()
+                uow.bestätigungen()
                     .delete_alle_fuer_email(konto.email())
                     .await
                     .map_err(IntoReport::into_report)
@@ -211,26 +211,26 @@ impl UseCase<()> for BenutzerLoeschen {
 /// and no password. A missing account is `Ok` so a fresh deployment can start before the
 /// superuser has registered.
 #[derive(Debug, Clone)]
-pub struct SystemadministratorBefoerdern {
+pub struct SystemadministratorBefördern {
     pub email: EmailAdresse,
 }
 
 /// What the bootstrap found.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Befoerderung {
+pub enum Beförderung {
     /// Promoted now.
-    Befoerdert,
+    Befördert,
     /// Already a `Systemadministrator`; nothing written.
-    BereitsBefoerdert,
+    BereitsBefördert,
     /// No `Konto` holds the address, so there was nothing to promote.
     KeinKonto,
 }
 
 #[async_trait]
-impl UseCase<Befoerderung> for SystemadministratorBefoerdern {
+impl UseCase<Beförderung> for SystemadministratorBefördern {
     type Error = Report<KontoDienstFehler>;
 
-    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Befoerderung, Self::Error> {
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Beförderung, Self::Error> {
         let uow = ctx
             .enter()
             .await
@@ -244,7 +244,7 @@ impl UseCase<Befoerderung> for SystemadministratorBefoerdern {
                 .map_err(IntoReport::into_report)
                 .change_context(KontoDienstFehler::Speicher)?
             else {
-                return Ok(Befoerderung::KeinKonto);
+                return Ok(Beförderung::KeinKonto);
             };
 
             let benutzer = uow
@@ -255,7 +255,7 @@ impl UseCase<Befoerderung> for SystemadministratorBefoerdern {
                 .change_context(KontoDienstFehler::Speicher)?;
 
             if benutzer.rolle() == Rolle::Systemadministrator {
-                return Ok(Befoerderung::BereitsBefoerdert);
+                return Ok(Beförderung::BereitsBefördert);
             }
 
             uow.benutzer()
@@ -264,7 +264,7 @@ impl UseCase<Befoerderung> for SystemadministratorBefoerdern {
                 .map_err(IntoReport::into_report)
                 .change_context(KontoDienstFehler::Speicher)?;
 
-            Ok(Befoerderung::Befoerdert)
+            Ok(Beförderung::Befördert)
         }
         .await;
 

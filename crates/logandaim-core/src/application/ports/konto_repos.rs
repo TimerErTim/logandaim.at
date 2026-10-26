@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use super::RepositoryResult;
 use crate::domain::EmailAdresse;
 use crate::domain::konto::{
-    Benutzer, BenutzerId, BestaetigungId, EmailBestaetigung, Konto, KontoId, NeueBestaetigung,
+    Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
     NeueSession, NeueWiederherstellung, NeuerBenutzer, NeuesKonto, PasswortWiederherstellung,
     Session, SessionId, SigningKey, SigningKeyId, TokenHash, WiederherstellungId,
 };
@@ -85,10 +85,10 @@ pub trait SigningKeyRepository: Send + Sync {
     async fn find_by_kid(&self, kid: &SigningKeyId) -> RepositoryResult<Option<SigningKey>>;
 
     /// Idempotent startup registration of the configured key.
-    async fn ensure(&self, schluessel: &SigningKey) -> RepositoryResult<()>;
+    async fn ensure(&self, schlüssel: &SigningKey) -> RepositoryResult<()>;
 
     /// Retire a key by row update; no delete, so an old token's `kid` stays recognisable.
-    async fn ausser_betrieb_nehmen(
+    async fn außer_betrieb_nehmen(
         &self,
         kid: &SigningKeyId,
         jetzt: chrono::DateTime<chrono::Utc>,
@@ -96,16 +96,16 @@ pub trait SigningKeyRepository: Send + Sync {
 }
 
 #[async_trait]
-pub trait EmailBestaetigungRepository: Send + Sync {
-    async fn create(&self, bestaetigung: NeueBestaetigung) -> RepositoryResult<EmailBestaetigung>;
+pub trait EmailBestätigungRepository: Send + Sync {
+    async fn create(&self, bestätigung: NeueBestätigung) -> RepositoryResult<EmailBestätigung>;
 
     /// Keyed by the token hash, because that is what step 2 presents.
-    async fn find_by_hash(&self, hash: &TokenHash) -> RepositoryResult<Option<EmailBestaetigung>>;
+    async fn find_by_hash(&self, hash: &TokenHash) -> RepositoryResult<Option<EmailBestätigung>>;
 
     /// Spend one row. Fails with `Conflict` if another request already spent it.
     async fn consume(
         &self,
-        id: BestaetigungId,
+        id: BestätigungId,
         jetzt: chrono::DateTime<chrono::Utc>,
     ) -> RepositoryResult<()>;
 

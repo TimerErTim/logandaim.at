@@ -18,7 +18,7 @@ impl SigningKeyId {
                 .bytes()
                 .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_');
         if !plausibel {
-            return Err(KontoFehler::SigningKeyUngueltig);
+            return Err(KontoFehler::SigningKeyUngültig);
         }
         Ok(Self(wert))
     }
@@ -36,40 +36,40 @@ impl SigningKeyId {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SigningKey {
     kid: SigningKeyId,
-    oeffentlicher_schluessel: String,
+    öffentlicher_schlüssel: String,
     aktiv: bool,
     erstellt_am: DateTime<Utc>,
-    ausser_betrieb_am: Option<DateTime<Utc>>,
+    außer_betrieb_am: Option<DateTime<Utc>>,
 }
 
 impl SigningKey {
     pub fn neu(
         kid: SigningKeyId,
-        oeffentlicher_schluessel: impl Into<String>,
+        öffentlicher_schlüssel: impl Into<String>,
         erstellt_am: DateTime<Utc>,
     ) -> Self {
         Self {
             kid,
-            oeffentlicher_schluessel: oeffentlicher_schluessel.into(),
+            öffentlicher_schlüssel: öffentlicher_schlüssel.into(),
             aktiv: true,
             erstellt_am,
-            ausser_betrieb_am: None,
+            außer_betrieb_am: None,
         }
     }
 
     pub fn from_parts(
         kid: SigningKeyId,
-        oeffentlicher_schluessel: impl Into<String>,
+        öffentlicher_schlüssel: impl Into<String>,
         aktiv: bool,
         erstellt_am: DateTime<Utc>,
-        ausser_betrieb_am: Option<DateTime<Utc>>,
+        außer_betrieb_am: Option<DateTime<Utc>>,
     ) -> Self {
         Self {
             kid,
-            oeffentlicher_schluessel: oeffentlicher_schluessel.into(),
+            öffentlicher_schlüssel: öffentlicher_schlüssel.into(),
             aktiv,
             erstellt_am,
-            ausser_betrieb_am,
+            außer_betrieb_am,
         }
     }
 
@@ -78,8 +78,8 @@ impl SigningKey {
     }
 
     /// Hex-encoded Ed25519 public key, as the startup row stores it.
-    pub fn oeffentlicher_schluessel(&self) -> &str {
-        &self.oeffentlicher_schluessel
+    pub fn öffentlicher_schlüssel(&self) -> &str {
+        &self.öffentlicher_schlüssel
     }
 
     pub fn aktiv(&self) -> bool {
@@ -94,15 +94,15 @@ impl SigningKey {
         self.erstellt_am
     }
 
-    pub fn ausser_betrieb_am(&self) -> Option<DateTime<Utc>> {
-        self.ausser_betrieb_am
+    pub fn außer_betrieb_am(&self) -> Option<DateTime<Utc>> {
+        self.außer_betrieb_am
     }
 
     /// Retire this key. Idempotent; an already retired row keeps its first timestamp so
     /// what happened when stays readable.
-    pub fn ausser_betrieb_nehmen(&mut self, jetzt: DateTime<Utc>) {
+    pub fn außer_betrieb_nehmen(&mut self, jetzt: DateTime<Utc>) {
         self.aktiv = false;
-        self.ausser_betrieb_am.get_or_insert(jetzt);
+        self.außer_betrieb_am.get_or_insert(jetzt);
     }
 }
 
@@ -117,26 +117,26 @@ mod tests {
     }
 
     #[test_log::test]
-    fn signing_key_id_wird_geprueft() {
+    fn signing_key_id_wird_geprüft() {
         assert!(SigningKeyId::new("").is_err());
         assert!(SigningKeyId::new("mit leerzeichen").is_err());
         assert!(SigningKeyId::new("k-2026_10").is_ok());
     }
 
     #[test_log::test]
-    fn neue_schluessel_sind_aktiv() {
-        let schluessel = SigningKey::neu(SigningKeyId::new("k1").unwrap(), "abcd", jetzt());
-        assert!(schluessel.ist_aktiv());
-        assert_eq!(schluessel.ausser_betrieb_am(), None);
+    fn neue_schlüssel_sind_aktiv() {
+        let schlüssel = SigningKey::neu(SigningKeyId::new("k1").unwrap(), "abcd", jetzt());
+        assert!(schlüssel.ist_aktiv());
+        assert_eq!(schlüssel.außer_betrieb_am(), None);
     }
 
     #[test_log::test]
-    fn ausser_betrieb_nehmen_ist_idempotent() {
-        let mut schluessel = SigningKey::neu(SigningKeyId::new("k1").unwrap(), "abcd", jetzt());
-        schluessel.ausser_betrieb_nehmen(jetzt());
-        schluessel.ausser_betrieb_nehmen(jetzt() + Duration::hours(1));
-        assert!(!schluessel.ist_aktiv());
-        assert_eq!(schluessel.ausser_betrieb_am(), Some(jetzt()));
+    fn außer_betrieb_nehmen_ist_idempotent() {
+        let mut schlüssel = SigningKey::neu(SigningKeyId::new("k1").unwrap(), "abcd", jetzt());
+        schlüssel.außer_betrieb_nehmen(jetzt());
+        schlüssel.außer_betrieb_nehmen(jetzt() + Duration::hours(1));
+        assert!(!schlüssel.ist_aktiv());
+        assert_eq!(schlüssel.außer_betrieb_am(), Some(jetzt()));
     }
 
     #[test_log::test]
@@ -144,10 +144,10 @@ mod tests {
         let original = SigningKey::neu(SigningKeyId::new("k1").unwrap(), "abcd", jetzt());
         let geladen = SigningKey::from_parts(
             original.kid().clone(),
-            original.oeffentlicher_schluessel(),
+            original.öffentlicher_schlüssel(),
             original.aktiv(),
             original.erstellt_am(),
-            original.ausser_betrieb_am(),
+            original.außer_betrieb_am(),
         );
         assert_eq!(original, geladen);
     }

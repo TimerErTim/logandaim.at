@@ -6,7 +6,7 @@ use libsql::Transaction;
 use logandaim_core::{
     ErrorReportExt, ResultReport,
     ports::{
-        BenutzerRepository, EmailBestaetigungRepository, KontoRepository,
+        BenutzerRepository, EmailBestätigungRepository, KontoRepository,
         PasswortWiederherstellungRepository, RepositoryError, RepositoryResult, SchussRepository,
         SessionRepository, SigningKeyRepository,
     },
@@ -17,7 +17,7 @@ use crate::{
     SQLiteConnection, SQLiteInstance,
     errors::libsql_error_to_persistence_error,
     repos::{
-        SQLiteBenutzerRepository, SQLiteEmailBestaetigungRepository, SQLiteKontoRepository,
+        SQLiteBenutzerRepository, SQLiteEmailBestätigungRepository, SQLiteKontoRepository,
         SQLitePasswortWiederherstellungRepository, SQLiteSchussRepository, SQLiteSessionRepository,
         SQLiteSigningKeyRepository,
     },
@@ -34,7 +34,7 @@ pub struct SQLiteUnitOfWork {
     konto_repo: SQLiteKontoRepository,
     session_repo: SQLiteSessionRepository,
     signing_key_repo: SQLiteSigningKeyRepository,
-    bestaetigung_repo: SQLiteEmailBestaetigungRepository,
+    bestätigung_repo: SQLiteEmailBestätigungRepository,
     wiederherstellung_repo: SQLitePasswortWiederherstellungRepository,
 }
 
@@ -54,7 +54,7 @@ impl UnitOfWorkProvider for SQLiteInstance {
             konto_repo: SQLiteKontoRepository { tx: tx.clone() },
             session_repo: SQLiteSessionRepository { tx: tx.clone() },
             signing_key_repo: SQLiteSigningKeyRepository { tx: tx.clone() },
-            bestaetigung_repo: SQLiteEmailBestaetigungRepository { tx: tx.clone() },
+            bestätigung_repo: SQLiteEmailBestätigungRepository { tx: tx.clone() },
             wiederherstellung_repo: SQLitePasswortWiederherstellungRepository { tx: tx.clone() },
             tx,
         }))
@@ -102,8 +102,8 @@ impl UnitOfWorkImpl for SQLiteUnitOfWork {
         &self.signing_key_repo
     }
 
-    fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository {
-        &self.bestaetigung_repo
+    fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {
+        &self.bestätigung_repo
     }
 
     fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {

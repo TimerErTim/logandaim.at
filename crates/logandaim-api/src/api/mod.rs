@@ -10,7 +10,7 @@
 //!   base64url-encodes them, and asks core for the signature (`auth::jwt`). The reverse on
 //!   the way in.
 //! - **Turning a bearer header into an [`AuthContext`].** A token that verifies is then
-//!   handed to `SitzungPruefen`, which is what makes a *revoked* session fail even though
+//!   handed to `SitzungPrüfen`, which is what makes a *revoked* session fail even though
 //!   its signature is still valid (AC-17). Only that use case's answer is injected into the
 //!   use case that follows.
 
@@ -21,10 +21,10 @@ use logandaim_core::{
     App, ResultReport,
     application::{AuthContext, ZugriffFehler},
     domain::konto::SigningKeypair,
-    ports::KundeSchluessel,
+    ports::KundeSchlüssel,
     service::{
         Abmeldung, BenutzerAnzeigen, Erneuerung, KontoDienstFehler, SchussRegistrieren,
-        SchussRegistrierenFehler, SitzungAusgestellt, SitzungPruefen, WertungBerechnen,
+        SchussRegistrierenFehler, SitzungAusgestellt, SitzungPrüfen, WertungBerechnen,
         WertungFehler,
     },
 };
@@ -131,7 +131,7 @@ impl LogandaimAppApi {
 
         let claims = jwt::decode(token, self.signing_key())?;
         self.app
-            .execute(AuthContext::Anonymous, SitzungPruefen { claims })
+            .execute(AuthContext::Anonymous, SitzungPrüfen { claims })
             .await
             .map_err(|_| Report::new(ZugriffFehler::NichtAngemeldet))
     }
@@ -142,7 +142,7 @@ impl LogandaimAppApi {
     pub async fn registrierung_starten(
         &self,
         anfrage: requests::RegistrierungStartAnfrage,
-        kunde: KundeSchluessel,
+        kunde: KundeSchlüssel,
     ) -> ResultReport<(), KontoDienstFehler> {
         self.app
             .execute(AuthContext::Anonymous, anfrage.in_use_case(kunde))
@@ -150,10 +150,10 @@ impl LogandaimAppApi {
     }
 
     /// Step 2. Creates the Benutzer, its Konto, and the first session.
-    pub async fn registrierung_abschliessen(
+    pub async fn registrierung_abschließen(
         &self,
         anfrage: requests::RegistrierungAbschlussAnfrage,
-        kunde: KundeSchluessel,
+        kunde: KundeSchlüssel,
     ) -> ResultReport<AusgestellteSitzung, KontoDienstFehler> {
         let ausgestellt = self
             .app
@@ -167,7 +167,7 @@ impl LogandaimAppApi {
     pub async fn anmelden(
         &self,
         anfrage: requests::AnmeldeAnfrage,
-        kunde: KundeSchluessel,
+        kunde: KundeSchlüssel,
     ) -> ResultReport<AusgestellteSitzung, KontoDienstFehler> {
         let ausgestellt = self
             .app
@@ -180,7 +180,7 @@ impl LogandaimAppApi {
     pub async fn erneuerung(
         &self,
         refresh_token: String,
-        kunde: KundeSchluessel,
+        kunde: KundeSchlüssel,
     ) -> ResultReport<AusgestellteSitzung, KontoDienstFehler> {
         let ausgestellt = self
             .app
@@ -217,7 +217,7 @@ impl LogandaimAppApi {
     pub async fn passwort_vergessen(
         &self,
         anfrage: requests::PasswortVergessenAnfrage,
-        kunde: KundeSchluessel,
+        kunde: KundeSchlüssel,
     ) -> ResultReport<(), KontoDienstFehler> {
         self.app
             .execute(AuthContext::Anonymous, anfrage.in_use_case(kunde))
@@ -259,10 +259,10 @@ impl LogandaimAppApi {
         })
     }
 
-    pub async fn benutzer_loeschen(
+    pub async fn benutzer_löschen(
         &self,
         auth: AuthContext,
-        anfrage: requests::BenutzerLoeschungAnfrage,
+        anfrage: requests::BenutzerLöschungAnfrage,
     ) -> ResultReport<(), KontoDienstFehler> {
         self.app.execute(auth, anfrage.in_use_case()).await
     }

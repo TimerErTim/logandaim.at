@@ -91,7 +91,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn angemeldet_liefert_die_identitaet() {
+    fn angemeldet_liefert_die_identität() {
         let (benutzer_id, session_id) = id();
         let auth = AuthContext::Authenticated {
             benutzer_id,

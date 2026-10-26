@@ -10,9 +10,9 @@ use logandaim_core::{
     ErrorReportExt,
     domain::{
         EmailAdresse,
-        konto::{BestaetigungId, EmailBestaetigung, NeueBestaetigung, TokenHash},
+        konto::{BestätigungId, EmailBestätigung, NeueBestätigung, TokenHash},
     },
-    ports::{EmailBestaetigungRepository, RepositoryError, RepositoryResult},
+    ports::{EmailBestätigungRepository, RepositoryError, RepositoryResult},
 };
 
 use crate::{
@@ -21,9 +21,9 @@ use crate::{
 };
 
 const SELECT: &str =
-    r#"SELECT id, email, token_hash, expires_at, spent_at FROM "email_bestaetigungen""#;
+    r#"SELECT id, email, token_hash, expires_at, spent_at FROM "email_bestätigungen""#;
 
-fn bestaetigung_from_row(row: &Row) -> RepositoryResult<EmailBestaetigung> {
+fn bestätigung_from_row(row: &Row) -> RepositoryResult<EmailBestätigung> {
     let id_raw: String = row.get(0).contextualize(RepositoryError::Data)?;
     let email_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
     let token_hash_raw: String = row.get(2).contextualize(RepositoryError::Data)?;
@@ -38,8 +38,8 @@ fn bestaetigung_from_row(row: &Row) -> RepositoryResult<EmailBestaetigung> {
         .map(|wert| parse_datetime(&wert).contextualize(RepositoryError::Data))
         .transpose()?;
 
-    Ok(EmailBestaetigung::from_parts(
-        BestaetigungId(id),
+    Ok(EmailBestätigung::from_parts(
+        BestätigungId(id),
         email,
         token_hash,
         expires_at,
@@ -47,27 +47,27 @@ fn bestaetigung_from_row(row: &Row) -> RepositoryResult<EmailBestaetigung> {
     ))
 }
 
-pub struct SQLiteEmailBestaetigungRepository {
+pub struct SQLiteEmailBestätigungRepository {
     pub(crate) tx: Arc<Mutex<Option<Transaction>>>,
 }
 
 #[async_trait]
-impl EmailBestaetigungRepository for SQLiteEmailBestaetigungRepository {
-    async fn create(&self, bestaetigung: NeueBestaetigung) -> RepositoryResult<EmailBestaetigung> {
-        let id = BestaetigungId(Uuid::new_v4());
-        let domain = EmailBestaetigung::neu(id, bestaetigung.clone());
+impl EmailBestätigungRepository for SQLiteEmailBestätigungRepository {
+    async fn create(&self, bestätigung: NeueBestätigung) -> RepositoryResult<EmailBestätigung> {
+        let id = BestätigungId(Uuid::new_v4());
+        let domain = EmailBestätigung::neu(id, bestätigung.clone());
 
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         tx.execute(
-            r#"INSERT INTO "email_bestaetigungen" (id, email, token_hash, expires_at, spent_at, _version)
+            r#"INSERT INTO "email_bestätigungen" (id, email, token_hash, expires_at, spent_at, _version)
                VALUES (?1, ?2, ?3, ?4, NULL, 0)"#,
             (
                 id.0.to_string(),
-                bestaetigung.email().as_ref().to_string(),
-                bestaetigung.token_hash().as_str().to_string(),
-                format_datetime(bestaetigung.expires_at()),
+                bestätigung.email().as_ref().to_string(),
+                bestätigung.token_hash().as_str().to_string(),
+                format_datetime(bestätigung.expires_at()),
             ),
         )
         .await
@@ -76,7 +76,7 @@ impl EmailBestaetigungRepository for SQLiteEmailBestaetigungRepository {
         Ok(domain)
     }
 
-    async fn find_by_hash(&self, hash: &TokenHash) -> RepositoryResult<Option<EmailBestaetigung>> {
+    async fn find_by_hash(&self, hash: &TokenHash) -> RepositoryResult<Option<EmailBestätigung>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
@@ -96,12 +96,12 @@ impl EmailBestaetigungRepository for SQLiteEmailBestaetigungRepository {
             return Ok(None);
         };
 
-        bestaetigung_from_row(&row).map(Some)
+        bestätigung_from_row(&row).map(Some)
     }
 
     async fn consume(
         &self,
-        id: BestaetigungId,
+        id: BestätigungId,
         jetzt: chrono::DateTime<chrono::Utc>,
     ) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
@@ -111,7 +111,7 @@ impl EmailBestaetigungRepository for SQLiteEmailBestaetigungRepository {
         // honest answer even when two requests interleave (AC-4, AC-13).
         let betroffen = tx
             .execute(
-                r#"UPDATE "email_bestaetigungen" SET spent_at = ?2, _version = _version + 1
+                r#"UPDATE "email_bestätigungen" SET spent_at = ?2, _version = _version + 1
                    WHERE id = ?1 AND spent_at IS NULL"#,
                 (id.0.to_string(), format_datetime(jetzt)),
             )
@@ -133,7 +133,7 @@ impl EmailBestaetigungRepository for SQLiteEmailBestaetigungRepository {
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         tx.execute(
-            r#"UPDATE "email_bestaetigungen" SET spent_at = ?2, _version = _version + 1
+            r#"UPDATE "email_bestätigungen" SET spent_at = ?2, _version = _version + 1
                WHERE email = ?1 AND spent_at IS NULL"#,
             (email.as_ref().to_string(), format_datetime(jetzt)),
         )
@@ -147,7 +147,7 @@ impl EmailBestaetigungRepository for SQLiteEmailBestaetigungRepository {
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         tx.execute(
-            r#"DELETE FROM "email_bestaetigungen" WHERE email = ?1"#,
+            r#"DELETE FROM "email_bestätigungen" WHERE email = ?1"#,
             [email.as_ref().to_string()],
         )
         .await

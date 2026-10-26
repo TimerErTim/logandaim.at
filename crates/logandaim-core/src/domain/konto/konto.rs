@@ -14,7 +14,7 @@ pub struct NeuesKonto {
     benutzer_id: BenutzerId,
     email: EmailAdresse,
     password_hash: PasswordHash,
-    bestaetigt_am: DateTime<Utc>,
+    bestätigt_am: DateTime<Utc>,
     erstellt_am: DateTime<Utc>,
 }
 
@@ -31,7 +31,7 @@ impl NeuesKonto {
             benutzer_id,
             email,
             password_hash,
-            bestaetigt_am: erstellt_am,
+            bestätigt_am: erstellt_am,
             erstellt_am,
         }
     }
@@ -48,8 +48,8 @@ impl NeuesKonto {
         &self.password_hash
     }
 
-    pub fn bestaetigt_am(&self) -> DateTime<Utc> {
-        self.bestaetigt_am
+    pub fn bestätigt_am(&self) -> DateTime<Utc> {
+        self.bestätigt_am
     }
 
     pub fn erstellt_am(&self) -> DateTime<Utc> {
@@ -64,7 +64,7 @@ pub struct Konto {
     benutzer_id: BenutzerId,
     email: EmailAdresse,
     password_hash: PasswordHash,
-    bestaetigt_am: DateTime<Utc>,
+    bestätigt_am: DateTime<Utc>,
     erstellt_am: DateTime<Utc>,
 }
 
@@ -75,7 +75,7 @@ impl Konto {
             benutzer_id: neu.benutzer_id,
             email: neu.email,
             password_hash: neu.password_hash,
-            bestaetigt_am: neu.bestaetigt_am,
+            bestätigt_am: neu.bestätigt_am,
             erstellt_am: neu.erstellt_am,
         }
     }
@@ -85,7 +85,7 @@ impl Konto {
         benutzer_id: BenutzerId,
         email: EmailAdresse,
         password_hash: PasswordHash,
-        bestaetigt_am: DateTime<Utc>,
+        bestätigt_am: DateTime<Utc>,
         erstellt_am: DateTime<Utc>,
     ) -> Self {
         Self {
@@ -93,7 +93,7 @@ impl Konto {
             benutzer_id,
             email,
             password_hash,
-            bestaetigt_am,
+            bestätigt_am,
             erstellt_am,
         }
     }
@@ -114,8 +114,8 @@ impl Konto {
         &self.password_hash
     }
 
-    pub fn bestaetigt_am(&self) -> DateTime<Utc> {
-        self.bestaetigt_am
+    pub fn bestätigt_am(&self) -> DateTime<Utc> {
+        self.bestätigt_am
     }
 
     pub fn erstellt_am(&self) -> DateTime<Utc> {
@@ -152,9 +152,9 @@ mod tests {
     }
 
     #[test_log::test]
-    fn neues_konto_bestaetigt_die_adresse() {
+    fn neues_konto_bestätigt_die_adresse() {
         let neu = NeuesKonto::neu(BenutzerId(Uuid::nil()), email(), hash().clone(), jetzt());
-        assert_eq!(neu.bestaetigt_am(), jetzt());
+        assert_eq!(neu.bestätigt_am(), jetzt());
         assert_eq!(neu.email().as_ref(), "anna.muster@example.at");
     }
 
@@ -167,7 +167,7 @@ mod tests {
             original.benutzer_id(),
             original.email().clone(),
             original.password_hash().clone(),
-            original.bestaetigt_am(),
+            original.bestätigt_am(),
             original.erstellt_am(),
         );
         assert_eq!(original, geladen);

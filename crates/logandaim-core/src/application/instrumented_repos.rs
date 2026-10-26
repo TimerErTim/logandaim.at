@@ -10,13 +10,13 @@ use tracing::instrument;
 
 use crate::application::uow::UnitOfWorkImpl;
 use crate::domain::konto::{
-    BenutzerId, BestaetigungId, Konto, KontoId, NeueBestaetigung, NeueSession,
-    NeueWiederherstellung, NeuerBenutzer, NeuesKonto, PasswortWiederherstellung, Rolle, Session,
-    SessionId, SigningKey, SigningKeyId, TokenHash, WiederherstellungId,
+    BenutzerId, BestätigungId, Konto, KontoId, NeueBestätigung, NeueSession, NeueWiederherstellung,
+    NeuerBenutzer, NeuesKonto, PasswortWiederherstellung, Rolle, Session, SessionId, SigningKey,
+    SigningKeyId, TokenHash, WiederherstellungId,
 };
 use crate::domain::{EmailAdresse, NeuerSchuss, Schuss, SchussId};
 use crate::ports::{
-    BenutzerRepository, EmailBestaetigungRepository, KontoRepository,
+    BenutzerRepository, EmailBestätigungRepository, KontoRepository,
     PasswortWiederherstellungRepository, RepositoryResult, SchussRepository, SessionRepository,
     SigningKeyRepository,
 };
@@ -145,24 +145,24 @@ impl_instrumented_repo!(
     methods: [
         #[instrument(skip(self, kid), fields(kid = kid.as_str()), level = "trace", err(Debug))]
         fn find_by_kid(&self, kid: &SigningKeyId) -> RepositoryResult<Option<SigningKey>>;
-        #[instrument(skip(self, schluessel), level = "debug", err(Debug))]
-        fn ensure(&self, schluessel: &SigningKey) -> RepositoryResult<()>;
+        #[instrument(skip(self, schlüssel), level = "debug", err(Debug))]
+        fn ensure(&self, schlüssel: &SigningKey) -> RepositoryResult<()>;
         #[instrument(skip(self, kid), fields(kid = kid.as_str()), level = "debug", err(Debug))]
-        fn ausser_betrieb_nehmen(&self, kid: &SigningKeyId, jetzt: chrono::DateTime<chrono::Utc>) -> RepositoryResult<()>;
+        fn außer_betrieb_nehmen(&self, kid: &SigningKeyId, jetzt: chrono::DateTime<chrono::Utc>) -> RepositoryResult<()>;
     ]
 );
 
 impl_instrumented_repo!(
-    InstrumentedEmailBestaetigungRepository,
-    EmailBestaetigungRepository,
-    bestaetigungen,
+    InstrumentedEmailBestätigungRepository,
+    EmailBestätigungRepository,
+    bestätigungen,
     methods: [
-        #[instrument(skip(self, bestaetigung), level = "debug", err(Debug))]
-        fn create(&self, bestaetigung: NeueBestaetigung) -> RepositoryResult<crate::domain::konto::EmailBestaetigung>;
+        #[instrument(skip(self, bestätigung), level = "debug", err(Debug))]
+        fn create(&self, bestätigung: NeueBestätigung) -> RepositoryResult<crate::domain::konto::EmailBestätigung>;
         #[instrument(skip(self, hash), level = "trace", err(Debug))]
-        fn find_by_hash(&self, hash: &TokenHash) -> RepositoryResult<Option<crate::domain::konto::EmailBestaetigung>>;
+        fn find_by_hash(&self, hash: &TokenHash) -> RepositoryResult<Option<crate::domain::konto::EmailBestätigung>>;
         #[instrument(skip(self, id), fields(id = ?id), level = "debug", err(Debug))]
-        fn consume(&self, id: BestaetigungId, jetzt: chrono::DateTime<chrono::Utc>) -> RepositoryResult<()>;
+        fn consume(&self, id: BestätigungId, jetzt: chrono::DateTime<chrono::Utc>) -> RepositoryResult<()>;
         #[instrument(skip(self, email), fields(email = email.as_ref()), level = "debug", err(Debug))]
         fn invalidate_open_for_email(&self, email: &EmailAdresse, jetzt: chrono::DateTime<chrono::Utc>) -> RepositoryResult<()>;
         #[instrument(skip(self, email), fields(email = email.as_ref()), level = "debug", err(Debug))]
@@ -195,7 +195,7 @@ pub(crate) struct RepoStorage {
     pub(crate) konten: InstrumentedKontoRepository,
     pub(crate) sessions: InstrumentedSessionRepository,
     pub(crate) signing_keys: InstrumentedSigningKeyRepository,
-    pub(crate) bestaetigungen: InstrumentedEmailBestaetigungRepository,
+    pub(crate) bestätigungen: InstrumentedEmailBestätigungRepository,
     pub(crate) wiederherstellungen: InstrumentedPasswortWiederherstellungRepository,
     pub(crate) uow: Box<dyn UnitOfWorkImpl>,
 }
@@ -208,7 +208,7 @@ impl RepoStorage {
             konten: InstrumentedKontoRepository::disabled(),
             sessions: InstrumentedSessionRepository::disabled(),
             signing_keys: InstrumentedSigningKeyRepository::disabled(),
-            bestaetigungen: InstrumentedEmailBestaetigungRepository::disabled(),
+            bestätigungen: InstrumentedEmailBestätigungRepository::disabled(),
             wiederherstellungen: InstrumentedPasswortWiederherstellungRepository::disabled(),
             uow,
         });
@@ -223,7 +223,7 @@ impl RepoStorage {
             this.konten = InstrumentedKontoRepository::new(uow_ptr);
             this.sessions = InstrumentedSessionRepository::new(uow_ptr);
             this.signing_keys = InstrumentedSigningKeyRepository::new(uow_ptr);
-            this.bestaetigungen = InstrumentedEmailBestaetigungRepository::new(uow_ptr);
+            this.bestätigungen = InstrumentedEmailBestätigungRepository::new(uow_ptr);
             this.wiederherstellungen =
                 InstrumentedPasswortWiederherstellungRepository::new(uow_ptr);
         }

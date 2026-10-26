@@ -21,6 +21,12 @@ description = "Fail when a design token is undocumented or a raw palette class l
 # names — live in `tasks/scripts/check-design.mjs` like every other long task.
 run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-design.mjs"
 
+["check:identifiers"]
+description = "Fail when a German identifier is transliterated instead of spelled in UTF-8"
+# The rule and its three exceptions live in the script; a repo-wide assertion wants a
+# scanner, not an `rg` one-liner that people learn to quote around.
+run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-identifiers.mjs"
+
 ["check:version"]
 description = "Fail when the workspace, frontend, and changelog versions disagree"
 run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-version.mjs"
@@ -38,4 +44,11 @@ run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-release.mjs"
 
 ["check"]
 description = "Check the code"
-depends = ["check:format", "check:lint", "check:openapi", "check:design", "check:version"]
+depends = [
+    "check:format",
+    "check:lint",
+    "check:openapi",
+    "check:design",
+    "check:identifiers",
+    "check:version",
+]

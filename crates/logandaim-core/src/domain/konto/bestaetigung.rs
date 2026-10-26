@@ -1,22 +1,22 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use super::{EMAIL_BESTAETIGUNG_GUELTIGKEIT, KontoFehler, TokenHash};
+use super::{EMAIL_BESTÄTIGUNG_GÜLTIGKEIT, KontoFehler, TokenHash};
 use crate::domain::EmailAdresse;
 
 /// Identity of one E-Mail-Adresse-Bestätigung.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct BestaetigungId(pub Uuid);
+pub struct BestätigungId(pub Uuid);
 
 /// Creation input of an E-Mail-Adresse-Bestätigung.
 #[derive(Debug, Clone)]
-pub struct NeueBestaetigung {
+pub struct NeueBestätigung {
     email: EmailAdresse,
     token_hash: TokenHash,
     erstellt_am: DateTime<Utc>,
 }
 
-impl NeueBestaetigung {
+impl NeueBestätigung {
     pub fn neu(email: EmailAdresse, token_hash: TokenHash, erstellt_am: DateTime<Utc>) -> Self {
         Self {
             email,
@@ -38,7 +38,7 @@ impl NeueBestaetigung {
     }
 
     pub fn expires_at(&self) -> DateTime<Utc> {
-        self.erstellt_am + EMAIL_BESTAETIGUNG_GUELTIGKEIT
+        self.erstellt_am + EMAIL_BESTÄTIGUNG_GÜLTIGKEIT
     }
 }
 
@@ -48,16 +48,16 @@ impl NeueBestaetigung {
 /// rule 3). Spending it is what authorises step 2, and step 2 still refuses if the address
 /// gained a Konto in the meantime (rule 4, AC-20).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EmailBestaetigung {
-    id: BestaetigungId,
+pub struct EmailBestätigung {
+    id: BestätigungId,
     email: EmailAdresse,
     token_hash: TokenHash,
     expires_at: DateTime<Utc>,
     spent_at: Option<DateTime<Utc>>,
 }
 
-impl EmailBestaetigung {
-    pub fn neu(id: BestaetigungId, neu: NeueBestaetigung) -> Self {
+impl EmailBestätigung {
+    pub fn neu(id: BestätigungId, neu: NeueBestätigung) -> Self {
         let expires_at = neu.expires_at();
         Self {
             id,
@@ -69,7 +69,7 @@ impl EmailBestaetigung {
     }
 
     pub fn from_parts(
-        id: BestaetigungId,
+        id: BestätigungId,
         email: EmailAdresse,
         token_hash: TokenHash,
         expires_at: DateTime<Utc>,
@@ -84,7 +84,7 @@ impl EmailBestaetigung {
         }
     }
 
-    pub fn id(&self) -> BestaetigungId {
+    pub fn id(&self) -> BestätigungId {
         self.id
     }
 
@@ -113,7 +113,7 @@ impl EmailBestaetigung {
     }
 
     /// Usable exactly once and only inside its 24 hours (rule 13, AC-4).
-    pub fn ist_gueltig(&self, jetzt: DateTime<Utc>) -> bool {
+    pub fn ist_gültig(&self, jetzt: DateTime<Utc>) -> bool {
         !self.ist_verbraucht() && !self.ist_abgelaufen(jetzt)
     }
 
@@ -136,10 +136,10 @@ mod tests {
         DateTime::from_timestamp(1_700_000_000, 0).unwrap()
     }
 
-    fn bestaetigung() -> EmailBestaetigung {
-        EmailBestaetigung::neu(
-            BestaetigungId(Uuid::nil()),
-            NeueBestaetigung::neu(
+    fn bestätigung() -> EmailBestätigung {
+        EmailBestätigung::neu(
+            BestätigungId(Uuid::nil()),
+            NeueBestätigung::neu(
                 EmailAdresse::normalisiert("anna@muster.de").unwrap(),
                 TokenHash::from_hex("a".repeat(64)).unwrap(),
                 jetzt(),
@@ -148,29 +148,29 @@ mod tests {
     }
 
     #[test_log::test]
-    fn neue_bestaetigung_gilt_24_stunden() {
-        let bestaetigung = bestaetigung();
-        assert_eq!(bestaetigung.expires_at(), jetzt() + Duration::hours(24));
-        assert!(bestaetigung.ist_gueltig(jetzt() + Duration::hours(23)));
-        assert!(!bestaetigung.ist_gueltig(jetzt() + Duration::hours(24)));
+    fn neue_bestätigung_gilt_24_stunden() {
+        let bestätigung = bestätigung();
+        assert_eq!(bestätigung.expires_at(), jetzt() + Duration::hours(24));
+        assert!(bestätigung.ist_gültig(jetzt() + Duration::hours(23)));
+        assert!(!bestätigung.ist_gültig(jetzt() + Duration::hours(24)));
     }
 
     #[test_log::test]
     fn zweite_verwendung_wird_abgelehnt() {
-        let mut bestaetigung = bestaetigung();
-        assert!(bestaetigung.verbrauchen(jetzt()).is_ok());
+        let mut bestätigung = bestätigung();
+        assert!(bestätigung.verbrauchen(jetzt()).is_ok());
         assert!(matches!(
-            bestaetigung.verbrauchen(jetzt()),
+            bestätigung.verbrauchen(jetzt()),
             Err(KontoFehler::TokenVerbraucht)
         ));
-        assert!(!bestaetigung.ist_gueltig(jetzt()));
+        assert!(!bestätigung.ist_gültig(jetzt()));
     }
 
     #[test_log::test]
     fn from_parts_roundtrip() {
-        let mut original = bestaetigung();
+        let mut original = bestätigung();
         original.verbrauchen(jetzt()).unwrap();
-        let geladen = EmailBestaetigung::from_parts(
+        let geladen = EmailBestätigung::from_parts(
             original.id(),
             original.email().clone(),
             original.token_hash().clone(),

@@ -31,7 +31,9 @@ pub mod mailpit;
 pub mod schuss;
 
 /// Frontend routes the mailed links point at.
-pub const BESTAETIGUNG_LINK: &str = "https://logandaim.at/registrierung";
+/// The frontend origin every e2e case's mailed links are spelled from.
+pub const FRONTEND_BASIS_URL: &str = "https://logandaim.at";
+pub const BESTÄTIGUNG_LINK: &str = "https://logandaim.at/registrierung";
 pub const WIEDERHERSTELLUNG_LINK: &str = "https://logandaim.at/passwort";
 pub const ISSUER: &str = "logandaim.at";
 pub const AUDIENCE: &str = "logandaim-api";
@@ -47,7 +49,7 @@ pub fn test_signing_key() -> SigningKeypair {
 }
 
 pub fn test_konfiguration() -> KontoKonfiguration {
-    KontoKonfiguration::neu(BESTAETIGUNG_LINK, WIEDERHERSTELLUNG_LINK, ISSUER, AUDIENCE)
+    KontoKonfiguration::neu(ISSUER, AUDIENCE)
 }
 
 /// A built app plus the fakes a test has to reach into.
@@ -107,6 +109,7 @@ impl E2eHarness {
         let absender = logandaim_core::domain::EmailAdresse::new("noreply@logandaim.at")
             .expect("static address");
         let mut konfiguration = SmtpKonfiguration::mailpit(absender);
+        konfiguration.frontend_basis_url = FRONTEND_BASIS_URL.to_owned();
         if let Ok(url) = std::env::var("LOGANDAIM_MAILPIT_SMTP") {
             if let Some((host, port)) = url.rsplit_once(':') {
                 konfiguration.host = host.to_owned();
@@ -144,7 +147,7 @@ impl E2eHarness {
     /// The token of the most recently mailed link.
     pub fn letztes_token(&self) -> String {
         let mail = self.mail.letzte();
-        token_aus(&mail.text)
+        token_aus(&mail.text(FRONTEND_BASIS_URL))
     }
 }
 

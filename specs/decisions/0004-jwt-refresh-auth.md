@@ -77,9 +77,10 @@ on reuse.
    never `*` and never an unvalidated reflection. The credential is the refresh cookie, sent only by
    the same-site production frontend; `*.github.io` previews are cross-site, receive no cookie, and
    run access-token-only. Preflight and error responses carry the same headers so 401/403 stay
-   readable. Implemented: `erlaubte_herkuenfte` in `backend/server/src/main.rs` builds the
-   allowlist as a fixed list of named origins; the earlier any-`localhost` prefix test is gone,
-   because an origin that merely *starts* with a loopback prefix is a different origin.
+   readable. Implemented: `allowed_origins` in `backend/server/src/main.rs` builds the allowlist
+   from the configured `frontendBasisUrl` plus the dev server's documented ports; the earlier
+   any-`localhost` prefix test is gone, because an origin that merely *starts* with a loopback
+   prefix is a different origin.
 
 ## Consequences
 
@@ -131,10 +132,10 @@ and is not part of the contract; the contract lives in SPEC-konto's rules and ac
 | Store | Fields |
 |-------|--------|
 | `benutzer` | `id`, `rolle` (`Benutzer` \| `Systemadministrator`), `erstellt_am` |
-| `konten` | `id`, `benutzer_id`, `email` (unique, normalized), `password_hash`, `bestaetigt_am`, `erstellt_am` |
-| `signing_keys` | `kid`, `oeffentlicher_schluessel`, `aktiv`, `erstellt_am`, `ausser_betrieb_am` |
+| `konten` | `id`, `benutzer_id`, `email` (unique, normalized), `password_hash`, `bestätigt_am`, `erstellt_am` |
+| `signing_keys` | `kid`, `öffentlicher_schlüssel`, `aktiv`, `erstellt_am`, `außer_betrieb_am` |
 | `sessions` | `id`, `benutzer_id`, `refresh_token_hash`, `signing_key_id`, `erstellt_am`, `expires_at`, `spent_at`, `revoked_at` |
-| `email_bestaetigungen` | `id`, `email` (normalized, **not** a `konto_id` — the `Konto` does not exist yet), `token_hash`, `expires_at`, `spent_at` |
+| `email_bestätigungen` | `id`, `email` (normalized, **not** a `konto_id` — the `Konto` does not exist yet), `token_hash`, `expires_at`, `spent_at` |
 | `passwort_wiederherstellungen` | `id`, `konto_id`, `token_hash`, `expires_at`, `spent_at` |
 
 Implemented in `crates/logandaim-sqlite/src/migrations/v0002_konto.rs`. The table and column names
@@ -142,7 +143,7 @@ are English because they name the technical objects above (`Session`, `SigningKe
 nouns; `benutzer`, `konten` and `passwort_wiederherstellungen` keep their German names because those
 *are* product nouns. Every row carries `_version` for optimistic concurrency, as the other tables do.
 
-`email_bestaetigungen` is keyed by address, not by account, because registration creates the
+`email_bestätigungen` is keyed by address, not by account, because registration creates the
 `Konto` only in step 2 (SPEC-konto rule 3). A confirmation row for an address that gained a `Konto`
 in the meantime is spent without creating anything (rule 4).
 
@@ -169,7 +170,7 @@ German domain paths as in ADR-0001, JSON keys `camelCase` UTF-8.
 | `POST /api/passwort-vergessen` | Request recovery mail; same response for unknown addresses. |
 | `POST /api/passwort-wiederherstellen` | Set new `Passwort` (`token`, `neuesPasswort`) → ends all sessions. |
 | `GET /api/benutzer` | The logged-in `Benutzer` (`id`, `eMailAdresse`, `rolle`). |
-| `POST /api/benutzer/loeschung` | `Benutzer-Löschung` (`passwort` re-entry + confirmation). |
+| `POST /api/benutzer/löschung` | `Benutzer-Löschung` (`passwort` re-entry + confirmation). |
 
 Error shape follows the existing structured errors: 400 validation or bad token, 401 not logged in
 or revoked session, 403 wrong authority, 409 state conflict, 429 throttled. Registration has **no**

@@ -33,12 +33,12 @@ impl SecretToken {
     /// Only shape is checked here; whether it names a live row is the use case's job.
     pub fn parse(wert: impl Into<String>) -> Result<Self, KontoFehler> {
         let wert = wert.into();
-        let plausibel = wert.len() == BASIS64URL_LAENGE
+        let plausibel = wert.len() == BASIS64URL_LÄNGE
             && wert
                 .bytes()
                 .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_');
         if !plausibel {
-            return Err(KontoFehler::TokenUngueltig);
+            return Err(KontoFehler::TokenUngültig);
         }
         Ok(Self::aus_basis64url(wert))
     }
@@ -60,7 +60,7 @@ impl fmt::Debug for SecretToken {
 }
 
 /// 32 random bytes encode to 43 base64url characters without padding.
-const BASIS64URL_LAENGE: usize = 43;
+const BASIS64URL_LÄNGE: usize = 43;
 
 /// SHA-256 digest of a [`SecretToken`], hex encoded: the only form that is stored.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -71,7 +71,7 @@ impl TokenHash {
         let hex = hex.into();
         let plausibel = hex.len() == 64 && hex.bytes().all(|byte| byte.is_ascii_hexdigit());
         if !plausibel {
-            return Err(KontoFehler::TokenUngueltig);
+            return Err(KontoFehler::TokenUngültig);
         }
         Ok(Self(hex.to_ascii_lowercase()))
     }
@@ -168,7 +168,7 @@ mod tests {
     #[test_log::test]
     fn secret_token_hat_256_bit_und_basis64url_form() {
         let token = generate_secret_token().unwrap();
-        assert_eq!(token.as_str().len(), BASIS64URL_LAENGE);
+        assert_eq!(token.as_str().len(), BASIS64URL_LÄNGE);
         assert!(SecretToken::parse(token.as_str()).is_ok());
     }
 

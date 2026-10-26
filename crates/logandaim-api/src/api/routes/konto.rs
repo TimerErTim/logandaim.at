@@ -47,13 +47,13 @@ pub async fn registrierung_starten(
     )
 }
 
-pub async fn registrierung_abschliessen(
+pub async fn registrierung_abschließen(
     spec: &LogandaimApiSpec,
     req: &Request,
     body: Json<requests::RegistrierungAbschlussAnfrage>,
 ) -> SitzungAntwort {
     let kunde = spec.api().kunde(req).await;
-    SitzungAntwort::neu(spec.api().registrierung_abschliessen(body.0, kunde).await)
+    SitzungAntwort::neu(spec.api().registrierung_abschließen(body.0, kunde).await)
 }
 
 pub async fn anmelden(
@@ -118,14 +118,14 @@ pub async fn benutzer_anzeigen(
     KontoAntwort::from(ergebnis)
 }
 
-pub async fn benutzer_loeschen(
+pub async fn benutzer_löschen(
     spec: &LogandaimApiSpec,
     req: &Request,
-    body: Json<requests::BenutzerLoeschungAnfrage>,
+    body: Json<requests::BenutzerLöschungAnfrage>,
 ) -> BeendendeAntwort<OkAntwort> {
     let ergebnis: ResultReport<(), KontoDienstFehler> =
         match spec.api().require_authenticated(req).await {
-            Ok(auth) => spec.api().benutzer_loeschen(auth, body.0).await,
+            Ok(auth) => spec.api().benutzer_löschen(auth, body.0).await,
             Err(_) => nicht_angemeldet(),
         };
     BeendendeAntwort::neu(ergebnis.map(|()| OkAntwort { ok: true }))

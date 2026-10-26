@@ -154,13 +154,13 @@ impl Session {
 
     /// Live: not revoked, not spent, not expired. This is what a *renewal* requires: the
     /// refresh token must not have been spent yet.
-    pub fn ist_gueltig(&self, jetzt: DateTime<Utc>) -> bool {
+    pub fn ist_gültig(&self, jetzt: DateTime<Utc>) -> bool {
         !self.ist_widerrufen() && !self.ist_verbraucht() && !self.ist_abgelaufen(jetzt)
     }
 
     /// Whether an access token issued under this session is still accepted.
     ///
-    /// Deliberately weaker than [`Session::ist_gueltig`]: a spent refresh token does not
+    /// Deliberately weaker than [`Session::ist_gültig`]: a spent refresh token does not
     /// end the session, so the access token handed out before a rotation keeps working
     /// until it expires (AC-7). Only revocation and expiry end it (AC-9, AC-17).
     pub fn ist_annehmbar(&self, jetzt: DateTime<Utc>) -> bool {
@@ -216,32 +216,32 @@ mod tests {
     }
 
     #[test_log::test]
-    fn neue_session_ist_gueltig_und_laeuft_in_einem_monat_ab() {
+    fn neue_session_ist_gültig_und_läuft_in_einem_monat_ab() {
         let session = session();
-        assert!(session.ist_gueltig(jetzt()));
+        assert!(session.ist_gültig(jetzt()));
         assert_eq!(session.expires_at(), jetzt() + Duration::days(30));
     }
 
     #[test_log::test]
-    fn abgelaufene_session_ist_ungueltig() {
+    fn abgelaufene_session_ist_ungültig() {
         let session = session();
         assert!(session.ist_abgelaufen(jetzt() + Duration::days(30)));
-        assert!(!session.ist_gueltig(jetzt() + Duration::days(30)));
+        assert!(!session.ist_gültig(jetzt() + Duration::days(30)));
     }
 
     #[test_log::test]
-    fn verbrauchte_session_ist_ungueltig() {
+    fn verbrauchte_session_ist_ungültig() {
         let mut session = session();
         session.verbrauchen(jetzt());
         assert!(session.ist_verbraucht());
-        assert!(!session.ist_gueltig(jetzt()));
+        assert!(!session.ist_gültig(jetzt()));
         // Spending twice keeps the first timestamp.
         session.verbrauchen(jetzt() + Duration::minutes(1));
         assert_eq!(session.spent_at(), Some(jetzt()));
     }
 
     #[test_log::test]
-    fn verbrauchte_session_laesst_das_alte_access_token_weiterleben() {
+    fn verbrauchte_session_lässt_das_alte_access_token_weiterleben() {
         // AC-7: rotating the refresh token must not invalidate the access token that was
         // issued with it; only revocation or expiry does (AC-9, AC-17).
         let mut session = session();
@@ -250,7 +250,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn widerrufene_session_ist_endgueltig_ungueltig() {
+    fn widerrufene_session_ist_endgültig_ungültig() {
         let mut session = session();
         session.widerrufen(jetzt());
         assert!(!session.ist_annehmbar(jetzt()));
@@ -258,11 +258,11 @@ mod tests {
     }
 
     #[test_log::test]
-    fn widerrufene_session_ist_undgueltig() {
+    fn widerrufene_session_ist_undgültig() {
         let mut session = session();
         session.widerrufen(jetzt());
         assert!(session.ist_widerrufen());
-        assert!(!session.ist_gueltig(jetzt()));
+        assert!(!session.ist_gültig(jetzt()));
     }
 
     #[test_log::test]
@@ -273,7 +273,7 @@ mod tests {
         assert_eq!(neu.signing_key_id(), session.signing_key_id());
         assert_eq!(neu.expires_at(), jetzt() + Duration::days(30));
         // The old session was not touched by rotation.
-        assert!(session.ist_gueltig(jetzt()));
+        assert!(session.ist_gültig(jetzt()));
     }
 
     #[test_log::test]
@@ -293,7 +293,7 @@ mod tests {
     }
 
     #[test_log::test]
-    fn signing_key_id_wird_geprueft() {
+    fn signing_key_id_wird_geprüft() {
         assert!(SigningKeyId::new("").is_err());
         assert!(SigningKeyId::new("mit leerzeichen").is_err());
         assert!(SigningKeyId::new("k-2026_10").is_ok());

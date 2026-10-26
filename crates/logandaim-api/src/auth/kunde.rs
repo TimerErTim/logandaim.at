@@ -5,7 +5,7 @@
 
 use std::net::IpAddr;
 
-use logandaim_core::ports::KundeSchluessel;
+use logandaim_core::ports::KundeSchlüssel;
 
 /// Build the key of the client behind one request.
 ///
@@ -19,7 +19,7 @@ pub fn kunde(
     real_ip: IpAddr,
     user_agent: Option<&str>,
     accept_language: Option<&str>,
-) -> KundeSchluessel {
+) -> KundeSchlüssel {
     use sha2::{Digest, Sha256};
 
     let mut hasher = Sha256::new();
@@ -29,7 +29,7 @@ pub fn kunde(
     // First 16 hex chars: enough to tell clients apart, short enough to read in a log.
     let fingerprint = hex::encode(hasher.finalize())[..16].to_owned();
 
-    KundeSchluessel::neu(real_ip, fingerprint)
+    KundeSchlüssel::neu(real_ip, fingerprint)
 }
 
 #[cfg(test)]
@@ -41,14 +41,14 @@ mod tests {
     }
 
     #[test_log::test]
-    fn gleiche_kennung_ergibt_gleichen_schluessel() {
+    fn gleiche_kennung_ergibt_gleichen_schlüssel() {
         let a = kunde(ip(), Some("Mozilla/5.0"), Some("de-AT"));
         let b = kunde(ip(), Some("Mozilla/5.0"), Some("de-AT"));
         assert_eq!(a, b);
     }
 
     #[test_log::test]
-    fn andere_ip_oder_anderer_client_ergeben_andere_schluessel() {
+    fn andere_ip_oder_anderer_client_ergeben_andere_schlüssel() {
         let basis = kunde(ip(), Some("Mozilla/5.0"), None);
 
         let andere_ip = kunde("198.51.100.1".parse().unwrap(), Some("Mozilla/5.0"), None);

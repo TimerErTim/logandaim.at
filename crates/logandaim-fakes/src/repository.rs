@@ -12,7 +12,7 @@ use logandaim_core::{
 
 use crate::konto::KontoDatastore;
 use crate::konto::{
-    FakeBenutzerRepository, FakeEmailBestaetigungRepository, FakeKontoRepository,
+    FakeBenutzerRepository, FakeEmailBestätigungRepository, FakeKontoRepository,
     FakePasswortWiederherstellungRepository, FakeSessionRepository, FakeSigningKeyRepository,
 };
 
@@ -104,7 +104,7 @@ pub struct KontoRepositories {
     pub konten: FakeKontoRepository,
     pub sessions: FakeSessionRepository,
     pub signing_keys: FakeSigningKeyRepository,
-    pub bestaetigungen: FakeEmailBestaetigungRepository,
+    pub bestätigungen: FakeEmailBestätigungRepository,
     pub wiederherstellungen: FakePasswortWiederherstellungRepository,
 }
 
@@ -115,7 +115,7 @@ impl KontoRepositories {
             konten: FakeKontoRepository::new(Arc::clone(&datastore)),
             sessions: FakeSessionRepository::new(Arc::clone(&datastore)),
             signing_keys: FakeSigningKeyRepository::new(Arc::clone(&datastore)),
-            bestaetigungen: FakeEmailBestaetigungRepository::new(Arc::clone(&datastore)),
+            bestätigungen: FakeEmailBestätigungRepository::new(Arc::clone(&datastore)),
             wiederherstellungen: FakePasswortWiederherstellungRepository::new(datastore),
         }
     }

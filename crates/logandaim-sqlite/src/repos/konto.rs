@@ -25,7 +25,7 @@ fn konto_from_row(row: &Row) -> RepositoryResult<Konto> {
     let benutzer_id_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
     let email_raw: String = row.get(2).contextualize(RepositoryError::Data)?;
     let password_hash_raw: String = row.get(3).contextualize(RepositoryError::Data)?;
-    let bestaetigt_am_raw: String = row.get(4).contextualize(RepositoryError::Data)?;
+    let bestätigt_am_raw: String = row.get(4).contextualize(RepositoryError::Data)?;
     let erstellt_am_raw: String = row.get(5).contextualize(RepositoryError::Data)?;
 
     let id = parse_uuid(&id_raw).contextualize(RepositoryError::Data)?;
@@ -33,7 +33,7 @@ fn konto_from_row(row: &Row) -> RepositoryResult<Konto> {
     let email = EmailAdresse::new(email_raw).change_context(RepositoryError::Data)?;
     let password_hash =
         PasswordHash::from_phc(password_hash_raw).change_context(RepositoryError::Data)?;
-    let bestaetigt_am = parse_datetime(&bestaetigt_am_raw).contextualize(RepositoryError::Data)?;
+    let bestätigt_am = parse_datetime(&bestätigt_am_raw).contextualize(RepositoryError::Data)?;
     let erstellt_am = parse_datetime(&erstellt_am_raw).contextualize(RepositoryError::Data)?;
 
     Ok(Konto::from_parts(
@@ -41,13 +41,13 @@ fn konto_from_row(row: &Row) -> RepositoryResult<Konto> {
         logandaim_core::domain::konto::BenutzerId(benutzer_id),
         email,
         password_hash,
-        bestaetigt_am,
+        bestätigt_am,
         erstellt_am,
     ))
 }
 
 const SELECT: &str =
-    r#"SELECT id, benutzer_id, email, password_hash, bestaetigt_am, erstellt_am FROM "konten""#;
+    r#"SELECT id, benutzer_id, email, password_hash, bestätigt_am, erstellt_am FROM "konten""#;
 
 pub struct SQLiteKontoRepository {
     pub(crate) tx: Arc<Mutex<Option<Transaction>>>,
@@ -63,14 +63,14 @@ impl KontoRepository for SQLiteKontoRepository {
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         tx.execute(
-            r#"INSERT INTO "konten" (id, benutzer_id, email, password_hash, bestaetigt_am, erstellt_am, _version)
+            r#"INSERT INTO "konten" (id, benutzer_id, email, password_hash, bestätigt_am, erstellt_am, _version)
                VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)"#,
             (
                 id.0.to_string(),
                 konto.benutzer_id().0.to_string(),
                 konto.email().as_ref().to_string(),
                 konto.password_hash().as_str().to_string(),
-                format_datetime(konto.bestaetigt_am()),
+                format_datetime(konto.bestätigt_am()),
                 format_datetime(konto.erstellt_am()),
             ),
         )

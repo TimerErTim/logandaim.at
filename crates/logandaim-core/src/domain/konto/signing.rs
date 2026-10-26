@@ -31,7 +31,7 @@ impl Signature {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, KontoFehler> {
         let bytes: [u8; SIGNATURE_BYTES] = bytes
             .try_into()
-            .map_err(|_| KontoFehler::SignaturUngueltig)?;
+            .map_err(|_| KontoFehler::SignaturUngültig)?;
         Ok(Self(bytes))
     }
 
@@ -60,14 +60,14 @@ impl fmt::Debug for Signature {
 #[derive(Clone)]
 pub struct SigningKeypair {
     kid: SigningKeyId,
-    schluessel: ed25519_dalek::SigningKey,
+    schlüssel: ed25519_dalek::SigningKey,
 }
 
 impl fmt::Debug for SigningKeypair {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SigningKeypair")
             .field("kid", &self.kid)
-            .field("schluessel", &"[redacted]")
+            .field("schlüssel", &"[redacted]")
             .finish()
     }
 }
@@ -79,16 +79,16 @@ impl SigningKeypair {
     /// silently created key would invalidate every session on the next restart.
     pub fn from_pkcs8_pem(kid: SigningKeyId, pem: &str) -> Result<Self, KontoFehler> {
         let pem = Zeroizing::new(pem.to_string());
-        let schluessel = ed25519_dalek::SigningKey::from_pkcs8_pem(&pem)
-            .map_err(|_| KontoFehler::SigningKeyUngueltig)?;
-        Ok(Self { kid, schluessel })
+        let schlüssel = ed25519_dalek::SigningKey::from_pkcs8_pem(&pem)
+            .map_err(|_| KontoFehler::SigningKeyUngültig)?;
+        Ok(Self { kid, schlüssel })
     }
 
     /// Build from the 32 raw secret bytes; only tests and key generation use this.
     pub fn from_secret_bytes(kid: SigningKeyId, bytes: &[u8; 32]) -> Self {
         Self {
             kid,
-            schluessel: ed25519_dalek::SigningKey::from_bytes(bytes),
+            schlüssel: ed25519_dalek::SigningKey::from_bytes(bytes),
         }
     }
 
@@ -98,41 +98,41 @@ impl SigningKeypair {
 
     /// Hex-encoded 32-byte public key, exactly what the `signing_keys` row stores.
     pub fn public_key_hex(&self) -> String {
-        hex::encode(self.schluessel.verifying_key().to_bytes())
+        hex::encode(self.schlüssel.verifying_key().to_bytes())
     }
 
     /// Sign raw bytes. The caller assembles whatever envelope it needs around them.
     pub fn sign(&self, nachricht: &[u8]) -> Signature {
-        Signature(self.schluessel.sign(nachricht).to_bytes())
+        Signature(self.schlüssel.sign(nachricht).to_bytes())
     }
 
     /// Verify raw bytes against this keypair's public half.
     pub fn verify(&self, nachricht: &[u8], signature: &Signature) -> Result<(), KontoFehler> {
         let signature = ed25519_dalek::Signature::from_bytes(&signature.0);
-        self.schluessel
+        self.schlüssel
             .verifying_key()
             .verify(nachricht, &signature)
-            .map_err(|_| KontoFehler::SignaturUngueltig)
+            .map_err(|_| KontoFehler::SignaturUngültig)
     }
 
     /// Verify with a public key that arrived from a key row, so a request signed by a
     /// different key is rejected even when that key is valid on its own.
     pub fn verify_with_public_key_hex(
-        oeffentlicher_schluessel_hex: &str,
+        öffentlicher_schlüssel_hex: &str,
         nachricht: &[u8],
         signature: &Signature,
     ) -> Result<(), KontoFehler> {
-        let bytes = hex::decode(oeffentlicher_schluessel_hex)
-            .map_err(|_| KontoFehler::SigningKeyUngueltig)?;
+        let bytes = hex::decode(öffentlicher_schlüssel_hex)
+            .map_err(|_| KontoFehler::SigningKeyUngültig)?;
         let bytes: [u8; 32] = bytes
             .try_into()
-            .map_err(|_| KontoFehler::SigningKeyUngueltig)?;
+            .map_err(|_| KontoFehler::SigningKeyUngültig)?;
         let verifying_key = ed25519_dalek::VerifyingKey::from_bytes(&bytes)
-            .map_err(|_| KontoFehler::SigningKeyUngueltig)?;
+            .map_err(|_| KontoFehler::SigningKeyUngültig)?;
         let signature = ed25519_dalek::Signature::from_bytes(&signature.0);
         verifying_key
             .verify(nachricht, &signature)
-            .map_err(|_| KontoFehler::SignaturUngueltig)
+            .map_err(|_| KontoFehler::SignaturUngültig)
     }
 }
 
@@ -164,25 +164,26 @@ mod tests {
     fn gekipptes_byte_wird_abgelehnt() {
         let keypair = keypair(3);
         let signatur = keypair.sign(b"header.payload");
+        // One byte differs from what was signed, so verification must fail.
         assert!(matches!(
-            keypair.verify(b"header.payloae", &signatur),
-            Err(KontoFehler::SignaturUngueltig)
+            keypair.verify(b"header.payloadX", &signatur),
+            Err(KontoFehler::SignaturUngültig)
         ));
     }
 
     #[test_log::test]
-    fn falscher_schluessel_wird_abgelehnt() {
+    fn falscher_schlüssel_wird_abgelehnt() {
         let signierer = keypair(4);
-        let pruefer = keypair(5);
+        let prüfer = keypair(5);
         let signatur = signierer.sign(b"header.payload");
         assert!(matches!(
-            pruefer.verify(b"header.payload", &signatur),
-            Err(KontoFehler::SignaturUngueltig)
+            prüfer.verify(b"header.payload", &signatur),
+            Err(KontoFehler::SignaturUngültig)
         ));
     }
 
     #[test_log::test]
-    fn public_key_verifikation_ueber_die_schluesselzeile() {
+    fn public_key_verifikation_über_die_schlüsselzeile() {
         let signierer = keypair(6);
         let signatur = signierer.sign(b"header.payload");
         let hex = signierer.public_key_hex();
@@ -193,20 +194,20 @@ mod tests {
         let fremder = keypair(7).public_key_hex();
         assert!(matches!(
             SigningKeypair::verify_with_public_key_hex(&fremder, b"header.payload", &signatur),
-            Err(KontoFehler::SignaturUngueltig)
+            Err(KontoFehler::SignaturUngültig)
         ));
     }
 
     #[test_log::test]
-    fn kaputte_signaturlaenge_wird_abgelehnt() {
+    fn kaputte_signaturlänge_wird_abgelehnt() {
         assert!(matches!(
             Signature::from_bytes(&[0u8; 63]),
-            Err(KontoFehler::SignaturUngueltig)
+            Err(KontoFehler::SignaturUngültig)
         ));
     }
 
     #[test_log::test]
-    fn debug_gibt_den_privatschluessel_nicht_preis() {
+    fn debug_gibt_den_privatschlüssel_nicht_preis() {
         let keypair = keypair(8);
         let text = format!("{keypair:?}");
         assert!(text.contains("redacted"));
@@ -219,6 +220,6 @@ mod tests {
             SigningKeyId::new("k1").unwrap(),
             "-----BEGIN PRIVATE KEY-----\nnope\n-----END PRIVATE KEY-----",
         );
-        assert!(matches!(ergebnis, Err(KontoFehler::SigningKeyUngueltig)));
+        assert!(matches!(ergebnis, Err(KontoFehler::SigningKeyUngültig)));
     }
 }

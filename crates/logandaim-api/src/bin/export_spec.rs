@@ -15,7 +15,7 @@ use logandaim_core::{
     application::KontoKonfiguration,
     domain::konto::{SigningKeyId, SigningKeypair},
     ports::{
-        Drossel, DrosselAktion, DrosselFehler, KundeSchluessel, Mail, MailFehler, MailSender,
+        Drossel, DrosselAktion, DrosselFehler, KundeSchlüssel, Mail, MailFehler, MailSender,
         RepositoryResult,
     },
     uow::{UnitOfWorkImpl, UnitOfWorkProvider},
@@ -36,21 +36,21 @@ struct KeineDrossel;
 
 #[async_trait]
 impl Drossel for KeineDrossel {
-    async fn pruefe_und_zaehle(
+    async fn prüfe_und_zähle(
         &self,
-        _kunde: &KundeSchluessel,
+        _kunde: &KundeSchlüssel,
         _aktion: DrosselAktion,
         _jetzt: DateTime<Utc>,
     ) -> Result<(), Report<DrosselFehler>> {
-        Err(Report::new(DrosselFehler::NichtVerfuegbar))
+        Err(Report::new(DrosselFehler::NichtVerfügbar))
     }
 
-    async fn zuruecksetzen(
+    async fn zurücksetzen(
         &self,
-        _kunde: &KundeSchluessel,
+        _kunde: &KundeSchlüssel,
         _aktion: DrosselAktion,
     ) -> Result<(), Report<DrosselFehler>> {
-        Err(Report::new(DrosselFehler::NichtVerfuegbar))
+        Err(Report::new(DrosselFehler::NichtVerfügbar))
     }
 }
 
@@ -73,12 +73,7 @@ fn main() {
         ))
         .drossel(Arc::new(KeineDrossel))
         .mail_sender(Arc::new(KeinVersand))
-        .konto(KontoKonfiguration::neu(
-            "https://logandaim.at/registrierung",
-            "https://logandaim.at/passwort",
-            "logandaim.at",
-            "logandaim-api",
-        ))
+        .konto(KontoKonfiguration::neu("logandaim.at", "logandaim-api"))
         .build();
 
     let api_service = openapi_service(dummy_app, std::iter::empty::<String>());

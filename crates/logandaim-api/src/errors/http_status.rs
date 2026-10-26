@@ -109,10 +109,10 @@ impl HttpStatusMapping for KontoDienstFehler {
     fn http_status(&self) -> Option<StatusCode> {
         Some(match self {
             // A bad token, a short Passwort, a missing confirmation flag.
-            KontoDienstFehler::UngueltigeAnfrage => StatusCode::BAD_REQUEST,
+            KontoDienstFehler::UngültigeAnfrage => StatusCode::BAD_REQUEST,
             KontoDienstFehler::NichtAngemeldet
             | KontoDienstFehler::ZugangsdatenFalsch
-            | KontoDienstFehler::SitzungUngueltig => StatusCode::UNAUTHORIZED,
+            | KontoDienstFehler::SitzungUngültig => StatusCode::UNAUTHORIZED,
             KontoDienstFehler::NichtErlaubt => StatusCode::FORBIDDEN,
             KontoDienstFehler::Gedrosselt => StatusCode::TOO_MANY_REQUESTS,
             KontoDienstFehler::Konflikt => StatusCode::CONFLICT,

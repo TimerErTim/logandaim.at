@@ -8,8 +8,8 @@ use crate::ResultReport;
 use crate::application::instrumented_repos::RepoStorage;
 use crate::application::uow::UnitOfWorkImpl;
 use crate::ports::{
-    BenutzerRepository, Drossel, DrosselAktion, DrosselFehler, EmailBestaetigungRepository,
-    KontoRepository, KundeSchluessel, Mail, MailFehler, MailSender, ObjectStore, ObjectStoreError,
+    BenutzerRepository, Drossel, DrosselAktion, DrosselFehler, EmailBestätigungRepository,
+    KontoRepository, KundeSchlüssel, Mail, MailFehler, MailSender, ObjectStore, ObjectStoreError,
     ObjectStream, PasswortWiederherstellungRepository, PdfDokument, PdfRenderError, PdfRenderer,
     RepositoryResult, SchussRepository, SessionRepository, SigningKeyRepository,
 };
@@ -76,22 +76,22 @@ impl InstrumentedDrossel {
 #[async_trait]
 impl Drossel for InstrumentedDrossel {
     #[instrument(skip(self, kunde), fields(aktion = aktion.as_str(), ip = %kunde.ip), level = "debug", err(Debug))]
-    async fn pruefe_und_zaehle(
+    async fn prüfe_und_zähle(
         &self,
-        kunde: &KundeSchluessel,
+        kunde: &KundeSchlüssel,
         aktion: DrosselAktion,
         jetzt: chrono::DateTime<chrono::Utc>,
     ) -> ResultReport<(), DrosselFehler> {
-        self.inner.pruefe_und_zaehle(kunde, aktion, jetzt).await
+        self.inner.prüfe_und_zähle(kunde, aktion, jetzt).await
     }
 
     #[instrument(skip(self, kunde), fields(aktion = aktion.as_str(), ip = %kunde.ip), level = "debug", err(Debug))]
-    async fn zuruecksetzen(
+    async fn zurücksetzen(
         &self,
-        kunde: &KundeSchluessel,
+        kunde: &KundeSchlüssel,
         aktion: DrosselAktion,
     ) -> ResultReport<(), DrosselFehler> {
-        self.inner.zuruecksetzen(kunde, aktion).await
+        self.inner.zurücksetzen(kunde, aktion).await
     }
 }
 
@@ -109,7 +109,7 @@ impl InstrumentedMailSender {
 #[async_trait]
 impl MailSender for InstrumentedMailSender {
     // The body carries a single-use token, so it is never recorded in a span.
-    #[instrument(skip(self, mail), fields(betreff = %mail.betreff), level = "debug", err(Debug))]
+    #[instrument(skip(self, mail), fields(betreff = mail.betreff()), level = "debug", err(Debug))]
     async fn senden(&self, mail: Mail) -> ResultReport<(), MailFehler> {
         self.inner.senden(mail).await
     }
@@ -161,8 +161,8 @@ impl UnitOfWorkImpl for InstrumentedUnitOfWork {
         &self.storage.signing_keys
     }
 
-    fn bestaetigungen(&self) -> &dyn EmailBestaetigungRepository {
-        &self.storage.bestaetigungen
+    fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {
+        &self.storage.bestätigungen
     }
 
     fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {

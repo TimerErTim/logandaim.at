@@ -6,11 +6,11 @@ use crate::{
     domain::{
         EmailAdresse,
         konto::{
-            KlartextPasswort, NeueBestaetigung, NeueSession, NeuerBenutzer, NeuesKonto,
+            KlartextPasswort, NeueBestätigung, NeueSession, NeuerBenutzer, NeuesKonto,
             generate_secret_token, hash_password, hash_token,
         },
     },
-    ports::{DrosselAktion, KundeSchluessel, Mail},
+    ports::{DrosselAktion, KundeSchlüssel, Mail},
     service::UseCase,
 };
 
@@ -23,13 +23,13 @@ use super::{
 ///
 /// Answers identically whether the address is free or already holds a `Konto` (rule 4,
 /// AC-1, AC-2). The only observable difference is that a free address gets mail. Nothing
-/// is written except an `EmailBestaetigung`, so no `Benutzer` exists yet (AC-20).
+/// is written except an `EmailBestätigung`, so no `Benutzer` exists yet (AC-20).
 #[derive(Debug, Clone)]
 pub struct RegistrierungStarten {
     /// Address as typed. Normalization is the domain's job, not the edge's.
     pub email: String,
     /// Who is asking, for the client-scoped throttle. Never the address itself.
-    pub kunde: KundeSchluessel,
+    pub kunde: KundeSchlüssel,
 }
 
 #[async_trait]
@@ -38,7 +38,7 @@ impl UseCase<()> for RegistrierungStarten {
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
         let email = EmailAdresse::normalisiert(&self.email)
-            .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+            .change_context(KontoDienstFehler::UngültigeAnfrage)?;
         let jetzt = ctx.clock().now();
 
         drossle(&ctx, &self.kunde, DrosselAktion::RegistrierungStart, jetzt).await?;
@@ -72,42 +72,26 @@ impl UseCase<()> for RegistrierungStarten {
             .change_context(KontoDienstFehler::Speicher)?;
 
         let ergebnis = async {
-            uow.bestaetigungen()
+            uow.bestätigungen()
                 .invalidate_open_for_email(&email, jetzt)
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(KontoDienstFehler::Speicher)?;
 
-            let bestaetigung = NeueBestaetigung::neu(email.clone(), hash_token(&token), jetzt);
-            let bestaetigung = uow
-                .bestaetigungen()
-                .create(bestaetigung)
+            let bestätigung = NeueBestätigung::neu(email.clone(), hash_token(&token), jetzt);
+            let bestätigung = uow
+                .bestätigungen()
+                .create(bestätigung)
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(KontoDienstFehler::Speicher)?;
-            Ok::<_, Report<KontoDienstFehler>>(bestaetigung)
+            Ok::<_, Report<KontoDienstFehler>>(bestätigung)
         }
         .await;
 
         uow.finish_with(ergebnis, speicherfehler).await?;
 
-        let link = ctx.konto_konfiguration().bestaetigung_url(token.as_str());
-        sende_mail(
-            &ctx,
-            Mail::neu(
-                email,
-                "Bestätige deine E-Mail-Adresse",
-                format!(
-                    "Hallo,\n\n\
-                     bitte bestätige deine E-Mail-Adresse für logandaim.at:\n\n\
-                     {link}\n\n\
-                     Der Link ist 24 Stunden gültig und kann nur einmal verwendet werden.\n\
-                     Wenn du dich nicht registriert hast, ignoriere diese Mail.\n"
-                ),
-            ),
-        )
-        .await;
-
+        sende_mail(&ctx, Mail::email_bestätigung(email, token.as_str())).await;
         Ok(())
     }
 }
@@ -118,15 +102,15 @@ impl UseCase<()> for RegistrierungStarten {
 /// unconfirmed `Benutzer` cannot exist (rule 3, AC-20). A token whose address gained a
 /// `Konto` in the meantime is spent and refused without creating anything (rule 4).
 #[derive(Debug, Clone)]
-pub struct RegistrierungAbschliessen {
+pub struct RegistrierungAbschließen {
     pub token: String,
     pub passwort: String,
     /// Trailing characters beyond the cap are rejected, not truncated.
-    pub kunde: KundeSchluessel,
+    pub kunde: KundeSchlüssel,
 }
 
 #[async_trait]
-impl UseCase<SitzungAusgestellt> for RegistrierungAbschliessen {
+impl UseCase<SitzungAusgestellt> for RegistrierungAbschließen {
     type Error = Report<KontoDienstFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SitzungAusgestellt, Self::Error> {
@@ -143,9 +127,9 @@ impl UseCase<SitzungAusgestellt> for RegistrierungAbschliessen {
         // Validate and hash before the token is looked at: a Passwort that fails the
         // length rule must not spend a usable token (AC-4).
         let passwort = KlartextPasswort::neu(self.passwort)
-            .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+            .change_context(KontoDienstFehler::UngültigeAnfrage)?;
         let token = crate::domain::konto::SecretToken::parse(self.token)
-            .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+            .change_context(KontoDienstFehler::UngültigeAnfrage)?;
         let password_hash = hash_password(&passwort).change_context(KontoDienstFehler::Speicher)?;
 
         let uow = ctx
@@ -154,30 +138,30 @@ impl UseCase<SitzungAusgestellt> for RegistrierungAbschliessen {
             .change_context(KontoDienstFehler::Speicher)?;
 
         let ergebnis = async {
-            let bestaetigung = uow
-                .bestaetigungen()
+            let bestätigung = uow
+                .bestätigungen()
                 .find_by_hash(&hash_token(&token))
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(KontoDienstFehler::Speicher)?;
 
-            let Some(bestaetigung) = bestaetigung else {
-                return Err(Report::new(KontoDienstFehler::UngueltigeAnfrage));
+            let Some(bestätigung) = bestätigung else {
+                return Err(Report::new(KontoDienstFehler::UngültigeAnfrage));
             };
 
-            if !bestaetigung.ist_gueltig(jetzt) {
-                return Err(Report::new(KontoDienstFehler::UngueltigeAnfrage));
+            if !bestätigung.ist_gültig(jetzt) {
+                return Err(Report::new(KontoDienstFehler::UngültigeAnfrage));
             }
 
             // Spend first, so a concurrent completion sees `Conflict` rather than
             // creating a second Benutzer for one address.
-            uow.bestaetigungen()
-                .consume(bestaetigung.id(), jetzt)
+            uow.bestätigungen()
+                .consume(bestätigung.id(), jetzt)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(KontoDienstFehler::UngueltigeAnfrage)?;
+                .change_context(KontoDienstFehler::UngültigeAnfrage)?;
 
-            let email = bestaetigung.email().clone();
+            let email = bestätigung.email().clone();
             let belegt = uow
                 .konten()
                 .find_by_email(&email)
@@ -186,7 +170,7 @@ impl UseCase<SitzungAusgestellt> for RegistrierungAbschliessen {
                 .change_context(KontoDienstFehler::Speicher)?;
             if belegt.is_some() {
                 // The address gained a Konto while this token was outstanding (rule 4).
-                return Err(Report::new(KontoDienstFehler::UngueltigeAnfrage));
+                return Err(Report::new(KontoDienstFehler::UngültigeAnfrage));
             }
 
             let benutzer = uow
@@ -202,8 +186,8 @@ impl UseCase<SitzungAusgestellt> for RegistrierungAbschliessen {
                 .map_err(IntoReport::into_report)
                 .change_context(KontoDienstFehler::Speicher)?;
 
-            uow.bestaetigungen()
-                .delete_alle_fuer_email(bestaetigung.email())
+            uow.bestätigungen()
+                .delete_alle_fuer_email(bestätigung.email())
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(KontoDienstFehler::Speicher)?;

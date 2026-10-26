@@ -5,10 +5,10 @@
 //! stay in one place and this file cannot drift from them.
 
 use logandaim_core::{
-    ports::KundeSchluessel,
+    ports::KundeSchlüssel,
     service::{
-        Anmeldung, BenutzerLoeschen, PasswortVergessen, PasswortWiederherstellen,
-        RegistrierungAbschliessen, RegistrierungStarten,
+        Anmeldung, BenutzerLöschen, PasswortVergessen, PasswortWiederherstellen,
+        RegistrierungAbschließen, RegistrierungStarten,
     },
 };
 
@@ -68,19 +68,19 @@ pub struct PasswortWiederherstellenAnfrage {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", serde(rename_all = "camelCase"))]
-pub struct BenutzerLoeschungAnfrage {
+pub struct BenutzerLöschungAnfrage {
     pub passwort: String,
     /// Must be `true`; a missing flag is a refusal, never a default.
-    pub bestaetigt: bool,
+    pub bestätigt: bool,
 }
 
 /// The client identity a throttle keys on. Never travels in a body: it is read from the
 /// connection and the request headers, so a caller cannot choose its own budget.
 #[derive(Debug, Clone)]
-pub struct Kundenkennung(pub KundeSchluessel);
+pub struct Kundenkennung(pub KundeSchlüssel);
 
 impl RegistrierungStartAnfrage {
-    pub fn in_use_case(self, kunde: KundeSchluessel) -> RegistrierungStarten {
+    pub fn in_use_case(self, kunde: KundeSchlüssel) -> RegistrierungStarten {
         RegistrierungStarten {
             email: self.e_mail_adresse,
             kunde,
@@ -89,8 +89,8 @@ impl RegistrierungStartAnfrage {
 }
 
 impl RegistrierungAbschlussAnfrage {
-    pub fn in_use_case(self, kunde: KundeSchluessel) -> RegistrierungAbschliessen {
-        RegistrierungAbschliessen {
+    pub fn in_use_case(self, kunde: KundeSchlüssel) -> RegistrierungAbschließen {
+        RegistrierungAbschließen {
             token: self.token,
             passwort: self.passwort,
             kunde,
@@ -99,7 +99,7 @@ impl RegistrierungAbschlussAnfrage {
 }
 
 impl AnmeldeAnfrage {
-    pub fn in_use_case(self, kunde: KundeSchluessel) -> Anmeldung {
+    pub fn in_use_case(self, kunde: KundeSchlüssel) -> Anmeldung {
         Anmeldung {
             email: self.e_mail_adresse,
             passwort: self.passwort,
@@ -109,7 +109,7 @@ impl AnmeldeAnfrage {
 }
 
 impl PasswortVergessenAnfrage {
-    pub fn in_use_case(self, kunde: KundeSchluessel) -> PasswortVergessen {
+    pub fn in_use_case(self, kunde: KundeSchlüssel) -> PasswortVergessen {
         PasswortVergessen {
             email: self.e_mail_adresse,
             kunde,
@@ -128,11 +128,11 @@ impl PasswortWiederherstellenAnfrage {
     }
 }
 
-impl BenutzerLoeschungAnfrage {
-    pub fn in_use_case(self) -> BenutzerLoeschen {
-        BenutzerLoeschen {
+impl BenutzerLöschungAnfrage {
+    pub fn in_use_case(self) -> BenutzerLöschen {
+        BenutzerLöschen {
             passwort: self.passwort,
-            bestaetigt: self.bestaetigt,
+            bestätigt: self.bestätigt,
         }
     }
 }
