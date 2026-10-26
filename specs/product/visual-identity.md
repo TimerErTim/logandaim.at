@@ -35,7 +35,7 @@ change is one edit that the app, the agent rule, and this spec all reflect.
 | Role | Use |
 |------|-----|
 | Product Owner | Decides the identity by looking at the gallery; approves this spec. |
-| Schütze (archer) | Uses the result outdoors, often one-handed and gloved. The accessibility bar is written for this role. |
+| Benutzer (archer) | Uses the result outdoors, often one-handed and gloved. The accessibility bar is written for this role. |
 | Agent implementer | Reads the design rule, builds UI against tokens, never against raw colours. |
 
 ## Scope
