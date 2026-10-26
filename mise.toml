@@ -16,6 +16,8 @@ node = "lts"
 # Supervises the verify:* daemons.
 pitchfork = "2.32.1"
 jq = "latest"
+# Catches transactional mail in development and CI; never a product runtime dependency.
+mailpit = "latest"
 
 [deps.npm]
 # Would love to have this auto, but it's not working on windows
@@ -48,6 +50,14 @@ task = "run:frontend"
 args = ["--host", "127.0.0.1", "--port", "4173"]
 port = 4173
 ready_http = "http://127.0.0.1:4173/"
+
+# Local SMTP catcher for AC-19 and manual flows. The HTTP API on 8025 is what the e2e
+# suite reads; SMTP on 1025 is what the server writes to. Disposable, so its database is
+# kept in `target/` and a `mise daemons stop` loses nothing.
+[daemons.mailpit]
+task = "run:mailpit"
+port = 8025
+ready_http = "http://127.0.0.1:8025/api/v1/info"
 
 [daemons.server]
 task = "run:server"

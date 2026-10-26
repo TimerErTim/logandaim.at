@@ -2,6 +2,18 @@
 description = "Tests all the project crates"
 run = "cargo nextest run --all-targets"
 
+["test:e2e"]
+description = "Run the HTTP e2e suite, including AC-19 against a real Mailpit"
+daemons = ["mailpit"]
+run = """
+#!/usr/bin/env bash
+set -eu
+# AC-19 asserts that mail really travelled over SMTP, so a dead Mailpit must fail the
+# run rather than skip the case.
+export LOGANDAIM_MAILPIT_URL="${LOGANDAIM_MAILPIT_URL:-http://127.0.0.1:8025}"
+cargo nextest run -p logandaim-api --test e2e
+"""
+
 ["test"]
 description = "Run all project tests"
-depends = ["test:crates"]
+depends = ["test:crates", "test:e2e"]
