@@ -37,26 +37,29 @@ on reuse.
 1. **Two tokens per `Anmelde-Sitzung`.**
    - **Access token:** a JWT (Ed25519), valid **24 hours** from issue, sent on every API request as
      `Authorization: Bearer <token>`. Claims: `sub` (Benutzer id), `sid` (Anmelde-Sitzung id),
-     `kid` (signing key id), `iat`, `exp`, `jti`.
+     `kid` (signing key id), `iss`, `aud`, `iat`, `exp`, `jti`. `iss` and `aud` come from
+     configuration and are verified on every request, so a token minted for another deployment or
+     audience is refused even with a valid signature; they were added during implementation and are
+     therefore not in the originally approved text.
    - **Refresh token:** an opaque random 256-bit value, valid **one month**, stored only as a salted
      hash. Accepted **exactly once**: a renewal spends it and returns a new pair.
-2. **The session row carries the state.** `anmelde_sitzungen` holds the refresh-token hash, the
-   signing key that issued the access token, and a `widerrufen_am` column. Every authenticated
+2. **The session row carries the state.** `sessions` holds the refresh-token hash, the
+   signing key that issued the access token, and a `revoked_at` column. Every authenticated
    request does two checks beyond the signature: the JWT's `kid` must be a configured, active public
    key, and the row named by `sid` must exist, be unexpired, and not be revoked. A valid signature
    over a revoked session is still **401**. This is how logout, password recovery, and
    `Benutzer-Löschung` take effect on the next request instead of after 24 hours (SPEC-konto rules
    6, 15; AC-9, AC-17).
 3. **Rotation is mandatory.** A renewal validates the presented refresh token against the session
-   row, revokes the row's old token (marks it spent, not the session), and issues a new access and
-   refresh token on a **new session row**. Reuse of a spent refresh token fails with 401 and revokes
-   the whole session, because a spent token appearing twice means it leaked.
-4. **Revocation is a row update, never a delete.** `widerrufen_am` is set; rows are cleaned up after
+   row, revokes the row's old token (marks it spent via `spent_at`, not the session), and issues a
+   new access and refresh token on a **new session row**. Reuse of a spent refresh token fails with
+   401 and revokes the whole session, because a spent token appearing twice means it leaked.
+4. **Revocation is a row update, never a delete.** `revoked_at` is set; rows are cleaned up after
    their refresh expiry. Deleting rows would make a replayed token indistinguishable from an unknown
    one and would lose the audit trail.
-5. **Signing keys are rows, not validity windows.** Signing is Ed25519 behind a `SignierSchluessel`
-   port. A `signier_schluessel` table holds each key's id, public key, and active flag, and each
-   `anmelde_sitzungen` row records which key signed its access token. Verification looks up the
+5. **Signing keys are rows, not validity windows.** Signing is Ed25519 behind a `SigningKey`
+   port. A `signing_keys` table holds each key's id, public key, and active flag, and each
+   `sessions` row records which key signed its access token. Verification looks up the
    token's `kid`: an unknown or inactive row means 401 (AC-17). Retiring a key is therefore a row
    update with no overlap period to reason about — a token signed before retirement stops being
    accepted the moment the row is deactivated, and the only time-based concern is cleaning up rows
@@ -68,15 +71,15 @@ on reuse.
    the API origin with `HttpOnly`, `Secure`, and `SameSite=Lax`, so JavaScript cannot read it and a
    page reload can still renew. Each rotation re-sets the cookie.
 7. **CORS with credentials for the same-site frontend.** Explicit origin allowlist
-   (`https://logandaim.at`, `http://localhost:3001` for development) emitting
-   `Access-Control-Allow-Headers: Authorization, Content-Type`,
+   (`https://logandaim.at`, plus the dev server's documented ports `3000` and `4173` on
+   `localhost`/`127.0.0.1`) emitting `Access-Control-Allow-Headers: Authorization, Content-Type`,
    `Access-Control-Allow-Credentials: true` for those origins, and `Access-Control-Allow-Origin`
    never `*` and never an unvalidated reflection. The credential is the refresh cookie, sent only by
    the same-site production frontend; `*.github.io` previews are cross-site, receive no cookie, and
    run access-token-only. Preflight and error responses carry the same headers so 401/403 stay
-   readable. The current server layer (`backend/server/src/main.rs`) allows any `localhost` port via
-   an inline prefix check and must move to the configured allowlist before the first auth endpoint
-   ships.
+   readable. Implemented: `erlaubte_herkuenfte` in `backend/server/src/main.rs` builds the
+   allowlist as a fixed list of named origins; the earlier any-`localhost` prefix test is gone,
+   because an origin that merely *starts* with a loopback prefix is a different origin.
 
 ## Consequences
 
@@ -93,7 +96,7 @@ on reuse.
   static bundle from one origin to keep that surface small.
 - Deployment gains key management: an Ed25519 private key in configuration and a key table with an
   active flag, retired by row update (rule 15, decision 5).
-- The database gains `signier_schluessel` and `anmelde_sitzungen` rows per renewed session, plus
+- The database gains `signing_keys` and `sessions` rows per renewed session, plus
   cleanup for expired ones.
 - Refresh rotation costs one row insert per renewal, so a long-lived tab writes one row per month
   per device at a 30-day refresh lifetime and a rotation per renewal.
@@ -128,19 +131,24 @@ and is not part of the contract; the contract lives in SPEC-konto's rules and ac
 | Store | Fields |
 |-------|--------|
 | `benutzer` | `id`, `rolle` (`Benutzer` \| `Systemadministrator`), `erstellt_am` |
-| `konten` | `id`, `benutzer_id`, `e_mail_adresse` (unique, normalized), `passwort_hash`, `bestaetigt_am`, `erstellt_am` |
-| `signier_schluessel` | `kid`, `oeffentlicher_schluessel`, `aktiv`, `erstellt_am`, `ausser_betrieb_am` |
-| `anmelde_sitzungen` | `id`, `benutzer_id`, `erneuerungs_token_hash`, `signier_schluessel_id`, `erstellt_am`, `laeuft_ab_am`, `zuletzt_verwendet_am`, `verbraucht_am`, `widerrufen_am` |
-| `e_mail_bestaetigungen` | `id`, `e_mail_adresse` (normalized, **not** a `konto_id` — the `Konto` does not exist yet), `token_hash`, `laeuft_ab_am`, `verbraucht_am` |
-| `passwort_wiederherstellungen` | `id`, `konto_id`, `token_hash`, `laeuft_ab_am`, `verbraucht_am` |
+| `konten` | `id`, `benutzer_id`, `email` (unique, normalized), `password_hash`, `bestaetigt_am`, `erstellt_am` |
+| `signing_keys` | `kid`, `oeffentlicher_schluessel`, `aktiv`, `erstellt_am`, `ausser_betrieb_am` |
+| `sessions` | `id`, `benutzer_id`, `refresh_token_hash`, `signing_key_id`, `erstellt_am`, `expires_at`, `spent_at`, `revoked_at` |
+| `email_bestaetigungen` | `id`, `email` (normalized, **not** a `konto_id` — the `Konto` does not exist yet), `token_hash`, `expires_at`, `spent_at` |
+| `passwort_wiederherstellungen` | `id`, `konto_id`, `token_hash`, `expires_at`, `spent_at` |
 
-`e_mail_bestaetigungen` is keyed by address, not by account, because registration creates the
+Implemented in `crates/logandaim-sqlite/src/migrations/v0002_konto.rs`. The table and column names
+are English because they name the technical objects above (`Session`, `SigningKey`), not product
+nouns; `benutzer`, `konten` and `passwort_wiederherstellungen` keep their German names because those
+*are* product nouns. Every row carries `_version` for optimistic concurrency, as the other tables do.
+
+`email_bestaetigungen` is keyed by address, not by account, because registration creates the
 `Konto` only in step 2 (SPEC-konto rule 3). A confirmation row for an address that gained a `Konto`
 in the meantime is spent without creating anything (rule 4).
 
 `Runden` and `Schüsse` reference `benutzer.id` optionally. On `Benutzer-Löschung` (SPEC-konto rule
 8) the reference and every personal attribute are stripped; the rows stay as anonymized records.
-The `benutzer` and `konten` rows are deleted, and their `anmelde_sitzungen` too.
+The `benutzer` and `konten` rows are deleted, and their `sessions` too.
 
 `AnlageVerwaltungen` do not live here. They belong to the `Anlage` aggregate (master-data spec, issue
 #10): the loaded `Anlage` answers whether a `Benutzer` is its `Administrator` or `Mitarbeiter`,
@@ -171,10 +179,18 @@ or revoked session, 403 wrong authority, 409 state conflict, 429 throttled. Regi
 
 Per authenticated request, in order: parse the `Authorization` header; verify the Ed25519 signature
 with the public key named by `kid` (unknown or retired `kid` → 401); check `exp`; load
-`anmelde_sitzungen` by `sid` and require `widerrufen_am IS NULL` and `laeuft_ab_am > now`; then load
+`sessions` by `sid` and require `revoked_at IS NULL` and `expires_at > now`; then load
 the `Benutzer` for `sub`. Cache the key set in memory; the session lookup is one indexed read and
 may be cached per session id for a few seconds if NFR-4 needs it, at the cost of that much
 revocation latency.
+
+### Crypto is domain code (sketch)
+
+Password hashing (argon2id), token hashing (SHA-256), and Ed25519 signing live in the `konto`
+supporting subdomain, not in an adapter: they are domain decisions about what a credential is, not
+I/O. What stays a port is the *key material* — the signing key arrives as configuration and the
+verifier looks keys up through a repository — plus mail delivery and throttling, which touch the
+outside world. This keeps the rules testable without a server, a database, or a clock.
 
 ### Mail port (sketch)
 

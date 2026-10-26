@@ -55,6 +55,24 @@ former `Anlagenbetreiber` role does not exist.
 The frontend and the API speak the same German terms. UI copy says `Benutzer`, `Konto`, `Anlage`,
 and `AnlageVerwaltung`; it never says "Account" and "Nutzer" for the same thing.
 
+**Auth-technical vocabulary stays English.** German engineering usage names these in English, and
+so does the code; hard-translating them ("Erneuerungs-Token") invents words no reader uses. Product
+nouns — the things a `Benutzer` sees and owns — stay German. The same concept therefore has one
+product name and one code name, and neither is a synonym for a different concept:
+
+| Product term (spec, UI) | Code term (identifiers) | Meaning |
+|-------------------------|-------------------------|---------|
+| `Anmelde-Sitzung` | `Session` | One logged-in state of a `Benutzer` on one device. |
+| `Zugriffs-Token` | `AccessToken` | Short-lived signed access credential, a JWT. |
+| `Erneuerungs-Token` | `RefreshToken` | Long-lived opaque credential, accepted exactly once. |
+| *(the mailed link value)* | `SecretToken` | Single-use random value, mailed and never stored raw. |
+| *(the stored form)* | `TokenHash` | SHA-256 of a `SecretToken`; the only form persisted. |
+| `Signierschlüssel` | `SigningKey` | Ed25519 key that signs access tokens; public half is a row. |
+| *(the stored form)* | `PasswordHash` | argon2id hash of a `Passwort`; the only form persisted. |
+
+The mapping is one-to-one in both directions. A `TokenHash` is never a `SecretToken`, and neither is
+a `Session`: the pair of tokens belongs to a `Session`, they are not the `Session`.
+
 ## Roles
 
 - **`Benutzer`** — every registered person, including those who hold an `AnlageVerwaltung`
@@ -630,3 +648,4 @@ anonymization, authorisation decisions) get domain unit tests in the backend cor
 | 2026-10-26 | Restructured to `Benutzer` + `Konto`; two-step address-first registration replaces all unconfirmed-state rules (AC-1 to AC-4, AC-20); session model replaced by a JWT access token plus a single-use rotating refresh token with server-side revocation (rules 12, 15, AC-7 to AC-9, AC-17, AC-18); throttles client-scoped only (rule 5, AC-15, AC-16); `Mitgliedschaft` renamed to `AnlageVerwaltung` with roles `Administrator` and `Mitarbeiter`; ADR-0002 replaced by ADR-0004. | Agent (Cursor) |
 | 2026-10-26 | Q-19 and Q-20 resolved: refresh token in an `HttpOnly` `__Host-` cookie, access token in memory (rule 12, rule 12a, AC-7a); signing keys are rows with an active flag, retired by row update (rule 15). Status set to `PO-approved`. | TimerErTim (PO) |
 | 2026-10-26 | Per-`Anlage` relationship renamed from `Verwaltung` to `AnlageVerwaltung`, so the term itself names its scope. Role names stay `Administrator` and `Mitarbeiter`. | TimerErTim (PO) |
+| 2026-10-26 | Recorded the product/code vocabulary split in the ubiquitous language: product nouns stay German, auth-technical terms are English (`Session`, `AccessToken`, `RefreshToken`, `SecretToken`, `TokenHash`, `SigningKey`, `PasswordHash`), one concept per row. No rule or AC changed. | Agent (Cursor) |
