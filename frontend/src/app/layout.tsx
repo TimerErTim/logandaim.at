@@ -45,9 +45,15 @@ const geistMono = Geist_Mono({
  */
 const basePath = process.env.NEXT_PUBLIC_LOGANDAIM_BASE_PATH ?? "";
 
+const description =
+  "Österreichweites Online-Logbuch für 3D-Bogenschießen: Runden Ziel für Ziel erfassen, den Schussabstand zwischen den Pflöcken festhalten und die eigene Treffsicherheit über die Zeit verfolgen.";
+
 export const metadata: Metadata = {
-  title: "logandaim.at",
-  description: "Logbuch für 3D-Bogenschießen.",
+  title: {
+    default: "logandaim.at",
+    template: "%s · logandaim.at",
+  },
+  description,
   applicationName: "logandaim.at",
   manifest: `${basePath}/site.webmanifest`,
   icons: {
@@ -75,7 +81,7 @@ export const metadata: Metadata = {
     locale: "de_AT",
     siteName: "logandaim.at",
     title: "logandaim.at",
-    description: "Logbuch für 3D-Bogenschießen.",
+    description,
   },
 };
 

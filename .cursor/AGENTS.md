@@ -1,339 +1,174 @@
-# YAMS — Repository Context
+# logandaim.at — Repository Context
 
-YAMS is a Rust backend for veterinary practice management (Rust edition **2024**, **async** throughout). The codebase follows **Domain-Driven Design** and **hexagonal architecture**. Business crates are prefixed `yams-`. The frontend (Next.js App Router) is documented under **Frontend** below.
+logandaim.at is an Austria-wide online logbook for 3D archery: a Rust backend (edition **2024**,
+**async** throughout) and a Next.js App Router frontend that is exported statically. The backend
+follows **Domain-Driven Design** and **hexagonal architecture**. Crates are prefixed `logandaim-`.
 
-## Workspace Layout
+## Where the truth lives
 
-```
-yams/
-├── crates/
-│   ├── yams-core/          # Domain, use cases, port definitions
-│   ├── yams-api/           # Public API surface (DTOs, YamsAppApi, OpenAPI)
-│   ├── yams-sqlite/   # SQLite/libsql repository adapter
-│   ├── yams-fakes/         # In-memory adapters, FixedClock, future factories/seeding
-│   └── molting/            # Generic async migration framework
-├── backend/server/         # Standalone HTTP server (yams-server)
-├── frontend/
-│   └── src/                # Next.js UI (App Router, TanStack Query)
-├── tasks/                  # mise task definitions
-├── specs/                  # Architecture specs — may lag code; trust implementation
-└── mise.toml               # Tool, env, and task orchestration
-```
+Read the one that owns the question; do not restate it here.
 
-## Architectural Layers
+| Question | Document |
+|----------|----------|
+| How work flows (issues, PRs, labels, CI, commits) | [`.github/CONTRIBUTING.md`](../.github/CONTRIBUTING.md) |
+| What the product should do | [`specs/`](../specs/README.md) — `PO-approved` specs only |
+| In which order to build one feature slice | [`docs/vertical-slice.md`](../docs/vertical-slice.md) |
+| How to model domain types | [`crates/logandaim-core/src/domain/README.md`](../crates/logandaim-core/src/domain/README.md) — module docs |
+| How the UI looks and behaves | [`.cursor/rules/design-system.mdc`](rules/design-system.mdc) |
+| Server configuration and environment variables | [`backend/README.md`](../backend/README.md) |
+| The code map (symbols, dependencies) | `graphify` (see [`graphify.mdc`](rules/graphify.mdc)) |
+
+## Workspace layout
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Driving adapters                                       │
-│  backend/server (Poem OpenAPI)                           │
-└────────────────────────┬────────────────────────────────┘
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│  yams-api — YamsAppApi, schema DTOs, error mapping      │
-└────────────────────────┬────────────────────────────────┘
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│  yams-core — App, use cases, domain, ports              │
-└────────────────────────┬────────────────────────────────┘
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│  yams-sqlite — SQLite UoW, repos, migrations       │
-└─────────────────────────────────────────────────────────┘
+crates/
+├── logandaim-core/         # Domain, use cases, port definitions
+├── logandaim-api/          # Public API surface: DTOs, LogandaimAppApi, OpenAPI
+├── logandaim-sqlite/       # SQLite/libsql repository adapter
+├── logandaim-fakes/        # In-memory adapters, FixedClock
+├── logandaim-filesystemstore/  # Object-store adapter
+└── molting/                # Generic async migration framework
+backend/server/             # Standalone HTTP server (logandaim-server)
+frontend/src/               # Next.js UI (App Router, TanStack Query)
+tasks/                      # mise task definitions
+specs/                      # Product intent (PO-owned)
+mise.toml                   # Tool, env, and task orchestration
+```
+
+## Layers
+
+```
+backend/server (Poem OpenAPI)          driving adapter
+        ↓
+logandaim-api — LogandaimAppApi, schema DTOs, HTTP status mapping
+        ↓
+logandaim-core — App, use cases, domain, ports
+        ↓
+logandaim-sqlite — SQLite UoW, repositories, migrations
 ```
 
 Dependency rule: **inward only**. Core knows nothing about HTTP or SQLite.
 
-## Language & Naming
+## Language & naming
 
-Two rules apply everywhere in this repo.
+Docs, comments, commit messages, and all non-domain source are **English**. German is reserved for
+the ubiquitous language: Rust types and modules, SQLite tables and columns, HTTP paths, JSON keys,
+and spec prose all use the spec's German term (`Anlage`, `Parcours`, `Ziel`, `Pflock`, `Runde`,
+`Schuss`, `Wertung`, `Wertungszone`).
 
-### English everywhere (except Ubiquitous Language)
+Naming ladder: `NeuerSchuss` (domain) → `SchussRegistrieren` (use case) → request DTO. German
+feature-slice file names (`schuss.rs`, not `model.rs` or `shot.rs`).
 
-**Docs, comments, commit messages, and non-domain source** are **English** — `AGENTS.md`, architecture notes, `///` and `//` comments, DDD/technical terms (`Aggregate`, `Value object`, `Repository`, `Use case`), technical error context.
+Use **proper UTF-8** in identifiers and persisted names. Never transliterate umlauts to
+`ae`/`oe`/`ue` (`naechste`, `strasse`). Prefer UTF-8 field names in schema types over ASCII fields
+plus `serde(rename)`.
 
-**German is reserved for Ubiquitous Language only** — domain concepts that belong in the veterinary-practice vocabulary:
+## Patterns an agent can silently break
 
-- Rust types and modules: `Klient`, `Behandlung`, `Leistung`, `Tagesabschluss`, `KlientErstellen`
-- Persisted names: SQLite tables/columns for domain fields (`klienten`, `leistungen`, `straße_und_hausnummer`)
-- API surface for domain: HTTP paths (`/klient`, `/tagesabschluss`), JSON keys (`vorname`, `straßeUndHausnummer`, `ländercode`, `mwst`)
-- Domain specs ([`specs/legacy/abrechnung.md`](specs/legacy/abrechnung.md)) — trust code over stale English specs
+- **`UseCase`** — one struct per business operation; `async fn perform(self, ctx)` returns
+  `ResultReport<Output, Context>`. Use cases enter and finish the UoW themselves.
+- **UoW** — `ctx.enter()` for an owned UoW, `ctx.sub(&uow)` for nested work (nested `enter` joins
+  the outer TX; nested `commit`/`rollback` are no-ops). Collect work without `?` across the UoW,
+  then `uow.finish(result, ctx)`. Dropping a UoW that neither committed nor rolled back panics.
+- **Repositories are dumb** — they persist and load domain types; state transitions belong in the
+  domain or the use case.
+- **Errors** — `Report<E>` at every boundary; use `.change_context()` directly. Value-object
+  validation is the one exception: plain `Result` with a dedicated `thiserror` enum.
+- **Concurrency** — `Versioned<T>` bundles an entity with its optimistic-lock version.
+- **All mutations go through `App::execute` / `App::execute_fn`.** No adapter calls a repository
+  directly. `App` only builds an `ExecutionContext`; it does not wrap the use-case result.
 
-**Naming ladder** — `NeuerKlient` (domain) → `KlientErstellen` (use case) → `KlientErstellung` (API request). German feature-slice file names (`klient.rs`, `abrechnung.rs`), not English technical names (`client.rs`, `billing.rs`).
+## Tracing
 
-### UTF-8, not ASCII escapes
-
-Use **proper UTF-8** in identifiers and persisted names. Never transliterate umlauts to `ae`/`oe`/`ue` (no `naechste`, `strasse`, `laendercode`, `stueckzahl`).
-
-- **Rust** — `nächste_rechnungsnummer`, `straße_und_hausnummer`, `Ländercode`, `TagesabschlussDurchführen`
-- **SQLite** — quote when needed: `"straße_und_hausnummer"`, `"stückzahl"`, `"ländercode"`
-- JSON — UTF-8 keys via `camelCase` serde (`straßeUndHausnummer`, `stückzahl`, `mwst`); prefer UTF-8 field names in schema types over ASCII fields + `serde(rename)` workarounds
-- **Migrations** — final schema in `v0002` (feature dev); squash incremental alters while pre-deploy
-
-Tooling handles UTF-8 in source files — use it.
-
-## yams-core — The Heart
-
-Single bounded context, single subdomain (for now). Organized by **feature slices**, not technical layers:
-
-```
-yams-core/src/
-├── domain/           # Aggregates & VOs (klient.rs, haustier.rs, leistung.rs, …)
-├── service/          # Use cases (use_cases/klient.rs, use_cases/abrechnung.rs, …)
-├── application/
-│   ├── ports/        # Clock, KlientRepository, HaustierRepository, …
-│   ├── uow.rs        # UnitOfWork facade, Versioned<T>
-│   ├── context.rs    # ExecutionContext
-│   ├── instrumented.rs       # Port/UoW tracing wrappers
-│   ├── instrumented_repos.rs # Repository tracing wrappers
-│   └── mod.rs        # App, orchestration (begin → execute → commit/rollback)
-└── adapters/         # Default port implementations (e.g. system_clock.rs)
-```
-
-Ports are `async_trait` traits; all repository and use-case I/O is async.
-
-### Design Principles
-
-**Domain modeling rules** (make invalid state unrepresentable: ID newtypes, validated value objects, type-state aggregates, `Neues*` / `neu` / `from_parts` construction, domain errors, domain unit tests) live in [`crates/yams-core/src/domain/README.md`](../crates/yams-core/src/domain/README.md), rendered as the `domain` module docs. Read it before touching `domain/`. It is domain-agnostic: keep it when replacing the domain types.
-
-Application-level principles:
-
-- **Versioned concurrency** — `Versioned<T>` bundles entity + optimistic-lock version.
-- **UoW** — use cases call `ctx.enter()` for an owned UoW (borrows ctx). Nested work uses `ctx.sub(&uow)` (ports stay on the context). Nested `enter` joins the outer TX; nested `commit`/`rollback` are no-ops. Collect work without `?` across the UoW, then `uow.finish(result, commit_context)` (commit on `Ok`, rollback on `Err`). Drop panics if neither `commit` nor `rollback` ran. `#[must_use]` on `UnitOfWork`.
-
-**Repositories are dumb.** Ports persist and load domain types — no business logic (no `mark_abgerechnet` on repository). State transitions happen in domain/use cases; repos `update` the mutated entity.
-
-**Error handling conventions:**
-- **`Report<E>` everywhere** — use cases, domain services (`RechnungOffen::aus_leistungen`), orchestration. Use `.change_context()` directly; avoid redundant `IntoReport::into_report`.
-- **Exception: value-object validation** returns plain `Result` (see domain README).
-
-Use cases receive an `ExecutionContext` (ports + UoW provider). They `enter` / `finish` the UoW themselves.
-
-### App & Orchestration
-
-`App` is the composition root. Built via `bon` builder:
-
-```rust
-App::builder()
-    .uow_provider(Box::new(provider))
-    .clock(Arc::new(SystemClock))
-    .build()
-```
-
-All business operations go through `App::execute(use_case)` or `App::execute_fn(closure)`. `App` only builds an `ExecutionContext`; the use case (or closure) enters and finishes the UoW. The use-case `Result` is returned as-is — no `ExecutionError` wrap.
-
-### UseCase Trait
-
-```rust
-pub trait UseCase<Output> {
-    type Error: ThreadSafeError;
-    fn perform(&self, ctx: ExecutionContext<'_>) -> impl Future<Output = ResultReport<Output, Self::Error>>;
-}
-```
-
-One use case per business operation (`KlientErstellen`, `HaustierErstellen`, `TagesabschlussDurchführen`, …).
-
-### Tracing & instrumentation
-
-Observability is layered at **boundaries**, not inside use-case `perform` methods. All wrappers live in `application/instrumented.rs` and `application/instrumented_repos.rs`. Default adapters (`adapters/`, `yams-filesystemstore`, `yams-typstreports`) add lightweight `tracing` **events** only — no duplicate spans where a wrapper already instruments the port.
-
-**Span hierarchy (typical `App::execute` call):**
-
-```
-App::execute / execute_fn          (span, use_case name)
-└── ExecutionContext::enter        (debug span)
-    └── repository ops             (trace/debug spans per method)
-    └── InstrumentedObjectStore    (debug spans: put/get/delete)
-    └── InstrumentedPdfRenderer    (debug span: rendern)
-└── InstrumentedUnitOfWork         (debug spans: commit / rollback)
-```
-
-**Where instrumentation is applied**
-
-| Layer | Location | What |
-|-------|----------|------|
-| App entry | `application/mod.rs` | `#[instrument]` on `execute` / `execute_fn` |
-| UoW begin | `context.rs` | `#[instrument]` on `enter` |
-| UoW commit/rollback | `InstrumentedUnitOfWork` | debug spans (not on public `UnitOfWork::commit`) |
-| Repositories | `Instrumented*Repository` in `instrumented_repos.rs` | trace reads, debug writes; wired via pinned `RepoStorage` inside `InstrumentedUnitOfWork` |
-| Object store / PDF | `InstrumentedObjectStore`, `InstrumentedPdfRenderer` | debug spans; wrapped in `ExecutionContext::root` / `nested` |
-| Default adapters | `InMemoryObjectStore`, `BlankPdfRenderer`, `SystemClock`, … | `debug!` / `trace!` events inside impl (complement spans, avoid `#[instrument]` on adapters) |
-| Use cases | `service/use_cases/` | `info!` / `debug!` **events** on business milestones — **no** `#[instrument]` on `perform` |
-
-**Log levels**
+Instrumentation lives at boundaries, in `application/instrumented.rs` and
+`application/instrumented_repos.rs`. `App::execute` and `ExecutionContext::enter` carry spans;
+adapters emit `debug!`/`trace!` events only, never duplicate spans.
 
 | Level | Use for |
 |-------|---------|
-| `info` | Use-case business milestones (entity created, Tagesabschluss progress, …) |
-| `debug` | Transaction commit/rollback, port I/O (store, PDF), repository writes |
-| `trace` | Repository reads, `SystemClock` (`now` / `today`) |
+| `info` | Use-case business milestones |
+| `debug` | Transaction commit/rollback, port I/O, repository writes |
+| `trace` | Repository reads, `SystemClock` |
 
-**Rules for contributors**
+1. No `#[instrument]` on a use-case `perform` — `App::execute` already names it, and a second span
+   hides the first.
+2. No spans on the public `UnitOfWork`; wrap at `InstrumentedUnitOfWork` and the ports.
+3. New repository trait: add an `Instrumented*Repository` with `impl_instrumented_repo!`, add a
+   `RepoStorage` field, and return it from `InstrumentedUnitOfWork`. The `uow` field stays last —
+   [`docs/vertical-slice.md`](../docs/vertical-slice.md) explains the pointer wiring.
+4. New non-repository port: add an `Instrumented*` wrapper and wire it in `ExecutionContext`.
 
-1. **Do not** add `#[instrument]` to use-case `perform` — `App::execute` already names the use case.
-2. **Do not** add spans on public `UnitOfWork` — wrap at `InstrumentedUnitOfWork` / repository / port boundaries.
-3. New repository traits: add an `Instrumented*Repository` in `instrumented_repos.rs` (macro `impl_instrumented_repo!`) and return it from `InstrumentedUnitOfWork`.
-4. New ports (non-repo): add an `Instrumented*` wrapper in `instrumented.rs` and wire it in `ExecutionContext`.
-5. Persistence/fake adapters stay free of spans; optional `debug!` events only when useful and not duplicated by wrappers.
+`backend/server/src/tracing_setup.rs` reads `LOGANDAIM_LOG_LEVEL` (default `info`).
 
-**Server bootstrap** — `backend/server/src/tracing_setup.rs` initializes `tracing-subscriber` with `EnvFilter::from_env` on `YAMS_LOG_LEVEL` (default `info` when unset), e.g. `YAMS_LOG_LEVEL=debug` or `trace` for repository read spans.
+## API layer
 
-## yams-api — Public Interface
+`LogandaimAppApi` is a thin translation: request → use case → schema DTO. No business rules, no
+serde or OpenAPI types leaking into core. Schema DTOs are separate from domain types; request DTOs
+convert with `From`/`TryFrom`.
 
-Framework-agnostic API layer between driving adapters and core.
+`LogandaimApiSpec` resolves the HTTP status: a `StatusCode` attached to the report first, then
+`HttpStatusMapping` on the current context, then the first nested mapped context, else 500. An
+orchestration error variant returns `None` so the domain error beneath it can speak. Statuses are
+attached at the API boundary, never in the domain.
 
-- **`YamsAppApi`** — wraps `Arc<App>`, exposes typed methods (`klient_erstellen`, `haustier_erstellen`, `tagesabschluss_durchführen`, …). Translates domain → API schema DTOs. Use-case errors pass through.
-- **`schema/`** — German DTOs, JSON `camelCase` (`vorname`, `ländercode`, `mwst` as a `0..=1` ratio, e.g. `"0.20"` not `"20"`).
-- **`requests/`** — inbound request types with `TryFrom` into use-case inputs. Domain validation is `change_context(ValidationError)` only; HTTP status for validation is attached as `StatusCode` at the API boundary.
-- **`errors/`** — `Report<E>` → structured JSON error trees. `YamsApiSpec` resolves HTTP status: attached `StatusCode` on the report, else `HttpStatusMapping` on the current context, else the first nested mapped context (domain / other use-case / repository), else 500. Persistence wrappers (`Persistenz`, `Erstellung`, `Invariante`, `Rechnung`) return `None` so the cause can speak. Not-found → 404, wrong aggregate state / booking conflict → 409, request validation → 400, unprocessable invoice contents → 422, permission → 403, connection → 503.
+After any schema or route change, run `mise run sync:openapi`; `mise run check` fails on drift.
 
-### Feature Flags
+## Testing
 
-| Feature   | Default | Purpose                              |
-|-----------|---------|--------------------------------------|
-| `serde`   | yes     | Serde derives on DTOs                |
-| `openapi` | yes     | poem-openapi types, `spec.rs`, `export_spec` bin |
+| Layer | Where | What |
+|-------|-------|------|
+| Domain unit | `#[cfg(test)]` in the domain source file | Isolated value-object and aggregate rules |
+| Business conformance | `crates/logandaim-core/tests/cases/` | Full use-case flows against `logandaim-fakes` |
+| Adapter conformance | `crates/logandaim-sqlite/tests/` | The same cases against real SQLite |
+| E2E / API | `crates/logandaim-api/tests/e2e/` | `LogandaimApiTestClient` over Poem `TestClient` |
 
-Consumer:
-- **yams-server** — full features (OpenAPI HTTP + Swagger/ReDoc)
-
-After schema or route changes, run `mise run sync:openapi` to refresh `frontend/src/api/schema.ts`.
-
-## yams-sqlite — Driven Adapter
-
-Single repository adapter (SQLite via libsql). Name may become more specific when additional adapters appear.
-
-- **No ORM** — manual row parsing and saving. Lean, explicit, some boilerplate. DRY and AI assistance keep it manageable.
-- **`SQLiteInstance`** — factory: `local(path)`, `in_memory()`, `in_temp_dir()`
-- **`SQLiteUnitOfWork`** — implements `UnitOfWorkProvider` + `UnitOfWorkImpl`
-- **`repos/`** — `SQLiteKlientRepository`, `SQLiteHaustierRepository`, …
-- **`migrations/`** — versioned SQL via `molting` framework (`v0001_initial.rs`, …)
-
-## molting
-
-Generic async migration framework used by yams-sqlite. Provides `UpMigration`, `DownMigration`, `MigrationRegistry`, `MigrationTarget` traits. Persistence implements `MigrationTarget` for `SQLiteConnection`.
-
-## Deployment
-
-The Next.js frontend calls `yams-server` over HTTP. Server configuration uses **config path → file → env → CLI**. `YAMS_DEV` enables TanStack Query devtools; it does **not** rewrite paths.
-
-| Runtime | Path | File | Overlay |
-|---------|------|------|---------|
-| `yams-server` | `YAMS_CONFIG_PATH` / `--config-path`, default `yams-server.json` in cwd | `backend/config.dev.json` in mise | env then CLI (`YAMS_DATABASE_URL`, `YAMS_OBJECT_STORE_DIR`, `BIND_ADDRESS`, `PORT`, `SUBPATH`) |
-| Browser | — | none; `NEXT_PUBLIC_*` only | `NEXT_PUBLIC_LOGANDAIM_API_URL`, `NEXT_PUBLIC_LOGANDAIM_DEV`, `NEXT_PUBLIC_LOGANDAIM_BASE_PATH` |
-
-The browser has no runtime config file: `NEXT_PUBLIC_LOGANDAIM_API_URL` is baked in at build time (the Pages deploy fails without it, `mise run dev:frontend` sets the local one); `NEXT_PUBLIC_LOGANDAIM_DEV` enables devtools outside development.
-
-## Error Handling
-
-`error_stack::Report` throughout. Core defines `ResultReport<T, E> = Result<T, Report<E>>` and `ErrorReportExt` for contextualizing `thiserror` enums. `App::execute` returns the use-case report. API layer maps `Report<E>` to `StructuredError` and HTTP status as above.
-
-## Testing Strategy
-
-| Layer              | Where                                      | What                                      |
-|--------------------|--------------------------------------------|-------------------------------------------|
-| Domain unit        | `#[cfg(test)]` in the domain source file   | Isolated VO/aggregate math (Preis, MwSt, contact validation) |
-| Business conform   | `yams-core/tests/cases/` (integration)     | Full use-case flows with `yams-fakes`     |
-| Adapter conformance| `yams-sqlite/tests/`                  | Same cases as core, real SQLite UoW        |
-| E2E / API          | `yams-api/tests/e2e/`                      | Poem `YamsApiTestClient` JSON nested at `/api`; `base_app_builder()` (SQLite, overridable adapters) |
-
-### yams-fakes
-
-`crates/yams-fakes/` — shared fake adapters, not buried in test trees: `FakeUnitOfWorkProvider`, `FakeDatastore`, per-entity `Fake*Repository`, `FixedClock`. Dev-dep of test crates today; also intended for scripts and data seeding (factory-style builders later).
-
-### Shared Conformance Pattern
-
-`base_app_builder()` in `yams-core/tests/business_conform.rs` wires `yams_fakes::FakeUnitOfWorkProvider`. Cases live in `yams-core/tests/cases/` and are shared via `#[path]` in `yams-sqlite/tests/business_conform.rs`, which overrides `base_app_builder()` to `SQLiteInstance::in_temp_dir()`. Tests that need a fixed date use `yams_fakes::FixedClock` on either builder.
-
-Persistence proves adapter conformance by running the same case suite against real SQLite.
-
-## Tooling
-
-- **mise** (`mise.toml`) — Rust toolchain, Node 22, env vars (`FRONTEND_DIR`, `OPENAPI_SPEC`), task includes from `tasks/`
-- **Rust nightly pinned** — `rust-toolchain.toml` uses `nightly-2026-07-02`; do not bump without testing (newer nightlies break poem-openapi lifetime capturing across await)
-- **cargo-nextest** — `cargo nextest` for running tests
-- **Key tasks**: `test:backend` (`cargo test`), `sync:openapi` (export spec → `openapi-typescript` → `frontend/src/api/schema.ts`), `dev:server`, `dev:frontend+server`
-- **Formatting/linting**: `fmt:rust`, `lint:crates` (clippy), `fmt:biome` (frontend)
+Cases live once in `logandaim-core/tests/cases/` and are shared into the SQLite harness with
+`#[path]`; each harness supplies its own `base_app_builder()`. Tests that need a fixed date use
+`logandaim_fakes::FixedClock`. Never copy a case to run it twice.
 
 ## Frontend
 
-Next.js in `frontend/`. OpenAPI types at `frontend/src/api/schema.ts` (`mise run sync:openapi`).
+`LogandaimApi` (`frontend/src/api/logandaim-api.ts`) is a transport-agnostic interface;
+`HttpLogandaimApi` implements it and `createLogandaimApi()` in `frontend/src/api/index.ts` is the
+only place that picks one. Components never see HTTP and never call the API directly: all server
+state goes through the TanStack Query hooks in `frontend/src/api/hooks/`, with keys in
+`query-keys.ts`. Never mirror server state in `useState`; use `queryClient.setQueryData` for
+optimistic updates.
 
-### API layer
+Configuration is static and baked in at build time (`NEXT_PUBLIC_LOGANDAIM_*`); there is no runtime
+config file and no async bootstrap. See [`docs/vertical-slice.md`](../docs/vertical-slice.md) for
+the seam and the state rules.
 
-- **`LogandaimApi`** (`src/api/logandaim-api.ts`) — framework-agnostic interface; components never see HTTP. The adapter in `src/api/index.ts` is the seam for a wasm/embedded core later.
-- **Bootstrap** — `LogandaimApiProvider` (`src/api/provider.tsx`) creates the adapter once; `useLogandaimApi()` exposes it.
-- **Config** — `src/lib/config.ts` reads `NEXT_PUBLIC_*` at build time. There is no runtime config file.
+**UI work starts by reading [`.cursor/rules/design-system.mdc`](rules/design-system.mdc).** It owns
+tokens, components, contrast, touch targets, and the `/dev` gallery; this file does not. Values live
+only in `frontend/src/app/globals.css`, used through semantic utilities. A new token, pairing,
+variant, or convention updates that rule and `specs/product/visual-identity.md` in the same commit.
 
-### TanStack Query (server state)
+## Tooling
 
-**All backend reads and writes go through the hooks in `frontend/src/api/hooks/`** — never raw `useEffect` + `fetch`, never a direct API call in a component.
+`mise` owns the toolchain and every task; see `mise.toml` and `tasks/`. `mise run ci` is the whole
+gate (`check`, `build`, `test`, `verify`) and is what CI runs.
 
-| Layer | Responsibility |
-|-------|----------------|
-| `LogandaimApi` + adapter | Transport only |
-| `api/hooks/queries.ts` | `useQuery` for reads |
-| `api/hooks/mutations.ts` | `useMutation` for writes; invalidate `query-keys` on success |
-| `api/query-keys.ts` | Hierarchical keys for targeted invalidation |
-| Components | Consume hooks; render `isPending` / `isError` / `data` |
-
-1. **New endpoint** — add the method to `LogandaimApi`, a key in `query-keys.ts`, and a hook in `queries.ts` or `mutations.ts`; use the hook in UI.
-2. **Mutations** invalidate the smallest matching key prefix. **No duplicate server state** — use `queryClient.setQueryData` for optimistic updates instead of copying data into `useState`.
-3. **Defaults** — `createQueryClient()` (`src/lib/query-client.ts`): 30s `staleTime`, refetch on window focus, no mutation retries.
-
-**Remote dev** — Next and the API need different ports (`mise run dev:frontend+server` gives API `:3000`, Next `:3001`). Cross-origin fetch needs CORS on the server; use matching hostnames (`localhost` vs `127.0.0.1`) in both URLs.
-
-### UI: read the design rule first
-
-**UI work starts by reading [`.cursor/rules/design-system.mdc`](rules/design-system.mdc).** It is the
-operative rulebook: tokens, components, accessibility, screen composition, and the gallery. Do not
-restate or second-guess it here; if the rule and this file disagree, the rule wins for appearance and
-this file wins for architecture.
-
-The short version an agent must not get wrong:
-
-- **Values live in `frontend/src/app/globals.css` only.** Use semantic utilities (`bg-surface`,
-  `text-ink`, `text-secondary`, `border-subtle`, `bg-primary`), never raw palette classes, never hex.
-  `mise run check:design` fails the gate otherwise.
-- **Review surface**: `/dev` (`page.dev.tsx`, dev phase only) shows every component in light and dark
-  with live contrast checks, a touch-target overlay, and one composed page. Look at it before claiming
-  a UI change is fine; a page can fail where every specimen passes.
-- **Identity is the PO's.** Propose changes by editing tokens and looking at `/dev`; never invent
-  brand direction, and put a superseded direction in the spec decision log, not on the page.
-- **Same-commit obligation**: a new token, changed pairing, new variant, or changed convention updates
-  the rule and [`specs/product/visual-identity.md`](../specs/product/visual-identity.md) in the same
-  commit.
-- **Accessibility**: 44×44 px targets (verified by hit-testing, not by reading computed styles),
-  visible focus, no colour-only meaning, contrast as a gate. See the rule.
-
-**Key paths**
-
-- Root layout and `<head>` metadata: `frontend/src/app/layout.tsx`
-- Layout shell: `frontend/src/components/layout/` (`app-chrome`, `app-shell`, `sidebar`, `page-chrome`)
-- Navigation config: `frontend/src/lib/navigation.ts`
-- Design tokens and paper patterns: `frontend/src/app/globals.css`
-- UI primitives and paper furniture: `frontend/src/components/ui/`
-- Component gallery: `frontend/src/app/dev/page.dev.tsx`, `frontend/src/components/dev-gallery/`
-- Brand assets: `assets/` (source), `frontend/public/` (served)
+The Rust toolchain is pinned in `rust-toolchain.toml`; do not bump the nightly without testing,
+because newer nightlies break poem-openapi's lifetime capture across `.await`.
 
 ## Version Control
 
-- **Merge, don't rebase, to integrate upstream.** When a branch conflicts with or falls behind its base, create a merge commit (`jj new <branch> <base>@github`, resolve, commit). Conflict resolutions must stay visible in history; never rewrite pushed commits to hide them.
-- Rebase only in special cases: unpushed local work, or explicit maintainer instruction.
-- Never force-push a shared or reviewed branch.
-- Commit identity and signing key come from environment-conditional jj config: with `CURSOR_AGENT` set, jj uses the agent account and its own SSH key. Never override `user.name`, `user.email`, or `signing.key` inline, and never disable signing.
+- **Merge, don't rebase, to integrate upstream.** When a branch conflicts with or falls behind its
+  base, create a merge commit (`jj new <branch> <base>@github`, resolve, commit). Conflict
+  resolutions stay visible in history; never rewrite pushed commits to hide them.
+- Rebase only for unpushed local work or explicit maintainer instruction. Never force-push a shared
+  or reviewed branch.
+- Commit identity and signing key come from the `CURSOR_AGENT`-conditional jj config. Never override
+  `user.name`, `user.email`, or `signing.key` inline, and never disable signing.
 
-## Conventions for Contributors
+## Adding a feature
 
-1. **New feature?** Walk the vertical slice in order, German feature names (`schuss.rs`, not `model.rs`):
-   [`docs/vertical-slice.md`](../docs/vertical-slice.md) describes the order
-(domain → port → use case → fakes → migration → SQLite repo → API → frontend) and who owns each concern. Copy its shape for a new slice, not the concrete feature names.
+Walk [`docs/vertical-slice.md`](../docs/vertical-slice.md) in order — domain → port → use case →
+UoW wiring → fakes → migration → SQLite repository → API → tests → frontend — and copy its shape,
+not its concrete names. Domain changes stay in core. Tests at every affected layer reference their
+acceptance criterion (`ac_3_…`).
 
-`domain/` (unit tests in the same file) → `application/ports/` → `service/use_cases/` → `logandaim-api` (`requests/`, `schema/`, `LogandaimAppApi` method, `spec.rs` route if HTTP) → `logandaim-sqlite/repos/` → migration in `migrations/` (if schema change) → use-case case in `logandaim-core/tests/cases/` → API e2e in `logandaim-api/tests/e2e/` when the public surface changed → `mise run sync:openapi` (if API surface changed).
-2. **Domain changes stay in core.** API DTOs are a separate translation layer; never leak serde/openapi concerns into core.
-3. **All mutations through `App::execute`.** No direct repo calls from adapters.
-4. **Domain modeling** — follow [`crates/yams-core/src/domain/README.md`](../crates/yams-core/src/domain/README.md).
-5. **Errors: `thiserror` in domain/use cases, `Report` at boundaries.** Use `.contextualize()` / `.change_context()` when crossing layers. English for technical messages; German only in domain/user-facing UL strings where appropriate.
-6. **Language** — English docs/comments/technical code; German UL for domain names; UTF-8 identifiers, no `ae`/`oe`/`ue` transliteration (see Language & Naming).
-7. **Tests:** domain units live in a `#[cfg(test)]` module in the source file; use-case flows go in `yams-core/tests/cases/` (persistence conformance follows automatically); API e2e uses Poem `YamsApiTestClient` in `yams-api/tests/e2e/` (`main.rs` holds the client, `base_app_builder()`, and JSON helpers).
-8. **Frontend data** — add TanStack Query hooks in `frontend/src/api/hooks/`; never fetch from components directly (see Frontend → TanStack Query).
-9. **Changelog is end-user facing.** `CHANGELOG.md` records only changes an end user can observe (features, behavior changes, fixes, removals, breaking changes). It is not a PO or project-management record: spec refinement, spec/ADR drafting, issue triage, label or milestone changes, internal refactors, docs, CI, tooling, dependency chores, and test-only work never belong there. Because this project is pre-release and seeded from another project's architecture, `Unreleased` may legitimately be empty, and removing inherited base material (Tauri shell, inherited domain code) is not a user-visible removal. See [`.github/CONTRIBUTING.md`](../.github/CONTRIBUTING.md#changelog-scope).
+The changelog is end-user facing: log the change a user experiences, never the work behind it. The
+rule, including why `Unreleased` may stay empty before the first release, is in
+[`CONTRIBUTING.md`](../.github/CONTRIBUTING.md#changelog-scope).

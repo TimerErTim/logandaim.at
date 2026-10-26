@@ -28,11 +28,22 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
       )}
     >
       <div className="flex h-full flex-col overflow-y-auto px-4 py-6">
+        <div className="mb-6 px-2">
+          <Link
+            href={homeItem.href}
+            className="inline-flex min-h-11 items-center rounded-sm font-serif text-base font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            aria-label="logandaim.at — Startseite"
+          >
+            logandaim.at
+          </Link>
+        </div>
+
         <div className="mb-8 px-2">
           <Link
             href={homeItem.href}
             className={cn(
               "flex min-h-11 w-full items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium transition-colors",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               homeActive
                 ? "bg-primary text-primary-foreground"
                 : "text-ink hover:bg-surface-muted",
