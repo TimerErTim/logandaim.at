@@ -22693,7 +22693,7 @@
       "file_type": "code",
       "norm_label": "assert_status_ok()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L339"
+      "source_location": "L333"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_base_app_builder",
@@ -22704,7 +22704,7 @@
       "file_type": "code",
       "norm_label": "base_app_builder()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L326"
+      "source_location": "L320"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_cookie_pair",
@@ -22715,7 +22715,7 @@
       "file_type": "code",
       "norm_label": "cookie_pair()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L301"
+      "source_location": "L295"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_cookie_response",
@@ -22726,7 +22726,7 @@
       "file_type": "code",
       "norm_label": "cookie_response()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L289"
+      "source_location": "L283"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_e2eharness",
@@ -22748,7 +22748,7 @@
       "file_type": "code",
       "norm_label": ".letztes_token()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L137"
+      "source_location": "L131"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_e2eharness_mit_smtp",
@@ -22781,7 +22781,7 @@
       "file_type": "code",
       "norm_label": ".vorspulen()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L132"
+      "source_location": "L126"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_json_response",
@@ -22792,7 +22792,7 @@
       "file_type": "code",
       "norm_label": "json_response()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L263"
+      "source_location": "L257"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient",
@@ -22803,7 +22803,7 @@
       "file_type": "code",
       "norm_label": "logandaimapitestclient",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L143"
+      "source_location": "L137"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_client",
@@ -22814,7 +22814,7 @@
       "file_type": "code",
       "norm_label": ".client()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L156"
+      "source_location": "L150"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_get_bytes",
@@ -22825,7 +22825,7 @@
       "file_type": "code",
       "norm_label": ".get_bytes()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L244"
+      "source_location": "L238"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_get_json",
@@ -22836,7 +22836,7 @@
       "file_type": "code",
       "norm_label": ".get_json()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L186"
+      "source_location": "L180"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_get_json_auth",
@@ -22847,7 +22847,7 @@
       "file_type": "code",
       "norm_label": ".get_json_auth()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L190"
+      "source_location": "L184"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_new",
@@ -22858,7 +22858,7 @@
       "file_type": "code",
       "norm_label": ".new()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L148"
+      "source_location": "L142"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_post",
@@ -22869,7 +22869,7 @@
       "file_type": "code",
       "norm_label": ".post()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L160"
+      "source_location": "L154"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_post_cookie",
@@ -22880,7 +22880,7 @@
       "file_type": "code",
       "norm_label": ".post_cookie()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L215"
+      "source_location": "L209"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_post_cookie_auth",
@@ -22891,7 +22891,7 @@
       "file_type": "code",
       "norm_label": ".post_cookie_auth()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L228"
+      "source_location": "L222"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_post_json",
@@ -22902,7 +22902,7 @@
       "file_type": "code",
       "norm_label": ".post_json()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L164"
+      "source_location": "L158"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_post_json_auth",
@@ -22913,7 +22913,7 @@
       "file_type": "code",
       "norm_label": ".post_json_auth()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L169"
+      "source_location": "L163"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_post_json_cookie",
@@ -22924,7 +22924,7 @@
       "file_type": "code",
       "norm_label": ".post_json_cookie()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L202"
+      "source_location": "L196"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_logandaimapitestclient_put_json",
@@ -22935,7 +22935,7 @@
       "file_type": "code",
       "norm_label": ".put_json()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L258"
+      "source_location": "L252"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_main_rs_arc",
@@ -23045,7 +23045,7 @@
       "file_type": "code",
       "norm_label": "token_aus()",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L313"
+      "source_location": "L307"
     },
     {
       "id": "crates_logandaim_api_tests_e2e_schuss",
@@ -34405,7 +34405,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L330",
+      "source_location": "L324",
       "weight": 1.0
     },
     {
@@ -34417,7 +34417,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L332",
+      "source_location": "L326",
       "weight": 1.0
     },
     {
@@ -34429,7 +34429,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L335",
+      "source_location": "L329",
       "weight": 1.0
     },
     {
@@ -34441,7 +34441,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L296",
+      "source_location": "L290",
       "weight": 1.0
     },
     {
@@ -34453,7 +34453,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L139",
+      "source_location": "L133",
       "weight": 1.0
     },
     {
@@ -34465,7 +34465,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L117",
+      "source_location": "L111",
       "weight": 1.0
     },
     {
@@ -34477,7 +34477,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L120",
+      "source_location": "L114",
       "weight": 1.0
     },
     {
@@ -34537,7 +34537,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L187",
+      "source_location": "L181",
       "weight": 1.0
     },
     {
@@ -34549,7 +34549,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L191",
+      "source_location": "L185",
       "weight": 1.0
     },
     {
@@ -34561,7 +34561,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L161",
+      "source_location": "L155",
       "weight": 1.0
     },
     {
@@ -34573,7 +34573,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L220",
+      "source_location": "L214",
       "weight": 1.0
     },
     {
@@ -34585,7 +34585,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L224",
+      "source_location": "L218",
       "weight": 1.0
     },
     {
@@ -34597,7 +34597,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L234",
+      "source_location": "L228",
       "weight": 1.0
     },
     {
@@ -34609,7 +34609,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L241",
+      "source_location": "L235",
       "weight": 1.0
     },
     {
@@ -34621,7 +34621,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L165",
+      "source_location": "L159",
       "weight": 1.0
     },
     {
@@ -34633,7 +34633,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L165",
+      "source_location": "L159",
       "weight": 1.0
     },
     {
@@ -34645,7 +34645,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L175",
+      "source_location": "L169",
       "weight": 1.0
     },
     {
@@ -34657,7 +34657,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L176",
+      "source_location": "L170",
       "weight": 1.0
     },
     {
@@ -34669,7 +34669,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L208",
+      "source_location": "L202",
       "weight": 1.0
     },
     {
@@ -34681,7 +34681,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L212",
+      "source_location": "L206",
       "weight": 1.0
     },
     {
@@ -34693,7 +34693,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L259",
+      "source_location": "L253",
       "weight": 1.0
     },
     {
@@ -45278,7 +45278,7 @@
       "confidence_score": 1.0,
       "context": "field",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L144",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
@@ -50042,7 +50042,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L289",
+      "source_location": "L283",
       "weight": 1.0
     },
     {
@@ -50078,7 +50078,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L144",
+      "source_location": "L138",
       "weight": 1.0
     },
     {
@@ -50090,7 +50090,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L156",
+      "source_location": "L150",
       "weight": 1.0
     },
     {
@@ -50102,7 +50102,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L215",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
@@ -50114,7 +50114,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L228",
+      "source_location": "L222",
       "weight": 1.0
     },
     {
@@ -50126,7 +50126,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L202",
+      "source_location": "L196",
       "weight": 1.0
     },
     {
@@ -70294,7 +70294,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L339",
+      "source_location": "L333",
       "weight": 1.0
     },
     {
@@ -70306,7 +70306,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L289",
+      "source_location": "L283",
       "weight": 1.0
     },
     {
@@ -70318,7 +70318,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L132",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -70330,7 +70330,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L263",
+      "source_location": "L257",
       "weight": 1.0
     },
     {
@@ -70342,7 +70342,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L148",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -76906,7 +76906,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L326",
+      "source_location": "L320",
       "weight": 1.0
     },
     {
@@ -76918,7 +76918,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L301",
+      "source_location": "L295",
       "weight": 1.0
     },
     {
@@ -76930,7 +76930,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L289",
+      "source_location": "L283",
       "weight": 1.0
     },
     {
@@ -76942,7 +76942,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L289",
+      "source_location": "L283",
       "weight": 1.0
     },
     {
@@ -76954,7 +76954,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L289",
+      "source_location": "L283",
       "weight": 1.0
     },
     {
@@ -76966,7 +76966,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L137",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -77002,7 +77002,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L263",
+      "source_location": "L257",
       "weight": 1.0
     },
     {
@@ -77014,7 +77014,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L263",
+      "source_location": "L257",
       "weight": 1.0
     },
     {
@@ -77026,7 +77026,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L156",
+      "source_location": "L150",
       "weight": 1.0
     },
     {
@@ -77038,7 +77038,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L244",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
@@ -77050,7 +77050,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L244",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
@@ -77062,7 +77062,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L244",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
@@ -77074,7 +77074,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L186",
+      "source_location": "L180",
       "weight": 1.0
     },
     {
@@ -77086,7 +77086,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L186",
+      "source_location": "L180",
       "weight": 1.0
     },
     {
@@ -77098,7 +77098,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L190",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
@@ -77110,7 +77110,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L190",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
@@ -77122,7 +77122,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L148",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -77134,7 +77134,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L160",
+      "source_location": "L154",
       "weight": 1.0
     },
     {
@@ -77146,7 +77146,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L160",
+      "source_location": "L154",
       "weight": 1.0
     },
     {
@@ -77158,7 +77158,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L215",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
@@ -77170,7 +77170,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L215",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
@@ -77182,7 +77182,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L215",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
@@ -77194,7 +77194,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L228",
+      "source_location": "L222",
       "weight": 1.0
     },
     {
@@ -77206,7 +77206,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L228",
+      "source_location": "L222",
       "weight": 1.0
     },
     {
@@ -77218,7 +77218,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L228",
+      "source_location": "L222",
       "weight": 1.0
     },
     {
@@ -77230,7 +77230,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L164",
+      "source_location": "L158",
       "weight": 1.0
     },
     {
@@ -77242,7 +77242,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L164",
+      "source_location": "L158",
       "weight": 1.0
     },
     {
@@ -77254,7 +77254,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L169",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -77266,7 +77266,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L169",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -77278,7 +77278,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L202",
+      "source_location": "L196",
       "weight": 1.0
     },
     {
@@ -77290,7 +77290,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L202",
+      "source_location": "L196",
       "weight": 1.0
     },
     {
@@ -77302,7 +77302,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L202",
+      "source_location": "L196",
       "weight": 1.0
     },
     {
@@ -77314,7 +77314,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L258",
+      "source_location": "L252",
       "weight": 1.0
     },
     {
@@ -77326,7 +77326,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L258",
+      "source_location": "L252",
       "weight": 1.0
     },
     {
@@ -77362,7 +77362,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L313",
+      "source_location": "L307",
       "weight": 1.0
     },
     {
@@ -86170,7 +86170,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L143",
+      "source_location": "L137",
       "weight": 1.0
     },
     {
@@ -86181,7 +86181,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L263",
+      "source_location": "L257",
       "weight": 1.0
     },
     {
@@ -86192,7 +86192,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L289",
+      "source_location": "L283",
       "weight": 1.0
     },
     {
@@ -86203,7 +86203,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L301",
+      "source_location": "L295",
       "weight": 1.0
     },
     {
@@ -86214,7 +86214,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L313",
+      "source_location": "L307",
       "weight": 1.0
     },
     {
@@ -86225,7 +86225,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L326",
+      "source_location": "L320",
       "weight": 1.0
     },
     {
@@ -86236,7 +86236,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L339",
+      "source_location": "L333",
       "weight": 1.0
     },
     {
@@ -101449,7 +101449,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L132",
+      "source_location": "L126",
       "weight": 1.0
     },
     {
@@ -101460,7 +101460,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L137",
+      "source_location": "L131",
       "weight": 1.0
     },
     {
@@ -101493,7 +101493,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L148",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -101504,7 +101504,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L156",
+      "source_location": "L150",
       "weight": 1.0
     },
     {
@@ -101515,7 +101515,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L160",
+      "source_location": "L154",
       "weight": 1.0
     },
     {
@@ -101526,7 +101526,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L164",
+      "source_location": "L158",
       "weight": 1.0
     },
     {
@@ -101537,7 +101537,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L169",
+      "source_location": "L163",
       "weight": 1.0
     },
     {
@@ -101548,7 +101548,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L186",
+      "source_location": "L180",
       "weight": 1.0
     },
     {
@@ -101559,7 +101559,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L190",
+      "source_location": "L184",
       "weight": 1.0
     },
     {
@@ -101570,7 +101570,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L202",
+      "source_location": "L196",
       "weight": 1.0
     },
     {
@@ -101581,7 +101581,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L215",
+      "source_location": "L209",
       "weight": 1.0
     },
     {
@@ -101592,7 +101592,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L228",
+      "source_location": "L222",
       "weight": 1.0
     },
     {
@@ -101603,7 +101603,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L244",
+      "source_location": "L238",
       "weight": 1.0
     },
     {
@@ -101614,7 +101614,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L258",
+      "source_location": "L252",
       "weight": 1.0
     },
     {
@@ -108672,7 +108672,7 @@
       "confidence_score": 0.85,
       "context": "call",
       "source_file": "crates/logandaim-api/tests/e2e/main.rs",
-      "source_location": "L149",
+      "source_location": "L143",
       "weight": 1.0
     },
     {
@@ -110265,5 +110265,5 @@
       "source_file": ".cursor/AGENTS.md"
     }
   ],
-  "built_at_commit": "9d0cccaf68be54f62ed8acfda83b6a8fc50beb84"
+  "built_at_commit": "7df8d412729be40dd11fd2097715c616d17f7fc9"
 }
