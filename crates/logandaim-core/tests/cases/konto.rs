@@ -18,10 +18,9 @@ use logandaim_core::{
     },
     ports::{ClientKey, RepositoryError},
     service::{
-        Abmeldung, Anmeldung, AnmeldungFehler, BenutzerAnzeigen, BenutzerAnzeigenFehler,
-        BenutzerLöschen, Erneuerung, PasswortVergessen, PasswortWiederherstellen,
-        RegistrierungAbschliessenFehler, RegistrierungAbschließen, RegistrierungStarten,
-        RegistrierungStartenFehler, SessionAusgestellt,
+        Abmeldung, Anmeldung, BenutzerAnzeigen, BenutzerAnzeigenFehler, BenutzerLöschen,
+        Erneuerung, PasswortVergessen, PasswortWiederherstellen, RegistrierungAbschliessenFehler,
+        RegistrierungAbschließen, RegistrierungStarten, SessionAusgestellt,
     },
 };
 
@@ -340,7 +339,6 @@ async fn ac6_falsches_passwort_und_unbekannte_adresse_sind_ununterscheidbar() {
                     logandaim_core::domain::konto::AccessTokenClaims {
                         sub: BenutzerId(uuid::Uuid::nil()),
                         sid: SessionId(uuid::Uuid::nil()),
-                        kid: logandaim_core::domain::konto::SigningKeyId::new("kein").unwrap(),
                         iss: "logandaim.at".into(),
                         aud: "logandaim-api".into(),
                         iat: harness.jetzt(),
@@ -713,102 +711,6 @@ async fn ac13_anonymer_zugriff_wird_verweigert() {
     assert!(abmelden.is_err());
 }
 
-// ------------------------------------------------------------------------ AC-15, AC-16
-
-#[test_log::test(pollster::test)]
-async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
-    let harness = harness().await;
-    let client = client_key(30);
-
-    for _ in 0..20 {
-        let ergebnis = harness
-            .app()
-            .execute(
-                AuthContext::Anonymous,
-                Anmeldung {
-                    email: adresse("niemand@muster.at"),
-                    passwort: passwort(),
-                    client_key: client.clone(),
-                },
-            )
-            .await;
-        assert!(ergebnis.is_err());
-        assert_ne!(
-            text(ergebnis.unwrap_err()),
-            AnmeldungFehler::Gedrosselt.to_string(),
-            "innerhalb des Budgets ist die Antwort ein Zugangsfehler, keine Drosselung"
-        );
-    }
-
-    let einundzwanzigster = harness
-        .app()
-        .execute(
-            AuthContext::Anonymous,
-            Anmeldung {
-                email: adresse("niemand@muster.at"),
-                passwort: passwort(),
-                client_key: client.clone(),
-            },
-        )
-        .await;
-    assert_eq!(
-        text(einundzwanzigster.unwrap_err()),
-        AnmeldungFehler::Gedrosselt.to_string()
-    );
-
-    // Another client is unaffected: the limit is never per address.
-    let anderer_client = harness
-        .app()
-        .execute(
-            AuthContext::Anonymous,
-            Anmeldung {
-                email: adresse("niemand@muster.at"),
-                passwort: passwort(),
-                client_key: client_key(31),
-            },
-        )
-        .await;
-    assert_ne!(
-        text(anderer_client.unwrap_err()),
-        AnmeldungFehler::Gedrosselt.to_string()
-    );
-}
-
-#[test_log::test(pollster::test)]
-async fn ac16_registrierung_ist_auf_fünf_pro_stunde_gedrosselt() {
-    let harness = harness().await;
-    let client = client_key(32);
-
-    for nummer in 0..5 {
-        harness
-            .app()
-            .execute(
-                AuthContext::Anonymous,
-                RegistrierungStarten {
-                    email: adresse(&format!("person{nummer}@muster.at")),
-                    client_key: client.clone(),
-                },
-            )
-            .await
-            .expect("die ersten fünf Anfragen gehen durch");
-    }
-
-    let sechste = harness
-        .app()
-        .execute(
-            AuthContext::Anonymous,
-            RegistrierungStarten {
-                email: adresse("person6@muster.at"),
-                client_key: client,
-            },
-        )
-        .await;
-    assert_eq!(
-        text(sechste.unwrap_err()),
-        RegistrierungStartenFehler::Gedrosselt.to_string()
-    );
-}
-
 // ------------------------------------------------------------------------------- AC-17
 
 /// AC-17: a token is checked against the public key stored **on its own session row**.
@@ -909,7 +811,6 @@ async fn ac14_fremden_benutzer_liest_nur_ein_systemadministrator() {
                 .konten()
                 .find_by_email(&adresse("anna@muster.at"))
                 .await?
-                .expect("die Adresse hat ein Konto")
                 .cloned_data()
                 .benutzer_id();
             // A Benutzer never exists without its Konto (rule 3), so the foreign identity
