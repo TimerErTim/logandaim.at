@@ -59,7 +59,7 @@ pub use session::{
     NeueSession, RefreshedSession, RenewableSession, RevokedSession, Session, SessionId, SessionIn,
     SessionNotRenewable, state as SessionState,
 };
-pub use signing::{SIGNATURE_BYTES, Signature, SigningKeyId, SigningKeypair};
+pub use signing::{SIGNATURE_BYTES, Signature, SigningKeypair};
 pub use token::{AccessToken, RefreshToken, SecretToken, SecretTokenHash};
 
 /// Shortest accepted Passwort, in characters.

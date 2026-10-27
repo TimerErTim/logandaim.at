@@ -11,16 +11,10 @@
 //! verifies against the row. That is what makes AC-17 a row check rather than a
 //! configuration check.
 //!
-//! Verify order inside `SessionPrüfen`:
-//!
-//! 1. structure and `alg` **pinned to `EdDSA` before the payload is decoded** — `none` and
-//!    every other algorithm are rejected here, never by a "supported algorithms" list,
-//! 2. the `kid` in the header equals the session row's `kid`,
-//! 3. the Ed25519 signature over the ASCII `header.payload`, verified with the public key
-//!    on the row,
-//! 4. the row's `Benutzer` and lifecycle state.
-//!
-//! Every failure is 401; the caller never learns which step failed.
+//! Verify order inside `SessionPrüfen`: `alg` is pinned to `EdDSA` before the payload is
+//! decoded, then the Ed25519 signature over the ASCII `header.payload` is checked against
+//! the public key on the session row, then the row's `Benutzer` and lifecycle state. Every
+//! failure is 401; the caller never learns which step failed.
 
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use chrono::{DateTime, Utc};
@@ -28,9 +22,7 @@ use error_stack::Report;
 use logandaim_core::{
     ResultReport,
     application::AccessError,
-    domain::konto::{
-        AccessToken, AccessTokenClaims, BenutzerId, SessionId, Signature, SigningKeyId,
-    },
+    domain::konto::{AccessToken, AccessTokenClaims, BenutzerId, SessionId, Signature},
     ports::Signing,
 };
 use serde::{Deserialize, Serialize};
@@ -45,7 +37,6 @@ pub const SIGNATUR_ALGORITHMUS: &str = "EdDSA";
 pub struct AccessTokenClaimsDto {
     pub sub: Uuid,
     pub sid: Uuid,
-    pub kid: String,
     pub iss: String,
     pub aud: String,
     pub iat: DateTime<Utc>,
@@ -56,7 +47,6 @@ pub struct AccessTokenClaimsDto {
 #[derive(Debug, Serialize, Deserialize)]
 struct JoseHeader {
     alg: String,
-    kid: String,
     typ: String,
 }
 
@@ -86,13 +76,11 @@ pub fn encode(
 ) -> ResultReport<AccessToken, AccessError> {
     let header = JoseHeader {
         alg: SIGNATUR_ALGORITHMUS.to_owned(),
-        kid: signing.kid().as_str().to_owned(),
         typ: "JWT".to_owned(),
     };
     let dto = AccessTokenClaimsDto {
         sub: claims.sub.0,
         sid: claims.sid.0,
-        kid: claims.kid.as_str().to_owned(),
         iss: claims.iss.clone(),
         aud: claims.aud.clone(),
         iat: claims.iat,
@@ -145,12 +133,6 @@ pub fn decode(token: &str) -> ResultReport<DecodedToken, AccessError> {
         .map_err(|_| ungültig())?;
     let dto: AccessTokenClaimsDto = serde_json::from_slice(&payload_roh).map_err(|_| ungültig())?;
 
-    // The header's `kid` must agree with the payload's: a token whose halves name different
-    // keys was assembled by hand, and it is refused before a row is even looked at.
-    if header.kid != dto.kid {
-        return Err(ungültig());
-    }
-
     let signatur_bytes = URL_SAFE_NO_PAD
         .decode(signatur_b64)
         .map_err(|_| ungültig())?;
@@ -161,7 +143,6 @@ pub fn decode(token: &str) -> ResultReport<DecodedToken, AccessError> {
         claims: AccessTokenClaims {
             sub: BenutzerId(dto.sub),
             sid: SessionId(dto.sid),
-            kid: SigningKeyId::new(dto.kid).map_err(|_| ungültig())?,
             iss: dto.iss,
             aud: dto.aud,
             iat: dto.iat,
@@ -195,10 +176,7 @@ mod tests {
     use logandaim_core::domain::konto::{ACCESS_TOKEN_LIFETIME, SigningKeypair};
 
     fn keypair() -> InMemorySigning {
-        InMemorySigning::from_secret_bytes(
-            SigningKeyId::new("test-key").expect("static kid"),
-            &[7u8; 32],
-        )
+        InMemorySigning::from_secret_bytes(&[7u8; 32])
     }
 
     fn claims() -> AccessTokenClaims {
@@ -206,7 +184,6 @@ mod tests {
         AccessTokenClaims {
             sub: BenutzerId(Uuid::nil()),
             sid: SessionId(Uuid::nil()),
-            kid: SigningKeyId::new("test-key").expect("static kid"),
             iss: "logandaim.at".into(),
             aud: "logandaim-api".into(),
             iat: jetzt,
@@ -254,12 +231,11 @@ mod tests {
 
     #[test_log::test]
     fn alg_none_wird_abgelehnt() {
-        let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"none","kid":"test-key","typ":"JWT"}"#);
+        let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"none","typ":"JWT"}"#);
         let payload = URL_SAFE_NO_PAD.encode(
             serde_json::to_vec(&AccessTokenClaimsDto {
                 sub: Uuid::nil(),
                 sid: Uuid::nil(),
-                kid: "test-key".into(),
                 iss: "logandaim.at".into(),
                 aud: "logandaim-api".into(),
                 iat: DateTime::from_timestamp(1_700_000_000, 0).unwrap(),
@@ -274,7 +250,7 @@ mod tests {
 
     #[test_log::test]
     fn hs256_wird_abgelehnt() {
-        let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"HS256","kid":"test-key","typ":"JWT"}"#);
+        let header = URL_SAFE_NO_PAD.encode(br#"{"alg":"HS256","typ":"JWT"}"#);
         let payload = URL_SAFE_NO_PAD.encode(br#"{"sub":"00000000-0000-0000-0000-000000000000"}"#);
         let token = format!("{header}.{payload}.AAAA");
         assert!(decode(&token).is_err());
@@ -286,33 +262,9 @@ mod tests {
         let token = encode(&claims(), &keypair).expect("encoding succeeds");
         let gelesen = decode(token.as_str()).expect("structure is fine");
 
-        // Same kid, different material: the row's public key is what rejects it.
-        let gleichnamig = InMemorySigning::from_secret_bytes(
-            SigningKeyId::new("test-key").expect("static kid"),
-            &[9u8; 32],
-        );
+        // Different material: the row's public key is what rejects it.
+        let gleichnamig = InMemorySigning::from_secret_bytes(&[9u8; 32]);
         assert!(!verify(&gelesen, &gleichnamig));
-    }
-
-    #[test_log::test]
-    fn kopf_und_rumpf_mit_verschiedenem_kid_werden_abgelehnt() {
-        let keypair = keypair();
-        let token = encode(&claims(), &keypair).expect("encoding succeeds");
-        let (header, rest) = token.as_str().split_once('.').expect("two parts");
-        let (_, signatur) = rest.rsplit_once('.').expect("payload and signature");
-
-        let fremder_kopf = JoseHeader {
-            alg: SIGNATUR_ALGORITHMUS.to_owned(),
-            kid: "other-key".to_owned(),
-            typ: "JWT".to_owned(),
-        };
-        let kopf = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&fremder_kopf).unwrap());
-        assert_ne!(kopf, header);
-        let zusammengesetzt = format!("{kopf}.{rest}");
-        assert!(decode(&zusammengesetzt).is_err());
-        // The untouched token still decodes, so the rejection is about the mismatch.
-        assert!(decode(&format!("{header}.{rest}")).is_ok());
-        let _ = signatur;
     }
 
     #[test_log::test]

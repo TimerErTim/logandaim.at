@@ -268,11 +268,8 @@ impl UseCase<AuthContext> for SessionPrüfen {
                 }
             };
 
-            // AC-17: the row names the key, and the row carries that key's public half,
-            // so a signature made by any other key is refused here.
-            if session.signing_key_id() != &self.claims.kid {
-                return Err(Report::new(SessionPrüfenFehler::NichtAngemeldet));
-            }
+            // AC-17: the row carries the public half of the key that issued it, so a
+            // signature made by any other key is refused here.
             SigningKeypair::verify_with_public_key_hex(
                 session.public_key_hex(),
                 self.signed_message.as_bytes(),

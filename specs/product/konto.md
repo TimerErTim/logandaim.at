@@ -228,7 +228,7 @@ Rules:
 15. Every API request presenting a `Zugriffs-Token` checks the token against the server: the
     signature must verify against the public key stored **on its own `Anmelde-Sitzung` row**, and that
     session must not be revoked. Both facts are database rows, not clocks: the session row carries
-    the `kid` and the public key it was issued under, and the same row says whether the session is
+    the public key it was issued under, and the same row says whether the session is
     revoked. There is no separate key table and no key registration step. Revocation is a row state,
     not a token expiry, so logout, recovery, and deletion are immediate (rule 6). A request whose
     session is unknown, whose stored key does not match the signature, or whose session is revoked

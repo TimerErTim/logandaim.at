@@ -3,30 +3,24 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration, Utc};
 use logandaim_core::{
     App,
-    adapters::InMemorySigning,
+    adapters::{InMemorySigning, InMemoryThrottle},
     application::{AppBuilder, AuthContext, IdentityProviderConfiguration, SetUowProvider},
-    domain::konto::{AccessTokenClaims, SigningKeyId},
+    domain::konto::AccessTokenClaims,
     ports::{Clock, Signing},
     service::SessionPrüfen,
 };
-use logandaim_fakes::{FakeMailSender, FixedClock, InMemoryThrottle};
+use logandaim_fakes::{FakeMailSender, FixedClock};
 
 /// Key every shared case signs and verifies with. A test-only constant seed.
 pub fn test_signing_key() -> InMemorySigning {
-    InMemorySigning::from_secret_bytes(
-        SigningKeyId::new("test-key").expect("static test kid is valid"),
-        &[7u8; 32],
-    )
+    InMemorySigning::from_secret_bytes(&[7u8; 32])
 }
 
 /// A key that is valid on its own but is not the one a case's sessions were issued
 /// under. Used by AC-17 to prove that the stored public key — not the configured key
 /// alone — decides whether a token verifies.
 pub fn fremder_schluessel() -> InMemorySigning {
-    InMemorySigning::from_secret_bytes(
-        SigningKeyId::new("test-key").expect("static test kid is valid"),
-        &[9u8; 32],
-    )
+    InMemorySigning::from_secret_bytes(&[9u8; 32])
 }
 
 /// The ASCII `header.payload` every case signs. Its content is irrelevant in core: only

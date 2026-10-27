@@ -50,7 +50,6 @@ pub(crate) fn new_session(
     NeueSession::neu(
         benutzer_id,
         refresh_token.hash(),
-        ctx.signing().kid().clone(),
         ctx.signing().public_key_hex(),
         jetzt,
     )
@@ -67,7 +66,6 @@ pub(crate) fn claims_for_session(
     AccessTokenClaims::neu(
         benutzer_id,
         session_id,
-        ctx.signing().kid().clone(),
         &konfiguration.issuer,
         &konfiguration.audience,
         jetzt,

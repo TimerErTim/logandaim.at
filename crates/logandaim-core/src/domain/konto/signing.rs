@@ -1,18 +1,8 @@
-//! Ed25519 signing over raw bytes, and the key id a token header names.
+//! Ed25519 signing over raw bytes.
 //!
-//! The domain owns the algorithm, the key material, and the claim *semantics*. It does not
-//! own the token's envelope: base64url, JOSE headers, and JSON are transport, they are only
-//! ever used at the HTTP edge, and they live in `logandaim-api`. Core therefore signs a
-//! byte string and verifies a byte string — the API hands it `"header.payload"` and takes
-//! back a signature, or the reverse.
-//!
-//! Consequences that are deliberate, not incidental:
-//!
-//! - `logandaim-core` gains no `serde_json`, no `base64`, and no JOSE dependency.
-//! - There is no `Signer` port. Swapping the algorithm invalidates every issued token, so
-//!   it must be a domain refactor, not a wiring line. Applications reach the algorithm
-//!   through the [`Signing`](crate::ports::Signing) port, which wraps *key material*, not
-//!   the algorithm.
+//! The domain owns the algorithm and the key material; the JWT envelope is transport and
+//! lives in `logandaim-api`. Core therefore signs and verifies byte strings, and gains no
+//! serialization dependency.
 
 use std::fmt;
 
@@ -24,32 +14,6 @@ use super::KontoFehler;
 
 /// Length of a raw Ed25519 signature.
 pub const SIGNATURE_BYTES: usize = 64;
-
-/// Identity of a signing key: the `kid` an access token header names.
-///
-/// Ids come from configuration and are published in the token header, so the shape is
-/// constrained to something that is safe in a JOSE header and readable in a log line.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct SigningKeyId(String);
-
-impl SigningKeyId {
-    pub fn new(wert: impl Into<String>) -> Result<Self, KontoFehler> {
-        let wert = wert.into();
-        let plausibel = !wert.is_empty()
-            && wert.len() <= 64
-            && wert
-                .bytes()
-                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_');
-        if !plausibel {
-            return Err(KontoFehler::SigningKeyUngültig);
-        }
-        Ok(Self(wert))
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
 
 /// A raw 64-byte Ed25519 signature. The API base64url-encodes it; core never does.
 #[derive(Clone, PartialEq, Eq)]
@@ -80,21 +44,15 @@ impl fmt::Debug for Signature {
     }
 }
 
-/// The configured private key plus the id it is published under.
-///
-/// Built once at startup from deployment configuration. The private half never reaches a
-/// database, a log line, or an error: `Debug` prints the `kid` only, and the seed is
-/// zeroized when the keypair is dropped.
+/// The configured private key. `Debug` never prints it, and the seed is zeroized on drop.
 #[derive(Clone)]
 pub struct SigningKeypair {
-    kid: SigningKeyId,
     schlüssel: ed25519_dalek::SigningKey,
 }
 
 impl fmt::Debug for SigningKeypair {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SigningKeypair")
-            .field("kid", &self.kid)
             .field("schlüssel", &"[redacted]")
             .finish()
     }
@@ -102,26 +60,18 @@ impl fmt::Debug for SigningKeypair {
 
 impl SigningKeypair {
     /// Load a PKCS#8 v1 PEM (`-----BEGIN PRIVATE KEY-----`).
-    ///
-    /// A malformed key is a startup error; there is no generated fallback, because a
-    /// silently created key would invalidate every session on the next restart.
-    pub fn from_pkcs8_pem(kid: SigningKeyId, pem: &str) -> Result<Self, KontoFehler> {
+    pub fn from_pkcs8_pem(pem: &str) -> Result<Self, KontoFehler> {
         let pem = Zeroizing::new(pem.to_string());
         let schlüssel = ed25519_dalek::SigningKey::from_pkcs8_pem(&pem)
             .map_err(|_| KontoFehler::SigningKeyUngültig)?;
-        Ok(Self { kid, schlüssel })
+        Ok(Self { schlüssel })
     }
 
-    /// Build from the 32 raw secret bytes; only tests and key generation use this.
-    pub fn from_secret_bytes(kid: SigningKeyId, bytes: &[u8; 32]) -> Self {
+    /// Build from the 32 raw secret bytes.
+    pub fn from_secret_bytes(bytes: &[u8; 32]) -> Self {
         Self {
-            kid,
             schlüssel: ed25519_dalek::SigningKey::from_bytes(bytes),
         }
-    }
-
-    pub fn kid(&self) -> &SigningKeyId {
-        &self.kid
     }
 
     /// Hex-encoded 32-byte public key. Every session row stores this, so an access token is
@@ -130,22 +80,11 @@ impl SigningKeypair {
         hex::encode(self.schlüssel.verifying_key().to_bytes())
     }
 
-    /// Sign raw bytes. The caller assembles whatever envelope it needs around them.
     pub fn sign(&self, nachricht: &[u8]) -> Signature {
         Signature(self.schlüssel.sign(nachricht).to_bytes())
     }
 
-    /// Verify raw bytes against this keypair's public half.
-    pub fn verify(&self, nachricht: &[u8], signature: &Signature) -> Result<(), KontoFehler> {
-        let signature = ed25519_dalek::Signature::from_bytes(&signature.0);
-        self.schlüssel
-            .verifying_key()
-            .verify(nachricht, &signature)
-            .map_err(|_| KontoFehler::SignaturUngültig)
-    }
-
-    /// Verify with a public key that arrived from a stored row, so a request signed by a
-    /// different key is rejected even when that key is valid on its own.
+    /// Verify with the public key stored on the session row, not the configured keypair.
     pub fn verify_with_public_key_hex(
         öffentlicher_schlüssel_hex: &str,
         nachricht: &[u8],
@@ -170,7 +109,7 @@ mod tests {
     use super::*;
 
     fn keypair(seed: u8) -> SigningKeypair {
-        SigningKeypair::from_secret_bytes(SigningKeyId::new("test-key").unwrap(), &[seed; 32])
+        SigningKeypair::from_secret_bytes(&[seed; 32])
     }
 
     #[test_log::test]
@@ -178,7 +117,8 @@ mod tests {
         let keypair = keypair(1);
         let nachricht = b"eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiIxIn0";
         let signatur = keypair.sign(nachricht);
-        assert!(keypair.verify(nachricht, &signatur).is_ok());
+        let hex = keypair.public_key_hex();
+        assert!(SigningKeypair::verify_with_public_key_hex(&hex, nachricht, &signatur).is_ok());
     }
 
     #[test_log::test]
@@ -186,16 +126,20 @@ mod tests {
         let keypair = keypair(2);
         let nachricht: Vec<u8> = (0..=255u8).collect();
         let signatur = keypair.sign(&nachricht);
-        assert!(keypair.verify(&nachricht, &signatur).is_ok());
+        let hex = keypair.public_key_hex();
+        assert!(SigningKeypair::verify_with_public_key_hex(&hex, &nachricht, &signatur).is_ok());
     }
 
     #[test_log::test]
     fn gekipptes_byte_wird_abgelehnt() {
         let keypair = keypair(3);
         let signatur = keypair.sign(b"header.payload");
-        // One byte differs from what was signed, so verification must fail.
         assert!(matches!(
-            keypair.verify(b"header.payloadX", &signatur),
+            SigningKeypair::verify_with_public_key_hex(
+                &keypair.public_key_hex(),
+                b"header.payloadX",
+                &signatur
+            ),
             Err(KontoFehler::SignaturUngültig)
         ));
     }
@@ -203,28 +147,20 @@ mod tests {
     #[test_log::test]
     fn falscher_schlüssel_wird_abgelehnt() {
         let signierer = keypair(4);
-        let prüfer = keypair(5);
         let signatur = signierer.sign(b"header.payload");
         assert!(matches!(
-            prüfer.verify(b"header.payload", &signatur),
+            SigningKeypair::verify_with_public_key_hex(
+                &keypair(5).public_key_hex(),
+                b"header.payload",
+                &signatur
+            ),
             Err(KontoFehler::SignaturUngültig)
         ));
     }
 
     #[test_log::test]
-    fn public_key_verifikation_über_die_gespeicherte_zeile() {
-        let signierer = keypair(6);
-        let signatur = signierer.sign(b"header.payload");
-        let hex = signierer.public_key_hex();
-        assert_eq!(hex.len(), 64);
-        assert!(
-            SigningKeypair::verify_with_public_key_hex(&hex, b"header.payload", &signatur).is_ok()
-        );
-        let fremder = keypair(7).public_key_hex();
-        assert!(matches!(
-            SigningKeypair::verify_with_public_key_hex(&fremder, b"header.payload", &signatur),
-            Err(KontoFehler::SignaturUngültig)
-        ));
+    fn public_key_ist_hex_und_32_bytes_lang() {
+        assert_eq!(keypair(6).public_key_hex().len(), 64);
     }
 
     #[test_log::test]
@@ -237,25 +173,14 @@ mod tests {
 
     #[test_log::test]
     fn debug_gibt_den_privatschlüssel_nicht_preis() {
-        let keypair = keypair(8);
-        let text = format!("{keypair:?}");
-        assert!(text.contains("redacted"));
-        assert!(text.contains("test-key"));
+        assert!(format!("{:?}", keypair(8)).contains("redacted"));
     }
 
     #[test_log::test]
     fn kaputtes_pem_wird_abgelehnt() {
         let ergebnis = SigningKeypair::from_pkcs8_pem(
-            SigningKeyId::new("k1").unwrap(),
             "-----BEGIN PRIVATE KEY-----\nnope\n-----END PRIVATE KEY-----",
         );
         assert!(matches!(ergebnis, Err(KontoFehler::SigningKeyUngültig)));
-    }
-
-    #[test_log::test]
-    fn signing_key_id_wird_geprüft() {
-        assert!(SigningKeyId::new("").is_err());
-        assert!(SigningKeyId::new("mit leerzeichen").is_err());
-        assert!(SigningKeyId::new("k-2026_10").is_ok());
     }
 }

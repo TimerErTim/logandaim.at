@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use super::{BenutzerId, KontoFehler, SecretTokenHash, SigningKeyId};
+use super::{BenutzerId, KontoFehler, SecretTokenHash};
 
 /// Identity of one Anmelde-Sitzung.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -49,7 +49,6 @@ pub mod state {
 pub struct NeueSession {
     benutzer_id: BenutzerId,
     refresh_token_hash: SecretTokenHash,
-    signing_key_id: SigningKeyId,
     public_key: String,
     created_at: DateTime<Utc>,
     expires_at: DateTime<Utc>,
@@ -59,14 +58,12 @@ impl NeueSession {
     pub fn neu(
         benutzer_id: BenutzerId,
         refresh_token_hash: SecretTokenHash,
-        signing_key_id: SigningKeyId,
         public_key: impl Into<String>,
         jetzt: DateTime<Utc>,
     ) -> Self {
         Self {
             benutzer_id,
             refresh_token_hash,
-            signing_key_id,
             public_key: public_key.into(),
             created_at: jetzt,
             expires_at: jetzt + super::REFRESH_TOKEN_LIFETIME,
@@ -79,10 +76,6 @@ impl NeueSession {
 
     pub fn refresh_token_hash(&self) -> &SecretTokenHash {
         &self.refresh_token_hash
-    }
-
-    pub fn signing_key_id(&self) -> &SigningKeyId {
-        &self.signing_key_id
     }
 
     pub fn public_key_hex(&self) -> &str {
@@ -111,7 +104,6 @@ pub struct SessionIn<S> {
     id: SessionId,
     benutzer_id: BenutzerId,
     refresh_token_hash: SecretTokenHash,
-    signing_key_id: SigningKeyId,
     public_key: String,
     created_at: DateTime<Utc>,
     state: S,
@@ -132,11 +124,6 @@ impl<S> SessionIn<S> {
 
     pub fn refresh_token_hash(&self) -> &SecretTokenHash {
         &self.refresh_token_hash
-    }
-
-    /// The `kid` this session's access token names.
-    pub fn signing_key_id(&self) -> &SigningKeyId {
-        &self.signing_key_id
     }
 
     /// Hex-encoded public key this session's access tokens must verify against.
@@ -168,7 +155,6 @@ impl RenewableSession {
             id: self.id,
             benutzer_id: self.benutzer_id,
             refresh_token_hash: self.refresh_token_hash,
-            signing_key_id: self.signing_key_id,
             public_key: self.public_key,
             created_at: self.created_at,
             state: state::Revoked {
@@ -183,7 +169,6 @@ impl RenewableSession {
         id: SessionId,
         benutzer_id: BenutzerId,
         refresh_token_hash: SecretTokenHash,
-        signing_key_id: SigningKeyId,
         public_key: impl Into<String>,
         jetzt: DateTime<Utc>,
     ) -> Self {
@@ -191,7 +176,6 @@ impl RenewableSession {
             id,
             benutzer_id,
             refresh_token_hash,
-            signing_key_id,
             public_key: public_key.into(),
             created_at: jetzt,
             state: state::Renewable {
@@ -206,7 +190,6 @@ impl RenewableSession {
             id,
             neu.benutzer_id,
             neu.refresh_token_hash,
-            neu.signing_key_id,
             neu.public_key,
             neu.created_at,
         )
@@ -225,7 +208,6 @@ impl RenewableSession {
         let folge = NeueSession::neu(
             self.benutzer_id,
             new_refresh_token_hash,
-            self.signing_key_id.clone(),
             self.public_key.clone(),
             jetzt,
         );
@@ -233,7 +215,6 @@ impl RenewableSession {
             id: self.id,
             benutzer_id: self.benutzer_id,
             refresh_token_hash: self.refresh_token_hash,
-            signing_key_id: self.signing_key_id,
             public_key: self.public_key,
             created_at: self.created_at,
             state: state::Refreshed {
@@ -268,7 +249,6 @@ impl RefreshedSession {
             id: self.id,
             benutzer_id: self.benutzer_id,
             refresh_token_hash: self.refresh_token_hash,
-            signing_key_id: self.signing_key_id,
             public_key: self.public_key,
             created_at: self.created_at,
             state: state::Revoked {
@@ -322,7 +302,6 @@ impl Session {
         id: SessionId,
         benutzer_id: BenutzerId,
         refresh_token_hash: SecretTokenHash,
-        signing_key_id: SigningKeyId,
         public_key: String,
         created_at: DateTime<Utc>,
         expires_at: DateTime<Utc>,
@@ -333,7 +312,6 @@ impl Session {
             id,
             benutzer_id,
             refresh_token_hash,
-            signing_key_id,
             public_key,
             created_at,
             state: (),
@@ -372,14 +350,6 @@ impl Session {
             Self::Renewable(session) => &session.refresh_token_hash,
             Self::Refreshed(session) => &session.refresh_token_hash,
             Self::Revoked(session) => &session.refresh_token_hash,
-        }
-    }
-
-    pub fn signing_key_id(&self) -> &SigningKeyId {
-        match self {
-            Self::Renewable(session) => &session.signing_key_id,
-            Self::Refreshed(session) => &session.signing_key_id,
-            Self::Revoked(session) => &session.signing_key_id,
         }
     }
 
@@ -475,7 +445,6 @@ impl SessionIn<()> {
             id: self.id,
             benutzer_id: self.benutzer_id,
             refresh_token_hash: self.refresh_token_hash,
-            signing_key_id: self.signing_key_id,
             public_key: self.public_key,
             created_at: self.created_at,
             state,
@@ -497,16 +466,11 @@ mod tests {
         SecretTokenHash::from_hex("a".repeat(64)).unwrap()
     }
 
-    fn kid() -> SigningKeyId {
-        SigningKeyId::new("k1").unwrap()
-    }
-
     fn session() -> SessionIn<state::Renewable> {
         SessionIn::neu(
             SessionId(Uuid::nil()),
             BenutzerId(Uuid::nil()),
             hash(),
-            kid(),
             "ab".repeat(32),
             jetzt(),
         )
@@ -600,7 +564,6 @@ mod tests {
                 session.id(),
                 session.benutzer_id(),
                 session.refresh_token_hash().clone(),
-                session.signing_key_id().clone(),
                 session.public_key_hex().to_owned(),
                 session.created_at(),
                 session.expires_at(),
@@ -615,12 +578,5 @@ mod tests {
             );
             assert_eq!(session, geladen, "Zustand {label} überlebt die Zeile");
         }
-    }
-
-    #[test_log::test]
-    fn signing_key_id_wird_geprüft() {
-        assert!(SigningKeyId::new("").is_err());
-        assert!(SigningKeyId::new("mit leerzeichen").is_err());
-        assert!(SigningKeyId::new("k-2026_10").is_ok());
     }
 }

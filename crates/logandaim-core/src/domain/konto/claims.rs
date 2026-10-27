@@ -1,15 +1,14 @@
 //! Claim *semantics*, without any serialization.
 //!
-//! The JWT envelope (JSON, base64url, the JOSE header, `alg` pinning, `kid` comparison)
-//! lives in `logandaim-api`. Core receives the already-parsed claim values and decides
-//! whether they are acceptable: is the window open, does the issuer and audience match.
-//! That split is why the serde derives live on the API-side twin and not here.
+//! The JWT envelope (JSON, base64url, the JOSE header, `alg` pinning) lives in
+//! `logandaim-api`. Core receives the already-parsed claim values and decides whether they
+//! are acceptable: is the window open, does the issuer and audience match.
 
 use chrono::{DateTime, Utc};
 
 use crate::domain::konto::ACCESS_TOKEN_LIFETIME;
 
-use super::{BenutzerId, CLOCK_SKEW, KontoFehler, SessionId, SigningKeyId};
+use super::{BenutzerId, CLOCK_SKEW, KontoFehler, SessionId};
 
 /// The claims an access token carries, already deserialized by the API.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,9 +17,6 @@ pub struct AccessTokenClaims {
     pub sub: BenutzerId,
     /// The Anmelde-Sitzung whose revoked state decides acceptance.
     pub sid: SessionId,
-    /// The key id the token was signed under. It must equal the `kid` stored on the
-    /// session row, and the signature must verify against that row's `public_key`.
-    pub kid: SigningKeyId,
     pub iss: String,
     pub aud: String,
     pub iat: DateTime<Utc>,
@@ -33,7 +29,6 @@ impl AccessTokenClaims {
     pub fn neu(
         benutzer_id: BenutzerId,
         session_id: SessionId,
-        kid: SigningKeyId,
         issuer: &str,
         audience: &str,
         jetzt: DateTime<Utc>,
@@ -41,7 +36,6 @@ impl AccessTokenClaims {
         Self {
             sub: benutzer_id,
             sid: session_id,
-            kid,
             iss: issuer.to_owned(),
             aud: audience.to_owned(),
             iat: jetzt,
@@ -95,7 +89,6 @@ mod tests {
         AccessTokenClaims {
             sub: BenutzerId(Uuid::nil()),
             sid: SessionId(Uuid::nil()),
-            kid: SigningKeyId::new("k1").unwrap(),
             iss: "logandaim.at".into(),
             aud: "logandaim-api".into(),
             iat,

@@ -37,16 +37,17 @@ on reuse.
 1. **Two tokens per `Anmelde-Sitzung`.**
    - **Access token:** a JWT (Ed25519), valid **24 hours** from issue, sent on every API request as
      `Authorization: Bearer <token>`. Claims: `sub` (Benutzer id), `sid` (Anmelde-Sitzung id),
-     `kid` (signing key id), `iss`, `aud`, `iat`, `exp`, `jti`. `iss` and `aud` come from
+     `iss`, `aud`, `iat`, `exp`, `jti`. `iss` and `aud` come from
      configuration and are verified on every request, so a token minted for another deployment or
      audience is refused even with a valid signature; they were added during implementation and are
      therefore not in the originally approved text.
    - **Refresh token:** an opaque random 256-bit value, valid **one month**, stored only as a salted
      hash. Accepted **exactly once**: a renewal spends it and returns a new pair.
-2. **The session row carries the state.** `sessions` holds the refresh-token hash, the
-   signing key that issued the access token, and a `revoked_at` column. Every authenticated
-   request does two checks beyond the signature: the JWT's `kid` must be a configured, active public
-   key, and the row named by `sid` must exist, be unexpired, and not be revoked. A valid signature
+2. **The session row carries the state.** `sessions` holds the refresh-token hash, the public key
+   that issued the access token, and a `revoked_at` column. Every authenticated request does two
+   checks beyond the signature: the signature must verify against the public key stored on the row,
+   and the row named by `sid` must exist, be unexpired, and not be revoked. There is no key table and
+   no key id, so a row is its own key directory. A valid signature
    over a revoked session is still **401**. This is how logout, password recovery, and
    `Benutzer-Löschung` take effect on the next request instead of after 24 hours (SPEC-konto rules
    6, 15; AC-9, AC-17).
@@ -177,12 +178,11 @@ or revoked session, 403 wrong authority, 409 state conflict, 429 throttled. Regi
 
 ### Token verification (sketch)
 
-Per authenticated request, in order: parse the `Authorization` header; verify the Ed25519 signature
-with the public key named by `kid` (unknown or retired `kid` → 401); check `exp`; load
-`sessions` by `sid` and require `revoked_at IS NULL` and `expires_at > now`; then load
-the `Benutzer` for `sub`. Cache the key set in memory; the session lookup is one indexed read and
-may be cached per session id for a few seconds if NFR-4 needs it, at the cost of that much
-revocation latency.
+Per authenticated request, in order: parse the `Authorization` header; pin `alg` to `EdDSA`; load
+`sessions` by `sid` (no row → 401); verify the Ed25519 signature over the ASCII `header.payload` with
+the `public_key` on that row; require `revoked_at IS NULL` and `expires_at > now`; then load the
+`Benutzer` for `sub`. The session lookup is one indexed read, and a token cannot outlive the key it
+was signed with because the key travels with the row.
 
 ### Crypto is domain code (sketch)
 
