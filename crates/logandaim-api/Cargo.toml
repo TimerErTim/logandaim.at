@@ -55,3 +55,10 @@ workspace = true
 [[bin]]
 name = "export_spec"
 required-features = ["openapi"]
+
+# The suite imports `logandaim_api::openapi_service`, which only exists with the feature;
+# without this the test target breaks `--no-default-features --all-targets`.
+[[test]]
+name = "e2e"
+path = "tests/e2e/main.rs"
+required-features = ["openapi"]
