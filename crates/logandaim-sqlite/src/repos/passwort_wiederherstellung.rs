@@ -113,7 +113,7 @@ impl PasswortWiederherstellungRepository for SQLitePasswortWiederherstellungRepo
     async fn find_by_hash(
         &self,
         hash: &SecretTokenHash,
-    ) -> RepositoryResult<Option<Versioned<PasswortWiederherstellung>>> {
+    ) -> RepositoryResult<Versioned<PasswortWiederherstellung>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
@@ -130,10 +130,10 @@ impl PasswortWiederherstellungRepository for SQLitePasswortWiederherstellungRepo
             .await
             .contextualize_with(libsql_error_to_persistence_error)?
         else {
-            return Ok(None);
+            return Err(RepositoryError::NotFound.into());
         };
 
-        wiederherstellung_from_row(&row).map(Some)
+        wiederherstellung_from_row(&row)
     }
 
     async fn find_by_konto(

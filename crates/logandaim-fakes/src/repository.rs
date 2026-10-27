@@ -337,13 +337,13 @@ impl SessionRepository for FakeSessionRepository {
     async fn find_by_refresh_hash(
         &self,
         hash: &SecretTokenHash,
-    ) -> RepositoryResult<Option<Versioned<Session>>> {
-        Ok(self
-            .datastore
+    ) -> RepositoryResult<Versioned<Session>> {
+        self.datastore
             .sessions()
             .values()
             .find(|session| session.refresh_token_hash() == hash)
-            .cloned())
+            .cloned()
+            .ok_or_else(|| Report::new(RepositoryError::NotFound))
     }
 
     async fn find_by_benutzer(
@@ -402,13 +402,13 @@ impl EmailBestätigungRepository for FakeEmailBestätigungRepository {
     async fn find_by_hash(
         &self,
         hash: &SecretTokenHash,
-    ) -> RepositoryResult<Option<Versioned<EmailBestätigung>>> {
-        Ok(self
-            .datastore
+    ) -> RepositoryResult<Versioned<EmailBestätigung>> {
+        self.datastore
             .bestätigungen()
             .values()
             .find(|bestätigung| bestätigung.token_hash() == hash)
-            .cloned())
+            .cloned()
+            .ok_or_else(|| Report::new(RepositoryError::NotFound))
     }
 
     async fn find_by_id(
@@ -493,13 +493,13 @@ impl PasswortWiederherstellungRepository for FakePasswortWiederherstellungReposi
     async fn find_by_hash(
         &self,
         hash: &SecretTokenHash,
-    ) -> RepositoryResult<Option<Versioned<PasswortWiederherstellung>>> {
-        Ok(self
-            .datastore
+    ) -> RepositoryResult<Versioned<PasswortWiederherstellung>> {
+        self.datastore
             .wiederherstellungen()
             .values()
             .find(|wiederherstellung| wiederherstellung.token_hash() == hash)
-            .cloned())
+            .cloned()
+            .ok_or_else(|| Report::new(RepositoryError::NotFound))
     }
 
     async fn find_by_konto(
@@ -551,20 +551,20 @@ impl FakeMailSender {
     }
 
     /// Every mail sent so far, oldest first.
-    pub fn gesendete(&self) -> Vec<Mail> {
+    pub fn sent(&self) -> Vec<Mail> {
         self.gesendet.lock().unwrap().clone()
     }
 
     /// The single mail sent so far. Panics on none or several, which is what a happy-path
     /// case actually asserts.
-    pub fn einzige(&self) -> Mail {
-        let gesendet = self.gesendete();
+    pub fn single(&self) -> Mail {
+        let gesendet = self.sent();
         assert_eq!(gesendet.len(), 1, "erwartet genau eine Mail");
         gesendet.into_iter().next().unwrap()
     }
 
     /// The most recently sent mail, which is the one a case just triggered.
-    pub fn letzte(&self) -> Mail {
+    pub fn latest(&self) -> Mail {
         self.gesendet
             .lock()
             .unwrap()
@@ -573,7 +573,7 @@ impl FakeMailSender {
             .expect("erwartet mindestens eine Mail")
     }
 
-    pub fn leeren(&self) {
+    pub fn clear(&self) {
         self.gesendet.lock().unwrap().clear();
     }
 }

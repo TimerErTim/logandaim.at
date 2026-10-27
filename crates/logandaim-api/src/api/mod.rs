@@ -18,7 +18,7 @@ use std::sync::Arc;
 use error_stack::Report;
 use logandaim_core::{
     App, ResultReport,
-    application::{AccessError, AuthContext},
+    application::AuthContext,
     ports::ClientKey,
     service::{
         Abmeldung, AbmeldungFehler, Anmeldung, AnmeldungFehler, BenutzerAnzeigen,
@@ -26,47 +26,15 @@ use logandaim_core::{
         ErneuerungFehler, PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen,
         PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
         RegistrierungStarten, RegistrierungStartenFehler, SchussRegistrieren,
-        SchussRegistrierenFehler, SessionAusgestellt, SessionPrüfen, WertungBerechnen,
-        WertungFehler,
+        SchussRegistrierenFehler, SessionAusgestellt, WertungBerechnen, WertungFehler,
     },
 };
 
 pub mod requests;
 
-use crate::{
-    auth::jwt,
-    schema::{
-        AnmeldeAntwort, BenutzerAntwort, SchemaBenutzer, Schuss, Wertung,
-        schema_schuss_from_domain, schema_wertung_from_domain,
-    },
+use crate::schema::{
+    Benutzer, Schuss, Wertung, schema_schuss_from_domain, schema_wertung_from_domain,
 };
-
-/// One issued session: the body the client receives, and the refresh token that must
-/// leave as a cookie instead.
-///
-/// The two are deliberately separate values. `antwort` holds the access token only, so no
-/// code path can accidentally serialise a refresh token into a JSON body or a log line.
-pub struct AusgestellteSession {
-    pub antwort: AnmeldeAntwort,
-    pub refresh_token: String,
-}
-
-impl AusgestellteSession {
-    fn aus(
-        ausgestellt: SessionAusgestellt,
-        signing_key: &dyn logandaim_core::ports::Signing,
-    ) -> Self {
-        let access_token =
-            jwt::encode(&ausgestellt.claims, signing_key).expect("the JOSE header serialises");
-        Self {
-            antwort: AnmeldeAntwort {
-                access_token: access_token.as_str().to_owned(),
-                benutzer: SchemaBenutzer::from(ausgestellt.benutzer),
-            },
-            refresh_token: ausgestellt.refresh_token.base64url().as_str().to_owned(),
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct LogandaimAppApi {
@@ -80,14 +48,6 @@ impl LogandaimAppApi {
 
     pub fn inner_app(&self) -> Arc<App> {
         self.app.clone()
-    }
-
-    /// The configured signing key, for the edge that assembles a JOSE envelope.
-    ///
-    /// Verification does **not** come from here: a token is checked against the public key
-    /// stored on its session row, inside `SessionPrüfen`.
-    pub fn signing_key(&self) -> &dyn logandaim_core::ports::Signing {
-        self.app.signing()
     }
 
     // ---------------------------------------------------------------- Schuss slice
@@ -114,50 +74,6 @@ impl LogandaimAppApi {
         Ok(schema_wertung_from_domain(ergebnis))
     }
 
-    // ---------------------------------------------------------------- Auth context
-
-    /// Turn an optional `Authorization` header into the identity to execute as.
-    ///
-    /// Absent header → [`AuthContext::Anonymous`]. A present but unverifiable one is a
-    /// refusal, not anonymity: silently downgrading a broken token to anonymous would make
-    /// a protected route answer "not logged in" instead of "your token is bad".
-    pub async fn auth_context(
-        &self,
-        authorization: Option<&str>,
-    ) -> ResultReport<AuthContext, AccessError> {
-        let Some(wert) = authorization else {
-            return Ok(AuthContext::Anonymous);
-        };
-        let token =
-            jwt::bearer_token(wert).ok_or_else(|| Report::new(AccessError::NotAuthenticated))?;
-
-        let gelesen = jwt::decode(token)?;
-        self.app
-            .execute(
-                AuthContext::Anonymous,
-                SessionPrüfen {
-                    claims: gelesen.claims,
-                    signed_message: gelesen.signed_message,
-                    signature: gelesen.signature,
-                },
-            )
-            .await
-            .map_err(|_| Report::new(AccessError::NotAuthenticated))
-    }
-
-    /// The identity of the caller, or a refusal. This is what a protected route calls.
-    pub async fn require_authenticated(
-        &self,
-        authorization: Option<&str>,
-    ) -> ResultReport<AuthContext, AccessError> {
-        let auth = self.auth_context(authorization).await?;
-        if auth.is_authenticated() {
-            Ok(auth)
-        } else {
-            Err(Report::new(AccessError::NotAuthenticated))
-        }
-    }
-
     // ---------------------------------------------------------------- Registration
 
     /// Step 1. Always answers `Ok`: a taken address is not disclosed (AC-2).
@@ -175,10 +91,10 @@ impl LogandaimAppApi {
         &self,
         anfrage: requests::RegistrierungAbschlussRequest,
         client_key: ClientKey,
-    ) -> ResultReport<AusgestellteSession, RegistrierungAbschliessenFehler> {
+    ) -> ResultReport<SessionAusgestellt, RegistrierungAbschliessenFehler> {
         let use_case: RegistrierungAbschließen = anfrage.in_use_case(client_key)?;
         let ausgestellt = self.app.execute(AuthContext::Anonymous, use_case).await?;
-        Ok(AusgestellteSession::aus(ausgestellt, self.signing_key()))
+        Ok(ausgestellt)
     }
 
     // ---------------------------------------------------------------- Login
@@ -187,18 +103,19 @@ impl LogandaimAppApi {
         &self,
         anfrage: requests::AnmeldungRequest,
         client_key: ClientKey,
-    ) -> ResultReport<AusgestellteSession, AnmeldungFehler> {
+    ) -> ResultReport<SessionAusgestellt, AnmeldungFehler> {
         let use_case: Anmeldung = anfrage.in_use_case(client_key)?;
         let ausgestellt = self.app.execute(AuthContext::Anonymous, use_case).await?;
-        Ok(AusgestellteSession::aus(ausgestellt, self.signing_key()))
+        Ok(ausgestellt)
     }
 
+    // TODO: serializable dto for session ausgestellt (as per api standard)
     /// Rotate the refresh token. The presented one is spent; a replay ends the family.
-    pub async fn erneuerung(
+    pub async fn session_erneuern(
         &self,
         refresh_token: String,
         client_key: ClientKey,
-    ) -> ResultReport<AusgestellteSession, ErneuerungFehler> {
+    ) -> ResultReport<SessionAusgestellt, ErneuerungFehler> {
         let refresh_token = logandaim_core::domain::konto::RefreshToken::try_from(refresh_token)
             .map_err(|_| Report::new(ErneuerungFehler::SessionUngültig))?;
 
@@ -212,19 +129,7 @@ impl LogandaimAppApi {
                 },
             )
             .await?;
-        let access_token = jwt::encode(&ausgestellt.claims, self.signing_key())
-            .expect("the JOSE header serialises");
-        Ok(AusgestellteSession {
-            antwort: AnmeldeAntwort {
-                access_token: access_token.as_str().to_owned(),
-                // A renewal answers no Benutzer: the client already has it, and asking
-                // for it would make renewal depend on a read it does not need.
-                benutzer: SchemaBenutzer {
-                    id: ausgestellt.claims.sub.0,
-                },
-            },
-            refresh_token: ausgestellt.refresh_token.base64url().as_str().to_owned(),
-        })
+        Ok(ausgestellt)
     }
 
     pub async fn abmelden(&self, auth: AuthContext) -> ResultReport<(), AbmeldungFehler> {
@@ -258,7 +163,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         benutzer_id: Option<uuid::Uuid>,
-    ) -> ResultReport<BenutzerAntwort, BenutzerAnzeigenFehler> {
+    ) -> ResultReport<Benutzer, BenutzerAnzeigenFehler> {
         let ansicht = self
             .app
             .execute(
@@ -269,10 +174,7 @@ impl LogandaimAppApi {
             )
             .await?;
 
-        Ok(BenutzerAntwort {
-            id: ansicht.id().0,
-            e_mail_adresse: ansicht.email.into(),
-        })
+        Ok((ansicht.benutzer, ansicht.email).into())
     }
 
     pub async fn benutzer_löschen(

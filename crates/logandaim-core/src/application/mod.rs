@@ -60,12 +60,6 @@ pub struct App {
 pub use app_builder::{SetClock, SetUowProvider};
 
 impl App {
-    /// The configured signing key port, so the HTTP edge can assemble and verify a JOSE
-    /// envelope around the bytes core signs.
-    pub fn signing(&self) -> &dyn Signing {
-        self.signing.as_ref()
-    }
-
     #[instrument(
         skip(self, use_case),
         fields(use_case = std::any::type_name::<U>(), auth = ?auth),
@@ -87,7 +81,6 @@ impl App {
     ) -> ResultReport<O, E>
     where
         for<'a> F: AsyncFnOnce(ExecutionContext<'a>) -> ResultReport<O, E> + Send,
-        E: Send,
     {
         f(self.new_execution_context(auth)).await
     }
@@ -103,7 +96,7 @@ impl App {
                 pdf_renderer: Arc::clone(&self.pdf_renderer),
                 throttle: Arc::clone(&self.throttle),
                 mail_sender: Arc::clone(&self.mail_sender),
-                konto: self.konto.clone(),
+                identity_provider_conf: self.konto.clone(),
             },
         )
     }

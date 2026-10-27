@@ -129,7 +129,7 @@ impl E2eHarness {
 
     /// The token of the most recently mailed link.
     pub fn letztes_token(&self) -> String {
-        let mail = self.mail.letzte();
+        let mail = self.mail.latest();
         token_aus(&mail.text(FRONTEND_BASIS_URL))
     }
 }

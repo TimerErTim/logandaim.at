@@ -130,7 +130,7 @@ impl_instrumented_repo!(
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
         fn find_by_id(&self, id: SessionId) -> RepositoryResult<Versioned<Session>>;
         #[instrument(skip(self, hash), level = "trace", err(Debug))]
-        fn find_by_refresh_hash(&self, hash: &SecretTokenHash) -> RepositoryResult<Option<Versioned<Session>>>;
+        fn find_by_refresh_hash(&self, hash: &SecretTokenHash) -> RepositoryResult<Versioned<Session>>;
         #[instrument(skip(self, session), level = "debug", err(Debug))]
         fn update(&self, session: &mut Versioned<Session>) -> RepositoryResult<()>;
         #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
@@ -150,7 +150,7 @@ impl_instrumented_repo!(
         #[instrument(skip(self, bestätigung), level = "debug", err(Debug))]
         fn create(&self, bestätigung: NeueBestätigung) -> RepositoryResult<Versioned<EmailBestätigung>>;
         #[instrument(skip(self, hash), level = "trace", err(Debug))]
-        fn find_by_hash(&self, hash: &SecretTokenHash) -> RepositoryResult<Option<Versioned<EmailBestätigung>>>;
+        fn find_by_hash(&self, hash: &SecretTokenHash) -> RepositoryResult<Versioned<EmailBestätigung>>;
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
         fn find_by_id(&self, id: BestätigungId) -> RepositoryResult<Versioned<EmailBestätigung>>;
         #[instrument(skip(self, email), fields(email = email.as_ref()), level = "trace", err(Debug))]
@@ -174,7 +174,7 @@ impl_instrumented_repo!(
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
         fn find_by_id(&self, id: PasswortWiederherstellungId) -> RepositoryResult<Versioned<PasswortWiederherstellung>>;
         #[instrument(skip(self, hash), level = "trace", err(Debug))]
-        fn find_by_hash(&self, hash: &SecretTokenHash) -> RepositoryResult<Option<Versioned<PasswortWiederherstellung>>>;
+        fn find_by_hash(&self, hash: &SecretTokenHash) -> RepositoryResult<Versioned<PasswortWiederherstellung>>;
         #[instrument(skip(self, konto_id), fields(konto_id = ?konto_id), level = "trace", err(Debug))]
         fn find_by_konto(&self, konto_id: KontoId) -> RepositoryResult<Vec<Versioned<PasswortWiederherstellung>>>;
         #[instrument(skip(self, wiederherstellung), level = "debug", err(Debug))]

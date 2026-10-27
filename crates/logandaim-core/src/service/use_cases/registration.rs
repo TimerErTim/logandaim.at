@@ -14,7 +14,7 @@ use crate::{
             SecretToken, hash_password,
         },
     },
-    ports::{ClientKey, Mail, ThrottleAction, not_found_as_none},
+    ports::{ClientKey, Mail, RepositoryError, ThrottleAction},
     service::{SessionAusgestellt, UseCase},
 };
 
@@ -64,18 +64,20 @@ impl UseCase<()> for RegistrierungStarten {
             .await
             .change_context(RegistrierungStartenFehler::KontoPrüfen)?;
 
-        let vorhandenes_konto = not_found_as_none(uow.konten().find_by_email(&self.email).await)
-            .change_context(RegistrierungStartenFehler::KontoPrüfen);
-
-        let vorhandenes_konto = uow
-            .finish(vorhandenes_konto, RegistrierungStartenFehler::KontoPrüfen)
+        let konto = uow.konten().find_by_email(&self.email).await;
+        uow.finish(Ok(()), RegistrierungStartenFehler::KontoPrüfen)
             .await?;
-
-        if vorhandenes_konto.is_some() {
-            // Taken: same answer as free, and the owner is not mailed either (AC-2).
-            tracing::info!("registrierung gestartet für eine bereits vergebene adresse");
-            return Ok(());
-        }
+        match konto {
+            Ok(_) => {
+                // Taken: same answer as free, and the owner is not mailed either (AC-2).
+                tracing::info!("registrierung gestartet für eine bereits vergebene adresse");
+                return Ok(());
+            }
+            Err(fehler) if !matches!(fehler.current_context(), RepositoryError::NotFound) => {
+                return Err(fehler).change_context(RegistrierungStartenFehler::KontoPrüfen);
+            }
+            _ => {}
+        };
 
         let token =
             SecretToken::random().change_context(RegistrierungStartenFehler::TokenErzeugen)?;
@@ -202,17 +204,21 @@ impl UseCase<SessionAusgestellt> for RegistrierungAbschließen {
             .change_context(RegistrierungAbschliessenFehler::BestätigungLaden)?;
 
         let ergebnis = async {
-            let bestätigung = uow
+            let bestätigung = match uow
                 .bestätigungen()
                 .find_by_hash(&(&self.token).into())
                 .await
-                .map_err(IntoReport::into_report)
-                .change_context(RegistrierungAbschliessenFehler::BestätigungLaden)?;
-
-            let Some(bestätigung) = bestätigung else {
-                return Err(Report::new(
-                    RegistrierungAbschliessenFehler::UngültigeAnfrage,
-                ));
+            {
+                Ok(bestätigung) => bestätigung,
+                Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {
+                    return Err(Report::new(
+                        RegistrierungAbschliessenFehler::UngültigeAnfrage,
+                    ));
+                }
+                Err(fehler) => {
+                    return Err(fehler)
+                        .change_context(RegistrierungAbschliessenFehler::BestätigungLaden);
+                }
             };
 
             if !bestätigung.ist_gültig(jetzt) {
@@ -232,14 +238,19 @@ impl UseCase<SessionAusgestellt> for RegistrierungAbschließen {
                 .change_context(RegistrierungAbschliessenFehler::BestätigungSpeichern)?;
 
             let email = bestätigung.email().clone();
-            let belegt = not_found_as_none(uow.konten().find_by_email(&email).await)
-                .change_context(RegistrierungAbschliessenFehler::KontoAnlegen)?;
-            if belegt.is_some() {
-                // The address gained a Konto while this token was outstanding (rule 4).
-                return Err(Report::new(
-                    RegistrierungAbschliessenFehler::UngültigeAnfrage,
-                ));
-            }
+            // The address gained a Konto while this token was outstanding (rule 4).
+            match uow.konten().find_by_email(&email).await {
+                Ok(_) => {
+                    return Err(Report::new(
+                        RegistrierungAbschliessenFehler::UngültigeAnfrage,
+                    ));
+                }
+                Err(fehler) if !matches!(fehler.current_context(), RepositoryError::NotFound) => {
+                    return Err(fehler)
+                        .change_context(RegistrierungAbschliessenFehler::KontoAnlegen);
+                }
+                _ => {}
+            };
 
             let benutzer = uow
                 .benutzer()

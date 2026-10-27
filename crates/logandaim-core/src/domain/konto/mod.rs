@@ -47,7 +47,7 @@ mod token;
 
 pub use benutzer::{Benutzer, BenutzerId, NeuerBenutzer, Rolle};
 pub use bestaetigung::{BestätigungId, EmailBestätigung, NeueBestätigung};
-pub use claims::AccessTokenClaims;
+pub use claims::{AccessTokenClaims, TokenId};
 pub use konto::{Konto, KontoId, NeuesKonto};
 pub use passwort::{
     HashedPasswort, KlartextPasswort, dummy_verify, hash_password, verify_password,

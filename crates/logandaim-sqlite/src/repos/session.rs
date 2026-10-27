@@ -119,7 +119,7 @@ impl SessionRepository for SQLiteSessionRepository {
     async fn find_by_refresh_hash(
         &self,
         hash: &SecretTokenHash,
-    ) -> RepositoryResult<Option<Versioned<Session>>> {
+    ) -> RepositoryResult<Versioned<Session>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
@@ -136,10 +136,10 @@ impl SessionRepository for SQLiteSessionRepository {
             .await
             .contextualize_with(libsql_error_to_persistence_error)?
         else {
-            return Ok(None);
+            return Err(RepositoryError::NotFound.into());
         };
 
-        session_from_row(&row).map(Some)
+        session_from_row(&row)
     }
 
     /// Full-row write-back with an in-place version bump. A rotation or revocation is a

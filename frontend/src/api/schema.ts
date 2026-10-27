@@ -178,7 +178,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["OkAntwort"];
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
                     };
                 };
                 500: {
@@ -240,7 +240,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["AnmeldeAntwort"];
+                        "application/json; charset=utf-8": components["schemas"]["SessionResponseContent"];
                     };
                 };
                 500: {
@@ -302,7 +302,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["AnmeldeAntwort"];
+                        "application/json; charset=utf-8": components["schemas"]["SessionResponseContent"];
                     };
                 };
                 500: {
@@ -332,7 +332,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/anmeldung/erneuerung": {
+    "/session/erneuern": {
         parameters: {
             query?: never;
             header?: never;
@@ -363,7 +363,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["AnmeldeAntwort"];
+                        "application/json; charset=utf-8": components["schemas"]["SessionResponseContent"];
                     };
                 };
                 500: {
@@ -393,7 +393,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/anmeldung/abmeldung": {
+    "/session/abmelden": {
         parameters: {
             query?: never;
             header?: never;
@@ -420,7 +420,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["OkAntwort"];
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
                     };
                 };
                 500: {
@@ -450,7 +450,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/passwort-vergessen": {
+    "/passwort/vergessen": {
         parameters: {
             query?: never;
             header?: never;
@@ -481,7 +481,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["OkAntwort"];
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
                     };
                 };
                 500: {
@@ -510,7 +510,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/passwort-wiederherstellen": {
+    "/passwort/wiederherstellen": {
         parameters: {
             query?: never;
             header?: never;
@@ -540,7 +540,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["OkAntwort"];
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
                     };
                 };
                 500: {
@@ -600,7 +600,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["BenutzerAntwort"];
+                        "application/json; charset=utf-8": components["schemas"]["Benutzer"];
                     };
                 };
                 500: {
@@ -663,7 +663,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["OkAntwort"];
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
                     };
                 };
                 500: {
@@ -697,18 +697,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /**
-         * AnmeldeAntwort
-         * @description What registration step 2, login, and renewal hand back.
-         *
-         *     The access token is in the body; the refresh token is *not* — it leaves as the
-         *     `__Host-` cookie, so a script that can read a JSON response still cannot read it, and
-         *     nothing in the body is ever stored by a proxy (`Cache-Control: no-store`).
-         */
-        AnmeldeAntwort: {
-            accessToken: string;
-            benutzer: components["schemas"]["SchemaBenutzer"];
-        };
         /** AnmeldungRequest */
         AnmeldungRequest: {
             /**
@@ -719,10 +707,10 @@ export interface components {
             passwort: string;
         };
         /**
-         * BenutzerAntwort
+         * Benutzer
          * @description The logged-in Benutzer as `GET /benutzer` answers it.
          */
-        BenutzerAntwort: {
+        Benutzer: {
             /** Format: uuid */
             id: string;
             /**
@@ -741,13 +729,16 @@ export interface components {
             "best\u00E4tigt": boolean;
         };
         /**
-         * OkAntwort
+         * Ok
          * @description Acknowledgement of a request that has nothing to return.
          *
          *     A bare `204` would be indistinguishable from a proxy's empty answer, so the explicit
          *     body is worth the two bytes.
+         * @example {
+         *       "ok": true
+         *     }
          */
-        OkAntwort: {
+        Ok: {
             ok: boolean;
         };
         /** PasswortVergessenRequest */
@@ -783,15 +774,6 @@ export interface components {
             eMailAdresse: string;
         };
         /**
-         * SchemaBenutzer
-         * @description One Benutzer. It carries no address: the `Konto` owns the address, and only the
-         *     caller's own `Konto` is ever disclosed (see [`BenutzerAntwort`]).
-         */
-        SchemaBenutzer: {
-            /** Format: uuid */
-            id: string;
-        };
-        /**
          * Schuss
          * @description One logged arrow, translated from the domain.
          */
@@ -815,6 +797,10 @@ export interface components {
             /** Format: uint64 */
             pfeil: number;
             wertungszone: components["schemas"]["Wertungszone"];
+        };
+        /** SessionResponseContent */
+        SessionResponseContent: {
+            accessToken: string;
         };
         /** StructuredError */
         StructuredError: {

@@ -13,7 +13,7 @@ use crate::{
         EmailAdresse,
         konto::{KlartextPasswort, NeuePasswortWiederherstellung, SecretToken, hash_password},
     },
-    ports::{ClientKey, Mail, ThrottleAction, not_found_as_none},
+    ports::{ClientKey, Mail, RepositoryError, ThrottleAction},
     service::UseCase,
 };
 
@@ -64,11 +64,14 @@ impl UseCase<()> for PasswortVergessen {
             .change_context(PasswortVergessenFehler::KontoLaden)?;
 
         let ergebnis = async {
-            let konto = not_found_as_none(uow.konten().find_by_email(&self.email).await)
-                .change_context(PasswortVergessenFehler::KontoLaden)?;
-
-            let Some(konto) = konto else {
-                return Ok::<_, Report<PasswortVergessenFehler>>(false);
+            let konto = match uow.konten().find_by_email(&self.email).await {
+                Ok(konto) => konto,
+                Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {
+                    return Ok::<_, Report<PasswortVergessenFehler>>(false);
+                }
+                Err(fehler) => {
+                    return Err(fehler).change_context(PasswortVergessenFehler::KontoLaden);
+                }
             };
 
             // One usable link per Konto: spend the outstanding ones first (rule 7).
@@ -180,17 +183,21 @@ impl UseCase<()> for PasswortWiederherstellen {
             .change_context(PasswortWiederherstellenFehler::WiederherstellungLaden)?;
 
         let ergebnis = async {
-            let wiederherstellung = uow
+            let wiederherstellung = match uow
                 .wiederherstellungen()
                 .find_by_hash(&(&self.token).into())
                 .await
-                .map_err(IntoReport::into_report)
-                .change_context(PasswortWiederherstellenFehler::WiederherstellungLaden)?;
-
-            let Some(wiederherstellung) = wiederherstellung else {
-                return Err(Report::new(
-                    PasswortWiederherstellenFehler::UngültigeAnfrage,
-                ));
+            {
+                Ok(wiederherstellung) => wiederherstellung,
+                Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {
+                    return Err(Report::new(
+                        PasswortWiederherstellenFehler::UngültigeAnfrage,
+                    ));
+                }
+                Err(fehler) => {
+                    return Err(fehler)
+                        .change_context(PasswortWiederherstellenFehler::WiederherstellungLaden);
+                }
             };
 
             if !wiederherstellung.ist_gültig(jetzt) {

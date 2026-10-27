@@ -84,7 +84,7 @@ impl EmailBestätigungRepository for SQLiteEmailBestätigungRepository {
     async fn find_by_hash(
         &self,
         hash: &SecretTokenHash,
-    ) -> RepositoryResult<Option<Versioned<EmailBestätigung>>> {
+    ) -> RepositoryResult<Versioned<EmailBestätigung>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
@@ -101,10 +101,10 @@ impl EmailBestätigungRepository for SQLiteEmailBestätigungRepository {
             .await
             .contextualize_with(libsql_error_to_persistence_error)?
         else {
-            return Ok(None);
+            return Err(RepositoryError::NotFound.into());
         };
 
-        bestätigung_from_row(&row).map(Some)
+        bestätigung_from_row(&row)
     }
 
     async fn find_by_id(

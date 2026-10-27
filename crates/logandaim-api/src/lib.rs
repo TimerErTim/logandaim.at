@@ -1,11 +1,10 @@
 pub mod api;
-pub mod auth;
 pub mod schema;
 
 #[cfg(feature = "openapi")]
-mod spec;
+mod http;
 #[cfg(feature = "openapi")]
-pub use spec::*;
+pub use http::*;
 pub mod errors;
 
 pub use api::{LogandaimAppApi, requests};

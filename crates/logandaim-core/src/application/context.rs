@@ -31,7 +31,7 @@ pub struct ExecutionContext<'a> {
     pdf_renderer: Arc<dyn PdfRenderer>,
     throttle: Arc<dyn Throttle>,
     mail_sender: Arc<dyn MailSender>,
-    konto: IdentityProviderConfiguration,
+    identity_provider_conf: IdentityProviderConfiguration,
 }
 
 /// Everything a context carries besides its UoW source, so `root`, `nested`, and `sub`
@@ -44,7 +44,7 @@ pub(crate) struct ContextPorts {
     pub(crate) pdf_renderer: Arc<dyn PdfRenderer>,
     pub(crate) throttle: Arc<dyn Throttle>,
     pub(crate) mail_sender: Arc<dyn MailSender>,
-    pub(crate) konto: IdentityProviderConfiguration,
+    pub(crate) identity_provider_conf: IdentityProviderConfiguration,
 }
 
 impl<'a> ExecutionContext<'a> {
@@ -61,7 +61,7 @@ impl<'a> ExecutionContext<'a> {
             pdf_renderer: InstrumentedPdfRenderer::new(ports.pdf_renderer),
             throttle: InstrumentedThrottle::new(ports.throttle),
             mail_sender: InstrumentedMailSender::new(ports.mail_sender),
-            konto: ports.konto,
+            identity_provider_conf: ports.identity_provider_conf,
         }
     }
 
@@ -75,7 +75,7 @@ impl<'a> ExecutionContext<'a> {
             pdf_renderer: InstrumentedPdfRenderer::new(ports.pdf_renderer),
             throttle: InstrumentedThrottle::new(ports.throttle),
             mail_sender: InstrumentedMailSender::new(ports.mail_sender),
-            konto: ports.konto,
+            identity_provider_conf: ports.identity_provider_conf,
         }
     }
 
@@ -102,8 +102,8 @@ impl<'a> ExecutionContext<'a> {
     }
 
     /// Mailed link targets and token identity of this deployment.
-    pub fn konto_konfiguration(&self) -> &IdentityProviderConfiguration {
-        &self.konto
+    pub fn identity_provider_conf(&self) -> &IdentityProviderConfiguration {
+        &self.identity_provider_conf
     }
 
     /// Who is executing this use case. Injected by the API layer, never by a use case.
@@ -130,7 +130,7 @@ impl<'a> ExecutionContext<'a> {
                 pdf_renderer: Arc::clone(&self.pdf_renderer),
                 throttle: Arc::clone(&self.throttle),
                 mail_sender: Arc::clone(&self.mail_sender),
-                konto: self.konto.clone(),
+                identity_provider_conf: self.identity_provider_conf.clone(),
             },
         )
     }

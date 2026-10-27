@@ -15,18 +15,11 @@ use crate::{
         Signature, SigningKeypair,
     },
     ports::{ClientKey, RepositoryError, ThrottleAction},
-    service::UseCase,
+    service::{SessionAusgestellt, UseCase},
     uow::UnitOfWork,
 };
 
 use super::claims_for_session;
-
-/// A renewed token pair: the API encodes `claims`, the client gets `refresh_token`.
-#[derive(Debug, Clone)]
-pub struct ErneuerungAusgestellt {
-    pub refresh_token: RefreshToken,
-    pub claims: AccessTokenClaims,
-}
 
 /// Every way `Erneuerung` may refuse.
 #[derive(Debug, thiserror::Error)]
@@ -39,6 +32,8 @@ pub enum ErneuerungFehler {
     SessionLaden,
     #[error("die Sitzung konnte nicht gespeichert werden")]
     SessionSpeichern,
+    #[error("der Benutzer konnte nicht geladen werden")]
+    BenutzerLaden,
     #[error("das Refresh-Token konnte nicht erzeugt werden")]
     TokenErzeugen,
 }
@@ -54,13 +49,10 @@ pub struct Erneuerung {
 }
 
 #[async_trait]
-impl UseCase<ErneuerungAusgestellt> for Erneuerung {
+impl UseCase<SessionAusgestellt> for Erneuerung {
     type Error = Report<ErneuerungFehler>;
 
-    async fn perform(
-        self,
-        ctx: ExecutionContext<'_>,
-    ) -> Result<ErneuerungAusgestellt, Self::Error> {
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SessionAusgestellt, Self::Error> {
         let jetzt = ctx.clock().now();
         ctx.throttle()
             .check_and_count(&self.client_key, ThrottleAction::Erneuerung, jetzt)
@@ -73,18 +65,26 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
             .change_context(ErneuerungFehler::SessionLaden)?;
 
         let ergebnis = async {
-            let session = uow
+            let mut session = match uow
                 .sessions()
                 .find_by_refresh_hash(&self.refresh_token.hash())
                 .await
-                .map_err(IntoReport::into_report)
-                .change_context(ErneuerungFehler::SessionLaden)?;
-
-            let Some(mut session) = session else {
-                return Err(Report::new(ErneuerungFehler::SessionUngültig));
+            {
+                Ok(session) => session,
+                Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {
+                    return Err(Report::new(ErneuerungFehler::SessionUngültig));
+                }
+                Err(fehler) => {
+                    return Err(fehler).change_context(ErneuerungFehler::SessionLaden);
+                }
             };
 
             let benutzer_id = session.benutzer_id();
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .change_context(ErneuerungFehler::BenutzerLaden)?;
             let live = match RenewableSession::try_from(session.cloned_data()) {
                 Ok(live) => live,
                 Err(SessionNotRenewable::Spent) => {
@@ -121,10 +121,11 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                 .sessions()
                 .create(folge)
                 .await
-                .map_err(IntoReport::into_report)
                 .change_context(ErneuerungFehler::SessionSpeichern)?;
 
-            Ok(Erneuerungsausgang::Neu(ErneuerungAusgestellt {
+            Ok(Erneuerungsausgang::Ok(SessionAusgestellt {
+                session_id: folge.id(),
+                benutzer: benutzer.into_data(),
                 refresh_token: folge_refresh,
                 claims: claims_for_session(&ctx, benutzer_id, folge.id(), jetzt),
             }))
@@ -135,7 +136,7 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
             .finish(ergebnis, ErneuerungFehler::SessionSpeichern)
             .await?
         {
-            Erneuerungsausgang::Neu(ausgestellt) => Ok(ausgestellt),
+            Erneuerungsausgang::Ok(ausgestellt) => Ok(ausgestellt),
             Erneuerungsausgang::Wiederholung => Err(Report::new(ErneuerungFehler::SessionUngültig)),
         }
     }
@@ -143,7 +144,7 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
 
 /// Whether a renewal produced a successor session or detected a replay.
 enum Erneuerungsausgang {
-    Neu(ErneuerungAusgestellt),
+    Ok(SessionAusgestellt),
     Wiederholung,
 }
 
@@ -241,7 +242,7 @@ impl UseCase<AuthContext> for SessionPrüfen {
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<AuthContext, Self::Error> {
         let jetzt = ctx.clock().now();
-        let konfiguration = ctx.konto_konfiguration();
+        let konfiguration = ctx.identity_provider_conf();
 
         self.claims
             .prüfe_herkunft(&konfiguration.issuer, &konfiguration.audience)

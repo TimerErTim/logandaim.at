@@ -10,6 +10,9 @@ use crate::domain::konto::ACCESS_TOKEN_LIFETIME;
 
 use super::{BenutzerId, CLOCK_SKEW, KontoFehler, SessionId};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TokenId(pub uuid::Uuid);
+
 /// The claims an access token carries, already deserialized by the API.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AccessTokenClaims {
@@ -22,7 +25,7 @@ pub struct AccessTokenClaims {
     pub iat: DateTime<Utc>,
     pub exp: DateTime<Utc>,
     /// Unique per token, so a replayed envelope is distinguishable in logs.
-    pub jti: String,
+    pub jti: TokenId,
 }
 
 impl AccessTokenClaims {
@@ -32,6 +35,7 @@ impl AccessTokenClaims {
         issuer: &str,
         audience: &str,
         jetzt: DateTime<Utc>,
+        token_id: TokenId,
     ) -> Self {
         Self {
             sub: benutzer_id,
@@ -40,7 +44,7 @@ impl AccessTokenClaims {
             aud: audience.to_owned(),
             iat: jetzt,
             exp: jetzt + ACCESS_TOKEN_LIFETIME,
-            jti: uuid::Uuid::new_v4().to_string(),
+            jti: token_id,
         }
     }
 
@@ -93,7 +97,7 @@ mod tests {
             aud: "logandaim-api".into(),
             iat,
             exp,
-            jti: "jti".into(),
+            jti: TokenId(Uuid::nil()),
         }
     }
 

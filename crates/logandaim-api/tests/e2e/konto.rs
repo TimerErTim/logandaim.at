@@ -51,11 +51,9 @@ async fn registriere(harness: &E2eHarness, email: &str) -> (String, String, Stri
         .as_str()
         .expect("accessToken im Body")
         .to_owned();
-    let benutzer_id = body["benutzer"]["id"]
-        .as_str()
-        .expect("benutzer.id im Body")
-        .to_owned();
     let cookie = refresh_cookie(&cookie.expect("Set-Cookie beim Abschluss"));
+    let (_, benutzer) = harness.client.get_json_auth("/api/benutzer", &access).await;
+    let benutzer_id = benutzer["id"].as_str().expect("id im Body").to_owned();
     (access, cookie, benutzer_id, email.to_owned())
 }
 
@@ -73,7 +71,7 @@ async fn ac1_registrierung_startet_ohne_benutzer_und_mailt_genau_einmal() {
         )
         .await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(harness.mail.gesendete().len(), 1);
+    assert_eq!(harness.mail.sent().len(), 1);
 
     // AC-20: no Benutzer exists before step 2, so an unknown address cannot log in.
     let (status, _) = harness
@@ -90,7 +88,7 @@ async fn ac1_registrierung_startet_ohne_benutzer_und_mailt_genau_einmal() {
 async fn ac2_vergebene_adresse_antwortet_gleich_und_mailt_nicht() {
     let harness = E2eHarness::new().await;
     registriere(&harness, "anna@muster.at").await;
-    harness.mail.leeren();
+    harness.mail.clear();
 
     let (frei_status, frei_body) = harness
         .client
@@ -110,9 +108,9 @@ async fn ac2_vergebene_adresse_antwortet_gleich_und_mailt_nicht() {
     assert_eq!(frei_status, belegt_status, "derselbe Status");
     assert_eq!(frei_body, belegt_body, "derselbe Body");
     // Only the free address was mailed.
-    assert_eq!(harness.mail.gesendete().len(), 1);
+    assert_eq!(harness.mail.sent().len(), 1);
     assert_eq!(
-        harness.mail.letzte().empfänger.as_ref(),
+        harness.mail.latest().empfänger.as_ref(),
         "neu@muster.at",
         "die vergebene Adresse bekommt keine Mail"
     );
@@ -244,7 +242,7 @@ async fn ac7_erneuerung_rotiert_und_das_alte_refresh_token_ist_verbraucht() {
 
     let (status, body, neuer_cookie) = harness
         .client
-        .post_cookie("/api/anmeldung/erneuerung", Some(&erster_cookie))
+        .post_cookie("/api/session/erneuern", Some(&erster_cookie))
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     let neuer_cookie = refresh_cookie(&neuer_cookie.expect("Set-Cookie bei Erneuerung"));
@@ -254,13 +252,13 @@ async fn ac7_erneuerung_rotiert_und_das_alte_refresh_token_ist_verbraucht() {
     // The spent token is refused, and so is the successor (the family is ended, rule 12).
     let (status, _, _) = harness
         .client
-        .post_cookie("/api/anmeldung/erneuerung", Some(&erster_cookie))
+        .post_cookie("/api/session/erneuern", Some(&erster_cookie))
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "Wiederverwendung");
 
     let (status, _, _) = harness
         .client
-        .post_cookie("/api/anmeldung/erneuerung", Some(&neuer_cookie))
+        .post_cookie("/api/session/erneuern", Some(&neuer_cookie))
         .await;
     assert_eq!(
         status,
@@ -326,7 +324,7 @@ async fn ac7a_access_token_steht_nie_in_einem_cookie() {
     let objekt = body.as_object().expect("ein JSON-Objekt");
     assert_eq!(
         objekt.keys().collect::<Vec<_>>(),
-        vec!["accessToken", "benutzer"],
+        vec!["accessToken"],
         "kein weiteres Feld im Body"
     );
 }
@@ -343,7 +341,7 @@ async fn ac8_abgelaufenes_refresh_token_wird_abgelehnt() {
 
     let (status, _, neuer_cookie) = harness
         .client
-        .post_cookie("/api/anmeldung/erneuerung", Some(&cookie))
+        .post_cookie("/api/session/erneuern", Some(&cookie))
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     let neuer_cookie = neuer_cookie.expect("auch ein Fehler löscht das Cookie");
@@ -367,7 +365,7 @@ async fn ac9_abmeldung_widerruft_und_das_access_token_fällt_sofort() {
     // response clears.
     let (status, _, set_cookie) = harness
         .client
-        .post_cookie_auth("/api/anmeldung/abmeldung", Some(&cookie), &access)
+        .post_cookie_auth("/api/session/abmelden", Some(&cookie), &access)
         .await;
     assert_eq!(status, StatusCode::OK);
     assert!(
@@ -387,19 +385,19 @@ async fn ac9_abmeldung_widerruft_und_das_access_token_fällt_sofort() {
 async fn ac10_wiederherstellung_antwortet_fuer_jede_adresse_gleich() {
     let harness = E2eHarness::new().await;
     registriere(&harness, "anna@muster.at").await;
-    harness.mail.leeren();
+    harness.mail.clear();
 
     let (bekannt_status, bekannt_body) = harness
         .client
         .post_json(
-            "/api/passwort-vergessen",
+            "/api/passwort/vergessen",
             json!({ "eMailAdresse": "anna@muster.at" }),
         )
         .await;
     let (unbekannt_status, unbekannt_body) = harness
         .client
         .post_json(
-            "/api/passwort-vergessen",
+            "/api/passwort/vergessen",
             json!({ "eMailAdresse": "niemand@muster.at" }),
         )
         .await;
@@ -407,15 +405,11 @@ async fn ac10_wiederherstellung_antwortet_fuer_jede_adresse_gleich() {
     assert_eq!(bekannt_status, StatusCode::OK);
     assert_eq!(unbekannt_status, StatusCode::OK);
     assert_eq!(bekannt_body, unbekannt_body);
-    assert_eq!(
-        harness.mail.gesendete().len(),
-        1,
-        "nur die bekannte Adresse"
-    );
+    assert_eq!(harness.mail.sent().len(), 1, "nur die bekannte Adresse");
     assert!(
         harness
             .mail
-            .letzte()
+            .latest()
             .text(FRONTEND_BASIS_URL)
             .contains(WIEDERHERSTELLUNG_LINK),
         "der Link zeigt auf die Wiederherstellungsroute"
@@ -443,7 +437,7 @@ async fn ac11_neues_passwort_beendet_alle_sessions_und_ist_einmalig() {
     harness
         .client
         .post_json(
-            "/api/passwort-vergessen",
+            "/api/passwort/vergessen",
             json!({ "eMailAdresse": "anna@muster.at" }),
         )
         .await;
@@ -453,7 +447,7 @@ async fn ac11_neues_passwort_beendet_alle_sessions_und_ist_einmalig() {
     let (status, _) = harness
         .client
         .post_json(
-            "/api/passwort-wiederherstellen",
+            "/api/passwort/wiederherstellen",
             json!({ "token": token, "neuesPasswort": neues_passwort }),
         )
         .await;
@@ -490,7 +484,7 @@ async fn ac11_neues_passwort_beendet_alle_sessions_und_ist_einmalig() {
     let (status, _) = harness
         .client
         .post_json(
-            "/api/passwort-wiederherstellen",
+            "/api/passwort/wiederherstellen",
             json!({ "token": token, "neuesPasswort": "drittes-passwort-123" }),
         )
         .await;
@@ -585,7 +579,7 @@ async fn ac13_anonymer_zugriff_wird_verweigert() {
     let (status, _) = harness.client.get_json("/api/benutzer").await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 
-    let (status, _) = harness.client.post("/api/anmeldung/abmeldung").await;
+    let (status, _) = harness.client.post("/api/session/abmelden").await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 
     // A malformed header is a refusal, not a silent downgrade to anonymous.
@@ -695,10 +689,9 @@ async fn ac17_signatur_wird_gegen_den_schlüssel_der_session_zeile_geprüft() {
 
     // Take the live token apart and re-sign its claims with different key material. The
     // envelope is valid, so only the row's public key can reject it.
-    let gelesen = logandaim_api::auth::jwt::decode(&access).expect("unser Token parst");
+    let gelesen = logandaim_api::jwt::decode(&access).expect("unser Token parst");
     let fremd = logandaim_core::adapters::InMemorySigning::from_secret_bytes(&[9u8; 32]);
-    let gefälscht =
-        logandaim_api::auth::jwt::encode(&gelesen.claims, &fremd).expect("encoding succeeds");
+    let gefälscht = logandaim_api::jwt::encode(&gelesen.claims, &fremd).expect("encoding succeeds");
 
     let (status, _) = harness
         .client
@@ -709,7 +702,7 @@ async fn ac17_signatur_wird_gegen_den_schlüssel_der_session_zeile_geprüft() {
     // An unknown session id (`sid`) is refused just as flatly: no row, no identity.
     let mut unbekannt = gelesen.claims.clone();
     unbekannt.sid = logandaim_core::domain::konto::SessionId(Uuid::nil());
-    let token = logandaim_api::auth::jwt::encode(&unbekannt, &super::test_signing_key())
+    let token = logandaim_api::jwt::encode(&unbekannt, &super::test_signing_key())
         .expect("encoding succeeds");
     let (status, _) = harness
         .client
@@ -731,7 +724,7 @@ async fn ac17_widerrufene_session_wird_abgelehnt() {
     // Logout names its session through the access token; the cookie is only cleared.
     let (status, _, _) = harness
         .client
-        .post_cookie_auth("/api/anmeldung/abmeldung", Some(&cookie), &access)
+        .post_cookie_auth("/api/session/abmelden", Some(&cookie), &access)
         .await;
     assert_eq!(status, StatusCode::OK);
 

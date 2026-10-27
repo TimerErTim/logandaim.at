@@ -13,7 +13,7 @@ use logandaim_core::{
         EmailAdresse,
         konto::{
             ACCESS_TOKEN_LIFETIME, BenutzerId, KlartextPasswort, NeuerBenutzer, NeuesKonto, Rolle,
-            SecretToken, SessionId, hash_password,
+            SecretToken, SessionId, TokenId, hash_password,
         },
     },
     ports::{ClientKey, RepositoryError},
@@ -130,7 +130,7 @@ async fn ac1_registrierung_startet_ohne_benutzer_und_mailt_genau_einmal() {
 
     let token = registrierung_starten(&harness, "anna@muster.at", client_key(1)).await;
 
-    assert_eq!(harness.mail().gesendete().len(), 1);
+    assert_eq!(harness.mail().sent().len(), 1);
     assert_eq!(
         token.base64url().len(),
         43,
@@ -160,7 +160,7 @@ async fn ac1_registrierung_startet_ohne_benutzer_und_mailt_genau_einmal() {
 async fn ac2_vergebene_adresse_antwortet_gleich_und_mailt_nicht() {
     let harness = harness().await;
     registriere(&harness, "belegt@muster.at").await;
-    harness.mail().leeren();
+    harness.mail().clear();
 
     let ergebnis = harness
         .app()
@@ -178,7 +178,7 @@ async fn ac2_vergebene_adresse_antwortet_gleich_und_mailt_nicht() {
         "die Antwort für eine vergebene Adresse ist Ok"
     );
     assert!(
-        harness.mail().gesendete().is_empty(),
+        harness.mail().sent().is_empty(),
         "eine vergebene Adresse bekommt keine Mail"
     );
 }
@@ -343,7 +343,7 @@ async fn ac6_falsches_passwort_und_unbekannte_adresse_sind_ununterscheidbar() {
                         aud: "logandaim-api".into(),
                         iat: harness.jetzt(),
                         exp: harness.jetzt() + ACCESS_TOKEN_LIFETIME,
-                        jti: "test".into(),
+                        jti: TokenId(uuid::Uuid::nil()),
                     }
                 )
             )
@@ -496,7 +496,7 @@ async fn ac9_abmeldung_widerruft_und_das_access_token_fällt_sofort() {
 async fn ac10_wiederherstellung_antwortet_für_jede_adresse_gleich() {
     let harness = harness().await;
     registriere(&harness, "anna@muster.at").await;
-    harness.mail().leeren();
+    harness.mail().clear();
 
     let bekannt = harness
         .app()
@@ -522,7 +522,7 @@ async fn ac10_wiederherstellung_antwortet_für_jede_adresse_gleich() {
     assert!(bekannt.is_ok());
     assert!(unbekannt.is_ok());
     assert_eq!(
-        harness.mail().gesendete().len(),
+        harness.mail().sent().len(),
         1,
         "nur ein vorhandenes Konto bekommt Mail"
     );
@@ -532,7 +532,7 @@ async fn ac10_wiederherstellung_antwortet_für_jede_adresse_gleich() {
 async fn ac11_neues_passwort_beendet_alle_sessions_und_ist_einmalig() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
-    harness.mail().leeren();
+    harness.mail().clear();
 
     harness
         .app()
@@ -889,7 +889,7 @@ async fn ac19_die_mail_trägt_einen_aufrufbaren_link() {
 
     registrierung_starten(&harness, "anna@muster.at", client_key(40)).await;
 
-    let mail = harness.mail().einzige();
+    let mail = harness.mail().single();
     assert_eq!(mail.betreff(), "Bestätige deine E-Mail-Adresse");
     let text = mail.text(FRONTEND_BASIS_URL);
     assert!(

@@ -83,7 +83,7 @@ impl Harness {
 
     /// The token of the single most recent mail, for a link that was just mailed.
     pub fn letztes_token(&self) -> String {
-        let mail = self.mail.letzte();
+        let mail = self.mail.latest();
         let text = mail.text(FRONTEND_BASIS_URL);
         let marker = "token=";
         let start = text

@@ -6,28 +6,9 @@
 
 use uuid::Uuid;
 
-use logandaim_core::domain::konto::Benutzer;
+use logandaim_core::domain;
 
 use crate::schema::EmailAdresse;
-
-/// One Benutzer. It carries no address: the `Konto` owns the address, and only the
-/// caller's own `Konto` is ever disclosed (see [`BenutzerAntwort`]).
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SchemaBenutzer {
-    pub id: Uuid,
-}
-
-impl From<Benutzer> for SchemaBenutzer {
-    fn from(benutzer: Benutzer) -> Self {
-        Self {
-            id: benutzer.id().0,
-        }
-    }
-}
 
 /// The logged-in Benutzer as `GET /benutzer` answers it.
 #[derive(Debug, Clone)]
@@ -35,9 +16,18 @@ impl From<Benutzer> for SchemaBenutzer {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BenutzerAntwort {
+pub struct Benutzer {
     pub id: Uuid,
     pub e_mail_adresse: EmailAdresse,
+}
+
+impl From<(domain::konto::Benutzer, domain::EmailAdresse)> for Benutzer {
+    fn from((benutzer, email): (domain::konto::Benutzer, domain::EmailAdresse)) -> Self {
+        Self {
+            id: benutzer.id().0,
+            e_mail_adresse: email.into(),
+        }
+    }
 }
 
 /// What registration step 2, login, and renewal hand back.
@@ -50,7 +40,7 @@ pub struct BenutzerAntwort {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AnmeldeAntwort {
+pub struct NeueSession {
     pub access_token: String,
-    pub benutzer: SchemaBenutzer,
+    pub refresh_token: String,
 }

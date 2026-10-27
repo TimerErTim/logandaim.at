@@ -91,6 +91,7 @@ impl NeueSession {
     }
 }
 
+// TODO: separate session ids and jwt ids (this session represents the jwt id in reality)
 /// One logged-in state of one Benutzer on one device, in one lifecycle state.
 ///
 /// Revocation is a row state, not a token expiry (SPEC-konto rule 15), so every request

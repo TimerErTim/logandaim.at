@@ -114,18 +114,7 @@ impl HttpStatusMapping for SchussRegistrierenFehler {
     }
 }
 
-/// One impl per use case, because each one owns its own error enum.
-///
-/// Every `konto` refusal has exactly one HTTP meaning: `UngültigeAnfrage` is 400,
-/// `NichtAngemeldet`/`ZugangsdatenFalsch`/`SessionUngültig` are 401, `NichtErlaubt` is 403,
-/// `Gedrosselt` is 429, and a `*Laden`/`*Speichern`/`*Anlegen`/`*Pruefen` variant is a 500
-/// fault of this deployment rather than a decision about the caller. A cause that reaches
-/// here but is not in the list falls through to the repository mapping.
-///
-/// `NichtErlaubt` is 403, never 404: the caller proved who it is and is simply not allowed,
-/// and pretending the record does not exist would only confuse a legitimate administrator
-/// debugging their own account.
-macro_rules! konto_status {
+macro_rules! http_status {
     ($fehler:ident { $($variante:ident => $status:expr),+ $(,)? }) => {
         impl HttpStatusMapping for $fehler {
             fn http_status(&self) -> Option<StatusCode> {
@@ -137,7 +126,7 @@ macro_rules! konto_status {
     };
 }
 
-konto_status!(AnmeldungFehler {
+http_status!(AnmeldungFehler {
     ZugangsdatenFalsch => StatusCode::UNAUTHORIZED,
     Gedrosselt => StatusCode::TOO_MANY_REQUESTS,
     KontoLaden => StatusCode::INTERNAL_SERVER_ERROR,
@@ -147,27 +136,28 @@ konto_status!(AnmeldungFehler {
     SessionSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(ErneuerungFehler {
+http_status!(ErneuerungFehler {
     SessionUngültig => StatusCode::UNAUTHORIZED,
     Gedrosselt => StatusCode::TOO_MANY_REQUESTS,
     SessionLaden => StatusCode::INTERNAL_SERVER_ERROR,
     SessionSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
     TokenErzeugen => StatusCode::INTERNAL_SERVER_ERROR,
+    BenutzerLaden => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(AbmeldungFehler {
+http_status!(AbmeldungFehler {
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     SessionLaden => StatusCode::INTERNAL_SERVER_ERROR,
     SessionSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(SessionPrüfenFehler {
+http_status!(SessionPrüfenFehler {
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     SessionLaden => StatusCode::INTERNAL_SERVER_ERROR,
     BenutzerLaden => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(RegistrierungStartenFehler {
+http_status!(RegistrierungStartenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     Gedrosselt => StatusCode::TOO_MANY_REQUESTS,
     KontoPrüfen => StatusCode::INTERNAL_SERVER_ERROR,
@@ -175,7 +165,7 @@ konto_status!(RegistrierungStartenFehler {
     BestätigungSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(RegistrierungAbschliessenFehler {
+http_status!(RegistrierungAbschliessenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     Gedrosselt => StatusCode::TOO_MANY_REQUESTS,
     BestätigungLaden => StatusCode::INTERNAL_SERVER_ERROR,
@@ -187,7 +177,7 @@ konto_status!(RegistrierungAbschliessenFehler {
     SessionSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(PasswortVergessenFehler {
+http_status!(PasswortVergessenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     Gedrosselt => StatusCode::TOO_MANY_REQUESTS,
     TokenErzeugen => StatusCode::INTERNAL_SERVER_ERROR,
@@ -195,7 +185,7 @@ konto_status!(PasswortVergessenFehler {
     WiederherstellungSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(PasswortWiederherstellenFehler {
+http_status!(PasswortWiederherstellenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     PasswortSetzen => StatusCode::INTERNAL_SERVER_ERROR,
     WiederherstellungLaden => StatusCode::INTERNAL_SERVER_ERROR,
@@ -205,14 +195,14 @@ konto_status!(PasswortWiederherstellenFehler {
     SessionSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(BenutzerAnzeigenFehler {
+http_status!(BenutzerAnzeigenFehler {
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     NichtErlaubt => StatusCode::FORBIDDEN,
     BenutzerLaden => StatusCode::INTERNAL_SERVER_ERROR,
     KontoLaden => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(BenutzerLöschenFehler {
+http_status!(BenutzerLöschenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     PasswortFalsch => StatusCode::UNAUTHORIZED,
@@ -227,7 +217,7 @@ konto_status!(BenutzerLöschenFehler {
 });
 
 // Reached only from the startup bootstrap; a failure is a deployment fault.
-konto_status!(SystemadministratorBefördernFehler {
+http_status!(SystemadministratorBefördernFehler {
     KontoLaden => StatusCode::INTERNAL_SERVER_ERROR,
     BenutzerLaden => StatusCode::INTERNAL_SERVER_ERROR,
     BenutzerSpeichern => StatusCode::INTERNAL_SERVER_ERROR,

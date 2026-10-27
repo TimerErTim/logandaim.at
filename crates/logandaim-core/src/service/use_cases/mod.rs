@@ -27,7 +27,7 @@ use chrono::{DateTime, Utc};
 use crate::{
     application::ExecutionContext,
     domain::konto::{
-        AccessTokenClaims, Benutzer, BenutzerId, NeueSession, RefreshToken, SessionId,
+        AccessTokenClaims, Benutzer, BenutzerId, NeueSession, RefreshToken, SessionId, TokenId,
     },
 };
 
@@ -62,12 +62,13 @@ pub(crate) fn claims_for_session(
     session_id: SessionId,
     jetzt: DateTime<Utc>,
 ) -> AccessTokenClaims {
-    let konfiguration = ctx.konto_konfiguration();
+    let konfiguration = ctx.identity_provider_conf();
     AccessTokenClaims::neu(
         benutzer_id,
         session_id,
         &konfiguration.issuer,
         &konfiguration.audience,
         jetzt,
+        TokenId(uuid::Uuid::new_v4()),
     )
 }

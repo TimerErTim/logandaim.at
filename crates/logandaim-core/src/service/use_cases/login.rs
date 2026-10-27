@@ -13,7 +13,7 @@ use crate::{
         EmailAdresse,
         konto::{KlartextPasswort, RefreshToken, dummy_verify, verify_password},
     },
-    ports::{ClientKey, ThrottleAction, not_found_as_none},
+    ports::{ClientKey, RepositoryError, ThrottleAction},
     service::{SessionAusgestellt, UseCase},
 };
 
@@ -69,13 +69,16 @@ impl UseCase<SessionAusgestellt> for Anmeldung {
             .change_context(AnmeldungFehler::KontoLaden)?;
 
         let ergebnis = async {
-            let konto = not_found_as_none(uow.konten().find_by_email(&self.email).await)
-                .change_context(AnmeldungFehler::KontoLaden)?;
-
-            let Some(konto) = konto else {
-                // Same work as the wrong-Passwort path (rule 4).
-                dummy_verify(&self.passwort).change_context(AnmeldungFehler::PasswortPrüfen)?;
-                return Err(Report::new(AnmeldungFehler::ZugangsdatenFalsch));
+            let konto = match uow.konten().find_by_email(&self.email).await {
+                Ok(konto) => konto,
+                Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {
+                    // Same work as the wrong-Passwort path (rule 4).
+                    dummy_verify(&self.passwort).change_context(AnmeldungFehler::PasswortPrüfen)?;
+                    return Err(Report::new(AnmeldungFehler::ZugangsdatenFalsch));
+                }
+                Err(fehler) => {
+                    return Err(fehler).change_context(AnmeldungFehler::KontoLaden);
+                }
             };
 
             let stimmt = verify_password(&self.passwort, konto.password_hash())

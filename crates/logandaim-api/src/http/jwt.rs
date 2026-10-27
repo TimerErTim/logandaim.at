@@ -22,11 +22,14 @@ use error_stack::Report;
 use logandaim_core::{
     ResultReport,
     application::AccessError,
-    domain::konto::{AccessToken, AccessTokenClaims, BenutzerId, SessionId, Signature},
+    domain::konto::{AccessToken, AccessTokenClaims, BenutzerId, SessionId, Signature, TokenId},
     ports::Signing,
+    service::SessionAusgestellt,
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use crate::schema::NeueSession;
 
 /// The only `alg` this deployment issues or accepts.
 pub const SIGNATUR_ALGORITHMUS: &str = "EdDSA";
@@ -41,7 +44,7 @@ pub struct AccessTokenClaimsDto {
     pub aud: String,
     pub iat: DateTime<Utc>,
     pub exp: DateTime<Utc>,
-    pub jti: String,
+    pub jti: Uuid,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -85,7 +88,7 @@ pub fn encode(
         aud: claims.aud.clone(),
         iat: claims.iat,
         exp: claims.exp,
-        jti: claims.jti.clone(),
+        jti: claims.jti.0,
     };
 
     let header = serde_json::to_vec(&header).map_err(|_| ungültig())?;
@@ -147,24 +150,22 @@ pub fn decode(token: &str) -> ResultReport<DecodedToken, AccessError> {
             aud: dto.aud,
             iat: dto.iat,
             exp: dto.exp,
-            jti: dto.jti,
+            jti: TokenId(dto.jti),
         },
         signed_message: signierte_nachricht,
         signature: signatur,
     })
 }
 
-/// Split one `Authorization` header value into the bearer token.
-///
-/// `None` when the scheme is not `Bearer` or the value is empty. The header is split once,
-/// so a token containing a space cannot smuggle a second scheme.
-pub fn bearer_token(kopf: &str) -> Option<&str> {
-    let (schema, wert) = kopf.split_once(' ')?;
-    if !schema.eq_ignore_ascii_case("Bearer") {
-        return None;
-    }
-    let wert = wert.trim();
-    (!wert.is_empty()).then_some(wert)
+pub fn encode_session(
+    ausgestellt: SessionAusgestellt,
+    signing: &dyn logandaim_core::ports::Signing,
+) -> ResultReport<NeueSession, AccessError> {
+    let access_token = encode(&ausgestellt.claims, signing).expect("the JOSE header serialises");
+    Ok(NeueSession {
+        access_token: access_token.as_str().to_owned(),
+        refresh_token: ausgestellt.refresh_token.base64url().as_str().to_owned(),
+    })
 }
 
 #[cfg(test)]
@@ -188,7 +189,7 @@ mod tests {
             aud: "logandaim-api".into(),
             iat: jetzt,
             exp: jetzt + ACCESS_TOKEN_LIFETIME,
-            jti: "jti".into(),
+            jti: TokenId(Uuid::nil()),
         }
     }
 
@@ -240,7 +241,7 @@ mod tests {
                 aud: "logandaim-api".into(),
                 iat: DateTime::from_timestamp(1_700_000_000, 0).unwrap(),
                 exp: DateTime::from_timestamp(1_700_086_400, 0).unwrap(),
-                jti: "jti".into(),
+                jti: Uuid::nil(),
             })
             .expect("dto serializes"),
         );
@@ -272,17 +273,6 @@ mod tests {
         for token in ["", "abc", "a.b", "a.b.c.d", ".."] {
             assert!(decode(token).is_err(), "{token} wurde akzeptiert");
         }
-    }
-
-    #[test_log::test]
-    fn bearer_parsing() {
-        assert_eq!(bearer_token("Bearer abc"), Some("abc"));
-        assert_eq!(bearer_token("bearer abc"), Some("abc"));
-        assert_eq!(bearer_token("Basic abc"), None);
-        assert_eq!(bearer_token("Bearer "), None);
-        assert_eq!(bearer_token("abc"), None);
-        // Only one split: a second scheme cannot be smuggled in.
-        assert_eq!(bearer_token("Bearer a b"), Some("a b"));
     }
 
     #[test_log::test]

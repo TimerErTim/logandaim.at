@@ -11,18 +11,6 @@ use crate::domain::{EmailAdresse, NeuerSchuss, Schuss, SchussId};
 
 pub type RepositoryResult<T> = ResultReport<T, RepositoryError>;
 
-/// `Ok(None)` when the lookup found no row, every other failure kept as it is.
-///
-/// A repository answers `NotFound`, so a caller that treats absence as a normal outcome asks
-/// for that translation explicitly instead of the port widening its return type.
-pub fn not_found_as_none<T>(result: RepositoryResult<T>) -> RepositoryResult<Option<T>> {
-    match result {
-        Ok(wert) => Ok(Some(wert)),
-        Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => Ok(None),
-        Err(fehler) => Err(fehler),
-    }
-}
-
 #[derive(thiserror::Error, Debug)]
 pub enum RepositoryError {
     #[error("entity not found")]
@@ -115,7 +103,7 @@ pub trait KontoRepository: Send + Sync {
 }
 
 /// Rows are **retained** when spent, revoked, or expired (see
-/// [`Session`](crate::domain::konto::SessionIn)): replay detection needs to find the row
+/// [`SessionIn`](crate::domain::konto::SessionIn)): replay detection needs to find the row
 /// a spent refresh token names, and a revocation timestamp is the record of what happened.
 #[async_trait]
 pub trait SessionRepository: Send + Sync {
@@ -127,7 +115,7 @@ pub trait SessionRepository: Send + Sync {
     async fn find_by_refresh_hash(
         &self,
         hash: &SecretTokenHash,
-    ) -> RepositoryResult<Option<Versioned<Session>>>;
+    ) -> RepositoryResult<Versioned<Session>>;
 
     /// Every session of one Benutzer, for the load-then-update revoke loop a use case runs
     /// (logout everywhere, password recovery). Retention means this must not delete.
@@ -156,7 +144,7 @@ pub trait EmailBestätigungRepository: Send + Sync {
     async fn find_by_hash(
         &self,
         hash: &SecretTokenHash,
-    ) -> RepositoryResult<Option<Versioned<EmailBestätigung>>>;
+    ) -> RepositoryResult<Versioned<EmailBestätigung>>;
 
     async fn find_by_id(
         &self, id: BestätigungId
@@ -191,7 +179,7 @@ pub trait PasswortWiederherstellungRepository: Send + Sync {
     async fn find_by_hash(
         &self,
         hash: &SecretTokenHash,
-    ) -> RepositoryResult<Option<Versioned<PasswortWiederherstellung>>>;
+    ) -> RepositoryResult<Versioned<PasswortWiederherstellung>>;
 
     /// Every outstanding row for one Konto, so a new request can spend them one by one
     /// (rule 7).
