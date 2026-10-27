@@ -71,10 +71,7 @@ impl Deref for SQLiteConnection {
 impl SQLiteInstance {
     pub async fn local(path: impl AsRef<Path>) -> ResultReport<Self, RepositoryError> {
         let path = path.as_ref();
-        // `:memory:` is not a file: `new_local` would give every connection its own
-        // separate database, so a migration applied on one connection would be invisible
-        // to the connection a query later runs on. The shared-cache in-memory instance is
-        // the only shape where `:memory:` behaves like one database.
+        // `new_local` gives every connection its own database; `:memory:` must be shared.
         if path == Path::new(":memory:") {
             return Self::in_memory().await;
         }

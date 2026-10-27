@@ -4,11 +4,10 @@
 use std::sync::Arc;
 
 use logandaim_core::App;
-use logandaim_core::adapters::InMemorySigning;
+use logandaim_core::adapters::{InMemorySigning, InMemoryThrottle};
 use logandaim_core::application::IdentityProviderConfiguration;
-use logandaim_core::domain::konto::SigningKeyId;
 use logandaim_core::ports::RepositoryError;
-use logandaim_fakes::{FakeMailSender, InMemoryThrottle};
+use logandaim_fakes::FakeMailSender;
 use logandaim_sqlite::SQLiteInstance;
 
 async fn app() -> Arc<App> {
@@ -17,10 +16,7 @@ async fn app() -> Arc<App> {
     Arc::new(
         App::builder()
             .uow_provider(Box::new(sqlite))
-            .signing(Arc::new(InMemorySigning::from_secret_bytes(
-                SigningKeyId::new("test-key").unwrap(),
-                &[7u8; 32],
-            )))
+            .signing(Arc::new(InMemorySigning::from_secret_bytes(&[7u8; 32])))
             .throttle(Arc::new(InMemoryThrottle::new()))
             .mail_sender(Arc::new(FakeMailSender::new()))
             .konto(IdentityProviderConfiguration::neu(

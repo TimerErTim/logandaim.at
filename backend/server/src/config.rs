@@ -28,21 +28,11 @@ pub struct ServerConfig {
     pub database_url: String,
     pub object_store_dir: PathBuf,
     pub log_dir: Option<PathBuf>,
-    /// Path to the PKCS#8 PEM private key that signs access tokens.
-    ///
-    /// Absent means "generate a throwaway key for this process", which is what a local run
-    /// wants. A production deployment sets one: a generated key invalidates every issued
-    /// access token on the next restart.
+    /// PKCS#8 PEM private key that signs access tokens; absent means "generate one per process".
     pub signing_key_path: Option<PathBuf>,
-    /// Row id the key is published under, so a rotation can run two keys side by side
-    /// while old tokens expire (AC-17).
-    pub signing_key_id: String,
-    /// Issuer claim of every access token.
     pub token_issuer: String,
-    /// Audience claim of every access token.
     pub token_audience: String,
-    /// Frontend origin the mailed links point at. The routes are the product's; this is
-    /// only where the app is served.
+    /// Frontend origin the mailed links point at.
     pub frontend_basis_url: String,
     /// SMTP relay host. Absent means "no relay": every send fails and is logged.
     pub smtp_host: Option<String>,
@@ -64,10 +54,9 @@ impl Default for ServerConfig {
             object_store_dir: PathBuf::from("storage/"),
             log_dir: None,
             signing_key_path: None,
-            signing_key_id: "k1".into(),
             token_issuer: "logandaim.at".into(),
             token_audience: "logandaim-api".into(),
-            frontend_basis_url: "http://localhost:3000".into(),
+            frontend_basis_url: "http://localhost:3001".into(),
             smtp_host: None,
             smtp_port: 1025,
             smtp_verschlüsselung: SmtpVerschlüsselung::Klar,
@@ -125,10 +114,6 @@ pub struct Cli {
     /// PKCS#8 PEM private key that signs access tokens; omit to generate one per process
     #[arg(long, env = "LOGANDAIM_SIGNING_KEY_PATH")]
     pub signing_key_path: Option<PathBuf>,
-
-    /// Row id the signing key is published under
-    #[arg(long, env = "LOGANDAIM_SIGNING_KEY_ID")]
-    pub signing_key_id: Option<String>,
 
     /// Issuer claim of every access token
     #[arg(long, env = "LOGANDAIM_TOKEN_ISSUER")]
@@ -242,9 +227,6 @@ fn overlay(mut config: ServerConfig, cli: &Cli) -> ServerConfig {
     }
     if cli.signing_key_path.is_some() {
         config.signing_key_path = cli.signing_key_path.clone();
-    }
-    if let Some(signing_key_id) = &cli.signing_key_id {
-        config.signing_key_id = signing_key_id.clone();
     }
     if let Some(token_issuer) = &cli.token_issuer {
         config.token_issuer = token_issuer.clone();

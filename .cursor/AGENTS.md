@@ -107,6 +107,22 @@ Use **proper UTF-8** in identifiers and persisted names. Never transliterate uml
 - **All mutations go through `App::execute` / `App::execute_fn`.** No adapter calls a repository
   directly. `App` only builds an `ExecutionContext`; it does not wrap the use-case result.
 
+## Comments
+
+A comment earns its place by saying something the code cannot. That is a narrow bar and it is the
+reviewer's, but two cases are always wrong:
+
+1. **Narrating the obvious.** `// set the field`, `// return the result`, `// loop over the ids`, a
+   doc comment restating the signature, a paragraph where a sentence carries the same fact. Delete
+   it; the identifier already says it.
+2. **More comment than code.** Within any function, item, or module doc, comment lines must not
+   outnumber code lines. A long "why" belongs in the module doc or the spec, not stapled above the
+   function that happens to need it.
+
+Write the reason, not the mechanics: why a shape is this way, what a wrong alternative would break,
+which acceptance criterion or rule pins it. One line beats three, and a module doc that explains the
+file beats a comment on every block. If removing a comment loses nothing, it was never a comment.
+
 ## Tracing
 
 Instrumentation lives at boundaries, in `application/instrumented.rs` and
@@ -132,10 +148,13 @@ adapters emit `debug!`/`trace!` events only, never duplicate spans.
 ## API layer
 
 `LogandaimAppApi` is a thin translation: request → use case → schema DTO. No business rules, no
-serde or OpenAPI types leaking into core. Schema DTOs are separate from domain types; request DTOs
+`poem` or OpenAPI types leaking into core, and none in the facade either: the library compiles with
+`--no-default-features`. Schema DTOs are separate from domain types; request DTOs are `…Request` and
 convert with `From`/`TryFrom`.
 
-`LogandaimApiSpec` resolves the HTTP status: a `StatusCode` attached to the report first, then
+`LogandaimApiSpec` in `spec.rs` is the whole HTTP edge: the `#[OpenApi]` handlers, the response
+envelopes with their headers, and the cookie. Handlers take native `poem_openapi` extractors — never
+a raw `&Request`. It also resolves the HTTP status: a `StatusCode` attached to the report first, then
 `HttpStatusMapping` on the current context, then the first nested mapped context, else 500. An
 orchestration error variant returns `None` so the domain error beneath it can speak. Statuses are
 attached at the API boundary, never in the domain.
@@ -154,6 +173,13 @@ After any schema or route change, run `mise run sync:openapi`; `mise run check` 
 Cases live once in `logandaim-core/tests/cases/` and are shared into the SQLite harness with
 `#[path]`; each harness supplies its own `base_app_builder()`. Tests that need a fixed date use
 `logandaim_fakes::FixedClock`. Never copy a case to run it twice.
+
+`cases/` proves UoW parity across adapters. A test that validates one adapter, or one use case
+against one adapter, is a normal integration test beside it (`crates/logandaim-core/tests/*.rs`),
+not a shared case.
+
+`mise run test` wraps two nextest profiles (`.config/nextest.toml`): `test:unit` runs everything that
+needs no external service, `test:e2e` runs the `e2e` binary with the Mailpit daemon.
 
 ## Frontend
 
