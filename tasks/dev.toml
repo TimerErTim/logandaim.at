@@ -7,6 +7,8 @@ env.LOGANDAIM_BIND_PORT = 3000
 env.LOGANDAIM_LOG_DIR = "{{ vars.REPO_ROOT }}/data.local/logs/"
 env.LOGANDAIM_DATABASE_URL = "{{ vars.REPO_ROOT }}/data.local/logandaim.db"
 env.LOGANDAIM_OBJECT_STORE_DIR = "{{ vars.REPO_ROOT }}/data.local/storage/"
+env.LOGANDAIM_SMTP_HOST = "127.0.0.1"
+daemons = ["mailpit"]
 run = "cargo run -p logandaim-server --"
 
 ["dev:frontend"]

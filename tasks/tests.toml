@@ -1,4 +1,12 @@
-["test"]
-description = "Run every test; the API e2e cases get a real Mailpit"
+["test:unit"]
+description = "Run the isolated tests (nextest profile `unit`, no external service)"
+run = "cargo nextest run --workspace --profile unit"
+
+["test:e2e"]
+description = "Run the end-to-end tests (nextest profile `e2e`) against a real Mailpit"
 daemons = ["mailpit"]
-run = "cargo nextest run --workspace"
+run = "cargo nextest run --workspace --profile e2e"
+
+["test"]
+description = "Run every test: unit first, then e2e with its services"
+depends = ["test:unit", "test:e2e"]
