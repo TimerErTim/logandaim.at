@@ -5,8 +5,8 @@
 //! `Authorization` header, and — for AC-19 — a mail that really travelled over SMTP. A rule
 //! that only holds because a use case was called directly does not reach a client.
 //!
-//! AC-7a, AC-17, and AC-18 only exist at this layer (a cookie header, a `kid` row, a clock
-//! past `exp`), so they have no counterpart in the core cases.
+//! AC-7a, AC-17, and AC-18 only exist at this layer (a cookie header, a session row's public
+//! key, a clock past `exp`), so they have no counterpart in the core cases.
 
 use chrono::Duration;
 use logandaim_core::domain::konto::ACCESS_TOKEN_LIFETIME;
@@ -684,7 +684,7 @@ async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
 /// AC-17: an access token is checked against the public key stored on its own session row.
 ///
 /// Two failures, both 401: an unknown session, and a signature that does not verify with
-/// the key that row carries — even though the token's `kid` matches the configuration.
+/// the key that row carries — even though the envelope is otherwise valid.
 #[test_log::test(pollster::test)]
 async fn ac17_signatur_wird_gegen_den_schlüssel_der_session_zeile_geprüft() {
     let harness = E2eHarness::new().await;

@@ -30,8 +30,8 @@ pub mod konto;
 pub mod mailpit;
 pub mod schuss;
 
-/// Frontend routes the mailed links point at.
-/// The frontend origin every e2e case's mailed links are spelled from.
+/// The frontend origin every e2e case's mailed links are spelled from, and the routes the
+/// adapter appends to it.
 pub const FRONTEND_BASIS_URL: &str = "https://logandaim.at";
 pub const BESTÄTIGUNG_LINK: &str = "https://logandaim.at/registrierung";
 pub const WIEDERHERSTELLUNG_LINK: &str = "https://logandaim.at/passwort";
@@ -103,12 +103,6 @@ impl E2eHarness {
             .expect("static address");
         let mut konfiguration = SmtpKonfiguration::mailpit(absender);
         konfiguration.frontend_basis_url = FRONTEND_BASIS_URL.to_owned();
-        if let Ok(url) = std::env::var("LOGANDAIM_MAILPIT_SMTP") {
-            if let Some((host, port)) = url.rsplit_once(':') {
-                konfiguration.host = host.to_owned();
-                konfiguration.port = port.parse().expect("SMTP-Port ist eine Zahl");
-            }
-        }
         let smtp = Arc::new(SmtpMailSender::neu(konfiguration).expect("der SMTP-Transport baut"));
 
         let app = App::builder()

@@ -733,7 +733,7 @@ async fn ac17_unbekannte_session_wird_abgelehnt() {
 }
 
 /// A signature that is well-formed but was made by another key does not verify against
-/// the public key the row carries — even when it names the same `kid`.
+/// the public key the row carries.
 #[test_log::test(pollster::test)]
 async fn ac17_fremder_schlüssel_passt_nicht_zur_session_zeile() {
     let harness = harness().await;
