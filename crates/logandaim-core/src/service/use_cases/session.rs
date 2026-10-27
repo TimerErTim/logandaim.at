@@ -8,10 +8,18 @@ use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
 
 use crate::{
-    ThreadSafeError, application::{AuthContext, ExecutionContext}, domain::konto::{AccessTokenClaims, BenutzerId, RefreshToken, RenewableSession, Session, SessionNotRenewable, Signature, SigningKeypair}, ports::{ClientKey, RepositoryError, ThrottleAction}, service::UseCase, uow::UnitOfWork,
+    ThreadSafeError,
+    application::{AuthContext, ExecutionContext},
+    domain::konto::{
+        AccessTokenClaims, BenutzerId, RefreshToken, RenewableSession, SessionNotRenewable,
+        Signature, SigningKeypair,
+    },
+    ports::{ClientKey, RepositoryError, ThrottleAction},
+    service::UseCase,
+    uow::UnitOfWork,
 };
 
-use super::{claims_for_session};
+use super::claims_for_session;
 
 /// A renewed token pair: the API encodes `claims`, the client gets `refresh_token`.
 #[derive(Debug, Clone)]
@@ -123,7 +131,10 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
         }
         .await;
 
-        match uow.finish(ergebnis, ErneuerungFehler::SessionSpeichern).await? {
+        match uow
+            .finish(ergebnis, ErneuerungFehler::SessionSpeichern)
+            .await?
+        {
             Erneuerungsausgang::Neu(ausgestellt) => Ok(ausgestellt),
             Erneuerungsausgang::Wiederholung => Err(Report::new(ErneuerungFehler::SessionUngültig)),
         }
@@ -194,7 +205,8 @@ impl UseCase<()> for Abmeldung {
         }
         .await;
 
-        uow.finish(ergebnis, AbmeldungFehler::SessionSpeichern).await
+        uow.finish(ergebnis, AbmeldungFehler::SessionSpeichern)
+            .await
     }
 }
 

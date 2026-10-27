@@ -14,8 +14,8 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration};
 use logandaim_api::openapi_service;
 use logandaim_core::{
-    App, adapters::InMemorySigning, application::IdentityProviderConfiguration, domain::konto::SigningKeyId,
-    ports::Clock,
+    App, adapters::InMemorySigning, application::IdentityProviderConfiguration,
+    domain::konto::SigningKeyId, ports::Clock,
 };
 use logandaim_fakes::{FakeMailSender, FixedClock, InMemoryThrottle};
 use logandaim_filesystemstore::FileSystemObjectStore;

@@ -37,7 +37,7 @@ impl KlartextPasswort {
     pub fn neu(passwort: impl Into<String>) -> Result<Self, KontoFehler> {
         let passwort = passwort.into();
         let länge = passwort.chars().count();
-        if länge < super::MIN_PASSWORT_LÄNGE || länge > super::MAX_PASSWORT_LÄNGE {
+        if !(super::MIN_PASSWORT_LÄNGE..=super::MAX_PASSWORT_LÄNGE).contains(&länge) {
             return Err(KontoFehler::PasswortLängeUngültig { länge });
         }
         Ok(Self(Zeroizing::new(passwort)))

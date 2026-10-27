@@ -74,7 +74,10 @@ fn main() {
         )))
         .throttle(Arc::new(NoThrottle))
         .mail_sender(Arc::new(NoMailSender))
-        .konto(IdentityProviderConfiguration::neu("logandaim.at", "logandaim-api"))
+        .konto(IdentityProviderConfiguration::neu(
+            "logandaim.at",
+            "logandaim-api",
+        ))
         .build();
 
     let api_service = openapi_service(dummy_app, std::iter::empty::<String>());

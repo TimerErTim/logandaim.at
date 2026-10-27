@@ -161,7 +161,7 @@ impl RenewableSession {
     pub fn ist_gültig(&self, jetzt: DateTime<Utc>) -> bool {
         !self.ist_abgelaufen(jetzt)
     }
-    
+
     pub fn widerrufen(self, jetzt: DateTime<Utc>) -> RevokedSession {
         let expires_at = self.expires_at();
         SessionIn {
@@ -571,13 +571,19 @@ mod tests {
     fn eine_verbrauchte_session_kann_nicht_erneut_erneuert_werden() {
         let (verbraucht, _) = session().erneuern(hash(), jetzt());
         let geladen = Session::Refreshed(verbraucht);
-        assert_eq!(RenewableSession::try_from(geladen), Err(SessionNotRenewable::Spent));
+        assert_eq!(
+            RenewableSession::try_from(geladen),
+            Err(SessionNotRenewable::Spent)
+        );
     }
 
     #[test_log::test]
     fn eine_widerrufene_session_kann_nicht_erneuert_werden() {
         let geladen = Session::Revoked(session().widerrufen(jetzt()));
-        assert_eq!(RenewableSession::try_from(geladen), Err(SessionNotRenewable::Revoked));
+        assert_eq!(
+            RenewableSession::try_from(geladen),
+            Err(SessionNotRenewable::Revoked)
+        );
     }
 
     #[test_log::test]

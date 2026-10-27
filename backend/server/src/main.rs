@@ -240,7 +240,10 @@ async fn main() -> Result<(), Report<BackendServerError>> {
 
     let signing_key = build_signing_key(&config)?;
     let mail_sender = lade_mail_sender(&config)?;
-    let konto = IdentityProviderConfiguration::neu(config.token_issuer.clone(), config.token_audience.clone());
+    let konto = IdentityProviderConfiguration::neu(
+        config.token_issuer.clone(),
+        config.token_audience.clone(),
+    );
 
     let app = App::builder()
         .uow_provider(Box::new(sqlite.clone()))

@@ -17,7 +17,7 @@ use crate::{
     service::UseCase,
 };
 
-use super::{revoke_all_sessions};
+use super::revoke_all_sessions;
 
 /// Every way `PasswortVergessen` may refuse.
 #[derive(Debug, thiserror::Error)]
@@ -100,7 +100,14 @@ impl UseCase<()> for PasswortVergessen {
             return Ok(());
         }
 
-        if let Err(fehler) = ctx.mail_sender().send(Mail::passwort_wiederherstellung(self.email, token.base64url().as_str())).await {
+        if let Err(fehler) = ctx
+            .mail_sender()
+            .send(Mail::passwort_wiederherstellung(
+                self.email,
+                token.base64url().as_str(),
+            ))
+            .await
+        {
             tracing::warn!(fehler = %fehler, "Transaktionsmail konnte nicht zugestellt werden");
         }
         Ok(())

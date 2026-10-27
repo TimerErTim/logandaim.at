@@ -7,9 +7,13 @@ use libsql::{Row, Transaction};
 use uuid::Uuid;
 
 use logandaim_core::{
-    ErrorReportExt, application::uow::Versioned, domain::konto::{
-        BenutzerId, NeueSession, RenewableSession, SecretTokenHash, Session, SessionId, SigningKeyId,
-    }, ports::{RepositoryError, RepositoryResult, SessionRepository},
+    ErrorReportExt,
+    application::uow::Versioned,
+    domain::konto::{
+        BenutzerId, NeueSession, RenewableSession, SecretTokenHash, Session, SessionId,
+        SigningKeyId,
+    },
+    ports::{RepositoryError, RepositoryResult, SessionRepository},
 };
 
 use crate::{

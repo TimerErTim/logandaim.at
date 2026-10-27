@@ -23,7 +23,10 @@ async fn app() -> Arc<App> {
             )))
             .throttle(Arc::new(InMemoryThrottle::new()))
             .mail_sender(Arc::new(FakeMailSender::new()))
-            .konto(IdentityProviderConfiguration::neu("logandaim.at", "logandaim-api"))
+            .konto(IdentityProviderConfiguration::neu(
+                "logandaim.at",
+                "logandaim-api",
+            ))
             .build(),
     )
 }

@@ -11,7 +11,7 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         EmailAdresse,
-        konto::{BenutzerId, Konto, KontoId, NeuesKonto, HashedPasswort},
+        konto::{BenutzerId, HashedPasswort, Konto, KontoId, NeuesKonto},
     },
     ports::{KontoRepository, RepositoryError, RepositoryResult},
 };

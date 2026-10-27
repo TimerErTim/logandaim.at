@@ -107,7 +107,7 @@ pub trait KontoRepository: Send + Sync {
 }
 
 /// Rows are **retained** when spent, revoked, or expired (see
-/// [`SessionIn`](crate::domain::konto::SessionIn)): replay detection needs to find the row
+/// [`Session`](crate::domain::konto::SessionIn)): replay detection needs to find the row
 /// a spent refresh token names, and a revocation timestamp is the record of what happened.
 #[async_trait]
 pub trait SessionRepository: Send + Sync {

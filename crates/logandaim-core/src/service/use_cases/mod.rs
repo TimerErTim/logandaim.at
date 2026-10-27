@@ -23,15 +23,12 @@ pub use session::*;
 pub use user::*;
 
 use chrono::{DateTime, Utc};
-use error_stack::{IntoReport, Report, ResultExt};
 
 use crate::{
-    application::{
-        ExecutionContext, ThreadSafeError,
-        uow::{UnitOfWork, Versioned},
-    }, domain::konto::{
-        AccessTokenClaims, Benutzer, BenutzerId, NeueSession, RefreshToken, Session, SessionId
-    }, ports::Mail,
+    application::ExecutionContext,
+    domain::konto::{
+        AccessTokenClaims, Benutzer, BenutzerId, NeueSession, RefreshToken, SessionId,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -76,4 +73,3 @@ pub(crate) fn claims_for_session(
         jetzt,
     )
 }
-

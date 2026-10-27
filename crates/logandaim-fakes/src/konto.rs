@@ -13,7 +13,7 @@ use logandaim_core::{
             Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
             NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
             PasswortWiederherstellung, PasswortWiederherstellungId, SecretTokenHash, Session,
-            SessionId
+            SessionId,
         },
     },
     ports::{

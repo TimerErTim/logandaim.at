@@ -6,13 +6,16 @@ use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
 
 use crate::{
-    application::ExecutionContext, domain::{
+    application::ExecutionContext,
+    domain::{
         EmailAdresse,
         konto::{
             KlartextPasswort, NeueBestätigung, NeuerBenutzer, NeuesKonto, RefreshToken,
             SecretToken, hash_password,
         },
-    }, ports::{ClientKey, Mail, ThrottleAction}, service::{SessionAusgestellt, UseCase},
+    },
+    ports::{ClientKey, Mail, ThrottleAction},
+    service::{SessionAusgestellt, UseCase},
 };
 
 use super::{claims_for_session, new_session};
@@ -104,7 +107,11 @@ impl UseCase<()> for RegistrierungStarten {
         uow.finish(ergebnis, RegistrierungStartenFehler::BestätigungSpeichern)
             .await?;
 
-        if let Err(fehler) = ctx.mail_sender().send(Mail::email_bestätigung(email, token.base64url().as_str())).await {
+        if let Err(fehler) = ctx
+            .mail_sender()
+            .send(Mail::email_bestätigung(email, token.base64url().as_str()))
+            .await
+        {
             tracing::warn!(fehler = %fehler, "Transaktionsmail konnte nicht zugestellt werden");
         }
         Ok(())
@@ -250,7 +257,12 @@ impl UseCase<SessionAusgestellt> for RegistrierungAbschließen {
                 .change_context(RegistrierungAbschliessenFehler::BenutzerAnlegen)?;
 
             uow.konten()
-                .create(NeuesKonto::neu(benutzer.id(), email.clone(), hashed_passwort, jetzt))
+                .create(NeuesKonto::neu(
+                    benutzer.id(),
+                    email.clone(),
+                    hashed_passwort,
+                    jetzt,
+                ))
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(RegistrierungAbschliessenFehler::KontoAnlegen)?;
