@@ -72,9 +72,9 @@ impl TryFrom<String> for KlartextPasswort {
 
 /// A stored credential: the argon2id PHC string, never the Passwort.
 #[derive(Clone, PartialEq, Eq)]
-pub struct PasswordHash(String);
+pub struct HashedPasswort(String);
 
-impl PasswordHash {
+impl HashedPasswort {
     /// Rebuild a stored hash, rejecting anything this module did not write.
     pub fn from_phc(phc: impl Into<String>) -> Result<Self, KontoFehler> {
         let phc = phc.into();
@@ -91,7 +91,7 @@ impl PasswordHash {
     }
 }
 
-impl fmt::Debug for PasswordHash {
+impl fmt::Debug for HashedPasswort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // The PHC string carries the salt and the digest; neither is a secret, but it is
         // still a credential and it never belongs in a log line by accident.
@@ -117,14 +117,14 @@ fn argon2() -> Argon2<'static> {
 ///
 /// Costs tens of milliseconds by design. Called only where a Passwort is written:
 /// `RegistrierungAbschließen` and `PasswortWiederherstellen`.
-pub fn hash_password(passwort: &KlartextPasswort) -> Result<PasswordHash, KontoFehler> {
+pub fn hash_password(passwort: &KlartextPasswort) -> Result<HashedPasswort, KontoFehler> {
     let mut salt_bytes = [0u8; SALT_BYTES];
     getrandom::fill(&mut salt_bytes).map_err(|_| KontoFehler::ZufallFehlgeschlagen)?;
     let salt = Salt::new(&salt_bytes).map_err(|_| KontoFehler::PasswortHashFehler)?;
     let phc = argon2()
         .hash_password_with_salt(passwort.als_bytes(), &salt)
         .map_err(|_| KontoFehler::PasswortHashFehler)?;
-    Ok(PasswordHash(phc.to_string()))
+    Ok(HashedPasswort(phc.to_string()))
 }
 
 /// Check a Passwort against a stored hash.
@@ -133,7 +133,7 @@ pub fn hash_password(passwort: &KlartextPasswort) -> Result<PasswordHash, KontoF
 /// verifying even after the module's defaults move.
 pub fn verify_password(
     passwort: &KlartextPasswort,
-    hash: &PasswordHash,
+    hash: &HashedPasswort,
 ) -> Result<bool, KontoFehler> {
     let parsed =
         PhcPasswordHash::from_str(hash.as_str()).map_err(|_| KontoFehler::PasswortHashUngültig)?;
@@ -149,7 +149,7 @@ pub fn verify_password(
 /// Keeps the unknown-address path of `Anmeldung` as expensive as the wrong-Passwort
 /// path, so the response time does not disclose account existence (SPEC-konto rule 4).
 pub fn dummy_verify(passwort: &KlartextPasswort) -> Result<(), KontoFehler> {
-    static DUMMY_HASH: std::sync::OnceLock<PasswordHash> = std::sync::OnceLock::new();
+    static DUMMY_HASH: std::sync::OnceLock<HashedPasswort> = std::sync::OnceLock::new();
     let hash = DUMMY_HASH.get_or_init(|| {
         // A hash of a value nobody can type, computed once per process.
         let unmöglich = KlartextPasswort::neu("\u{0}logandaim-dummy-verify\u{0}")
@@ -228,11 +228,11 @@ mod tests {
     #[test_log::test]
     fn fremder_algorithmus_wird_abgelehnt() {
         assert!(matches!(
-            PasswordHash::from_phc("$scrypt$v=1$m=1,t=1,p=1$c2FsdA$aGFzaA"),
+            HashedPasswort::from_phc("$scrypt$v=1$m=1,t=1,p=1$c2FsdA$aGFzaA"),
             Err(KontoFehler::PasswortHashUngültig)
         ));
         assert!(matches!(
-            PasswordHash::from_phc("kein phc string"),
+            HashedPasswort::from_phc("kein phc string"),
             Err(KontoFehler::PasswortHashUngültig)
         ));
     }

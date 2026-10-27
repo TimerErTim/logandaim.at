@@ -8,8 +8,6 @@ use error_stack::IntoReport;
 #[allow(unused_imports)]
 pub use use_cases::*;
 
-pub use crate::domain::konto::SessionAusgestellt;
-
 #[async_trait]
 pub trait UseCase<Output> {
     type Error: IntoReport + Send;

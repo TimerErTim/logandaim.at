@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use error_stack::Report;
+use logandaim_core::domain::konto::RenewableSession;
 use logandaim_core::{
     ResultReport,
     application::uow::Versioned,
@@ -12,7 +13,7 @@ use logandaim_core::{
             Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
             NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
             PasswortWiederherstellung, PasswortWiederherstellungId, SecretTokenHash, Session,
-            SessionId, SessionIn,
+            SessionId
         },
     },
     ports::{
@@ -283,7 +284,7 @@ impl FakeSessionRepository {
 impl SessionRepository for FakeSessionRepository {
     async fn create(&self, session: NeueSession) -> RepositoryResult<Versioned<Session>> {
         let id = SessionId(Uuid::new_v4());
-        let erstellt = Versioned::init(Session::Ok(SessionIn::aus(id, session)));
+        let erstellt = Versioned::init(Session::Renewable(RenewableSession::aus(id, session)));
         self.datastore.konto.sessions().insert(id, erstellt.clone());
         Ok(erstellt)
     }

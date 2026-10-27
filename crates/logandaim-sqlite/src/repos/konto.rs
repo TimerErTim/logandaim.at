@@ -11,7 +11,7 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         EmailAdresse,
-        konto::{BenutzerId, Konto, KontoId, NeuesKonto, PasswordHash},
+        konto::{BenutzerId, Konto, KontoId, NeuesKonto, HashedPasswort},
     },
     ports::{KontoRepository, RepositoryError, RepositoryResult},
 };
@@ -40,7 +40,7 @@ fn konto_from_row(row: &Row) -> RepositoryResult<Versioned<Konto>> {
     // The one constructor: a stored address is normalised on the way in too.
     let email = EmailAdresse::normalisiert(email_raw).change_context(RepositoryError::Data)?;
     let password_hash =
-        PasswordHash::from_phc(password_hash_raw).change_context(RepositoryError::Data)?;
+        HashedPasswort::from_phc(password_hash_raw).change_context(RepositoryError::Data)?;
     let bestätigt_am = parse_datetime(&bestätigt_am_raw).contextualize(RepositoryError::Data)?;
     let created_at = parse_datetime(&created_at_raw).contextualize(RepositoryError::Data)?;
 

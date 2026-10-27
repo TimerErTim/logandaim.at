@@ -283,6 +283,10 @@ impl<T> Versioned<T> {
     pub fn set_data(&mut self, data: T) {
         self.data = data;
     }
+
+    pub fn map_data(&mut self, f: impl FnOnce(&T) -> T) {
+        self.data = f(&self.data);
+    }
 }
 
 impl<T> Clone for Versioned<T>

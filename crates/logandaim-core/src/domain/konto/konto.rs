@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use super::{BenutzerId, PasswordHash};
+use super::{BenutzerId, HashedPasswort};
 use crate::domain::EmailAdresse;
 
 /// Identity of one Konto.
@@ -13,7 +13,7 @@ pub struct KontoId(pub Uuid);
 pub struct NeuesKonto {
     benutzer_id: BenutzerId,
     email: EmailAdresse,
-    password_hash: PasswordHash,
+    password_hash: HashedPasswort,
     bestätigt_am: DateTime<Utc>,
     created_at: DateTime<Utc>,
 }
@@ -24,7 +24,7 @@ impl NeuesKonto {
     pub fn neu(
         benutzer_id: BenutzerId,
         email: EmailAdresse,
-        password_hash: PasswordHash,
+        password_hash: HashedPasswort,
         created_at: DateTime<Utc>,
     ) -> Self {
         Self {
@@ -44,7 +44,7 @@ impl NeuesKonto {
         &self.email
     }
 
-    pub fn password_hash(&self) -> &PasswordHash {
+    pub fn password_hash(&self) -> &HashedPasswort {
         &self.password_hash
     }
 
@@ -63,7 +63,7 @@ pub struct Konto {
     id: KontoId,
     benutzer_id: BenutzerId,
     email: EmailAdresse,
-    password_hash: PasswordHash,
+    password_hash: HashedPasswort,
     bestätigt_am: DateTime<Utc>,
     created_at: DateTime<Utc>,
 }
@@ -84,7 +84,7 @@ impl Konto {
         id: KontoId,
         benutzer_id: BenutzerId,
         email: EmailAdresse,
-        password_hash: PasswordHash,
+        password_hash: HashedPasswort,
         bestätigt_am: DateTime<Utc>,
         created_at: DateTime<Utc>,
     ) -> Self {
@@ -110,7 +110,7 @@ impl Konto {
         &self.email
     }
 
-    pub fn password_hash(&self) -> &PasswordHash {
+    pub fn password_hash(&self) -> &HashedPasswort {
         &self.password_hash
     }
 
@@ -124,7 +124,7 @@ impl Konto {
 
     /// Replace the credential. Used by `PasswortWiederherstellen`; every Anmelde-Sitzung
     /// of the owner is ended separately by that use case.
-    pub fn setze_password_hash(&mut self, password_hash: PasswordHash) {
+    pub fn setze_password_hash(&mut self, password_hash: HashedPasswort) {
         self.password_hash = password_hash;
     }
 }
@@ -143,8 +143,8 @@ mod tests {
     }
 
     /// One real argon2id hash, computed once for this module's tests.
-    fn hash() -> &'static PasswordHash {
-        static HASH: std::sync::OnceLock<PasswordHash> = std::sync::OnceLock::new();
+    fn hash() -> &'static HashedPasswort {
+        static HASH: std::sync::OnceLock<HashedPasswort> = std::sync::OnceLock::new();
         HASH.get_or_init(|| {
             let passwort = KlartextPasswort::neu("korrekt-pferd-batterie").unwrap();
             hash_password(&passwort).unwrap()

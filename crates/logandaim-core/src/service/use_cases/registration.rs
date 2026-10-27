@@ -6,19 +6,16 @@ use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
 
 use crate::{
-    application::ExecutionContext,
-    domain::{
+    application::ExecutionContext, domain::{
         EmailAdresse,
         konto::{
             KlartextPasswort, NeueBestätigung, NeuerBenutzer, NeuesKonto, RefreshToken,
-            SecretToken, SessionAusgestellt, hash_password,
+            SecretToken, hash_password,
         },
-    },
-    ports::{ClientKey, ThrottleAction},
-    service::UseCase,
+    }, ports::{ClientKey, Mail, ThrottleAction}, service::{SessionAusgestellt, UseCase},
 };
 
-use super::{claims_for_session, new_session, send_mail};
+use super::{claims_for_session, new_session};
 
 /// Every way `RegistrierungStarten` may refuse.
 #[derive(Debug, thiserror::Error)]
@@ -107,11 +104,9 @@ impl UseCase<()> for RegistrierungStarten {
         uow.finish(ergebnis, RegistrierungStartenFehler::BestätigungSpeichern)
             .await?;
 
-        send_mail(
-            &ctx,
-            crate::ports::Mail::email_bestätigung(email, token.base64url().as_str()),
-        )
-        .await;
+        if let Err(fehler) = ctx.mail_sender().send(Mail::email_bestätigung(email, token.base64url().as_str())).await {
+            tracing::warn!(fehler = %fehler, "Transaktionsmail konnte nicht zugestellt werden");
+        }
         Ok(())
     }
 }
@@ -195,7 +190,7 @@ impl UseCase<SessionAusgestellt> for RegistrierungAbschließen {
 
         // Hash before the token is looked at: a Passwort that fails the length rule must
         // not spend a usable token (AC-4). The length rule already ran at construction.
-        let password_hash = hash_password(&self.passwort)
+        let hashed_passwort = hash_password(&self.passwort)
             .change_context(RegistrierungAbschliessenFehler::PasswortSetzen)?;
 
         let uow = ctx
@@ -255,12 +250,16 @@ impl UseCase<SessionAusgestellt> for RegistrierungAbschließen {
                 .change_context(RegistrierungAbschliessenFehler::BenutzerAnlegen)?;
 
             uow.konten()
-                .create(NeuesKonto::neu(benutzer.id(), email, password_hash, jetzt))
+                .create(NeuesKonto::neu(benutzer.id(), email.clone(), hashed_passwort, jetzt))
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(RegistrierungAbschliessenFehler::KontoAnlegen)?;
 
-            delete_confirmations(&uow, bestätigung.email()).await?;
+            uow.bestätigungen()
+                .delete_by_email(&email)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RegistrierungAbschliessenFehler::BestätigungSpeichern)?;
 
             let refresh_token = RefreshToken::random()
                 .change_context(RegistrierungAbschliessenFehler::TokenErzeugen)?;
@@ -290,15 +289,4 @@ impl UseCase<SessionAusgestellt> for RegistrierungAbschließen {
         );
         Ok(ausgestellt)
     }
-}
-
-async fn delete_confirmations(
-    uow: &crate::application::uow::UnitOfWork<'_>,
-    email: &EmailAdresse,
-) -> Result<(), Report<RegistrierungAbschliessenFehler>> {
-    uow.bestätigungen()
-        .delete_by_email(email)
-        .await
-        .map_err(IntoReport::into_report)
-        .change_context(RegistrierungAbschliessenFehler::BestätigungSpeichern)
 }

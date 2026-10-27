@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use async_lock::Mutex;
 use async_trait::async_trait;
@@ -7,12 +7,9 @@ use libsql::{Row, Transaction};
 use uuid::Uuid;
 
 use logandaim_core::{
-    ErrorReportExt,
-    application::uow::Versioned,
-    domain::konto::{
-        BenutzerId, NeueSession, SecretTokenHash, Session, SessionId, SessionIn, SigningKeyId,
-    },
-    ports::{RepositoryError, RepositoryResult, SessionRepository},
+    ErrorReportExt, application::uow::Versioned, domain::konto::{
+        BenutzerId, NeueSession, RenewableSession, SecretTokenHash, Session, SessionId, SigningKeyId,
+    }, ports::{RepositoryError, RepositoryResult, SessionRepository},
 };
 
 use crate::{
@@ -75,7 +72,7 @@ pub struct SQLiteSessionRepository {
 impl SessionRepository for SQLiteSessionRepository {
     async fn create(&self, session: NeueSession) -> RepositoryResult<Versioned<Session>> {
         let id = SessionId(Uuid::new_v4());
-        let domain = Session::Ok(SessionIn::aus(id, session.clone()));
+        let domain = Session::Renewable(RenewableSession::aus(id, session.clone()));
 
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
@@ -167,8 +164,14 @@ impl SessionRepository for SQLiteSessionRepository {
                 session.public_key_hex().to_string(),
                 format_datetime(session.created_at()),
                 format_datetime(session.expires_at()),
-                session.spent_at().map(format_datetime),
-                session.revoked_at().map(format_datetime),
+                match (*session).deref() {
+                    Session::Refreshed(session) => Some(format_datetime(session.spent_at())),
+                    _ => None,
+                },
+                match (*session).deref() {
+                    Session::Revoked(session) => Some(format_datetime(session.revoked_at())),
+                    _ => None,
+                },
                 session.v() as i64,
             ),
             session.v(),

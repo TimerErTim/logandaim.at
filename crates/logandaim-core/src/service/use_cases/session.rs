@@ -4,16 +4,14 @@
 //! keeps the underlying repository error in the `error_stack` chain.
 
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
 
 use crate::{
-    application::{AuthContext, ExecutionContext},
-    domain::konto::{AccessTokenClaims, RefreshToken, Session, SessionNotLive, SigningKeypair},
-    ports::{ClientKey, RepositoryError, ThrottleAction},
-    service::UseCase,
+    ThreadSafeError, application::{AuthContext, ExecutionContext}, domain::konto::{AccessTokenClaims, BenutzerId, RefreshToken, RenewableSession, Session, SessionNotRenewable, Signature, SigningKeypair}, ports::{ClientKey, RepositoryError, ThrottleAction}, service::UseCase, uow::UnitOfWork,
 };
 
-use super::{claims_for_session, revoke_all_sessions, update_session};
+use super::{claims_for_session};
 
 /// A renewed token pair: the API encodes `claims`, the client gets `refresh_token`.
 #[derive(Debug, Clone)]
@@ -74,14 +72,14 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                 .map_err(IntoReport::into_report)
                 .change_context(ErneuerungFehler::SessionLaden)?;
 
-            let Some(session) = session else {
+            let Some(mut session) = session else {
                 return Err(Report::new(ErneuerungFehler::SessionUngültig));
             };
 
             let benutzer_id = session.benutzer_id();
-            let live = match session.cloned_data().into_live() {
+            let live = match RenewableSession::try_from(session.cloned_data()) {
                 Ok(live) => live,
-                Err(SessionNotLive::Spent) => {
+                Err(SessionNotRenewable::Spent) => {
                     // Replay of a spent token: end the family rather than warn (rule 12).
                     // The revocation belongs to this unit of work, so it commits and the
                     // use case answers with a refusal afterwards.
@@ -91,7 +89,7 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                     .await?;
                     return Ok::<_, Report<ErneuerungFehler>>(Erneuerungsausgang::Wiederholung);
                 }
-                Err(SessionNotLive::Revoked) => {
+                Err(SessionNotRenewable::Revoked) => {
                     return Err(Report::new(ErneuerungFehler::SessionUngültig));
                 }
             };
@@ -104,13 +102,12 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                 RefreshToken::random().change_context(ErneuerungFehler::TokenErzeugen)?;
             let (verbraucht, folge) = live.erneuern(folge_refresh.hash(), jetzt);
 
-            update_session(
-                &uow,
-                session,
-                |_| Session::Refreshed(verbraucht),
-                || ErneuerungFehler::SessionSpeichern,
-            )
-            .await?;
+            session.map_data(|_| verbraucht.into());
+            uow.sessions()
+                .update(&mut session)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context_lazy(|| ErneuerungFehler::SessionSpeichern)?;
 
             let folge = uow
                 .sessions()
@@ -126,7 +123,7 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
         }
         .await;
 
-        match uow.finish(ergebnis, ErneuerungFehler::SessionLaden).await? {
+        match uow.finish(ergebnis, ErneuerungFehler::SessionSpeichern).await? {
             Erneuerungsausgang::Neu(ausgestellt) => Ok(ausgestellt),
             Erneuerungsausgang::Wiederholung => Err(Report::new(ErneuerungFehler::SessionUngültig)),
         }
@@ -171,7 +168,7 @@ impl UseCase<()> for Abmeldung {
             .change_context(AbmeldungFehler::SessionLaden)?;
 
         let ergebnis = async {
-            let session = match uow.sessions().find_by_id(session_id).await {
+            let mut session = match uow.sessions().find_by_id(session_id).await {
                 Ok(session) => session,
                 Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {
                     // Already gone: the caller's intent is satisfied.
@@ -187,18 +184,17 @@ impl UseCase<()> for Abmeldung {
             if session.ist_widerrufen() {
                 return Ok(());
             }
-            update_session(
-                &uow,
-                session,
-                |geladen| geladen.widerrufen(jetzt),
-                || AbmeldungFehler::SessionSpeichern,
-            )
-            .await?;
+            session.map_data(|session| session.clone().widerrufen(jetzt));
+            uow.sessions()
+                .update(&mut session)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context_lazy(|| AbmeldungFehler::SessionSpeichern)?;
             Ok::<_, Report<AbmeldungFehler>>(())
         }
         .await;
 
-        uow.finish(ergebnis, AbmeldungFehler::SessionLaden).await
+        uow.finish(ergebnis, AbmeldungFehler::SessionSpeichern).await
     }
 }
 
@@ -224,7 +220,7 @@ pub struct SessionPrüfen {
     pub claims: AccessTokenClaims,
     /// The ASCII `header.payload` the signature was produced over.
     pub signed_message: String,
-    pub signature: crate::domain::konto::Signature,
+    pub signature: Signature,
 }
 
 #[async_trait]
@@ -293,4 +289,35 @@ impl UseCase<AuthContext> for SessionPrüfen {
         uow.finish(ergebnis, SessionPrüfenFehler::SessionLaden)
             .await
     }
+}
+
+pub(crate) async fn revoke_all_sessions<E, F>(
+    uow: &UnitOfWork<'_>,
+    benutzer_id: BenutzerId,
+    jetzt: DateTime<Utc>,
+    fehler: F,
+) -> Result<(), Report<E>>
+where
+    E: ThreadSafeError,
+    F: Fn() -> E,
+{
+    let sessions = uow
+        .sessions()
+        .find_by_benutzer(benutzer_id)
+        .await
+        .map_err(IntoReport::into_report)
+        .change_context(fehler())?;
+
+    for mut session in sessions {
+        if session.ist_widerrufen() {
+            continue;
+        }
+        session.map_data(|session| session.clone().widerrufen(jetzt));
+        uow.sessions()
+            .update(&mut session)
+            .await
+            .map_err(IntoReport::into_report)
+            .change_context_lazy(&fehler)?;
+    }
+    Ok(())
 }

@@ -7,6 +7,8 @@
 
 use chrono::{DateTime, Utc};
 
+use crate::domain::konto::ACCESS_TOKEN_LIFETIME;
+
 use super::{BenutzerId, CLOCK_SKEW, KontoFehler, SessionId, SigningKeyId};
 
 /// The claims an access token carries, already deserialized by the API.
@@ -28,6 +30,26 @@ pub struct AccessTokenClaims {
 }
 
 impl AccessTokenClaims {
+    pub fn neu(
+        benutzer_id: BenutzerId,
+        session_id: SessionId,
+        kid: SigningKeyId,
+        issuer: &str,
+        audience: &str,
+        jetzt: DateTime<Utc>,
+    ) -> Self {
+        Self {
+            sub: benutzer_id,
+            sid: session_id,
+            kid,
+            iss: issuer.to_owned(),
+            aud: audience.to_owned(),
+            iat: jetzt,
+            exp: jetzt + ACCESS_TOKEN_LIFETIME,
+            jti: uuid::Uuid::new_v4().to_string(),
+        }
+    }
+
     /// `exp` in the future and `iat` not implausibly ahead, both with [`CLOCK_SKEW`]
     /// tolerance so a slightly fast issuer and a slightly slow verifier agree.
     pub fn prüfe_zeitfenster(&self, jetzt: DateTime<Utc>) -> Result<(), KontoFehler> {

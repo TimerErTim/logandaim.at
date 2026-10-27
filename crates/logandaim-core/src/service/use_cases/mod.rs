@@ -29,13 +29,18 @@ use crate::{
     application::{
         ExecutionContext, ThreadSafeError,
         uow::{UnitOfWork, Versioned},
-    },
-    domain::konto::{
-        AccessTokenClaims, BenutzerId, NeueSession, RefreshToken, Session, SessionId,
-        claims_for as domain_claims,
-    },
-    ports::Mail,
+    }, domain::konto::{
+        AccessTokenClaims, Benutzer, BenutzerId, NeueSession, RefreshToken, Session, SessionId
+    }, ports::Mail,
 };
+
+#[derive(Debug, Clone)]
+pub struct SessionAusgestellt {
+    pub benutzer: Benutzer,
+    pub session_id: SessionId,
+    pub refresh_token: RefreshToken,
+    pub claims: AccessTokenClaims,
+}
 
 /// The creation input of one session, carrying the issuing key's public half so the row
 /// itself is enough to verify its access tokens (AC-17).
@@ -62,7 +67,7 @@ pub(crate) fn claims_for_session(
     jetzt: DateTime<Utc>,
 ) -> AccessTokenClaims {
     let konfiguration = ctx.konto_konfiguration();
-    domain_claims(
+    AccessTokenClaims::neu(
         benutzer_id,
         session_id,
         ctx.signing().kid().clone(),
@@ -72,69 +77,3 @@ pub(crate) fn claims_for_session(
     )
 }
 
-/// Apply a domain transition to a loaded session and write it back.
-///
-/// The row goes in as it was loaded, is mutated in place, and goes out through
-/// [`Versioned`]: the adapter writes it only while its version is still current, so a
-/// concurrent writer surfaces as `VersionMismatch` instead of being silently overwritten.
-pub(crate) async fn update_session<E, F, M>(
-    uow: &UnitOfWork<'_>,
-    mut geladen: Versioned<Session>,
-    mutiere: M,
-    fehler: F,
-) -> Result<(), Report<E>>
-where
-    E: ThreadSafeError,
-    F: Fn() -> E,
-    M: FnOnce(Session) -> Session,
-{
-    *geladen = mutiere(geladen.cloned_data());
-    uow.sessions()
-        .update(&mut geladen)
-        .await
-        .map_err(IntoReport::into_report)
-        .change_context(fehler())?;
-    Ok(())
-}
-
-/// End every session of one Benutzer: a spent refresh token (replay, rule 12) and a
-/// password recovery (rule 6) both need this.
-///
-/// Load-then-update per aggregate, one by one — the repository has no bulk mutator, because
-/// "revoke every session" is a decision of the use case, not a `UPDATE` to hide in a port.
-pub(crate) async fn revoke_all_sessions<E, F>(
-    uow: &UnitOfWork<'_>,
-    benutzer_id: BenutzerId,
-    jetzt: DateTime<Utc>,
-    fehler: F,
-) -> Result<(), Report<E>>
-where
-    E: ThreadSafeError,
-    F: Fn() -> E,
-{
-    let sessions = uow
-        .sessions()
-        .find_by_benutzer(benutzer_id)
-        .await
-        .map_err(IntoReport::into_report)
-        .change_context(fehler())?;
-
-    for session in sessions {
-        if session.ist_widerrufen() {
-            continue;
-        }
-        update_session(uow, session, |geladen| geladen.widerrufen(jetzt), &fehler).await?;
-    }
-    Ok(())
-}
-
-/// Send one mail after the transaction committed. A failure is a warning, never an error:
-/// the account state is already durable and retrying is the operator's job (NFR-5).
-pub(crate) async fn send_mail(ctx: &ExecutionContext<'_>, mail: Mail) {
-    if let Err(fehler) = ctx.mail_sender().send(mail).await {
-        tracing::warn!(
-            fehler = %fehler,
-            "Transaktionsmail konnte nicht zugestellt werden"
-        );
-    }
-}
