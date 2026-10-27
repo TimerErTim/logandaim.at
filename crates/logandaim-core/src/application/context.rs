@@ -11,7 +11,7 @@ use crate::{
 use tracing::instrument;
 
 use super::auth::AuthContext;
-use super::konfiguration::KontoKonfiguration;
+use super::konfiguration::IdentityProviderConfiguration;
 
 #[derive(Clone, Copy)]
 enum ExecutionSource<'a> {
@@ -31,7 +31,7 @@ pub struct ExecutionContext<'a> {
     pdf_renderer: Arc<dyn PdfRenderer>,
     throttle: Arc<dyn Throttle>,
     mail_sender: Arc<dyn MailSender>,
-    konto: KontoKonfiguration,
+    konto: IdentityProviderConfiguration,
 }
 
 /// Everything a context carries besides its UoW source, so `root`, `nested`, and `sub`
@@ -44,7 +44,7 @@ pub(crate) struct ContextPorts {
     pub(crate) pdf_renderer: Arc<dyn PdfRenderer>,
     pub(crate) throttle: Arc<dyn Throttle>,
     pub(crate) mail_sender: Arc<dyn MailSender>,
-    pub(crate) konto: KontoKonfiguration,
+    pub(crate) konto: IdentityProviderConfiguration,
 }
 
 impl<'a> ExecutionContext<'a> {
@@ -102,7 +102,7 @@ impl<'a> ExecutionContext<'a> {
     }
 
     /// Mailed link targets and token identity of this deployment.
-    pub fn konto_konfiguration(&self) -> &KontoKonfiguration {
+    pub fn konto_konfiguration(&self) -> &IdentityProviderConfiguration {
         &self.konto
     }
 

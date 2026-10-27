@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use logandaim_core::App;
 use logandaim_core::adapters::InMemorySigning;
-use logandaim_core::application::KontoKonfiguration;
+use logandaim_core::application::IdentityProviderConfiguration;
 use logandaim_core::domain::konto::SigningKeyId;
 use logandaim_core::ports::RepositoryError;
 use logandaim_fakes::{FakeMailSender, InMemoryThrottle};
@@ -23,7 +23,7 @@ async fn app() -> Arc<App> {
             )))
             .throttle(Arc::new(InMemoryThrottle::new()))
             .mail_sender(Arc::new(FakeMailSender::new()))
-            .konto(KontoKonfiguration::neu("logandaim.at", "logandaim-api"))
+            .konto(IdentityProviderConfiguration::neu("logandaim.at", "logandaim-api"))
             .build(),
     )
 }

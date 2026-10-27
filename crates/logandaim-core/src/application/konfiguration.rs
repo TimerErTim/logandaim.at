@@ -8,14 +8,14 @@
 
 /// Under which identity access tokens are issued.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct KontoKonfiguration {
+pub struct IdentityProviderConfiguration {
     /// `iss` claim of every access token this deployment issues.
     pub issuer: String,
     /// `aud` claim of every access token this deployment issues.
     pub audience: String,
 }
 
-impl KontoKonfiguration {
+impl IdentityProviderConfiguration {
     pub fn neu(issuer: impl Into<String>, audience: impl Into<String>) -> Self {
         Self {
             issuer: issuer.into(),
@@ -30,7 +30,7 @@ mod tests {
 
     #[test_log::test]
     fn die_konfiguration_hält_nur_die_claim_identität() {
-        let konfiguration = KontoKonfiguration::neu("logandaim.at", "logandaim-api");
+        let konfiguration = IdentityProviderConfiguration::neu("logandaim.at", "logandaim-api");
         assert_eq!(konfiguration.issuer, "logandaim.at");
         assert_eq!(konfiguration.audience, "logandaim-api");
     }

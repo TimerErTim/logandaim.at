@@ -19,7 +19,7 @@ mod context;
 pub use context::ExecutionContext;
 
 mod konfiguration;
-pub use konfiguration::KontoKonfiguration;
+pub use konfiguration::IdentityProviderConfiguration;
 
 mod instrumented;
 mod instrumented_repos;
@@ -41,7 +41,7 @@ pub struct App {
     /// Transaction mail. No default, for the same reason.
     pub mail_sender: Arc<dyn MailSender>,
     /// Mailed link targets and token identity. Deployment data, not behaviour.
-    pub konto: KontoKonfiguration,
+    pub konto: IdentityProviderConfiguration,
     #[builder(default = Arc::new(SystemClock))]
     pub clock: Arc<dyn Clock>,
     #[builder(default = Arc::new(InMemoryObjectStore::new()))]

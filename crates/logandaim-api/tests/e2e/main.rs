@@ -14,7 +14,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration};
 use logandaim_api::openapi_service;
 use logandaim_core::{
-    App, adapters::InMemorySigning, application::KontoKonfiguration, domain::konto::SigningKeyId,
+    App, adapters::InMemorySigning, application::IdentityProviderConfiguration, domain::konto::SigningKeyId,
     ports::Clock,
 };
 use logandaim_fakes::{FakeMailSender, FixedClock, InMemoryThrottle};
@@ -46,8 +46,8 @@ pub fn test_signing_key() -> InMemorySigning {
     )
 }
 
-pub fn test_konfiguration() -> KontoKonfiguration {
-    KontoKonfiguration::neu(ISSUER, AUDIENCE)
+pub fn test_konfiguration() -> IdentityProviderConfiguration {
+    IdentityProviderConfiguration::neu(ISSUER, AUDIENCE)
 }
 
 /// A built app plus the fakes a test has to reach into.

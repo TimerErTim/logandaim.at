@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, Utc};
 use logandaim_core::{
     App,
     adapters::InMemorySigning,
-    application::{AppBuilder, AuthContext, KontoKonfiguration, SetUowProvider},
+    application::{AppBuilder, AuthContext, IdentityProviderConfiguration, SetUowProvider},
     domain::konto::{AccessTokenClaims, SigningKeyId},
     ports::{Clock, Signing},
     service::SessionPrüfen,
@@ -50,8 +50,8 @@ pub fn pruefen(_harness: &Harness, claims: AccessTokenClaims) -> SessionPrüfen 
 }
 
 /// Token identity every shared case runs with.
-pub fn test_konfiguration() -> KontoKonfiguration {
-    KontoKonfiguration::neu("logandaim.at", "logandaim-api")
+pub fn test_konfiguration() -> IdentityProviderConfiguration {
+    IdentityProviderConfiguration::neu("logandaim.at", "logandaim-api")
 }
 
 /// The frontend origin a case's mailed links are spelled from.
