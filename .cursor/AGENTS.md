@@ -59,15 +59,22 @@ tables and columns, HTTP paths, JSON keys, and spec prose.
 Naming ladder: `NeuerSchuss` (domain) → `SchussRegistrieren` (use case) → request DTO. A use-case
 type keeps its German domain noun; the module it lives in does not.
 
-The application and infrastructure layers are English, because they are structure, not
-vocabulary: ports (`UserRepository`-style methods — `get_by_id`, `update`, `delete`), adapters,
-throttling, mail, and the use-case module files (`login.rs`, `registration.rs`, `password.rs`,
-`session.rs`, `user.rs`). A file is named for the English journey it covers, never for its German
-type.
+**The domain concept stays German; the technical makeup around it is English.** A port keeps its
+German noun (`BenutzerRepository`, `PasswortWiederherstellung`, `Drossel`) because that noun *is* the
+ubiquitous language. Everything that dresses it is English: methods (`find_by_id`, `find_all`,
+`create`, `update`, `delete`, `delete_by_benutzer`, `check_and_count`, `is_authenticated`), modules
+(`repos.rs`, `throttle.rs`, `login.rs`, `password.rs`, `requests/benutzer.rs`), DTO suffixes
+(`…Request`), and error plumbing. `KundenRepository::find_by_id`, never
+`KundenSpeicher::bekomme_durch_identität`.
+
+So: German nouns, English verbs and structure. A German *verb* in the application layer
+(`prüfe_und_zähle`, `speichere`, `setze_rolle`) is a mistake — it is not domain vocabulary, it is
+plumbing that happens to be spelled in German. A German noun with an English verb is correct:
+`BenutzerRepository::delete_by_benutzer`.
 
 Use **proper UTF-8** in identifiers and persisted names. Never transliterate umlauts to
-`ae`/`oe`/`ue` (`naechste`, `strasse`); never paper over it with `serde(rename)`. This is enforced
-by review, not by a task.
+`ae`/`oe`/`ue` (`BenutzerLöschenFehler`, not `BenutzerLoeschenFehler`; `Bestätigung`, not
+`Bestaetigung`); never paper over it with `serde(rename)`. This is enforced by review, not by a task.
 
 ## Patterns an agent can silently break
 
@@ -77,7 +84,13 @@ by review, not by a task.
   the outer TX; nested `commit`/`rollback` are no-ops). Collect work without `?` across the UoW,
   then `uow.finish(result, ctx)`. Dropping a UoW that neither committed nor rolled back panics.
 - **Repositories are dumb** — they persist and load domain types; state transitions belong in the
-  domain or the use case.
+  domain or the use case. Every repository has the same five shapes: `find_by_id`, `find_all` (or a
+  scoped `find_by_*`), `create(Neues*)`, `update(&mut Versioned<T>) -> RepositoryResult<()>`,
+  `delete(Versioned<T>) -> RepositoryResult<()>`. `update` writes the whole row back and bumps the
+  version **in place**; `delete` takes the aggregate as it was loaded, so a stale version is a
+  `VersionMismatch` in both directions. The load → domain mutation → write-back loop is the
+  caller's, and a purpose-built mutator (`revoke_all`, `set_role`) is a sign the logic belongs in a
+  use-case loop instead.
 - **Errors** — `Report<E>` at every boundary; use `.change_context()` directly. Value-object
   validation is the one exception: plain `Result` with a dedicated `thiserror` enum.
 - **Concurrency** — `Versioned<T>` bundles an entity with its optimistic-lock version.

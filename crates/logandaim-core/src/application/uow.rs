@@ -279,6 +279,10 @@ impl<T> Versioned<T> {
     {
         self.data.clone()
     }
+
+    pub fn set_data(&mut self, data: T) {
+        self.data = data;
+    }
 }
 
 impl<T> Clone for Versioned<T>

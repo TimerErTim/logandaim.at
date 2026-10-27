@@ -18,7 +18,10 @@ use logandaim_core::{
 
 use crate::{
     errors::libsql_error_to_persistence_error,
-    repos::common::{format_datetime, parse_datetime, parse_uuid, parse_version},
+    repos::common::{
+        delete_versioned, format_datetime, parse_datetime, parse_uuid, parse_version,
+        update_versioned,
+    },
 };
 
 const SELECT: &str = r#"SELECT id, benutzer_id, email, password_hash, bestätigt_am, created_at,
@@ -157,51 +160,45 @@ impl KontoRepository for SQLiteKontoRepository {
         Ok(konten)
     }
 
-    async fn update(&self, konto: &Versioned<Konto>) -> RepositoryResult<Versioned<Konto>> {
+    /// Full-row write-back with an in-place version bump; a stale version is a
+    /// `VersionMismatch`, never a silent overwrite.
+    async fn update(&self, konto: &mut Versioned<Konto>) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let betroffen = tx
-            .execute(
-                r#"UPDATE "konten" SET benutzer_id = ?2, email = ?3, password_hash = ?4,
-                       bestätigt_am = ?5, created_at = ?6, _version = ?7 + 1
-                   WHERE id = ?1 AND _version = ?7"#,
-                (
-                    konto.id().0.to_string(),
-                    konto.benutzer_id().0.to_string(),
-                    konto.email().as_ref().to_string(),
-                    konto.password_hash().as_str().to_string(),
-                    format_datetime(konto.bestätigt_am()),
-                    format_datetime(konto.created_at()),
-                    konto.v() as i64,
-                ),
-            )
-            .await
-            .contextualize_with(libsql_error_to_persistence_error)?;
+        update_versioned(
+            tx,
+            r#"UPDATE "konten" SET benutzer_id = ?2, email = ?3, password_hash = ?4,
+                   bestätigt_am = ?5, created_at = ?6, _version = ?7 + 1
+               WHERE id = ?1 AND _version = ?7"#,
+            (
+                konto.id().0.to_string(),
+                konto.benutzer_id().0.to_string(),
+                konto.email().as_ref().to_string(),
+                konto.password_hash().as_str().to_string(),
+                format_datetime(konto.bestätigt_am()),
+                format_datetime(konto.created_at()),
+                konto.v() as i64,
+            ),
+            konto.v(),
+        )
+        .await?;
 
-        if betroffen == 0 {
-            return Err(RepositoryError::VersionMismatch {
-                expected: konto.v(),
-                actual: None,
-            }
-            .into());
-        }
-
-        Ok(konto.clone().incremented())
+        konto.increment();
+        Ok(())
     }
 
-    async fn delete(&self, id: KontoId) -> RepositoryResult<()> {
+    /// Delete guarded by the version the caller holds.
+    async fn delete(&self, konto: Versioned<Konto>) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let betroffen = tx
-            .execute(r#"DELETE FROM "konten" WHERE id = ?1"#, [id.0.to_string()])
-            .await
-            .contextualize_with(libsql_error_to_persistence_error)?;
-
-        if betroffen == 0 {
-            return Err(RepositoryError::NotFound.into());
-        }
-        Ok(())
+        delete_versioned(
+            tx,
+            r#"DELETE FROM "konten" WHERE id = ?1 AND _version = ?2"#,
+            (konto.id().0.to_string(), konto.v() as i64),
+            konto.v(),
+        )
+        .await
     }
 }

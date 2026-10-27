@@ -33,7 +33,7 @@ pub enum AnmeldungFehler {
     #[error("der Benutzer konnte nicht geladen werden")]
     BenutzerLaden,
     #[error("das Passwort konnte nicht geprüft werden")]
-    PasswortPruefen,
+    PasswortPrüfen,
     #[error("das Refresh-Token konnte nicht erzeugt werden")]
     TokenErzeugen,
     #[error("die Sitzung konnte nicht gespeichert werden")]
@@ -80,12 +80,12 @@ impl UseCase<SitzungAusgestellt> for Anmeldung {
 
             let Some(konto) = konto else {
                 // Same work as the wrong-Passwort path (rule 4).
-                dummy_verify(&self.passwort).change_context(AnmeldungFehler::PasswortPruefen)?;
+                dummy_verify(&self.passwort).change_context(AnmeldungFehler::PasswortPrüfen)?;
                 return Err(Report::new(AnmeldungFehler::ZugangsdatenFalsch));
             };
 
             let stimmt = verify_password(&self.passwort, konto.password_hash())
-                .change_context(AnmeldungFehler::PasswortPruefen)?;
+                .change_context(AnmeldungFehler::PasswortPrüfen)?;
             if !stimmt {
                 return Err(Report::new(AnmeldungFehler::ZugangsdatenFalsch));
             }

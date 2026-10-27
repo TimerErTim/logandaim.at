@@ -15,7 +15,10 @@ use logandaim_core::{
 
 use crate::{
     errors::libsql_error_to_persistence_error,
-    repos::common::{format_datetime, parse_datetime, parse_uuid, parse_version},
+    repos::common::{
+        delete_versioned, format_datetime, parse_datetime, parse_uuid, parse_version,
+        update_versioned,
+    },
 };
 
 const SELECT: &str = r#"SELECT id, rolle, created_at, _version FROM "benutzer""#;
@@ -82,53 +85,41 @@ impl BenutzerRepository for SQLiteBenutzerRepository {
         benutzer_from_row(&row)
     }
 
-    async fn update(
-        &self,
-        benutzer: &Versioned<Benutzer>,
-    ) -> RepositoryResult<Versioned<Benutzer>> {
+    /// Full-row write-back with an in-place version bump; a stale version is a
+    /// `VersionMismatch`, never a silent overwrite.
+    async fn update(&self, benutzer: &mut Versioned<Benutzer>) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let betroffen = tx
-            .execute(
-                r#"UPDATE "benutzer" SET rolle = ?2, created_at = ?3, _version = ?4 + 1
-                   WHERE id = ?1 AND _version = ?4"#,
-                (
-                    benutzer.id().0.to_string(),
-                    benutzer.rolle().as_str(),
-                    format_datetime(benutzer.created_at()),
-                    benutzer.v() as i64,
-                ),
-            )
-            .await
-            .contextualize_with(libsql_error_to_persistence_error)?;
+        update_versioned(
+            tx,
+            r#"UPDATE "benutzer" SET rolle = ?2, created_at = ?3, _version = ?4 + 1
+               WHERE id = ?1 AND _version = ?4"#,
+            (
+                benutzer.id().0.to_string(),
+                benutzer.rolle().as_str(),
+                format_datetime(benutzer.created_at()),
+                benutzer.v() as i64,
+            ),
+            benutzer.v(),
+        )
+        .await?;
 
-        if betroffen == 0 {
-            return Err(RepositoryError::VersionMismatch {
-                expected: benutzer.v(),
-                actual: None,
-            }
-            .into());
-        }
-
-        Ok(benutzer.clone().incremented())
+        benutzer.increment();
+        Ok(())
     }
 
-    async fn delete(&self, id: BenutzerId) -> RepositoryResult<()> {
+    /// Delete guarded by the version the caller holds.
+    async fn delete(&self, benutzer: Versioned<Benutzer>) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let betroffen = tx
-            .execute(
-                r#"DELETE FROM "benutzer" WHERE id = ?1"#,
-                [id.0.to_string()],
-            )
-            .await
-            .contextualize_with(libsql_error_to_persistence_error)?;
-
-        if betroffen == 0 {
-            return Err(RepositoryError::NotFound.into());
-        }
-        Ok(())
+        delete_versioned(
+            tx,
+            r#"DELETE FROM "benutzer" WHERE id = ?1 AND _version = ?2"#,
+            (benutzer.id().0.to_string(), benutzer.v() as i64),
+            benutzer.v(),
+        )
+        .await
     }
 }

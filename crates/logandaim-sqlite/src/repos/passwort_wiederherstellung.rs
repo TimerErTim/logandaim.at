@@ -18,7 +18,10 @@ use logandaim_core::{
 
 use crate::{
     errors::libsql_error_to_persistence_error,
-    repos::common::{format_datetime, parse_datetime, parse_uuid, parse_version},
+    repos::common::{
+        delete_versioned, format_datetime, parse_datetime, parse_uuid, parse_version,
+        update_versioned,
+    },
 };
 
 const SELECT: &str = r#"SELECT id, konto_id, token_hash, expires_at, spent_at, _version
@@ -159,57 +162,54 @@ impl PasswortWiederherstellungRepository for SQLitePasswortWiederherstellungRepo
         Ok(wiederherstellungen)
     }
 
+    /// Full-row write-back with an in-place version bump. Spending a recovery is a domain
+    /// transition; this only persists it.
     async fn update(
         &self,
-        wiederherstellung: &Versioned<PasswortWiederherstellung>,
-    ) -> RepositoryResult<Versioned<PasswortWiederherstellung>> {
+        wiederherstellung: &mut Versioned<PasswortWiederherstellung>,
+    ) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let betroffen = tx
-            .execute(
-                r#"UPDATE "passwort_wiederherstellungen" SET konto_id = ?2, token_hash = ?3,
-                       expires_at = ?4, spent_at = ?5, _version = ?6 + 1
-                   WHERE id = ?1 AND _version = ?6"#,
-                (
-                    wiederherstellung.id().0.to_string(),
-                    wiederherstellung.konto_id().0.to_string(),
-                    wiederherstellung.token_hash().as_str().to_string(),
-                    format_datetime(wiederherstellung.expires_at()),
-                    wiederherstellung.spent_at().map(format_datetime),
-                    wiederherstellung.v() as i64,
-                ),
-            )
-            .await
-            .contextualize_with(libsql_error_to_persistence_error)?;
+        update_versioned(
+            tx,
+            r#"UPDATE "passwort_wiederherstellungen" SET konto_id = ?2, token_hash = ?3,
+                   expires_at = ?4, spent_at = ?5, _version = ?6 + 1
+               WHERE id = ?1 AND _version = ?6"#,
+            (
+                wiederherstellung.id().0.to_string(),
+                wiederherstellung.konto_id().0.to_string(),
+                wiederherstellung.token_hash().as_str().to_string(),
+                format_datetime(wiederherstellung.expires_at()),
+                wiederherstellung.spent_at().map(format_datetime),
+                wiederherstellung.v() as i64,
+            ),
+            wiederherstellung.v(),
+        )
+        .await?;
 
-        if betroffen == 0 {
-            return Err(RepositoryError::VersionMismatch {
-                expected: wiederherstellung.v(),
-                actual: None,
-            }
-            .into());
-        }
-
-        Ok(wiederherstellung.clone().incremented())
+        wiederherstellung.increment();
+        Ok(())
     }
 
-    async fn delete(&self, id: PasswortWiederherstellungId) -> RepositoryResult<()> {
+    /// Delete guarded by the version the caller holds.
+    async fn delete(
+        &self,
+        wiederherstellung: Versioned<PasswortWiederherstellung>,
+    ) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let betroffen = tx
-            .execute(
-                r#"DELETE FROM "passwort_wiederherstellungen" WHERE id = ?1"#,
-                [id.0.to_string()],
-            )
-            .await
-            .contextualize_with(libsql_error_to_persistence_error)?;
-
-        if betroffen == 0 {
-            return Err(RepositoryError::NotFound.into());
-        }
-        Ok(())
+        delete_versioned(
+            tx,
+            r#"DELETE FROM "passwort_wiederherstellungen" WHERE id = ?1 AND _version = ?2"#,
+            (
+                wiederherstellung.id().0.to_string(),
+                wiederherstellung.v() as i64,
+            ),
+            wiederherstellung.v(),
+        )
+        .await
     }
 
     async fn delete_by_konto(&self, konto_id: KontoId) -> RepositoryResult<()> {

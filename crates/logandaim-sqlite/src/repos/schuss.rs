@@ -8,11 +8,15 @@ use uuid::Uuid;
 
 use logandaim_core::{
     ErrorReportExt,
+    application::uow::Versioned,
     domain::{NeuerSchuss, Schuss, SchussId, Wertungszone, ZielId},
     ports::{RepositoryError, RepositoryResult, SchussRepository},
 };
 
-use crate::{errors::libsql_error_to_persistence_error, repos::common::parse_uuid};
+use crate::{
+    errors::libsql_error_to_persistence_error,
+    repos::common::{delete_versioned, parse_uuid, parse_version, update_versioned},
+};
 
 /// Single source of truth for the stored spelling of a Wertungszone.
 fn zone_to_str(zone: Wertungszone) -> &'static str {
@@ -34,7 +38,7 @@ fn zone_from_str(value: &str) -> Result<Wertungszone, RepositoryError> {
     }
 }
 
-fn schuss_from_row(row: &Row) -> RepositoryResult<Schuss> {
+fn schuss_from_row(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
     let id_raw: String = row.get(0).contextualize(RepositoryError::Data)?;
     let ziel_id_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
     let pfeil: i64 = row.get(2).contextualize(RepositoryError::Data)?;
@@ -45,8 +49,11 @@ fn schuss_from_row(row: &Row) -> RepositoryResult<Schuss> {
     let zone = zone_from_str(&zone_raw).contextualize(RepositoryError::Data)?;
     let pfeil = usize::try_from(pfeil).contextualize(RepositoryError::Data)?;
 
-    Schuss::from_parts(SchussId(id), ZielId(ziel_id), pfeil, zone)
-        .change_context(RepositoryError::Data)
+    Ok(Versioned::new(
+        parse_version(row, 4)?,
+        Schuss::from_parts(SchussId(id), ZielId(ziel_id), pfeil, zone)
+            .change_context(RepositoryError::Data)?,
+    ))
 }
 
 pub struct SQLiteSchussRepository {
@@ -55,7 +62,7 @@ pub struct SQLiteSchussRepository {
 
 #[async_trait]
 impl SchussRepository for SQLiteSchussRepository {
-    async fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Schuss> {
+    async fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Versioned<Schuss>> {
         let id = SchussId(Uuid::new_v4());
         let domain = Schuss::neu(id, schuss.clone());
 
@@ -74,16 +81,16 @@ impl SchussRepository for SQLiteSchussRepository {
         .await
         .contextualize_with(libsql_error_to_persistence_error)?;
 
-        Ok(domain)
+        Ok(Versioned::init(domain))
     }
 
-    async fn find_by_id(&self, id: SchussId) -> RepositoryResult<Schuss> {
+    async fn find_by_id(&self, id: SchussId) -> RepositoryResult<Versioned<Schuss>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         let mut rows = tx
             .query(
-                r#"SELECT id, ziel_id, pfeil, "wertungszone" FROM "schüsse" WHERE id = ?1"#,
+                r#"SELECT id, ziel_id, pfeil, "wertungszone", _version FROM "schüsse" WHERE id = ?1"#,
                 [id.0.to_string()],
             )
             .await
@@ -100,7 +107,7 @@ impl SchussRepository for SQLiteSchussRepository {
         schuss_from_row(&row)
     }
 
-    async fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Schuss>> {
+    async fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Versioned<Schuss>>> {
         if ids.is_empty() {
             return Ok(Vec::new());
         }
@@ -113,7 +120,7 @@ impl SchussRepository for SQLiteSchussRepository {
             .collect::<Vec<_>>()
             .join(", ");
         let sql = format!(
-            r#"SELECT id, ziel_id, pfeil, "wertungszone" FROM "schüsse" WHERE id IN ({placeholders})"#
+            r#"SELECT id, ziel_id, pfeil, "wertungszone", _version FROM "schüsse" WHERE id IN ({placeholders})"#
         );
 
         let mut rows = tx
@@ -134,5 +141,42 @@ impl SchussRepository for SQLiteSchussRepository {
         }
 
         Ok(schüsse)
+    }
+
+    async fn update(&self, schuss: &mut Versioned<Schuss>) -> RepositoryResult<()> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
+
+        update_versioned(
+            tx,
+            r#"UPDATE "schüsse" SET ziel_id = ?2, pfeil = ?3, "wertungszone" = ?4,
+                   _version = ?5 + 1
+               WHERE id = ?1 AND _version = ?5"#,
+            (
+                schuss.id().0.to_string(),
+                schuss.ziel_id().0.to_string(),
+                schuss.pfeil().get() as i64,
+                zone_to_str(schuss.wertungszone()),
+                schuss.v() as i64,
+            ),
+            schuss.v(),
+        )
+        .await?;
+
+        schuss.increment();
+        Ok(())
+    }
+
+    async fn delete(&self, schuss: Versioned<Schuss>) -> RepositoryResult<()> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
+
+        delete_versioned(
+            tx,
+            r#"DELETE FROM "schüsse" WHERE id = ?1 AND _version = ?2"#,
+            (schuss.id().0.to_string(), schuss.v() as i64),
+            schuss.v(),
+        )
+        .await
     }
 }

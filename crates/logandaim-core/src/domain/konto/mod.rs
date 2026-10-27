@@ -58,7 +58,7 @@ pub use session::{
     NeueSession, Session, SessionId, SessionIn, SessionNotLive, SessionState, state,
 };
 pub use signing::{SIGNATURE_BYTES, Signature, SigningKeyId, SigningKeypair};
-pub use sitzung_ausgestellt::{SitzungAusgestellt, claims_fuer};
+pub use sitzung_ausgestellt::{SitzungAusgestellt, claims_for};
 pub use token::{AccessToken, RefreshToken, SecretToken, SecretTokenHash};
 
 /// Shortest accepted Passwort, in characters.

@@ -28,11 +28,11 @@ pub enum RegistrierungStartenFehler {
     #[error("zu viele Versuche; bitte später erneut versuchen")]
     Gedrosselt,
     #[error("die E-Mail-Adresse konnte nicht geprüft werden")]
-    KontoPruefen,
+    KontoPrüfen,
     #[error("das Bestätigungs-Token konnte nicht erzeugt werden")]
     TokenErzeugen,
     #[error("die Bestätigung konnte nicht gespeichert werden")]
-    BestaetigungSpeichern,
+    BestätigungSpeichern,
 }
 
 /// Registration step 1: name an address, receive a confirmation mail.
@@ -62,17 +62,17 @@ impl UseCase<()> for RegistrierungStarten {
         let uow = ctx
             .enter()
             .await
-            .change_context(RegistrierungStartenFehler::KontoPruefen)?;
+            .change_context(RegistrierungStartenFehler::KontoPrüfen)?;
 
         let vorhandenes_konto = uow
             .konten()
             .find_by_email(&self.email)
             .await
             .map_err(IntoReport::into_report)
-            .change_context(RegistrierungStartenFehler::KontoPruefen);
+            .change_context(RegistrierungStartenFehler::KontoPrüfen);
 
         let vorhandenes_konto = uow
-            .finish(vorhandenes_konto, RegistrierungStartenFehler::KontoPruefen)
+            .finish(vorhandenes_konto, RegistrierungStartenFehler::KontoPrüfen)
             .await?;
 
         if vorhandenes_konto.is_some() {
@@ -87,7 +87,7 @@ impl UseCase<()> for RegistrierungStarten {
         let uow = ctx
             .enter()
             .await
-            .change_context(RegistrierungStartenFehler::BestaetigungSpeichern)?;
+            .change_context(RegistrierungStartenFehler::BestätigungSpeichern)?;
 
         let ergebnis = async {
             // One link per address: an outstanding confirmation is spent before the new
@@ -99,12 +99,12 @@ impl UseCase<()> for RegistrierungStarten {
                 .create(bestätigung)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(RegistrierungStartenFehler::BestaetigungSpeichern)?;
+                .change_context(RegistrierungStartenFehler::BestätigungSpeichern)?;
             Ok::<_, Report<RegistrierungStartenFehler>>(())
         }
         .await;
 
-        uow.finish(ergebnis, RegistrierungStartenFehler::BestaetigungSpeichern)
+        uow.finish(ergebnis, RegistrierungStartenFehler::BestätigungSpeichern)
             .await?;
 
         send_mail(
@@ -126,21 +126,18 @@ async fn spend_open_confirmations(
         .find_by_email(email)
         .await
         .map_err(IntoReport::into_report)
-        .change_context(RegistrierungStartenFehler::BestaetigungSpeichern)?;
+        .change_context(RegistrierungStartenFehler::BestätigungSpeichern)?;
     for bestätigung in offene {
         if bestätigung.ist_verbraucht() {
             continue;
         }
-        let mut neu = bestätigung.cloned_data();
-        neu.verbrauchen(jetzt);
+        let mut geladen = bestätigung;
+        geladen.verbrauchen(jetzt);
         uow.bestätigungen()
-            .update(&crate::application::uow::Versioned::new(
-                bestätigung.v(),
-                neu,
-            ))
+            .update(&mut geladen)
             .await
             .map_err(IntoReport::into_report)
-            .change_context(RegistrierungStartenFehler::BestaetigungSpeichern)?;
+            .change_context(RegistrierungStartenFehler::BestätigungSpeichern)?;
     }
     Ok(())
 }
@@ -153,9 +150,9 @@ pub enum RegistrierungAbschliessenFehler {
     #[error("zu viele Versuche; bitte später erneut versuchen")]
     Gedrosselt,
     #[error("die Bestätigung konnte nicht geladen werden")]
-    BestaetigungLaden,
+    BestätigungLaden,
     #[error("die Bestätigung konnte nicht gespeichert werden")]
-    BestaetigungSpeichern,
+    BestätigungSpeichern,
     #[error("das Passwort konnte nicht gespeichert werden")]
     PasswortSetzen,
     #[error("der Benutzer konnte nicht angelegt werden")]
@@ -204,7 +201,7 @@ impl UseCase<SitzungAusgestellt> for RegistrierungAbschließen {
         let uow = ctx
             .enter()
             .await
-            .change_context(RegistrierungAbschliessenFehler::BestaetigungLaden)?;
+            .change_context(RegistrierungAbschliessenFehler::BestätigungLaden)?;
 
         let ergebnis = async {
             let bestätigung = uow
@@ -212,7 +209,7 @@ impl UseCase<SitzungAusgestellt> for RegistrierungAbschließen {
                 .find_by_hash(&(&self.token).into())
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(RegistrierungAbschliessenFehler::BestaetigungLaden)?;
+                .change_context(RegistrierungAbschliessenFehler::BestätigungLaden)?;
 
             let Some(bestätigung) = bestätigung else {
                 return Err(Report::new(
@@ -228,16 +225,13 @@ impl UseCase<SitzungAusgestellt> for RegistrierungAbschließen {
 
             // Spend first, so a concurrent completion sees `VersionMismatch` rather than
             // creating a second Benutzer for one address.
-            let mut verbraucht = bestätigung.cloned_data();
+            let mut verbraucht = bestätigung.clone();
             verbraucht.verbrauchen(jetzt);
             uow.bestätigungen()
-                .update(&crate::application::uow::Versioned::new(
-                    bestätigung.v(),
-                    verbraucht,
-                ))
+                .update(&mut verbraucht)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(RegistrierungAbschliessenFehler::BestaetigungSpeichern)?;
+                .change_context(RegistrierungAbschliessenFehler::BestätigungSpeichern)?;
 
             let email = bestätigung.email().clone();
             let belegt = uow
@@ -287,7 +281,7 @@ impl UseCase<SitzungAusgestellt> for RegistrierungAbschließen {
         .await;
 
         let ausgestellt = uow
-            .finish(ergebnis, RegistrierungAbschliessenFehler::BestaetigungLaden)
+            .finish(ergebnis, RegistrierungAbschliessenFehler::BestätigungLaden)
             .await?;
 
         tracing::info!(
@@ -306,5 +300,5 @@ async fn delete_confirmations(
         .delete_by_email(email)
         .await
         .map_err(IntoReport::into_report)
-        .change_context(RegistrierungAbschliessenFehler::BestaetigungSpeichern)
+        .change_context(RegistrierungAbschliessenFehler::BestätigungSpeichern)
 }

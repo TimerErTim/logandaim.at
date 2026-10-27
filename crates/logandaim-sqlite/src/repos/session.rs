@@ -17,7 +17,10 @@ use logandaim_core::{
 
 use crate::{
     errors::libsql_error_to_persistence_error,
-    repos::common::{format_datetime, parse_datetime, parse_uuid, parse_version},
+    repos::common::{
+        delete_versioned, format_datetime, parse_datetime, parse_uuid, parse_version,
+        update_versioned,
+    },
 };
 
 const SELECT: &str = r#"SELECT id, benutzer_id, refresh_token_hash, signing_key_id, public_key,
@@ -144,41 +147,36 @@ impl SessionRepository for SQLiteSessionRepository {
         session_from_row(&row).map(Some)
     }
 
-    async fn update(&self, session: &Versioned<Session>) -> RepositoryResult<Versioned<Session>> {
+    /// Full-row write-back with an in-place version bump. A rotation or revocation is a
+    /// domain transition the caller applied; this only persists it.
+    async fn update(&self, session: &mut Versioned<Session>) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let betroffen = tx
-            .execute(
-                r#"UPDATE "sessions" SET benutzer_id = ?2, refresh_token_hash = ?3,
-                       signing_key_id = ?4, public_key = ?5, created_at = ?6, expires_at = ?7,
-                       spent_at = ?8, revoked_at = ?9, _version = ?10 + 1
-                   WHERE id = ?1 AND _version = ?10"#,
-                (
-                    session.id().0.to_string(),
-                    session.benutzer_id().0.to_string(),
-                    session.refresh_token_hash().as_str().to_string(),
-                    session.signing_key_id().as_str().to_string(),
-                    session.public_key_hex().to_string(),
-                    format_datetime(session.created_at()),
-                    format_datetime(session.expires_at()),
-                    session.spent_at().map(format_datetime),
-                    session.revoked_at().map(format_datetime),
-                    session.v() as i64,
-                ),
-            )
-            .await
-            .contextualize_with(libsql_error_to_persistence_error)?;
+        update_versioned(
+            tx,
+            r#"UPDATE "sessions" SET benutzer_id = ?2, refresh_token_hash = ?3,
+                   signing_key_id = ?4, public_key = ?5, created_at = ?6, expires_at = ?7,
+                   spent_at = ?8, revoked_at = ?9, _version = ?10 + 1
+               WHERE id = ?1 AND _version = ?10"#,
+            (
+                session.id().0.to_string(),
+                session.benutzer_id().0.to_string(),
+                session.refresh_token_hash().as_str().to_string(),
+                session.signing_key_id().as_str().to_string(),
+                session.public_key_hex().to_string(),
+                format_datetime(session.created_at()),
+                format_datetime(session.expires_at()),
+                session.spent_at().map(format_datetime),
+                session.revoked_at().map(format_datetime),
+                session.v() as i64,
+            ),
+            session.v(),
+        )
+        .await?;
 
-        if betroffen == 0 {
-            return Err(RepositoryError::VersionMismatch {
-                expected: session.v(),
-                actual: None,
-            }
-            .into());
-        }
-
-        Ok(session.clone().incremented())
+        session.increment();
+        Ok(())
     }
 
     async fn find_by_benutzer(
@@ -207,22 +205,18 @@ impl SessionRepository for SQLiteSessionRepository {
         Ok(sessions)
     }
 
-    async fn delete(&self, id: SessionId) -> RepositoryResult<()> {
+    /// Delete guarded by the version the caller holds.
+    async fn delete(&self, session: Versioned<Session>) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let betroffen = tx
-            .execute(
-                r#"DELETE FROM "sessions" WHERE id = ?1"#,
-                [id.0.to_string()],
-            )
-            .await
-            .contextualize_with(libsql_error_to_persistence_error)?;
-
-        if betroffen == 0 {
-            return Err(RepositoryError::NotFound.into());
-        }
-        Ok(())
+        delete_versioned(
+            tx,
+            r#"DELETE FROM "sessions" WHERE id = ?1 AND _version = ?2"#,
+            (session.id().0.to_string(), session.v() as i64),
+            session.v(),
+        )
+        .await
     }
 
     async fn delete_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<()> {

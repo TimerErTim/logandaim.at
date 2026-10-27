@@ -13,7 +13,7 @@ use crate::{
     service::UseCase,
 };
 
-use super::{claims_for_session, revoke_all_sessions, save_session};
+use super::{claims_for_session, revoke_all_sessions, update_session};
 
 /// A renewed token pair: the API encodes `claims`, the client gets `refresh_token`.
 #[derive(Debug, Clone)]
@@ -104,9 +104,12 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                 RefreshToken::random().change_context(ErneuerungFehler::TokenErzeugen)?;
             let (verbraucht, folge) = live.erneuern(folge_refresh.hash(), jetzt);
 
-            save_session(&uow, session.v(), Session::Refreshed(verbraucht), || {
-                ErneuerungFehler::SitzungSpeichern
-            })
+            update_session(
+                &uow,
+                session,
+                |_| Session::Refreshed(verbraucht),
+                || ErneuerungFehler::SitzungSpeichern,
+            )
             .await?;
 
             let folge = uow
@@ -184,10 +187,10 @@ impl UseCase<()> for Abmeldung {
             if session.ist_widerrufen() {
                 return Ok(());
             }
-            save_session(
+            update_session(
                 &uow,
-                session.v(),
-                session.cloned_data().widerrufen(jetzt),
+                session,
+                |geladen| geladen.widerrufen(jetzt),
                 || AbmeldungFehler::SitzungSpeichern,
             )
             .await?;
@@ -201,7 +204,7 @@ impl UseCase<()> for Abmeldung {
 
 /// Every way `SitzungPrüfen` may refuse.
 #[derive(Debug, thiserror::Error)]
-pub enum SitzungPruefenFehler {
+pub enum SitzungPrüfenFehler {
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
     NichtAngemeldet,
     #[error("die Sitzung konnte nicht geladen werden")]
@@ -226,7 +229,7 @@ pub struct SitzungPrüfen {
 
 #[async_trait]
 impl UseCase<AuthContext> for SitzungPrüfen {
-    type Error = Report<SitzungPruefenFehler>;
+    type Error = Report<SitzungPrüfenFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<AuthContext, Self::Error> {
         let jetzt = ctx.clock().now();
@@ -234,25 +237,25 @@ impl UseCase<AuthContext> for SitzungPrüfen {
 
         self.claims
             .prüfe_herkunft(&konfiguration.issuer, &konfiguration.audience)
-            .change_context(SitzungPruefenFehler::NichtAngemeldet)?;
+            .change_context(SitzungPrüfenFehler::NichtAngemeldet)?;
         self.claims
             .prüfe_zeitfenster(jetzt)
-            .change_context(SitzungPruefenFehler::NichtAngemeldet)?;
+            .change_context(SitzungPrüfenFehler::NichtAngemeldet)?;
 
         let uow = ctx
             .enter()
             .await
-            .change_context(SitzungPruefenFehler::SitzungLaden)?;
+            .change_context(SitzungPrüfenFehler::SitzungLaden)?;
 
         let ergebnis = async {
             let session = match uow.sessions().find_by_id(self.claims.sid).await {
                 Ok(session) => session,
                 Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {
                     // An unknown session is a 401, never a 500.
-                    return Err(Report::new(SitzungPruefenFehler::NichtAngemeldet));
+                    return Err(Report::new(SitzungPrüfenFehler::NichtAngemeldet));
                 }
                 Err(fehler) => {
-                    return Err(Report::new(SitzungPruefenFehler::SitzungLaden)
+                    return Err(Report::new(SitzungPrüfenFehler::SitzungLaden)
                         .attach(fehler.current_context().to_string()));
                 }
             };
@@ -260,17 +263,17 @@ impl UseCase<AuthContext> for SitzungPrüfen {
             // AC-17: the row names the key, and the row carries that key's public half,
             // so a signature made by any other key is refused here.
             if session.signing_key_id() != &self.claims.kid {
-                return Err(Report::new(SitzungPruefenFehler::NichtAngemeldet));
+                return Err(Report::new(SitzungPrüfenFehler::NichtAngemeldet));
             }
             SigningKeypair::verify_with_public_key_hex(
                 session.public_key_hex(),
                 self.signed_message.as_bytes(),
                 &self.signature,
             )
-            .change_context(SitzungPruefenFehler::NichtAngemeldet)?;
+            .change_context(SitzungPrüfenFehler::NichtAngemeldet)?;
 
             if session.benutzer_id() != self.claims.sub || !session.ist_annehmbar(jetzt) {
-                return Err(Report::new(SitzungPruefenFehler::NichtAngemeldet));
+                return Err(Report::new(SitzungPrüfenFehler::NichtAngemeldet));
             }
 
             // The Benutzer must still exist: a deleted account leaves no live identity.
@@ -278,16 +281,16 @@ impl UseCase<AuthContext> for SitzungPrüfen {
                 .find_by_id(self.claims.sub)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(SitzungPruefenFehler::BenutzerLaden)?;
+                .change_context(SitzungPrüfenFehler::BenutzerLaden)?;
 
-            Ok::<_, Report<SitzungPruefenFehler>>(AuthContext::Authenticated {
+            Ok::<_, Report<SitzungPrüfenFehler>>(AuthContext::Authenticated {
                 benutzer_id: self.claims.sub,
                 session_id: self.claims.sid,
             })
         }
         .await;
 
-        uow.finish(ergebnis, SitzungPruefenFehler::SitzungLaden)
+        uow.finish(ergebnis, SitzungPrüfenFehler::SitzungLaden)
             .await
     }
 }

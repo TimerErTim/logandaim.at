@@ -12,9 +12,12 @@ use std::time::Duration;
 
 use serde_json::Value;
 
-/// Where Mailpit listens; overridable so CI and a local daemon can differ.
+/// Where Mailpit listens, hardcoded to the port `[daemons.mailpit]` in `mise.toml` binds.
+///
+/// The port is the daemon's, so an env variable here would only add a way to point the
+/// suite at a Mailpit the task did not start.
 fn basis_url() -> String {
-    std::env::var("LOGANDAIM_MAILPIT_URL").unwrap_or_else(|_| "http://127.0.0.1:8025".to_owned())
+    "http://127.0.0.1:8025".to_owned()
 }
 
 /// Whether Mailpit answers at all.

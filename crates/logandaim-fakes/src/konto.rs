@@ -108,13 +108,14 @@ impl Default for KontoDatastore {
     }
 }
 
-/// Write `neu` into `map` only when it was loaded at `neu.v()`, mirroring the conditional
-/// `UPDATE ... WHERE _version = ?`. The caller's copy is bumped, as a real adapter does.
+/// Write `neu` into `map` only when the stored row is still at `neu.v()`, mirroring the
+/// conditional `UPDATE ... WHERE _version = ?`, then bump `neu`'s version in place as a
+/// real adapter does.
 fn store_update<K, T>(
     map: &mut FxHashMap<K, Versioned<T>>,
     id: K,
-    neu: &Versioned<T>,
-) -> RepositoryResult<Versioned<T>>
+    neu: &mut Versioned<T>,
+) -> RepositoryResult<()>
 where
     K: std::hash::Hash + Eq + Copy,
     T: Clone,
@@ -128,9 +129,32 @@ where
             actual: Some(vorhanden.v()),
         }));
     }
-    let geschrieben = neu.clone().incremented();
-    map.insert(id, geschrieben.clone());
-    Ok(geschrieben)
+    neu.increment();
+    map.insert(id, neu.clone());
+    Ok(())
+}
+
+/// Remove `geladen` from `map` only when the stored row is still at its version, mirroring
+/// the conditional `DELETE ... WHERE id = ? AND _version = ?`.
+fn store_delete<K, T>(
+    map: &mut FxHashMap<K, Versioned<T>>,
+    id: K,
+    geladen: &Versioned<T>,
+) -> RepositoryResult<()>
+where
+    K: std::hash::Hash + Eq + Copy,
+{
+    let vorhanden = map
+        .get(&id)
+        .ok_or_else(|| Report::new(RepositoryError::NotFound))?;
+    if vorhanden.v() != geladen.v() {
+        return Err(Report::new(RepositoryError::VersionMismatch {
+            expected: geladen.v(),
+            actual: Some(vorhanden.v()),
+        }));
+    }
+    map.remove(&id);
+    Ok(())
 }
 
 pub struct FakeBenutzerRepository {
@@ -161,19 +185,14 @@ impl BenutzerRepository for FakeBenutzerRepository {
             .ok_or_else(|| Report::new(RepositoryError::NotFound))
     }
 
-    async fn update(
-        &self,
-        benutzer: &Versioned<Benutzer>,
-    ) -> RepositoryResult<Versioned<Benutzer>> {
+    async fn update(&self, benutzer: &mut Versioned<Benutzer>) -> RepositoryResult<()> {
         let mut map = self.datastore.konto.benutzer();
         store_update(&mut *map, benutzer.id(), benutzer)
     }
 
-    async fn delete(&self, id: BenutzerId) -> RepositoryResult<()> {
-        if self.datastore.konto.benutzer().remove(&id).is_none() {
-            return Err(Report::new(RepositoryError::NotFound));
-        }
-        Ok(())
+    async fn delete(&self, benutzer: Versioned<Benutzer>) -> RepositoryResult<()> {
+        let mut map = self.datastore.konto.benutzer();
+        store_delete(&mut *map, benutzer.id(), &benutzer)
     }
 }
 
@@ -239,16 +258,14 @@ impl KontoRepository for FakeKontoRepository {
             .collect())
     }
 
-    async fn update(&self, konto: &Versioned<Konto>) -> RepositoryResult<Versioned<Konto>> {
+    async fn update(&self, konto: &mut Versioned<Konto>) -> RepositoryResult<()> {
         let mut map = self.datastore.konto.konten();
         store_update(&mut *map, konto.id(), konto)
     }
 
-    async fn delete(&self, id: KontoId) -> RepositoryResult<()> {
-        if self.datastore.konto.konten().remove(&id).is_none() {
-            return Err(Report::new(RepositoryError::NotFound));
-        }
-        Ok(())
+    async fn delete(&self, konto: Versioned<Konto>) -> RepositoryResult<()> {
+        let mut map = self.datastore.konto.konten();
+        store_delete(&mut *map, konto.id(), &konto)
     }
 }
 
@@ -293,7 +310,7 @@ impl SessionRepository for FakeSessionRepository {
             .cloned())
     }
 
-    async fn update(&self, session: &Versioned<Session>) -> RepositoryResult<Versioned<Session>> {
+    async fn update(&self, session: &mut Versioned<Session>) -> RepositoryResult<()> {
         let mut map = self.datastore.konto.sessions();
         store_update(&mut *map, session.id(), session)
     }
@@ -312,11 +329,9 @@ impl SessionRepository for FakeSessionRepository {
             .collect())
     }
 
-    async fn delete(&self, id: SessionId) -> RepositoryResult<()> {
-        if self.datastore.konto.sessions().remove(&id).is_none() {
-            return Err(Report::new(RepositoryError::NotFound));
-        }
-        Ok(())
+    async fn delete(&self, session: Versioned<Session>) -> RepositoryResult<()> {
+        let mut map = self.datastore.konto.sessions();
+        store_delete(&mut *map, session.id(), &session)
     }
 
     async fn delete_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<()> {
@@ -393,20 +408,17 @@ impl EmailBestätigungRepository for FakeEmailBestätigungRepository {
     }
 
     async fn update(
-        &self,
-        bestätigung: &Versioned<EmailBestätigung>,
-    ) -> RepositoryResult<Versioned<EmailBestätigung>> {
+        &self, bestätigung: &mut Versioned<EmailBestätigung>
+    ) -> RepositoryResult<()> {
         // Spending is a transition guarded by the version, which is what keeps two
         // concurrent completions from both winning.
         let mut map = self.datastore.konto.bestätigungen();
         store_update(&mut *map, bestätigung.id(), bestätigung)
     }
 
-    async fn delete(&self, id: BestätigungId) -> RepositoryResult<()> {
-        if self.datastore.konto.bestätigungen().remove(&id).is_none() {
-            return Err(Report::new(RepositoryError::NotFound));
-        }
-        Ok(())
+    async fn delete(&self, bestätigung: Versioned<EmailBestätigung>) -> RepositoryResult<()> {
+        let mut map = self.datastore.konto.bestätigungen();
+        store_delete(&mut *map, bestätigung.id(), &bestätigung)
     }
 
     async fn delete_by_email(&self, email: &EmailAdresse) -> RepositoryResult<()> {
@@ -484,23 +496,18 @@ impl PasswortWiederherstellungRepository for FakePasswortWiederherstellungReposi
 
     async fn update(
         &self,
-        wiederherstellung: &Versioned<PasswortWiederherstellung>,
-    ) -> RepositoryResult<Versioned<PasswortWiederherstellung>> {
+        wiederherstellung: &mut Versioned<PasswortWiederherstellung>,
+    ) -> RepositoryResult<()> {
         let mut map = self.datastore.konto.wiederherstellungen();
         store_update(&mut *map, wiederherstellung.id(), wiederherstellung)
     }
 
-    async fn delete(&self, id: PasswortWiederherstellungId) -> RepositoryResult<()> {
-        if self
-            .datastore
-            .konto
-            .wiederherstellungen()
-            .remove(&id)
-            .is_none()
-        {
-            return Err(Report::new(RepositoryError::NotFound));
-        }
-        Ok(())
+    async fn delete(
+        &self,
+        wiederherstellung: Versioned<PasswortWiederherstellung>,
+    ) -> RepositoryResult<()> {
+        let mut map = self.datastore.konto.wiederherstellungen();
+        store_delete(&mut *map, wiederherstellung.id(), &wiederherstellung)
     }
 
     async fn delete_by_konto(&self, konto_id: KontoId) -> RepositoryResult<()> {

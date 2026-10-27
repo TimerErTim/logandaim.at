@@ -1,18 +1,4 @@
-["test:unit"]
-description = "Tests every isolated piece: no daemon, no network, no real SMTP"
-run = "cargo nextest run --workspace --filter-expr 'not binary_id(logandaim-api::e2e)'"
-
-["test:e2e"]
-description = "Run every test that needs a real external service"
-daemons = ["mailpit"]
-run = """
-#!/usr/bin/env bash
-set -eu
-# Port of [daemons.mailpit] in mise.toml.
-export LOGANDAIM_MAILPIT_URL=http://127.0.0.1:8025
-cargo nextest run -p logandaim-api --test e2e
-"""
-
 ["test"]
-description = "Run all project tests"
-depends = ["test:unit", "test:e2e"]
+description = "Run every test; the API e2e cases get a real Mailpit"
+daemons = ["mailpit"]
+run = "cargo nextest run --workspace"

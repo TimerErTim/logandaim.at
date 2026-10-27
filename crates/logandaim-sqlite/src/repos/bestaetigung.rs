@@ -18,7 +18,10 @@ use logandaim_core::{
 
 use crate::{
     errors::libsql_error_to_persistence_error,
-    repos::common::{format_datetime, parse_datetime, parse_uuid, parse_version},
+    repos::common::{
+        delete_versioned, format_datetime, parse_datetime, parse_uuid, parse_version,
+        update_versioned,
+    },
 };
 
 const SELECT: &str =
@@ -153,59 +156,47 @@ impl EmailBestätigungRepository for SQLiteEmailBestätigungRepository {
         Ok(bestätigungen)
     }
 
+    /// Full-row write-back with an in-place version bump. Spending a confirmation is a
+    /// domain transition; this only persists it.
     async fn update(
-        &self,
-        bestätigung: &Versioned<EmailBestätigung>,
-    ) -> RepositoryResult<Versioned<EmailBestätigung>> {
+        &self, bestätigung: &mut Versioned<EmailBestätigung>
+    ) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        // Conditional on the version *and* on `spent_at IS NULL`, so two concurrent
-        // completes cannot both look at an unspent row and both create a Benutzer.
-        let betroffen = tx
-            .execute(
-                r#"UPDATE "email_bestätigungen" SET email = ?2, token_hash = ?3,
-                       expires_at = ?4, spent_at = ?5, _version = ?6 + 1
-                   WHERE id = ?1 AND _version = ?6"#,
-                (
-                    bestätigung.id().0.to_string(),
-                    bestätigung.email().as_ref().to_string(),
-                    bestätigung.token_hash().as_str().to_string(),
-                    format_datetime(bestätigung.expires_at()),
-                    bestätigung.spent_at().map(format_datetime),
-                    bestätigung.v() as i64,
-                ),
-            )
-            .await
-            .contextualize_with(libsql_error_to_persistence_error)?;
+        update_versioned(
+            tx,
+            r#"UPDATE "email_bestätigungen" SET email = ?2, token_hash = ?3,
+                   expires_at = ?4, spent_at = ?5, _version = ?6 + 1
+               WHERE id = ?1 AND _version = ?6"#,
+            (
+                bestätigung.id().0.to_string(),
+                bestätigung.email().as_ref().to_string(),
+                bestätigung.token_hash().as_str().to_string(),
+                format_datetime(bestätigung.expires_at()),
+                bestätigung.spent_at().map(format_datetime),
+                bestätigung.v() as i64,
+            ),
+            bestätigung.v(),
+        )
+        .await?;
 
-        if betroffen == 0 {
-            return Err(RepositoryError::VersionMismatch {
-                expected: bestätigung.v(),
-                actual: None,
-            }
-            .into());
-        }
-
-        Ok(bestätigung.clone().incremented())
+        bestätigung.increment();
+        Ok(())
     }
 
-    async fn delete(&self, id: BestätigungId) -> RepositoryResult<()> {
+    /// Delete guarded by the version the caller holds.
+    async fn delete(&self, bestätigung: Versioned<EmailBestätigung>) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let betroffen = tx
-            .execute(
-                r#"DELETE FROM "email_bestätigungen" WHERE id = ?1"#,
-                [id.0.to_string()],
-            )
-            .await
-            .contextualize_with(libsql_error_to_persistence_error)?;
-
-        if betroffen == 0 {
-            return Err(RepositoryError::NotFound.into());
-        }
-        Ok(())
+        delete_versioned(
+            tx,
+            r#"DELETE FROM "email_bestätigungen" WHERE id = ?1 AND _version = ?2"#,
+            (bestätigung.id().0.to_string(), bestätigung.v() as i64),
+            bestätigung.v(),
+        )
+        .await
     }
 
     async fn delete_by_email(&self, email: &EmailAdresse) -> RepositoryResult<()> {

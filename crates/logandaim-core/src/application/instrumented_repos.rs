@@ -72,11 +72,15 @@ impl_instrumented_repo!(
     schüsse,
     methods: [
         #[instrument(skip(self, schuss), level = "debug", err(Debug))]
-        fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Schuss>;
+        fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Versioned<Schuss>>;
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
-        fn find_by_id(&self, id: SchussId) -> RepositoryResult<Schuss>;
+        fn find_by_id(&self, id: SchussId) -> RepositoryResult<Versioned<Schuss>>;
         #[instrument(skip(self, ids), fields(anzahl = ids.len()), level = "trace", err(Debug))]
-        fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Schuss>>;
+        fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+        #[instrument(skip(self, schuss), level = "debug", err(Debug))]
+        fn update(&self, schuss: &mut Versioned<Schuss>) -> RepositoryResult<()>;
+        #[instrument(skip(self, schuss), level = "debug", err(Debug))]
+        fn delete(&self, schuss: Versioned<Schuss>) -> RepositoryResult<()>;
     ]
 );
 
@@ -90,9 +94,9 @@ impl_instrumented_repo!(
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
         fn find_by_id(&self, id: BenutzerId) -> RepositoryResult<Versioned<Benutzer>>;
         #[instrument(skip(self, benutzer), level = "debug", err(Debug))]
-        fn update(&self, benutzer: &Versioned<Benutzer>) -> RepositoryResult<Versioned<Benutzer>>;
-        #[instrument(skip(self, id), fields(id = ?id), level = "debug", err(Debug))]
-        fn delete(&self, id: BenutzerId) -> RepositoryResult<()>;
+        fn update(&self, benutzer: &mut Versioned<Benutzer>) -> RepositoryResult<()>;
+        #[instrument(skip(self, benutzer), level = "debug", err(Debug))]
+        fn delete(&self, benutzer: Versioned<Benutzer>) -> RepositoryResult<()>;
     ]
 );
 
@@ -110,9 +114,9 @@ impl_instrumented_repo!(
         #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
         fn find_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Konto>>>;
         #[instrument(skip(self, konto), level = "debug", err(Debug))]
-        fn update(&self, konto: &Versioned<Konto>) -> RepositoryResult<Versioned<Konto>>;
-        #[instrument(skip(self, id), fields(id = ?id), level = "debug", err(Debug))]
-        fn delete(&self, id: KontoId) -> RepositoryResult<()>;
+        fn update(&self, konto: &mut Versioned<Konto>) -> RepositoryResult<()>;
+        #[instrument(skip(self, konto), level = "debug", err(Debug))]
+        fn delete(&self, konto: Versioned<Konto>) -> RepositoryResult<()>;
     ]
 );
 
@@ -128,11 +132,11 @@ impl_instrumented_repo!(
         #[instrument(skip(self, hash), level = "trace", err(Debug))]
         fn find_by_refresh_hash(&self, hash: &SecretTokenHash) -> RepositoryResult<Option<Versioned<Session>>>;
         #[instrument(skip(self, session), level = "debug", err(Debug))]
-        fn update(&self, session: &Versioned<Session>) -> RepositoryResult<Versioned<Session>>;
+        fn update(&self, session: &mut Versioned<Session>) -> RepositoryResult<()>;
         #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
         fn find_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Session>>>;
-        #[instrument(skip(self, id), fields(id = ?id), level = "debug", err(Debug))]
-        fn delete(&self, id: SessionId) -> RepositoryResult<()>;
+        #[instrument(skip(self, session), level = "debug", err(Debug))]
+        fn delete(&self, session: Versioned<Session>) -> RepositoryResult<()>;
         #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "debug", err(Debug))]
         fn delete_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<()>;
     ]
@@ -152,9 +156,9 @@ impl_instrumented_repo!(
         #[instrument(skip(self, email), fields(email = email.as_ref()), level = "trace", err(Debug))]
         fn find_by_email(&self, email: &EmailAdresse) -> RepositoryResult<Vec<Versioned<EmailBestätigung>>>;
         #[instrument(skip(self, bestätigung), level = "debug", err(Debug))]
-        fn update(&self, bestätigung: &Versioned<EmailBestätigung>) -> RepositoryResult<Versioned<EmailBestätigung>>;
-        #[instrument(skip(self, id), fields(id = ?id), level = "debug", err(Debug))]
-        fn delete(&self, id: BestätigungId) -> RepositoryResult<()>;
+        fn update(&self, bestätigung: &mut Versioned<EmailBestätigung>) -> RepositoryResult<()>;
+        #[instrument(skip(self, bestätigung), level = "debug", err(Debug))]
+        fn delete(&self, bestätigung: Versioned<EmailBestätigung>) -> RepositoryResult<()>;
         #[instrument(skip(self, email), fields(email = email.as_ref()), level = "debug", err(Debug))]
         fn delete_by_email(&self, email: &EmailAdresse) -> RepositoryResult<()>;
     ]
@@ -174,9 +178,9 @@ impl_instrumented_repo!(
         #[instrument(skip(self, konto_id), fields(konto_id = ?konto_id), level = "trace", err(Debug))]
         fn find_by_konto(&self, konto_id: KontoId) -> RepositoryResult<Vec<Versioned<PasswortWiederherstellung>>>;
         #[instrument(skip(self, wiederherstellung), level = "debug", err(Debug))]
-        fn update(&self, wiederherstellung: &Versioned<PasswortWiederherstellung>) -> RepositoryResult<Versioned<PasswortWiederherstellung>>;
-        #[instrument(skip(self, id), fields(id = ?id), level = "debug", err(Debug))]
-        fn delete(&self, id: PasswortWiederherstellungId) -> RepositoryResult<()>;
+        fn update(&self, wiederherstellung: &mut Versioned<PasswortWiederherstellung>) -> RepositoryResult<()>;
+        #[instrument(skip(self, wiederherstellung), level = "debug", err(Debug))]
+        fn delete(&self, wiederherstellung: Versioned<PasswortWiederherstellung>) -> RepositoryResult<()>;
         #[instrument(skip(self, konto_id), fields(konto_id = ?konto_id), level = "debug", err(Debug))]
         fn delete_by_konto(&self, konto_id: KontoId) -> RepositoryResult<()>;
     ]

@@ -20,7 +20,7 @@ pub struct SitzungAusgestellt {
 }
 
 /// The claim set of one freshly issued access token.
-pub fn claims_fuer(
+pub fn claims_for(
     benutzer_id: BenutzerId,
     session_id: SessionId,
     kid: super::SigningKeyId,

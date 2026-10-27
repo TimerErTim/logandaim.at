@@ -16,7 +16,7 @@
 use error_stack::Report;
 use logandaim_core::ResultReport;
 use logandaim_core::service::{
-    AbmeldungFehler, BenutzerAnzeigenFehler, BenutzerLoeschenFehler, ErneuerungFehler,
+    AbmeldungFehler, BenutzerAnzeigenFehler, BenutzerLöschenFehler, ErneuerungFehler,
     PasswortWiederherstellenFehler,
 };
 use poem::Request;
@@ -126,10 +126,10 @@ pub async fn benutzer_löschen(
     req: &Request,
     body: Json<requests::BenutzerLöschungAnfrage>,
 ) -> BeendendeAntwort<OkAntwort> {
-    let ergebnis: ResultReport<(), BenutzerLoeschenFehler> =
+    let ergebnis: ResultReport<(), BenutzerLöschenFehler> =
         match spec.api().require_authenticated(req).await {
             Ok(auth) => spec.api().benutzer_löschen(auth, body.0).await,
-            Err(_) => Err(Report::new(BenutzerLoeschenFehler::NichtAngemeldet)),
+            Err(_) => Err(Report::new(BenutzerLöschenFehler::NichtAngemeldet)),
         };
     BeendendeAntwort::neu(ergebnis.map(|()| OkAntwort { ok: true }))
 }

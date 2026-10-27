@@ -8,7 +8,7 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use chrono::Duration;
 use logandaim_core::{
-    application::{AuthContext, uow::Versioned},
+    application::AuthContext,
     domain::{
         EmailAdresse,
         konto::{
@@ -957,12 +957,9 @@ async fn ac14_fremden_benutzer_liest_nur_ein_systemadministrator() {
         .app()
         .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
             let uow = ctx.enter().await?;
-            let benutzer = uow.benutzer().find_by_id(anna_id).await?;
-            let mut neu = benutzer.cloned_data();
-            neu.befördere_zu_systemadministrator();
-            uow.benutzer()
-                .update(&Versioned::new(benutzer.v(), neu))
-                .await?;
+            let mut benutzer = uow.benutzer().find_by_id(anna_id).await?;
+            benutzer.befördere_zu_systemadministrator();
+            uow.benutzer().update(&mut benutzer).await?;
             uow.commit().await
         })
         .await
@@ -999,4 +996,108 @@ async fn ac19_die_mail_trägt_einen_aufrufbaren_link() {
         "die Mail trägt den Frontend-Link: {text}"
     );
     assert_eq!(mail.empfänger.as_ref(), "anna@muster.at");
+}
+// ------------------------------------------------------ repository contract
+
+/// The reference contract every repository follows: `update` writes a whole row back and
+/// bumps the version **in place**, `delete` takes the aggregate as it was loaded. A stale
+/// version is a conflict in both directions, which is what keeps two writers from silently
+/// overwriting or deleting each other's change.
+#[test_log::test(pollster::test)]
+async fn speicher_vertrag_aktualisiert_die_version_und_schuetzt_das_loeschen() {
+    let harness = harness().await;
+
+    let (benutzer_id, geladen) = harness
+        .app()
+        .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx.enter().await?;
+            let erstellt = uow
+                .benutzer()
+                .create(NeuerBenutzer::neu(Rolle::Benutzer, ctx.clock().now()))
+                .await?;
+            let geladen = uow.benutzer().find_by_id(erstellt.id()).await?;
+            uow.commit().await?;
+            Ok((erstellt.id(), geladen))
+        })
+        .await
+        .expect("ein Benutzer wird angelegt und zurückgelesen");
+
+    let mut zu_aktualisieren = geladen.clone();
+    zu_aktualisieren.befördere_zu_systemadministrator();
+    harness
+        .app()
+        .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx.enter().await?;
+            uow.benutzer().update(&mut zu_aktualisieren).await?;
+            uow.commit().await
+        })
+        .await
+        .expect("eine Domain-Mutation wird zurückgeschrieben");
+
+    assert_eq!(
+        zu_aktualisieren.v(),
+        geladen.v() + 1,
+        "update hebt die Version des Aufrufers in place an"
+    );
+
+    // Writing the same row again at its now-stale version is a conflict, not a rewrite.
+    let mut veraltet = geladen.clone();
+    veraltet.befördere_zu_systemadministrator();
+    let zweiter_schreibversuch = harness
+        .app()
+        .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx.enter().await?;
+            let ergebnis = uow.benutzer().update(&mut veraltet).await;
+            uow.finish(ergebnis, RepositoryError::Unknown).await
+        })
+        .await;
+    assert!(
+        matches!(
+            zweiter_schreibversuch.unwrap_err().current_context(),
+            RepositoryError::VersionMismatch { .. }
+        ),
+        "eine veraltete Version wird abgelehnt"
+    );
+
+    // A delete that carries the stale row is refused; the fresh row deletes.
+    let veraltetes_loeschen = harness
+        .app()
+        .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx.enter().await?;
+            let ergebnis = uow.benutzer().delete(geladen.clone()).await;
+            uow.finish(ergebnis, RepositoryError::Unknown).await
+        })
+        .await;
+    assert!(
+        matches!(
+            veraltetes_loeschen.unwrap_err().current_context(),
+            RepositoryError::VersionMismatch { .. }
+        ),
+        "delete prüft die Version des übergebenen Aggregats"
+    );
+
+    harness
+        .app()
+        .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx.enter().await?;
+            uow.benutzer().delete(zu_aktualisieren).await?;
+            uow.commit().await
+        })
+        .await
+        .expect("die aktuelle Version löscht die Zeile");
+
+    let nachher = harness
+        .app()
+        .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx.enter().await?;
+            let ergebnis = uow.benutzer().find_by_id(benutzer_id).await;
+            uow.commit().await?;
+            Ok(ergebnis)
+        })
+        .await
+        .expect("die Suche läuft");
+    assert!(
+        nachher.is_err(),
+        "die gelöschte Zeile ist danach nicht mehr auffindbar"
+    );
 }

@@ -1,7 +1,11 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, NaiveDate, Utc};
-use logandaim_core::{domain::Menge, ports::RepositoryError};
+use error_stack::Report;
+use logandaim_core::{
+    domain::Menge,
+    ports::{RepositoryError, RepositoryResult},
+};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -66,6 +70,29 @@ pub async fn update_versioned(
             expected,
             actual: None,
         });
+    }
+    Ok(())
+}
+
+/// Conditional delete guarded by `_version`, so removing an aggregate somebody else has
+/// changed since it was loaded is a `VersionMismatch` rather than a vanished row.
+///
+/// `DELETE ... WHERE id = ?id AND _version = ?expected`.
+pub async fn delete_versioned(
+    tx: &libsql::Transaction,
+    sql: &str,
+    params: impl libsql::params::IntoParams,
+    expected: u64,
+) -> RepositoryResult<()> {
+    let affected = tx
+        .execute(sql, params)
+        .await
+        .map_err(|_| Report::new(RepositoryError::OperationFailed))?;
+    if affected == 0 {
+        return Err(Report::new(RepositoryError::VersionMismatch {
+            expected,
+            actual: None,
+        }));
     }
     Ok(())
 }

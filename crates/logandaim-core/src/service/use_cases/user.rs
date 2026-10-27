@@ -120,7 +120,7 @@ impl UseCase<BenutzerAnsicht> for BenutzerAnzeigen {
 
 /// Every way `BenutzerLöschen` may refuse.
 #[derive(Debug, thiserror::Error)]
-pub enum BenutzerLoeschenFehler {
+pub enum BenutzerLöschenFehler {
     #[error("die Anfrage ist ungültig")]
     UngültigeAnfrage,
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
@@ -128,19 +128,21 @@ pub enum BenutzerLoeschenFehler {
     #[error("das Passwort ist falsch")]
     PasswortFalsch,
     #[error("das Passwort konnte nicht geprüft werden")]
-    PasswortPruefen,
+    PasswortPrüfen,
     #[error("das Konto konnte nicht geladen werden")]
     KontoLaden,
     #[error("die Wiederherstellung konnte nicht gelöscht werden")]
-    WiederherstellungLoeschen,
+    WiederherstellungLöschen,
     #[error("die Bestätigung konnte nicht gelöscht werden")]
-    BestaetigungLoeschen,
+    BestätigungLöschen,
     #[error("das Konto konnte nicht gelöscht werden")]
-    KontoLoeschen,
+    KontoLöschen,
+    #[error("der Benutzer konnte nicht geladen werden")]
+    BenutzerLaden,
     #[error("die Sitzungen konnten nicht gelöscht werden")]
-    SitzungLoeschen,
+    SitzungLöschen,
     #[error("der Benutzer konnte nicht gelöscht werden")]
-    BenutzerLoeschen,
+    BenutzerLöschen,
 }
 
 /// Delete the caller's own Benutzer, its Konto, sessions, and outstanding tokens.
@@ -156,84 +158,94 @@ pub struct BenutzerLöschen {
 
 #[async_trait]
 impl UseCase<()> for BenutzerLöschen {
-    type Error = Report<BenutzerLoeschenFehler>;
+    type Error = Report<BenutzerLöschenFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
         let (benutzer_id, _) = ctx
             .auth()
             .require_authenticated()
-            .change_context(BenutzerLoeschenFehler::NichtAngemeldet)?;
+            .change_context(BenutzerLöschenFehler::NichtAngemeldet)?;
 
         if !self.bestätigt {
-            return Err(Report::new(BenutzerLoeschenFehler::UngültigeAnfrage));
+            return Err(Report::new(BenutzerLöschenFehler::UngültigeAnfrage));
         }
 
         let uow = ctx
             .enter()
             .await
-            .change_context(BenutzerLoeschenFehler::KontoLaden)?;
+            .change_context(BenutzerLöschenFehler::KontoLaden)?;
 
         let ergebnis = async {
+            // The row is loaded first: `delete` takes the aggregate as it was read, so a
+            // Benutzer changed since then is a conflict rather than a vanished record.
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(BenutzerLöschenFehler::BenutzerLaden)?;
+
             let konten = uow
                 .konten()
                 .find_by_benutzer(benutzer_id)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(BenutzerLoeschenFehler::NichtAngemeldet)?;
+                .change_context(BenutzerLöschenFehler::NichtAngemeldet)?;
 
             // Re-entering the Passwort must match *a* Konto of this Benutzer; a wrong
             // value refuses before anything is removed.
             let mut stimmt = false;
             for konto in &konten {
                 if verify_password(&self.passwort, konto.password_hash())
-                    .change_context(BenutzerLoeschenFehler::PasswortPruefen)?
+                    .change_context(BenutzerLöschenFehler::PasswortPrüfen)?
                 {
                     stimmt = true;
                     break;
                 }
             }
             if !stimmt {
-                return Err(Report::new(BenutzerLoeschenFehler::PasswortFalsch));
+                return Err(Report::new(BenutzerLöschenFehler::PasswortFalsch));
             }
 
-            for konto in &konten {
+            for konto in konten {
                 uow.wiederherstellungen()
                     .delete_by_konto(konto.id())
                     .await
                     .map_err(IntoReport::into_report)
-                    .change_context(BenutzerLoeschenFehler::WiederherstellungLoeschen)?;
+                    .change_context(BenutzerLöschenFehler::WiederherstellungLöschen)?;
                 uow.bestätigungen()
                     .delete_by_email(konto.email())
                     .await
                     .map_err(IntoReport::into_report)
-                    .change_context(BenutzerLoeschenFehler::BestaetigungLoeschen)?;
+                    .change_context(BenutzerLöschenFehler::BestätigungLöschen)?;
                 // Delete the Konto explicitly rather than relying on a foreign-key
                 // cascade: every adapter must free the address the same way, and a fake
-                // has no `ON DELETE CASCADE`.
+                // has no `ON DELETE CASCADE`. The row goes in as loaded, so a Konto that
+                // somebody changed meanwhile is a conflict, not a deletion.
                 uow.konten()
-                    .delete(konto.id())
+                    .delete(konto)
                     .await
                     .map_err(IntoReport::into_report)
-                    .change_context(BenutzerLoeschenFehler::KontoLoeschen)?;
+                    .change_context(BenutzerLöschenFehler::KontoLöschen)?;
             }
 
             uow.sessions()
                 .delete_by_benutzer(benutzer_id)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(BenutzerLoeschenFehler::SitzungLoeschen)?;
+                .change_context(BenutzerLöschenFehler::SitzungLöschen)?;
 
             uow.benutzer()
-                .delete(benutzer_id)
+                .delete(benutzer)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(BenutzerLoeschenFehler::NichtAngemeldet)?;
+                .change_context(BenutzerLöschenFehler::NichtAngemeldet)?;
 
-            Ok::<_, Report<BenutzerLoeschenFehler>>(())
+            Ok::<_, Report<BenutzerLöschenFehler>>(())
         }
         .await;
 
-        uow.finish(ergebnis, BenutzerLoeschenFehler::KontoLaden)
+        uow.finish(ergebnis, BenutzerLöschenFehler::KontoLaden)
             .await?;
         tracing::info!(benutzer_id = ?benutzer_id, "benutzer gelöscht");
         Ok(())
@@ -242,7 +254,7 @@ impl UseCase<()> for BenutzerLöschen {
 
 /// Every way `SystemadministratorBefördern` may refuse.
 #[derive(Debug, thiserror::Error)]
-pub enum SystemadministratorBefoerdernFehler {
+pub enum SystemadministratorBefördernFehler {
     #[error("das Konto konnte nicht geladen werden")]
     KontoLaden,
     #[error("der Benutzer konnte nicht geladen werden")]
@@ -277,13 +289,13 @@ pub enum Beförderung {
 
 #[async_trait]
 impl UseCase<Beförderung> for SystemadministratorBefördern {
-    type Error = Report<SystemadministratorBefoerdernFehler>;
+    type Error = Report<SystemadministratorBefördernFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Beförderung, Self::Error> {
         let uow = ctx
             .enter()
             .await
-            .change_context(SystemadministratorBefoerdernFehler::KontoLaden)?;
+            .change_context(SystemadministratorBefördernFehler::KontoLaden)?;
 
         let ergebnis = async {
             let Some(konto) = uow
@@ -291,7 +303,7 @@ impl UseCase<Beförderung> for SystemadministratorBefördern {
                 .find_by_email(&self.email)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(SystemadministratorBefoerdernFehler::KontoLaden)?
+                .change_context(SystemadministratorBefördernFehler::KontoLaden)?
             else {
                 return Ok(Beförderung::KeinKonto);
             };
@@ -301,7 +313,7 @@ impl UseCase<Beförderung> for SystemadministratorBefördern {
                 .find_by_id(konto.benutzer_id())
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(SystemadministratorBefoerdernFehler::BenutzerLaden)?;
+                .change_context(SystemadministratorBefördernFehler::BenutzerLaden)?;
 
             if benutzer.rolle() == Rolle::Systemadministrator {
                 return Ok(Beförderung::BereitsBefördert);
@@ -309,19 +321,19 @@ impl UseCase<Beförderung> for SystemadministratorBefördern {
 
             // A plain domain mutation written back with `update`, so optimistic concurrency
             // applies like any other change.
-            let mut neu = benutzer.cloned_data();
-            neu.befördere_zu_systemadministrator();
+            let mut benutzer = benutzer;
+            benutzer.befördere_zu_systemadministrator();
             uow.benutzer()
-                .update(&crate::application::uow::Versioned::new(benutzer.v(), neu))
+                .update(&mut benutzer)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(SystemadministratorBefoerdernFehler::BenutzerSpeichern)?;
+                .change_context(SystemadministratorBefördernFehler::BenutzerSpeichern)?;
 
             Ok(Beförderung::Befördert)
         }
         .await;
 
-        uow.finish(ergebnis, SystemadministratorBefoerdernFehler::KontoLaden)
+        uow.finish(ergebnis, SystemadministratorBefördernFehler::KontoLaden)
             .await
     }
 }

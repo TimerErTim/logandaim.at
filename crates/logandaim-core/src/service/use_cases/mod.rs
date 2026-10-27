@@ -32,7 +32,7 @@ use crate::{
     },
     domain::konto::{
         AccessTokenClaims, BenutzerId, NeueSession, RefreshToken, Session, SessionId,
-        claims_fuer as domain_claims,
+        claims_for as domain_claims,
     },
     ports::Mail,
 };
@@ -72,20 +72,25 @@ pub(crate) fn claims_for_session(
     )
 }
 
-/// Write a mutated session back, carrying the version it was loaded at so a concurrent
-/// writer surfaces as `VersionMismatch` instead of being silently overwritten.
-pub(crate) async fn save_session<E, F>(
+/// Apply a domain transition to a loaded session and write it back.
+///
+/// The row goes in as it was loaded, is mutated in place, and goes out through
+/// [`Versioned`]: the adapter writes it only while its version is still current, so a
+/// concurrent writer surfaces as `VersionMismatch` instead of being silently overwritten.
+pub(crate) async fn update_session<E, F, M>(
     uow: &UnitOfWork<'_>,
-    geladene_version: u64,
-    neu: Session,
+    mut geladen: Versioned<Session>,
+    mutiere: M,
     fehler: F,
 ) -> Result<(), Report<E>>
 where
     E: ThreadSafeError,
     F: Fn() -> E,
+    M: FnOnce(Session) -> Session,
 {
+    *geladen = mutiere(geladen.cloned_data());
     uow.sessions()
-        .update(&Versioned::new(geladene_version, neu))
+        .update(&mut geladen)
         .await
         .map_err(IntoReport::into_report)
         .change_context(fehler())?;
@@ -118,13 +123,7 @@ where
         if session.ist_widerrufen() {
             continue;
         }
-        save_session(
-            uow,
-            session.v(),
-            session.cloned_data().widerrufen(jetzt),
-            &fehler,
-        )
-        .await?;
+        update_session(uow, session, |geladen| geladen.widerrufen(jetzt), &fehler).await?;
     }
     Ok(())
 }

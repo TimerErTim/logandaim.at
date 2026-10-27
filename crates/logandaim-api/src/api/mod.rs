@@ -23,7 +23,7 @@ use logandaim_core::{
     ports::ClientKey,
     service::{
         Abmeldung, AbmeldungFehler, Anmeldung, AnmeldungFehler, BenutzerAnzeigen,
-        BenutzerAnzeigenFehler, BenutzerLoeschenFehler, BenutzerLöschen, Erneuerung,
+        BenutzerAnzeigenFehler, BenutzerLöschen, BenutzerLöschenFehler, Erneuerung,
         ErneuerungFehler, PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen,
         PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
         RegistrierungStarten, RegistrierungStartenFehler, SchussRegistrieren,
@@ -272,7 +272,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         anfrage: requests::BenutzerLöschungAnfrage,
-    ) -> ResultReport<(), BenutzerLoeschenFehler> {
+    ) -> ResultReport<(), BenutzerLöschenFehler> {
         let use_case: BenutzerLöschen = anfrage.in_use_case()?;
         self.app.execute(auth, use_case).await
     }

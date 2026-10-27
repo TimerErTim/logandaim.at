@@ -124,13 +124,10 @@ async fn spend_open_recoveries(
         if wiederherstellung.ist_verbraucht() {
             continue;
         }
-        let mut neu = wiederherstellung.cloned_data();
-        neu.verbrauchen(jetzt);
+        let mut geladen = wiederherstellung;
+        geladen.verbrauchen(jetzt);
         uow.wiederherstellungen()
-            .update(&crate::application::uow::Versioned::new(
-                wiederherstellung.v(),
-                neu,
-            ))
+            .update(&mut geladen)
             .await
             .map_err(IntoReport::into_report)
             .change_context(PasswortVergessenFehler::WiederherstellungSpeichern)?;
@@ -201,28 +198,24 @@ impl UseCase<()> for PasswortWiederherstellen {
                 ));
             }
 
-            let mut verbraucht = wiederherstellung.cloned_data();
+            let mut verbraucht = wiederherstellung.clone();
             verbraucht.verbrauchen(jetzt);
             uow.wiederherstellungen()
-                .update(&crate::application::uow::Versioned::new(
-                    wiederherstellung.v(),
-                    verbraucht,
-                ))
+                .update(&mut verbraucht)
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(PasswortWiederherstellenFehler::WiederherstellungSpeichern)?;
 
-            let konto = uow
+            let mut konto = uow
                 .konten()
                 .find_by_id(wiederherstellung.konto_id())
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(PasswortWiederherstellenFehler::UngültigeAnfrage)?;
 
-            let mut neu = konto.cloned_data();
-            neu.setze_password_hash(password_hash);
+            konto.setze_password_hash(password_hash);
             uow.konten()
-                .update(&crate::application::uow::Versioned::new(konto.v(), neu))
+                .update(&mut konto)
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(PasswortWiederherstellenFehler::KontoSpeichern)?;

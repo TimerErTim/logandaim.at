@@ -6,6 +6,7 @@ use rustc_hash::FxHashMap;
 use uuid::Uuid;
 
 use logandaim_core::{
+    application::uow::Versioned,
     domain::{NeuerSchuss, Schuss, SchussId},
     ports::{RepositoryError, RepositoryResult, SchussRepository},
 };
@@ -22,7 +23,7 @@ use crate::konto::{
 /// `Clone` snapshots the maps, which is what the fake unit of work uses to get
 /// transaction semantics without a database.
 pub struct FakeDatastore {
-    pub schüsse: Mutex<FxHashMap<Uuid, Schuss>>,
+    pub schüsse: Mutex<FxHashMap<Uuid, logandaim_core::application::uow::Versioned<Schuss>>>,
     pub konto: KontoDatastore,
 }
 
@@ -68,18 +69,18 @@ impl FakeSchussRepository {
 
 #[async_trait]
 impl SchussRepository for FakeSchussRepository {
-    async fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Schuss> {
+    async fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Versioned<Schuss>> {
         let id = SchussId(Uuid::new_v4());
-        let created = Schuss::neu(id, schuss);
+        let erstellt = Versioned::init(Schuss::neu(id, schuss));
         self.datastore
             .schüsse
             .lock()
             .unwrap()
-            .insert(id.0, created.clone());
-        Ok(created)
+            .insert(id.0, erstellt.clone());
+        Ok(erstellt)
     }
 
-    async fn find_by_id(&self, id: SchussId) -> RepositoryResult<Schuss> {
+    async fn find_by_id(&self, id: SchussId) -> RepositoryResult<Versioned<Schuss>> {
         self.datastore
             .schüsse
             .lock()
@@ -89,12 +90,43 @@ impl SchussRepository for FakeSchussRepository {
             .ok_or_else(|| Report::new(RepositoryError::NotFound))
     }
 
-    async fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Schuss>> {
+    async fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Versioned<Schuss>>> {
         let data = self.datastore.schüsse.lock().unwrap();
         Ok(ids
             .iter()
             .filter_map(|id| data.get(&id.0).cloned())
             .collect())
+    }
+
+    async fn update(&self, schuss: &mut Versioned<Schuss>) -> RepositoryResult<()> {
+        let mut map = self.datastore.schüsse.lock().unwrap();
+        let vorhanden = map
+            .get(&schuss.id().0)
+            .ok_or_else(|| Report::new(RepositoryError::NotFound))?;
+        if vorhanden.v() != schuss.v() {
+            return Err(Report::new(RepositoryError::VersionMismatch {
+                expected: schuss.v(),
+                actual: Some(vorhanden.v()),
+            }));
+        }
+        schuss.increment();
+        map.insert(schuss.id().0, schuss.clone());
+        Ok(())
+    }
+
+    async fn delete(&self, schuss: Versioned<Schuss>) -> RepositoryResult<()> {
+        let mut map = self.datastore.schüsse.lock().unwrap();
+        let vorhanden = map
+            .get(&schuss.id().0)
+            .ok_or_else(|| Report::new(RepositoryError::NotFound))?;
+        if vorhanden.v() != schuss.v() {
+            return Err(Report::new(RepositoryError::VersionMismatch {
+                expected: schuss.v(),
+                actual: Some(vorhanden.v()),
+            }));
+        }
+        map.remove(&schuss.id().0);
+        Ok(())
     }
 }
 

@@ -5,10 +5,10 @@ use logandaim_core::domain::schuss::SchussFehler;
 use logandaim_core::domain::zeitraum::ZeitraumFehler;
 use logandaim_core::ports::{ObjectStoreError, RepositoryError};
 use logandaim_core::service::{
-    AbmeldungFehler, AnmeldungFehler, BenutzerAnzeigenFehler, BenutzerLoeschenFehler,
+    AbmeldungFehler, AnmeldungFehler, BenutzerAnzeigenFehler, BenutzerLöschenFehler,
     ErneuerungFehler, PasswortVergessenFehler, PasswortWiederherstellenFehler,
     RegistrierungAbschliessenFehler, RegistrierungStartenFehler, SchussRegistrierenFehler,
-    SitzungPruefenFehler, SystemadministratorBefoerdernFehler, WertungFehler,
+    SitzungPrüfenFehler, SystemadministratorBefördernFehler, WertungFehler,
 };
 
 use super::ValidationError;
@@ -49,14 +49,14 @@ fn nested_http_status<C: ThreadSafeError>(error: &Report<C>) -> Option<StatusCod
         .or_else(|| mapped::<C, AnmeldungFehler>(error))
         .or_else(|| mapped::<C, ErneuerungFehler>(error))
         .or_else(|| mapped::<C, AbmeldungFehler>(error))
-        .or_else(|| mapped::<C, SitzungPruefenFehler>(error))
+        .or_else(|| mapped::<C, SitzungPrüfenFehler>(error))
         .or_else(|| mapped::<C, RegistrierungStartenFehler>(error))
         .or_else(|| mapped::<C, RegistrierungAbschliessenFehler>(error))
         .or_else(|| mapped::<C, PasswortVergessenFehler>(error))
         .or_else(|| mapped::<C, PasswortWiederherstellenFehler>(error))
         .or_else(|| mapped::<C, BenutzerAnzeigenFehler>(error))
-        .or_else(|| mapped::<C, BenutzerLoeschenFehler>(error))
-        .or_else(|| mapped::<C, SystemadministratorBefoerdernFehler>(error))
+        .or_else(|| mapped::<C, BenutzerLöschenFehler>(error))
+        .or_else(|| mapped::<C, SystemadministratorBefördernFehler>(error))
         .or_else(|| mapped::<C, RepositoryError>(error))
         .or_else(|| mapped::<C, ObjectStoreError>(error))
         .or_else(|| mapped::<C, ValidationError>(error))
@@ -142,7 +142,7 @@ konto_status!(AnmeldungFehler {
     Gedrosselt => StatusCode::TOO_MANY_REQUESTS,
     KontoLaden => StatusCode::INTERNAL_SERVER_ERROR,
     BenutzerLaden => StatusCode::INTERNAL_SERVER_ERROR,
-    PasswortPruefen => StatusCode::INTERNAL_SERVER_ERROR,
+    PasswortPrüfen => StatusCode::INTERNAL_SERVER_ERROR,
     TokenErzeugen => StatusCode::INTERNAL_SERVER_ERROR,
     SitzungSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
@@ -161,7 +161,7 @@ konto_status!(AbmeldungFehler {
     SitzungSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(SitzungPruefenFehler {
+konto_status!(SitzungPrüfenFehler {
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     SitzungLaden => StatusCode::INTERNAL_SERVER_ERROR,
     BenutzerLaden => StatusCode::INTERNAL_SERVER_ERROR,
@@ -170,16 +170,16 @@ konto_status!(SitzungPruefenFehler {
 konto_status!(RegistrierungStartenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     Gedrosselt => StatusCode::TOO_MANY_REQUESTS,
-    KontoPruefen => StatusCode::INTERNAL_SERVER_ERROR,
+    KontoPrüfen => StatusCode::INTERNAL_SERVER_ERROR,
     TokenErzeugen => StatusCode::INTERNAL_SERVER_ERROR,
-    BestaetigungSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
+    BestätigungSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
 konto_status!(RegistrierungAbschliessenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     Gedrosselt => StatusCode::TOO_MANY_REQUESTS,
-    BestaetigungLaden => StatusCode::INTERNAL_SERVER_ERROR,
-    BestaetigungSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
+    BestätigungLaden => StatusCode::INTERNAL_SERVER_ERROR,
+    BestätigungSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
     PasswortSetzen => StatusCode::INTERNAL_SERVER_ERROR,
     BenutzerAnlegen => StatusCode::INTERNAL_SERVER_ERROR,
     KontoAnlegen => StatusCode::INTERNAL_SERVER_ERROR,
@@ -212,21 +212,22 @@ konto_status!(BenutzerAnzeigenFehler {
     KontoLaden => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-konto_status!(BenutzerLoeschenFehler {
+konto_status!(BenutzerLöschenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     PasswortFalsch => StatusCode::UNAUTHORIZED,
-    PasswortPruefen => StatusCode::INTERNAL_SERVER_ERROR,
+    PasswortPrüfen => StatusCode::INTERNAL_SERVER_ERROR,
     KontoLaden => StatusCode::INTERNAL_SERVER_ERROR,
-    WiederherstellungLoeschen => StatusCode::INTERNAL_SERVER_ERROR,
-    BestaetigungLoeschen => StatusCode::INTERNAL_SERVER_ERROR,
-    KontoLoeschen => StatusCode::INTERNAL_SERVER_ERROR,
-    SitzungLoeschen => StatusCode::INTERNAL_SERVER_ERROR,
-    BenutzerLoeschen => StatusCode::INTERNAL_SERVER_ERROR,
+    BenutzerLaden => StatusCode::INTERNAL_SERVER_ERROR,
+    WiederherstellungLöschen => StatusCode::INTERNAL_SERVER_ERROR,
+    BestätigungLöschen => StatusCode::INTERNAL_SERVER_ERROR,
+    KontoLöschen => StatusCode::INTERNAL_SERVER_ERROR,
+    SitzungLöschen => StatusCode::INTERNAL_SERVER_ERROR,
+    BenutzerLöschen => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
 // Reached only from the startup bootstrap; a failure is a deployment fault.
-konto_status!(SystemadministratorBefoerdernFehler {
+konto_status!(SystemadministratorBefördernFehler {
     KontoLaden => StatusCode::INTERNAL_SERVER_ERROR,
     BenutzerLaden => StatusCode::INTERNAL_SERVER_ERROR,
     BenutzerSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
@@ -326,7 +327,7 @@ mod tests {
             StatusCode::FORBIDDEN
         );
         assert_eq!(
-            status(BenutzerLoeschenFehler::PasswortFalsch),
+            status(BenutzerLöschenFehler::PasswortFalsch),
             StatusCode::UNAUTHORIZED
         );
         assert_eq!(

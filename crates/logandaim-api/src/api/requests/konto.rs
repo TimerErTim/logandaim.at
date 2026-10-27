@@ -17,7 +17,7 @@ use logandaim_core::{
     },
     ports::ClientKey,
     service::{
-        Anmeldung, AnmeldungFehler, BenutzerLoeschenFehler, BenutzerLöschen, PasswortVergessen,
+        Anmeldung, AnmeldungFehler, BenutzerLöschen, BenutzerLöschenFehler, PasswortVergessen,
         PasswortVergessenFehler, PasswortWiederherstellen, PasswortWiederherstellenFehler,
         RegistrierungAbschliessenFehler, RegistrierungAbschließen, RegistrierungStarten,
         RegistrierungStartenFehler,
@@ -161,9 +161,9 @@ impl PasswortWiederherstellenAnfrage {
 }
 
 impl BenutzerLöschungAnfrage {
-    pub fn in_use_case(self) -> Result<BenutzerLöschen, Report<BenutzerLoeschenFehler>> {
+    pub fn in_use_case(self) -> Result<BenutzerLöschen, Report<BenutzerLöschenFehler>> {
         let passwort = KlartextPasswort::try_from(self.passwort)
-            .map_err(|_| Report::new(BenutzerLoeschenFehler::UngültigeAnfrage))?;
+            .map_err(|_| Report::new(BenutzerLöschenFehler::UngültigeAnfrage))?;
         Ok(BenutzerLöschen {
             passwort,
             bestätigt: self.bestätigt,
