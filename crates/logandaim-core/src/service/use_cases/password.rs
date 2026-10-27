@@ -149,9 +149,9 @@ pub enum PasswortWiederherstellenFehler {
     #[error("das Konto konnte nicht gespeichert werden")]
     KontoSpeichern,
     #[error("die Sitzung konnte nicht geladen werden")]
-    SitzungLaden,
+    SessionLaden,
     #[error("die Sitzung konnte nicht gespeichert werden")]
-    SitzungSpeichern,
+    SessionSpeichern,
 }
 
 /// Set a new Passwort with a recovery token. Single use, ends every session (AC-11).
@@ -223,7 +223,7 @@ impl UseCase<()> for PasswortWiederherstellen {
             // Every Anmelde-Sitzung of the owner ends, including their access tokens
             // (rule 6, AC-11): whoever held a stolen token is out.
             revoke_all_sessions(&uow, konto.benutzer_id(), jetzt, || {
-                PasswortWiederherstellenFehler::SitzungSpeichern
+                PasswortWiederherstellenFehler::SessionSpeichern
             })
             .await?;
 

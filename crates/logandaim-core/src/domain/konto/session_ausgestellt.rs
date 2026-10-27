@@ -12,7 +12,7 @@ use super::{
 /// own output — two use cases (`Anmeldung`, `RegistrierungAbschließen`) return it, and a
 /// third (`Erneuerung`) returns its renewal half.
 #[derive(Debug, Clone)]
-pub struct SitzungAusgestellt {
+pub struct SessionAusgestellt {
     pub benutzer: Benutzer,
     pub session_id: SessionId,
     pub refresh_token: RefreshToken,

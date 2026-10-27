@@ -24,7 +24,7 @@ use poem_openapi::{
 };
 
 use crate::{
-    api::AusgestellteSitzung,
+    api::AusgestellteSession,
     auth::cookie,
     errors::{HttpStatusMapping, InternalServerError, StructuredError, status_from_report},
     schema::AnmeldeAntwort,
@@ -38,7 +38,7 @@ const NO_STORE: &str = "no-store";
 /// A failure clears the cookie, because a failed renewal must not leave the previous token
 /// usable in the jar; every variant carries `Cache-Control: no-store`.
 #[derive(ApiResponse)]
-pub enum SitzungAntwort {
+pub enum SessionAntwort {
     #[oai(status = 200)]
     Ok(
         Json<AnmeldeAntwort>,
@@ -59,8 +59,8 @@ pub enum SitzungAntwort {
     ),
 }
 
-impl SitzungAntwort {
-    pub fn neu<E>(ergebnis: ResultReport<AusgestellteSitzung, E>) -> Self
+impl SessionAntwort {
+    pub fn neu<E>(ergebnis: ResultReport<AusgestellteSession, E>) -> Self
     where
         E: ThreadSafeError + HttpStatusMapping,
     {

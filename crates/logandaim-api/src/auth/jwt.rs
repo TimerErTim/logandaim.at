@@ -7,11 +7,11 @@
 //!
 //! **Decoding does not verify a signature.** The key a token must be checked against is
 //! the public key stored on its session row, and only the database knows that. So `decode`
-//! returns the claims *plus* the raw `header.payload` and the signature, and `SitzungPrüfen`
+//! returns the claims *plus* the raw `header.payload` and the signature, and `SessionPrüfen`
 //! verifies against the row. That is what makes AC-17 a row check rather than a
 //! configuration check.
 //!
-//! Verify order inside `SitzungPrüfen`:
+//! Verify order inside `SessionPrüfen`:
 //!
 //! 1. structure and `alg` **pinned to `EdDSA` before the payload is decoded** — `none` and
 //!    every other algorithm are rejected here, never by a "supported algorithms" list,
@@ -63,7 +63,7 @@ struct JoseHeader {
 /// A structurally valid token that still has to be checked against its session row.
 ///
 /// The signature is *not* verified here: the key lives on the session row, so verification
-/// is `SitzungPrüfen`'s job.
+/// is `SessionPrüfen`'s job.
 #[derive(Debug, Clone)]
 pub struct DecodedToken {
     pub claims: AccessTokenClaims,
@@ -215,7 +215,7 @@ mod tests {
         }
     }
 
-    /// The same call `SitzungPrüfen` makes, with the key a session row would carry.
+    /// The same call `SessionPrüfen` makes, with the key a session row would carry.
     fn verify(gelesen: &DecodedToken, signing: &InMemorySigning) -> bool {
         SigningKeypair::verify_with_public_key_hex(
             &signing.public_key_hex(),

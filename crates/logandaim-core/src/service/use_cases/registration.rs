@@ -11,7 +11,7 @@ use crate::{
         EmailAdresse,
         konto::{
             KlartextPasswort, NeueBestätigung, NeuerBenutzer, NeuesKonto, RefreshToken,
-            SecretToken, SitzungAusgestellt, hash_password,
+            SecretToken, SessionAusgestellt, hash_password,
         },
     },
     ports::{ClientKey, ThrottleAction},
@@ -162,7 +162,7 @@ pub enum RegistrierungAbschliessenFehler {
     #[error("das Refresh-Token konnte nicht erzeugt werden")]
     TokenErzeugen,
     #[error("die Sitzung konnte nicht gespeichert werden")]
-    SitzungSpeichern,
+    SessionSpeichern,
 }
 
 /// Registration step 2: spend the confirmation token, set the Passwort, be logged in.
@@ -178,10 +178,10 @@ pub struct RegistrierungAbschließen {
 }
 
 #[async_trait]
-impl UseCase<SitzungAusgestellt> for RegistrierungAbschließen {
+impl UseCase<SessionAusgestellt> for RegistrierungAbschließen {
     type Error = Report<RegistrierungAbschliessenFehler>;
 
-    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SitzungAusgestellt, Self::Error> {
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SessionAusgestellt, Self::Error> {
         let jetzt = ctx.clock().now();
 
         ctx.throttle()
@@ -269,9 +269,9 @@ impl UseCase<SitzungAusgestellt> for RegistrierungAbschließen {
                 .create(new_session(&ctx, benutzer.id(), &refresh_token, jetzt))
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(RegistrierungAbschliessenFehler::SitzungSpeichern)?;
+                .change_context(RegistrierungAbschliessenFehler::SessionSpeichern)?;
 
-            Ok::<_, Report<RegistrierungAbschliessenFehler>>(SitzungAusgestellt {
+            Ok::<_, Report<RegistrierungAbschliessenFehler>>(SessionAusgestellt {
                 benutzer: benutzer.cloned_data(),
                 session_id: session.id(),
                 refresh_token,

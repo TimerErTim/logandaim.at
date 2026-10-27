@@ -10,7 +10,7 @@
 //!   base64url-encodes them, and asks core for the signature (`auth::jwt`). The reverse on
 //!   the way in.
 //! - **Turning a bearer header into an [`AuthContext`].** A token that verifies is then
-//!   handed to `SitzungPrüfen`, which is what makes a *revoked* session fail even though
+//!   handed to `SessionPrüfen`, which is what makes a *revoked* session fail even though
 //!   its signature is still valid (AC-17). Only that use case's answer is injected into the
 //!   use case that follows.
 
@@ -27,7 +27,7 @@ use logandaim_core::{
         ErneuerungFehler, PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen,
         PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
         RegistrierungStarten, RegistrierungStartenFehler, SchussRegistrieren,
-        SchussRegistrierenFehler, SitzungAusgestellt, SitzungPrüfen, WertungBerechnen,
+        SchussRegistrierenFehler, SessionAusgestellt, SessionPrüfen, WertungBerechnen,
         WertungFehler,
     },
 };
@@ -50,14 +50,14 @@ use crate::{
 ///
 /// The two are deliberately separate values. `antwort` holds the access token only, so no
 /// code path can accidentally serialise a refresh token into a JSON body or a log line.
-pub struct AusgestellteSitzung {
+pub struct AusgestellteSession {
     pub antwort: AnmeldeAntwort,
     pub refresh_token: String,
 }
 
-impl AusgestellteSitzung {
+impl AusgestellteSession {
     fn aus(
-        ausgestellt: SitzungAusgestellt,
+        ausgestellt: SessionAusgestellt,
         signing_key: &dyn logandaim_core::ports::Signing,
     ) -> Self {
         let access_token =
@@ -89,7 +89,7 @@ impl LogandaimAppApi {
     /// The configured signing key, for the edge that assembles a JOSE envelope.
     ///
     /// Verification does **not** come from here: a token is checked against the public key
-    /// stored on its session row, inside `SitzungPrüfen`.
+    /// stored on its session row, inside `SessionPrüfen`.
     pub fn signing_key(&self) -> &dyn logandaim_core::ports::Signing {
         self.app.signing()
     }
@@ -139,7 +139,7 @@ impl LogandaimAppApi {
         self.app
             .execute(
                 AuthContext::Anonymous,
-                SitzungPrüfen {
+                SessionPrüfen {
                     claims: gelesen.claims,
                     signed_message: gelesen.signed_message,
                     signature: gelesen.signature,
@@ -166,10 +166,10 @@ impl LogandaimAppApi {
         &self,
         anfrage: requests::RegistrierungAbschlussAnfrage,
         client_key: ClientKey,
-    ) -> ResultReport<AusgestellteSitzung, RegistrierungAbschliessenFehler> {
+    ) -> ResultReport<AusgestellteSession, RegistrierungAbschliessenFehler> {
         let use_case: RegistrierungAbschließen = anfrage.in_use_case(client_key)?;
         let ausgestellt = self.app.execute(AuthContext::Anonymous, use_case).await?;
-        Ok(AusgestellteSitzung::aus(ausgestellt, self.signing_key()))
+        Ok(AusgestellteSession::aus(ausgestellt, self.signing_key()))
     }
 
     // ---------------------------------------------------------------- Login
@@ -178,10 +178,10 @@ impl LogandaimAppApi {
         &self,
         anfrage: requests::AnmeldeAnfrage,
         client_key: ClientKey,
-    ) -> ResultReport<AusgestellteSitzung, AnmeldungFehler> {
+    ) -> ResultReport<AusgestellteSession, AnmeldungFehler> {
         let use_case: Anmeldung = anfrage.in_use_case(client_key)?;
         let ausgestellt = self.app.execute(AuthContext::Anonymous, use_case).await?;
-        Ok(AusgestellteSitzung::aus(ausgestellt, self.signing_key()))
+        Ok(AusgestellteSession::aus(ausgestellt, self.signing_key()))
     }
 
     /// Rotate the refresh token. The presented one is spent; a replay ends the family.
@@ -189,9 +189,9 @@ impl LogandaimAppApi {
         &self,
         refresh_token: String,
         client_key: ClientKey,
-    ) -> ResultReport<AusgestellteSitzung, ErneuerungFehler> {
+    ) -> ResultReport<AusgestellteSession, ErneuerungFehler> {
         let refresh_token = logandaim_core::domain::konto::RefreshToken::try_from(refresh_token)
-            .map_err(|_| Report::new(ErneuerungFehler::SitzungUngültig))?;
+            .map_err(|_| Report::new(ErneuerungFehler::SessionUngültig))?;
 
         let ausgestellt = self
             .app
@@ -205,7 +205,7 @@ impl LogandaimAppApi {
             .await?;
         let access_token = jwt::encode(&ausgestellt.claims, self.signing_key())
             .expect("the JOSE header serialises");
-        Ok(AusgestellteSitzung {
+        Ok(AusgestellteSession {
             antwort: AnmeldeAntwort {
                 access_token: access_token.as_str().to_owned(),
                 // A renewal answers no Benutzer: the client already has it, and asking

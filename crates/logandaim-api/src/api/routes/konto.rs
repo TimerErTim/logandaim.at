@@ -26,7 +26,7 @@ use crate::{
     LogandaimApiSpec,
     api::{
         requests,
-        session::{BeendendeAntwort, KontoAntwort, SitzungAntwort},
+        session::{BeendendeAntwort, KontoAntwort, SessionAntwort},
     },
     schema::{BenutzerAntwort, OkAntwort},
 };
@@ -49,9 +49,9 @@ pub async fn registrierung_abschließen(
     spec: &LogandaimApiSpec,
     req: &Request,
     body: Json<requests::RegistrierungAbschlussAnfrage>,
-) -> SitzungAntwort {
+) -> SessionAntwort {
     let client_key = spec.api().client_key(req).await;
-    SitzungAntwort::neu(
+    SessionAntwort::neu(
         spec.api()
             .registrierung_abschließen(body.0, client_key)
             .await,
@@ -62,18 +62,18 @@ pub async fn anmelden(
     spec: &LogandaimApiSpec,
     req: &Request,
     body: Json<requests::AnmeldeAnfrage>,
-) -> SitzungAntwort {
+) -> SessionAntwort {
     let client_key = spec.api().client_key(req).await;
-    SitzungAntwort::neu(spec.api().anmelden(body.0, client_key).await)
+    SessionAntwort::neu(spec.api().anmelden(body.0, client_key).await)
 }
 
-pub async fn erneuerung(spec: &LogandaimApiSpec, req: &Request) -> SitzungAntwort {
+pub async fn erneuerung(spec: &LogandaimApiSpec, req: &Request) -> SessionAntwort {
     let client_key = spec.api().client_key(req).await;
     let ergebnis = match refresh_aus_cookie(req) {
         Some(token) => spec.api().erneuerung(token, client_key).await,
-        None => Err(Report::new(ErneuerungFehler::SitzungUngültig)),
+        None => Err(Report::new(ErneuerungFehler::SessionUngültig)),
     };
-    SitzungAntwort::neu(ergebnis)
+    SessionAntwort::neu(ergebnis)
 }
 
 pub async fn abmelden(spec: &LogandaimApiSpec, req: &Request) -> BeendendeAntwort<OkAntwort> {

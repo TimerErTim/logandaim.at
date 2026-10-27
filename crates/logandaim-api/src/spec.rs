@@ -145,7 +145,7 @@ impl<C: ThreadSafeError + HttpStatusMapping> From<Result<ObjectStream, Report<C>
 }
 
 use crate::api::routes::konto as konto_routes;
-use crate::api::session::{BeendendeAntwort, KontoAntwort, SitzungAntwort};
+use crate::api::session::{BeendendeAntwort, KontoAntwort, SessionAntwort};
 use crate::schema::{BenutzerAntwort, OkAntwort};
 
 #[OpenApi]
@@ -188,18 +188,18 @@ impl LogandaimApiSpec {
         &self,
         req: &Request,
         body: Json<RegistrierungAbschlussAnfrage>,
-    ) -> SitzungAntwort {
+    ) -> SessionAntwort {
         konto_routes::registrierung_abschließen(self, req, body).await
     }
 
     #[oai(path = "/anmeldung", method = "post")]
-    async fn anmelden(&self, req: &Request, body: Json<AnmeldeAnfrage>) -> SitzungAntwort {
+    async fn anmelden(&self, req: &Request, body: Json<AnmeldeAnfrage>) -> SessionAntwort {
         konto_routes::anmelden(self, req, body).await
     }
 
     /// Rotate the refresh token from the cookie.
     #[oai(path = "/anmeldung/erneuerung", method = "post")]
-    async fn erneuerung(&self, req: &Request) -> SitzungAntwort {
+    async fn erneuerung(&self, req: &Request) -> SessionAntwort {
         konto_routes::erneuerung(self, req).await
     }
 

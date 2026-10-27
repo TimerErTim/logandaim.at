@@ -42,8 +42,8 @@ mod konto;
 mod passwort;
 mod passwort_wiederherstellung;
 mod session;
+mod session_ausgestellt;
 mod signing;
-mod sitzung_ausgestellt;
 mod token;
 
 pub use benutzer::{Benutzer, BenutzerId, NeuerBenutzer, Rolle};
@@ -57,8 +57,8 @@ pub use passwort_wiederherstellung::{
 pub use session::{
     NeueSession, Session, SessionId, SessionIn, SessionNotLive, SessionState, state,
 };
+pub use session_ausgestellt::{SessionAusgestellt, claims_for};
 pub use signing::{SIGNATURE_BYTES, Signature, SigningKeyId, SigningKeypair};
-pub use sitzung_ausgestellt::{SitzungAusgestellt, claims_for};
 pub use token::{AccessToken, RefreshToken, SecretToken, SecretTokenHash};
 
 /// Shortest accepted Passwort, in characters.

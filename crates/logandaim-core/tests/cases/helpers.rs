@@ -7,7 +7,7 @@ use logandaim_core::{
     application::{AppBuilder, AuthContext, KontoKonfiguration, SetUowProvider},
     domain::konto::{AccessTokenClaims, SigningKeyId},
     ports::{Clock, Signing},
-    service::SitzungPrüfen,
+    service::SessionPrüfen,
 };
 use logandaim_fakes::{FakeMailSender, FixedClock, InMemoryThrottle};
 
@@ -34,10 +34,10 @@ pub fn fremder_schluessel() -> InMemorySigning {
 /// public half.
 const SIGNIERTE_NACHRICHT: &str = "eyJhbGciOiJFZERTQSJ9.eyJzdWIiOiJ0ZXN0In0";
 
-/// A `SitzungPrüfen` whose signature was made by `signing`, over the same message every
+/// A `SessionPrüfen` whose signature was made by `signing`, over the same message every
 /// case uses.
-pub fn pruefen_mit(signing: &dyn Signing, claims: AccessTokenClaims) -> SitzungPrüfen {
-    SitzungPrüfen {
+pub fn pruefen_mit(signing: &dyn Signing, claims: AccessTokenClaims) -> SessionPrüfen {
+    SessionPrüfen {
         claims,
         signed_message: SIGNIERTE_NACHRICHT.to_owned(),
         signature: signing.sign(SIGNIERTE_NACHRICHT.as_bytes()),
@@ -45,7 +45,7 @@ pub fn pruefen_mit(signing: &dyn Signing, claims: AccessTokenClaims) -> SitzungP
 }
 
 /// The common case: signed by the key the harness was built with.
-pub fn pruefen(_harness: &Harness, claims: AccessTokenClaims) -> SitzungPrüfen {
+pub fn pruefen(_harness: &Harness, claims: AccessTokenClaims) -> SessionPrüfen {
     pruefen_mit(&test_signing_key(), claims)
 }
 

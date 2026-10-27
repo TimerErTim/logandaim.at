@@ -121,7 +121,7 @@ async fn ac2_vergebene_adresse_antwortet_gleich_und_mailt_nicht() {
 // ------------------------------------------------------------------------------- AC-3
 
 #[test_log::test(pollster::test)]
-async fn ac3_abschluss_erzeugt_benutzer_konto_und_erste_sitzung() {
+async fn ac3_abschluss_erzeugt_benutzer_konto_und_erste_session() {
     let harness = E2eHarness::new().await;
     let (access, cookie, benutzer_id, _) = registriere(&harness, "anna@muster.at").await;
 
@@ -184,7 +184,7 @@ async fn ac4_kurzes_passwort_oder_ungültiges_token_erzeugt_nichts() {
 }
 
 #[test_log::test(pollster::test)]
-async fn ac5_anmeldung_eröffnet_eine_gültige_sitzung() {
+async fn ac5_anmeldung_eröffnet_eine_gültige_session() {
     let harness = E2eHarness::new().await;
     registriere(&harness, "anna@muster.at").await;
 
@@ -426,7 +426,7 @@ async fn ac10_wiederherstellung_antwortet_fuer_jede_adresse_gleich() {
 // ------------------------------------------------------------------------------ AC-11
 
 #[test_log::test(pollster::test)]
-async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
+async fn ac11_neues_passwort_beendet_alle_sessions_und_ist_einmalig() {
     let harness = E2eHarness::new().await;
     let (erster_access, _, _, _) = registriere(&harness, "anna@muster.at").await;
     let (zweiter_access, _, _, _) = {
@@ -687,7 +687,7 @@ async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
 /// Two failures, both 401: an unknown session, and a signature that does not verify with
 /// the key that row carries — even though the token's `kid` matches the configuration.
 #[test_log::test(pollster::test)]
-async fn ac17_signatur_wird_gegen_den_schlüssel_der_sitzungszeile_geprüft() {
+async fn ac17_signatur_wird_gegen_den_schlüssel_der_session_zeile_geprüft() {
     let harness = E2eHarness::new().await;
     let (access, _, benutzer_id, _) = registriere(&harness, "anna@muster.at").await;
 
@@ -729,7 +729,7 @@ async fn ac17_signatur_wird_gegen_den_schlüssel_der_sitzungszeile_geprüft() {
 
 /// AC-17: a revoked session fails even though its signature still verifies.
 #[test_log::test(pollster::test)]
-async fn ac17_widerrufene_sitzung_wird_abgelehnt() {
+async fn ac17_widerrufene_session_wird_abgelehnt() {
     let harness = E2eHarness::new().await;
     let (access, cookie, _, _) = registriere(&harness, "anna@muster.at").await;
 

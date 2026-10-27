@@ -26,13 +26,13 @@ pub struct ErneuerungAusgestellt {
 #[derive(Debug, thiserror::Error)]
 pub enum ErneuerungFehler {
     #[error("die Sitzung ist nicht mehr gültig")]
-    SitzungUngültig,
+    SessionUngültig,
     #[error("zu viele Versuche; bitte später erneut versuchen")]
     Gedrosselt,
     #[error("die Sitzung konnte nicht geladen werden")]
-    SitzungLaden,
+    SessionLaden,
     #[error("die Sitzung konnte nicht gespeichert werden")]
-    SitzungSpeichern,
+    SessionSpeichern,
     #[error("das Refresh-Token konnte nicht erzeugt werden")]
     TokenErzeugen,
 }
@@ -64,7 +64,7 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
         let uow = ctx
             .enter()
             .await
-            .change_context(ErneuerungFehler::SitzungLaden)?;
+            .change_context(ErneuerungFehler::SessionLaden)?;
 
         let ergebnis = async {
             let session = uow
@@ -72,10 +72,10 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                 .find_by_refresh_hash(&self.refresh_token.hash())
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(ErneuerungFehler::SitzungLaden)?;
+                .change_context(ErneuerungFehler::SessionLaden)?;
 
             let Some(session) = session else {
-                return Err(Report::new(ErneuerungFehler::SitzungUngültig));
+                return Err(Report::new(ErneuerungFehler::SessionUngültig));
             };
 
             let benutzer_id = session.benutzer_id();
@@ -86,18 +86,18 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                     // The revocation belongs to this unit of work, so it commits and the
                     // use case answers with a refusal afterwards.
                     revoke_all_sessions(&uow, benutzer_id, jetzt, || {
-                        ErneuerungFehler::SitzungSpeichern
+                        ErneuerungFehler::SessionSpeichern
                     })
                     .await?;
                     return Ok::<_, Report<ErneuerungFehler>>(Erneuerungsausgang::Wiederholung);
                 }
                 Err(SessionNotLive::Revoked) => {
-                    return Err(Report::new(ErneuerungFehler::SitzungUngültig));
+                    return Err(Report::new(ErneuerungFehler::SessionUngültig));
                 }
             };
 
             if !live.ist_gültig(jetzt) {
-                return Err(Report::new(ErneuerungFehler::SitzungUngültig));
+                return Err(Report::new(ErneuerungFehler::SessionUngültig));
             }
 
             let folge_refresh =
@@ -108,7 +108,7 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                 &uow,
                 session,
                 |_| Session::Refreshed(verbraucht),
-                || ErneuerungFehler::SitzungSpeichern,
+                || ErneuerungFehler::SessionSpeichern,
             )
             .await?;
 
@@ -117,7 +117,7 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
                 .create(folge)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(ErneuerungFehler::SitzungSpeichern)?;
+                .change_context(ErneuerungFehler::SessionSpeichern)?;
 
             Ok(Erneuerungsausgang::Neu(ErneuerungAusgestellt {
                 refresh_token: folge_refresh,
@@ -126,9 +126,9 @@ impl UseCase<ErneuerungAusgestellt> for Erneuerung {
         }
         .await;
 
-        match uow.finish(ergebnis, ErneuerungFehler::SitzungLaden).await? {
+        match uow.finish(ergebnis, ErneuerungFehler::SessionLaden).await? {
             Erneuerungsausgang::Neu(ausgestellt) => Ok(ausgestellt),
-            Erneuerungsausgang::Wiederholung => Err(Report::new(ErneuerungFehler::SitzungUngültig)),
+            Erneuerungsausgang::Wiederholung => Err(Report::new(ErneuerungFehler::SessionUngültig)),
         }
     }
 }
@@ -145,9 +145,9 @@ pub enum AbmeldungFehler {
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
     NichtAngemeldet,
     #[error("die Sitzung konnte nicht geladen werden")]
-    SitzungLaden,
+    SessionLaden,
     #[error("die Sitzung konnte nicht gespeichert werden")]
-    SitzungSpeichern,
+    SessionSpeichern,
 }
 
 /// End the current Anmelde-Sitzung. Idempotent: a missing session is already logged out.
@@ -168,18 +168,18 @@ impl UseCase<()> for Abmeldung {
         let uow = ctx
             .enter()
             .await
-            .change_context(AbmeldungFehler::SitzungLaden)?;
+            .change_context(AbmeldungFehler::SessionLaden)?;
 
         let ergebnis = async {
             let session = match uow.sessions().find_by_id(session_id).await {
                 Ok(session) => session,
                 Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {
                     // Already gone: the caller's intent is satisfied.
-                    tracing::debug!("abmeldung: sitzung war bereits beendet");
+                    tracing::debug!("abmeldung: session war bereits beendet");
                     return Ok(());
                 }
                 Err(fehler) => {
-                    return Err(Report::new(AbmeldungFehler::SitzungLaden)
+                    return Err(Report::new(AbmeldungFehler::SessionLaden)
                         .attach(fehler.current_context().to_string()));
                 }
             };
@@ -191,24 +191,24 @@ impl UseCase<()> for Abmeldung {
                 &uow,
                 session,
                 |geladen| geladen.widerrufen(jetzt),
-                || AbmeldungFehler::SitzungSpeichern,
+                || AbmeldungFehler::SessionSpeichern,
             )
             .await?;
             Ok::<_, Report<AbmeldungFehler>>(())
         }
         .await;
 
-        uow.finish(ergebnis, AbmeldungFehler::SitzungLaden).await
+        uow.finish(ergebnis, AbmeldungFehler::SessionLaden).await
     }
 }
 
-/// Every way `SitzungPrüfen` may refuse.
+/// Every way `SessionPrüfen` may refuse.
 #[derive(Debug, thiserror::Error)]
-pub enum SitzungPrüfenFehler {
+pub enum SessionPrüfenFehler {
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
     NichtAngemeldet,
     #[error("die Sitzung konnte nicht geladen werden")]
-    SitzungLaden,
+    SessionLaden,
     #[error("der Benutzer konnte nicht geladen werden")]
     BenutzerLaden,
 }
@@ -220,7 +220,7 @@ pub enum SitzungPrüfenFehler {
 /// key is valid on its own (AC-17). The `sid` row must exist and be unrevoked, and the
 /// `Benutzer` must still exist.
 #[derive(Debug, Clone)]
-pub struct SitzungPrüfen {
+pub struct SessionPrüfen {
     pub claims: AccessTokenClaims,
     /// The ASCII `header.payload` the signature was produced over.
     pub signed_message: String,
@@ -228,8 +228,8 @@ pub struct SitzungPrüfen {
 }
 
 #[async_trait]
-impl UseCase<AuthContext> for SitzungPrüfen {
-    type Error = Report<SitzungPrüfenFehler>;
+impl UseCase<AuthContext> for SessionPrüfen {
+    type Error = Report<SessionPrüfenFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<AuthContext, Self::Error> {
         let jetzt = ctx.clock().now();
@@ -237,25 +237,25 @@ impl UseCase<AuthContext> for SitzungPrüfen {
 
         self.claims
             .prüfe_herkunft(&konfiguration.issuer, &konfiguration.audience)
-            .change_context(SitzungPrüfenFehler::NichtAngemeldet)?;
+            .change_context(SessionPrüfenFehler::NichtAngemeldet)?;
         self.claims
             .prüfe_zeitfenster(jetzt)
-            .change_context(SitzungPrüfenFehler::NichtAngemeldet)?;
+            .change_context(SessionPrüfenFehler::NichtAngemeldet)?;
 
         let uow = ctx
             .enter()
             .await
-            .change_context(SitzungPrüfenFehler::SitzungLaden)?;
+            .change_context(SessionPrüfenFehler::SessionLaden)?;
 
         let ergebnis = async {
             let session = match uow.sessions().find_by_id(self.claims.sid).await {
                 Ok(session) => session,
                 Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {
                     // An unknown session is a 401, never a 500.
-                    return Err(Report::new(SitzungPrüfenFehler::NichtAngemeldet));
+                    return Err(Report::new(SessionPrüfenFehler::NichtAngemeldet));
                 }
                 Err(fehler) => {
-                    return Err(Report::new(SitzungPrüfenFehler::SitzungLaden)
+                    return Err(Report::new(SessionPrüfenFehler::SessionLaden)
                         .attach(fehler.current_context().to_string()));
                 }
             };
@@ -263,17 +263,17 @@ impl UseCase<AuthContext> for SitzungPrüfen {
             // AC-17: the row names the key, and the row carries that key's public half,
             // so a signature made by any other key is refused here.
             if session.signing_key_id() != &self.claims.kid {
-                return Err(Report::new(SitzungPrüfenFehler::NichtAngemeldet));
+                return Err(Report::new(SessionPrüfenFehler::NichtAngemeldet));
             }
             SigningKeypair::verify_with_public_key_hex(
                 session.public_key_hex(),
                 self.signed_message.as_bytes(),
                 &self.signature,
             )
-            .change_context(SitzungPrüfenFehler::NichtAngemeldet)?;
+            .change_context(SessionPrüfenFehler::NichtAngemeldet)?;
 
             if session.benutzer_id() != self.claims.sub || !session.ist_annehmbar(jetzt) {
-                return Err(Report::new(SitzungPrüfenFehler::NichtAngemeldet));
+                return Err(Report::new(SessionPrüfenFehler::NichtAngemeldet));
             }
 
             // The Benutzer must still exist: a deleted account leaves no live identity.
@@ -281,16 +281,16 @@ impl UseCase<AuthContext> for SitzungPrüfen {
                 .find_by_id(self.claims.sub)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(SitzungPrüfenFehler::BenutzerLaden)?;
+                .change_context(SessionPrüfenFehler::BenutzerLaden)?;
 
-            Ok::<_, Report<SitzungPrüfenFehler>>(AuthContext::Authenticated {
+            Ok::<_, Report<SessionPrüfenFehler>>(AuthContext::Authenticated {
                 benutzer_id: self.claims.sub,
                 session_id: self.claims.sid,
             })
         }
         .await;
 
-        uow.finish(ergebnis, SitzungPrüfenFehler::SitzungLaden)
+        uow.finish(ergebnis, SessionPrüfenFehler::SessionLaden)
             .await
     }
 }

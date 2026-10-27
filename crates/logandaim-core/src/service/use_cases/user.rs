@@ -140,7 +140,7 @@ pub enum BenutzerLöschenFehler {
     #[error("der Benutzer konnte nicht geladen werden")]
     BenutzerLaden,
     #[error("die Sitzungen konnten nicht gelöscht werden")]
-    SitzungLöschen,
+    SessionLöschen,
     #[error("der Benutzer konnte nicht gelöscht werden")]
     BenutzerLöschen,
 }
@@ -233,7 +233,7 @@ impl UseCase<()> for BenutzerLöschen {
                 .delete_by_benutzer(benutzer_id)
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(BenutzerLöschenFehler::SitzungLöschen)?;
+                .change_context(BenutzerLöschenFehler::SessionLöschen)?;
 
             uow.benutzer()
                 .delete(benutzer)

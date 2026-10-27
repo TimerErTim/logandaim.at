@@ -21,7 +21,7 @@ use logandaim_core::{
         Abmeldung, Anmeldung, AnmeldungFehler, BenutzerAnzeigen, BenutzerAnzeigenFehler,
         BenutzerLöschen, Erneuerung, PasswortVergessen, PasswortWiederherstellen,
         RegistrierungAbschliessenFehler, RegistrierungAbschließen, RegistrierungStarten,
-        RegistrierungStartenFehler, SitzungAusgestellt,
+        RegistrierungStartenFehler, SessionAusgestellt,
     },
 };
 
@@ -76,7 +76,7 @@ async fn registrierung_starten(
 }
 
 /// Register fully and return the issued session.
-async fn registriere(harness: &Harness, email: &str) -> SitzungAusgestellt {
+async fn registriere(harness: &Harness, email: &str) -> SessionAusgestellt {
     let token = registrierung_starten(harness, email, client_key(1)).await;
     harness
         .app()
@@ -92,7 +92,7 @@ async fn registriere(harness: &Harness, email: &str) -> SitzungAusgestellt {
         .expect("registration step 2 issues a session")
 }
 
-async fn anmelden(harness: &Harness, email: &str) -> SitzungAusgestellt {
+async fn anmelden(harness: &Harness, email: &str) -> SessionAusgestellt {
     harness
         .app()
         .execute(
@@ -108,7 +108,7 @@ async fn anmelden(harness: &Harness, email: &str) -> SitzungAusgestellt {
 }
 
 /// What the API will inject after decoding a bearer token.
-fn auth_aus(ausgestellt: &SitzungAusgestellt) -> AuthContext {
+fn auth_aus(ausgestellt: &SessionAusgestellt) -> AuthContext {
     AuthContext::Authenticated {
         benutzer_id: ausgestellt.benutzer.id(),
         session_id: ausgestellt.session_id,
@@ -187,7 +187,7 @@ async fn ac2_vergebene_adresse_antwortet_gleich_und_mailt_nicht() {
 // ------------------------------------------------------------------------- AC-3, AC-4
 
 #[test_log::test(pollster::test)]
-async fn ac3_abschluss_erzeugt_benutzer_konto_und_erste_sitzung() {
+async fn ac3_abschluss_erzeugt_benutzer_konto_und_erste_session() {
     let harness = harness().await;
 
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
@@ -260,7 +260,7 @@ async fn registriere_abschließen(
     harness: &Harness,
     token: &SecretToken,
     client_key: ClientKey,
-) -> Result<SitzungAusgestellt, error_stack::Report<RegistrierungAbschliessenFehler>> {
+) -> Result<SessionAusgestellt, error_stack::Report<RegistrierungAbschliessenFehler>> {
     harness
         .app()
         .execute(
@@ -277,7 +277,7 @@ async fn registriere_abschließen(
 // ------------------------------------------------------------------------- AC-5, AC-6
 
 #[test_log::test(pollster::test)]
-async fn ac5_anmeldung_eröffnet_eine_gültige_sitzung() {
+async fn ac5_anmeldung_eröffnet_eine_gültige_session() {
     let harness = harness().await;
     registriere(&harness, "anna@muster.at").await;
 
@@ -442,7 +442,7 @@ async fn ac8_verbrauchtes_refresh_token_wird_abgelehnt_und_beendet_die_familie()
         .await;
     assert!(
         nachfolger.is_err(),
-        "ein Replay beendet die ganze Sitzungsfamilie"
+        "ein Replay beendet die ganze Session-Familie"
     );
 }
 
@@ -531,7 +531,7 @@ async fn ac10_wiederherstellung_antwortet_für_jede_adresse_gleich() {
 }
 
 #[test_log::test(pollster::test)]
-async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
+async fn ac11_neues_passwort_beendet_alle_sessions_und_ist_einmalig() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
     harness.mail().leeren();
@@ -563,14 +563,14 @@ async fn ac11_neues_passwort_beendet_alle_sitzungen_und_ist_einmalig() {
         .expect("das neue Passwort wird gesetzt");
 
     // Every session ended, including the access token issued before.
-    let alte_sitzung = harness
+    let alte_session = harness
         .app()
         .execute(
             AuthContext::Anonymous,
             pruefen(&harness, ausgestellt.claims.clone()),
         )
         .await;
-    assert!(alte_sitzung.is_err(), "alle Sitzungen sind beendet");
+    assert!(alte_session.is_err(), "alle Sitzungen sind beendet");
 
     // Single use.
     let zweiter = harness
@@ -816,7 +816,7 @@ async fn ac16_registrierung_ist_auf_fünf_pro_stunde_gedrosselt() {
 /// Deleting the row is not a way out either: an unknown `sid` is a 401, never a 500 and
 /// never an implicit acceptance.
 #[test_log::test(pollster::test)]
-async fn ac17_unbekannte_sitzung_wird_abgelehnt() {
+async fn ac17_unbekannte_session_wird_abgelehnt() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
 
@@ -833,7 +833,7 @@ async fn ac17_unbekannte_sitzung_wird_abgelehnt() {
 /// A signature that is well-formed but was made by another key does not verify against
 /// the public key the row carries — even when it names the same `kid`.
 #[test_log::test(pollster::test)]
-async fn ac17_fremder_schlüssel_passt_nicht_zur_sitzungszeile() {
+async fn ac17_fremder_schlüssel_passt_nicht_zur_session_zeile() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
 
@@ -852,7 +852,7 @@ async fn ac17_fremder_schlüssel_passt_nicht_zur_sitzungszeile() {
 }
 
 #[test_log::test(pollster::test)]
-async fn ac17_widerrufene_sitzung_wird_trotz_gültigem_schlüssel_abgelehnt() {
+async fn ac17_widerrufene_session_wird_trotz_gültigem_schlüssel_abgelehnt() {
     let harness = harness().await;
     let ausgestellt = registriere(&harness, "anna@muster.at").await;
 

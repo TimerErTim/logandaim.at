@@ -19,6 +19,7 @@ flag "--host <host>" help="Address to bind to" default="127.0.0.1"
 flag "--port <port>" env="PORT" help="Port to bind to" default="{{ vars.API_PORT }}"
 flag "--database-url <url>" env="LOGANDAIM_DATABASE_URL" help="Database URL; :memory: keeps the run throwaway" default=":memory:"
 flag "--object-store-dir <dir>" env="LOGANDAIM_OBJECT_STORE_DIR" help="Object store directory, created when missing" default="target/smoke-server/storage"
+flag "--signing-key <path>" env="LOGANDAIM_SIGNING_KEY_PATH" help="Ed25519 signing key file"
 """
 depends = ["LOGANDAIM_BUILD_RELEASE={{ usage.release }} build:server"]
 run = """#!/usr/bin/env bash
@@ -27,5 +28,7 @@ exec target/{% if usage.release %}release{% else %}debug{% endif %}/logandaim-se
   --bind-address '{{ usage.host }}' \
   --bind-port '{{ usage.port }}' \
   --database-url '{{ usage.database_url }}' \
-  --object-store-dir '{{ usage.object_store_dir }}'
+  --object-store-dir '{{ usage.object_store_dir }}' \
+{%- if usage.signing_key %} \
+  --signing-key-path '{{ usage.signing_key }}'{% endif %}
 """

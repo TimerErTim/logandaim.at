@@ -72,6 +72,16 @@ So: German nouns, English verbs and structure. A German *verb* in the applicatio
 plumbing that happens to be spelled in German. A German noun with an English verb is correct:
 `BenutzerRepository::delete_by_benutzer`.
 
+**Auth-technical nouns are the one exception, and their English spelling is fixed.** German
+engineering usage names these in English, so the code says `Session`, `AccessToken`,
+`RefreshToken`, `SecretToken`, `SecretTokenHash`, `SigningKey`, and `PasswordHash` — see the
+vocabulary table in [`specs/product/konto.md`](../specs/product/konto.md). The product term
+`Anmelde-Sitzung` maps to the code term `Session`, one-to-one, and it applies to **every**
+identifier built on the noun, not only the aggregate: `SessionAusgestellt`, `SessionPrüfen`,
+`SessionAntwort`, `SessionLaden`. Never mix the two (`SitzungPrüfen` next to `SessionId`): one
+concept, one spelling. German stays in the error text a user reads (`"die Sitzung ist nicht mehr
+gültig"`) and in the product term in prose.
+
 Use **proper UTF-8** in identifiers and persisted names. Never transliterate umlauts to
 `ae`/`oe`/`ue` (`BenutzerLöschenFehler`, not `BenutzerLoeschenFehler`; `Bestätigung`, not
 `Bestaetigung`); never paper over it with `serde(rename)`. This is enforced by review, not by a task.

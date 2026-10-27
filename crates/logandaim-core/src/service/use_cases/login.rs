@@ -12,7 +12,7 @@ use crate::{
     domain::{
         EmailAdresse,
         konto::{
-            KlartextPasswort, RefreshToken, SitzungAusgestellt, dummy_verify, verify_password,
+            KlartextPasswort, RefreshToken, SessionAusgestellt, dummy_verify, verify_password,
         },
     },
     ports::{ClientKey, ThrottleAction},
@@ -37,7 +37,7 @@ pub enum AnmeldungFehler {
     #[error("das Refresh-Token konnte nicht erzeugt werden")]
     TokenErzeugen,
     #[error("die Sitzung konnte nicht gespeichert werden")]
-    SitzungSpeichern,
+    SessionSpeichern,
 }
 
 /// Log in with address and Passwort.
@@ -54,10 +54,10 @@ pub struct Anmeldung {
 }
 
 #[async_trait]
-impl UseCase<SitzungAusgestellt> for Anmeldung {
+impl UseCase<SessionAusgestellt> for Anmeldung {
     type Error = Report<AnmeldungFehler>;
 
-    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SitzungAusgestellt, Self::Error> {
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SessionAusgestellt, Self::Error> {
         let jetzt = ctx.clock().now();
 
         ctx.throttle()
@@ -104,9 +104,9 @@ impl UseCase<SitzungAusgestellt> for Anmeldung {
                 .create(new_session(&ctx, benutzer.id(), &refresh_token, jetzt))
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(AnmeldungFehler::SitzungSpeichern)?;
+                .change_context(AnmeldungFehler::SessionSpeichern)?;
 
-            Ok::<_, Report<AnmeldungFehler>>(SitzungAusgestellt {
+            Ok::<_, Report<AnmeldungFehler>>(SessionAusgestellt {
                 benutzer: benutzer.cloned_data(),
                 session_id: session.id(),
                 refresh_token,
