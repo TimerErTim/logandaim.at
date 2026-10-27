@@ -8,15 +8,9 @@ fail-fast = false
 path = "junit.xml"
 
 [profile.unit]
-fail-fast = false
+inherits = "default"
 default-filter = 'not binary(e2e)'
 
-[profile.unit.junit]
-path = "junit.xml"
-
 [profile.e2e]
-fail-fast = false
+inherits = "default"
 default-filter = 'binary(e2e)'
-
-[profile.e2e.junit]
-path = "junit.xml"
