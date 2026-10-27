@@ -2,17 +2,16 @@
 //!
 //! Everything here is a thin translation: request → use case → schema. No business rules.
 //! Use-case errors pass through unchanged; `HttpStatusMapping` in `errors/http_status.rs`
-//! turns them into status codes.
+//! turns them into status codes. Nothing here touches `poem`: the HTTP edge lives in
+//! `spec.rs` behind the `openapi` feature, so the library compiles without it.
 //!
-//! Two responsibilities are genuinely this layer's and must stay here:
+//! Two responsibilities are genuinely this layer's:
 //!
 //! - **The access token's envelope.** Core signs bytes; this facade serialises the claims,
-//!   base64url-encodes them, and asks core for the signature (`auth::jwt`). The reverse on
-//!   the way in.
+//!   base64url-encodes them, and asks core for the signature (`auth::jwt`).
 //! - **Turning a bearer header into an [`AuthContext`].** A token that verifies is then
 //!   handed to `SessionPrüfen`, which is what makes a *revoked* session fail even though
-//!   its signature is still valid (AC-17). Only that use case's answer is injected into the
-//!   use case that follows.
+//!   its signature is still valid (AC-17).
 
 use std::sync::Arc;
 
@@ -32,10 +31,7 @@ use logandaim_core::{
     },
 };
 
-pub mod extractors;
 pub mod requests;
-pub mod routes;
-pub mod session;
 
 use crate::{
     auth::jwt,
@@ -98,7 +94,7 @@ impl LogandaimAppApi {
 
     pub async fn schuss_registrieren(
         &self,
-        erstellung: requests::SchussErstellung,
+        erstellung: requests::SchussErstellungRequest,
     ) -> ResultReport<Schuss, SchussRegistrierenFehler> {
         let schuss = self
             .app
@@ -109,7 +105,7 @@ impl LogandaimAppApi {
 
     pub async fn wertung_berechnen(
         &self,
-        anfrage: requests::WertungsAnfrage,
+        anfrage: requests::WertungRequest,
     ) -> ResultReport<Wertung, WertungFehler> {
         let ergebnis = self
             .app
@@ -149,12 +145,25 @@ impl LogandaimAppApi {
             .map_err(|_| Report::new(AccessError::NotAuthenticated))
     }
 
+    /// The identity of the caller, or a refusal. This is what a protected route calls.
+    pub async fn require_authenticated(
+        &self,
+        authorization: Option<&str>,
+    ) -> ResultReport<AuthContext, AccessError> {
+        let auth = self.auth_context(authorization).await?;
+        if auth.is_authenticated() {
+            Ok(auth)
+        } else {
+            Err(Report::new(AccessError::NotAuthenticated))
+        }
+    }
+
     // ---------------------------------------------------------------- Registration
 
     /// Step 1. Always answers `Ok`: a taken address is not disclosed (AC-2).
     pub async fn registrierung_starten(
         &self,
-        anfrage: requests::RegistrierungStartAnfrage,
+        anfrage: requests::RegistrierungStartRequest,
         client_key: ClientKey,
     ) -> ResultReport<(), RegistrierungStartenFehler> {
         let use_case: RegistrierungStarten = anfrage.in_use_case(client_key)?;
@@ -164,7 +173,7 @@ impl LogandaimAppApi {
     /// Step 2. Creates the Benutzer, its Konto, and the first session.
     pub async fn registrierung_abschließen(
         &self,
-        anfrage: requests::RegistrierungAbschlussAnfrage,
+        anfrage: requests::RegistrierungAbschlussRequest,
         client_key: ClientKey,
     ) -> ResultReport<AusgestellteSession, RegistrierungAbschliessenFehler> {
         let use_case: RegistrierungAbschließen = anfrage.in_use_case(client_key)?;
@@ -176,7 +185,7 @@ impl LogandaimAppApi {
 
     pub async fn anmelden(
         &self,
-        anfrage: requests::AnmeldeAnfrage,
+        anfrage: requests::AnmeldungRequest,
         client_key: ClientKey,
     ) -> ResultReport<AusgestellteSession, AnmeldungFehler> {
         let use_case: Anmeldung = anfrage.in_use_case(client_key)?;
@@ -212,7 +221,6 @@ impl LogandaimAppApi {
                 // for it would make renewal depend on a read it does not need.
                 benutzer: SchemaBenutzer {
                     id: ausgestellt.claims.sub.0,
-                    rolle: crate::schema::SchemaRolle::Benutzer,
                 },
             },
             refresh_token: ausgestellt.refresh_token.base64url().as_str().to_owned(),
@@ -227,7 +235,7 @@ impl LogandaimAppApi {
 
     pub async fn passwort_vergessen(
         &self,
-        anfrage: requests::PasswortVergessenAnfrage,
+        anfrage: requests::PasswortVergessenRequest,
         client_key: ClientKey,
     ) -> ResultReport<(), PasswortVergessenFehler> {
         let use_case: PasswortVergessen = anfrage.in_use_case(client_key)?;
@@ -237,7 +245,7 @@ impl LogandaimAppApi {
     /// Single use, and ends every session of the Benutzer.
     pub async fn passwort_wiederherstellen(
         &self,
-        anfrage: requests::PasswortWiederherstellenAnfrage,
+        anfrage: requests::PasswortWiederherstellenRequest,
     ) -> ResultReport<(), PasswortWiederherstellenFehler> {
         let use_case: PasswortWiederherstellen = anfrage.in_use_case()?;
         self.app.execute(AuthContext::Anonymous, use_case).await
@@ -263,15 +271,14 @@ impl LogandaimAppApi {
 
         Ok(BenutzerAntwort {
             id: ansicht.id().0,
-            e_mail_adresse: ansicht.email.as_ref().to_owned(),
-            rolle: ansicht.benutzer.rolle().into(),
+            e_mail_adresse: ansicht.email.into(),
         })
     }
 
     pub async fn benutzer_löschen(
         &self,
         auth: AuthContext,
-        anfrage: requests::BenutzerLöschungAnfrage,
+        anfrage: requests::BenutzerLöschungRequest,
     ) -> ResultReport<(), BenutzerLöschenFehler> {
         let use_case: BenutzerLöschen = anfrage.in_use_case()?;
         self.app.execute(auth, use_case).await

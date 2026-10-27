@@ -14,10 +14,12 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration};
 use logandaim_api::openapi_service;
 use logandaim_core::{
-    App, adapters::InMemorySigning, application::IdentityProviderConfiguration,
-    domain::konto::SigningKeyId, ports::Clock,
+    App,
+    adapters::{InMemorySigning, InMemoryThrottle},
+    application::IdentityProviderConfiguration,
+    ports::Clock,
 };
-use logandaim_fakes::{FakeMailSender, FixedClock, InMemoryThrottle};
+use logandaim_fakes::{FakeMailSender, FixedClock};
 use logandaim_filesystemstore::FileSystemObjectStore;
 use logandaim_smtp::{SmtpKonfiguration, SmtpMailSender};
 use logandaim_sqlite::SQLiteInstance;
@@ -40,10 +42,7 @@ pub const PASSWORT: &str = "korrekt-pferd-batterie";
 /// The key every test signs with. A fixed seed, so a token from one run is verifiable in
 /// another and a test failure is reproducible.
 pub fn test_signing_key() -> InMemorySigning {
-    InMemorySigning::from_secret_bytes(
-        SigningKeyId::new("test-key").expect("static kid is valid"),
-        &[7u8; 32],
-    )
+    InMemorySigning::from_secret_bytes(&[7u8; 32])
 }
 
 pub fn test_konfiguration() -> IdentityProviderConfiguration {

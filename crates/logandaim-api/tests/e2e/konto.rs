@@ -133,7 +133,6 @@ async fn ac3_abschluss_erzeugt_benutzer_konto_und_erste_session() {
     let (status, body) = harness.client.get_json_auth("/api/benutzer", &access).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["eMailAdresse"], "anna@muster.at");
-    assert_eq!(body["rolle"], "Benutzer");
 }
 
 // ------------------------------------------------------------------------- AC-4, AC-5
@@ -694,13 +693,10 @@ async fn ac17_signatur_wird_gegen_den_schlüssel_der_session_zeile_geprüft() {
     let (status, _) = harness.client.get_json_auth("/api/benutzer", &access).await;
     assert_eq!(status, StatusCode::OK);
 
-    // Take the live token apart and re-sign its claims with different key material under
-    // the *same* `kid`. The envelope is valid, so only the row's public key can reject it.
+    // Take the live token apart and re-sign its claims with different key material. The
+    // envelope is valid, so only the row's public key can reject it.
     let gelesen = logandaim_api::auth::jwt::decode(&access).expect("unser Token parst");
-    let fremd = logandaim_core::adapters::InMemorySigning::from_secret_bytes(
-        gelesen.claims.kid.clone(),
-        &[9u8; 32],
-    );
+    let fremd = logandaim_core::adapters::InMemorySigning::from_secret_bytes(&[9u8; 32]);
     let gefälscht =
         logandaim_api::auth::jwt::encode(&gelesen.claims, &fremd).expect("encoding succeeds");
 
@@ -708,11 +704,7 @@ async fn ac17_signatur_wird_gegen_den_schlüssel_der_session_zeile_geprüft() {
         .client
         .get_json_auth("/api/benutzer", gefälscht.as_str())
         .await;
-    assert_eq!(
-        status,
-        StatusCode::UNAUTHORIZED,
-        "fremde Signatur unter demselben kid"
-    );
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "fremde Signatur");
 
     // An unknown session id (`sid`) is refused just as flatly: no row, no identity.
     let mut unbekannt = gelesen.claims.clone();

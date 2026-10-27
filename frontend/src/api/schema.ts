@@ -56,7 +56,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["SchussErstellung"];
+                    "application/json; charset=utf-8": components["schemas"]["SchussErstellungRequest"];
                 };
             };
             responses: {
@@ -110,7 +110,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["WertungsAnfrage"];
+                    "application/json; charset=utf-8": components["schemas"]["WertungRequest"];
                 };
             };
             responses: {
@@ -155,20 +155,20 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Step 1 of registration. Answers `200` whether the address is free or taken, so the
-         *     endpoint is not an address oracle (AC-2).
-         */
+        /** Step 1. Answers `200` whether the address is free or taken (AC-2). */
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    "User-Agent"?: string;
+                    "Accept-Language"?: string;
+                };
                 path?: never;
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["RegistrierungStartAnfrage"];
+                    "application/json; charset=utf-8": components["schemas"]["RegistrierungStartRequest"];
                 };
             };
             responses: {
@@ -220,13 +220,16 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    "User-Agent"?: string;
+                    "Accept-Language"?: string;
+                };
                 path?: never;
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["RegistrierungAbschlussAnfrage"];
+                    "application/json; charset=utf-8": components["schemas"]["RegistrierungAbschlussRequest"];
                 };
             };
             responses: {
@@ -279,13 +282,16 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    "User-Agent"?: string;
+                    "Accept-Language"?: string;
+                };
                 path?: never;
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["AnmeldeAnfrage"];
+                    "application/json; charset=utf-8": components["schemas"]["AnmeldungRequest"];
                 };
             };
             responses: {
@@ -339,9 +345,14 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    "User-Agent"?: string;
+                    "Accept-Language"?: string;
+                };
                 path?: never;
-                cookie?: never;
+                cookie?: {
+                    "__Host-logandaim_refresh"?: string;
+                };
             };
             requestBody?: never;
             responses: {
@@ -394,7 +405,9 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    Authorization?: string;
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -449,13 +462,16 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    "User-Agent"?: string;
+                    "Accept-Language"?: string;
+                };
                 path?: never;
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["PasswortVergessenAnfrage"];
+                    "application/json; charset=utf-8": components["schemas"]["PasswortVergessenRequest"];
                 };
             };
             responses: {
@@ -513,7 +529,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["PasswortWiederherstellenAnfrage"];
+                    "application/json; charset=utf-8": components["schemas"]["PasswortWiederherstellenRequest"];
                 };
             };
             responses: {
@@ -570,7 +586,9 @@ export interface paths {
                 query?: {
                     benutzerId?: string;
                 };
-                header?: never;
+                header?: {
+                    Authorization?: string;
+                };
                 path?: never;
                 cookie?: never;
             };
@@ -626,13 +644,15 @@ export interface paths {
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    Authorization?: string;
+                };
                 path?: never;
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["BenutzerL\u00F6schungAnfrage"];
+                    "application/json; charset=utf-8": components["schemas"]["BenutzerL\u00F6schungRequest"];
                 };
             };
             responses: {
@@ -677,11 +697,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** AnmeldeAnfrage */
-        AnmeldeAnfrage: {
-            eMailAdresse: string;
-            passwort: string;
-        };
         /**
          * AnmeldeAntwort
          * @description What registration step 2, login, and renewal hand back.
@@ -694,6 +709,15 @@ export interface components {
             accessToken: string;
             benutzer: components["schemas"]["SchemaBenutzer"];
         };
+        /** AnmeldungRequest */
+        AnmeldungRequest: {
+            /**
+             * E-Mail-Adresse
+             * @example test@example.com
+             */
+            eMailAdresse: string;
+            passwort: string;
+        };
         /**
          * BenutzerAntwort
          * @description The logged-in Benutzer as `GET /benutzer` answers it.
@@ -701,14 +725,17 @@ export interface components {
         BenutzerAntwort: {
             /** Format: uuid */
             id: string;
+            /**
+             * E-Mail-Adresse
+             * @example test@example.com
+             */
             eMailAdresse: string;
-            rolle: components["schemas"]["SchemaRolle"];
         };
         /**
-         * BenutzerLöschungAnfrage
+         * BenutzerLöschungRequest
          * @description Deleting one's own Benutzer: the Passwort is re-entered, and the intent is explicit.
          */
-        "BenutzerL\u00F6schungAnfrage": {
+        "BenutzerL\u00F6schungRequest": {
             passwort: string;
             /** @description Must be `true`; a missing flag is a refusal, never a default. */
             "best\u00E4tigt": boolean;
@@ -717,34 +744,42 @@ export interface components {
          * OkAntwort
          * @description Acknowledgement of a request that has nothing to return.
          *
-         *     A bare `204` would be indistinguishable from a proxy's empty answer, and a caller
-         *     cannot tell success from a dropped connection; an explicit body is worth the two bytes.
+         *     A bare `204` would be indistinguishable from a proxy's empty answer, so the explicit
+         *     body is worth the two bytes.
          */
         OkAntwort: {
             ok: boolean;
         };
-        /** PasswortVergessenAnfrage */
-        PasswortVergessenAnfrage: {
+        /** PasswortVergessenRequest */
+        PasswortVergessenRequest: {
+            /**
+             * E-Mail-Adresse
+             * @example test@example.com
+             */
             eMailAdresse: string;
         };
-        /** PasswortWiederherstellenAnfrage */
-        PasswortWiederherstellenAnfrage: {
+        /** PasswortWiederherstellenRequest */
+        PasswortWiederherstellenRequest: {
             token: string;
             neuesPasswort: string;
         };
         /**
-         * RegistrierungAbschlussAnfrage
+         * RegistrierungAbschlussRequest
          * @description Registration step 2.
          */
-        RegistrierungAbschlussAnfrage: {
+        RegistrierungAbschlussRequest: {
             token: string;
             passwort: string;
         };
         /**
-         * RegistrierungStartAnfrage
+         * RegistrierungStartRequest
          * @description Registration step 1.
          */
-        RegistrierungStartAnfrage: {
+        RegistrierungStartRequest: {
+            /**
+             * E-Mail-Adresse
+             * @example test@example.com
+             */
             eMailAdresse: string;
         };
         /**
@@ -755,13 +790,7 @@ export interface components {
         SchemaBenutzer: {
             /** Format: uuid */
             id: string;
-            rolle: components["schemas"]["SchemaRolle"];
         };
-        /**
-         * @description Authority of a Benutzer, as the API spells it.
-         * @enum {string}
-         */
-        SchemaRolle: SchemaRolle;
         /**
          * Schuss
          * @description One logged arrow, translated from the domain.
@@ -776,13 +805,11 @@ export interface components {
             wertungszone: components["schemas"]["Wertungszone"];
         };
         /**
-         * SchussErstellung
-         * @description Inbound request for registering one Schuss at a Ziel.
-         *
-         *     Pure transport DTO. `pfeil` is validated by `domain::NeuerSchuss` when the use case
-         *     builds it, so the rule stays in one place.
+         * SchussErstellungRequest
+         * @description Inbound request for registering one Schuss at a Ziel. `pfeil` is validated by
+         *     `domain::NeuerSchuss` when the use case builds it.
          */
-        SchussErstellung: {
+        SchussErstellungRequest: {
             /** Format: uuid */
             zielId: string;
             /** Format: uint64 */
@@ -809,10 +836,10 @@ export interface components {
             "anzahlSch\u00FCsse": number;
         };
         /**
-         * WertungsAnfrage
+         * WertungRequest
          * @description Inbound request for summarizing a selection of Schüsse.
          */
-        WertungsAnfrage: {
+        WertungRequest: {
             schussIds: string[];
         };
         /**
@@ -829,10 +856,6 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export enum SchemaRolle {
-    Benutzer = "Benutzer",
-    Systemadministrator = "Systemadministrator"
-}
 export enum Wertungszone {
     Spot = "Spot",
     Kill = "Kill",
