@@ -146,18 +146,3 @@ impl MailSender for SmtpMailSender {
         Ok(())
     }
 }
-
-/// A `MailSender` for a deployment with no relay configured.
-///
-/// It fails every send, which the calling use case logs as a warning (NFR-5). That is
-/// deliberately louder than a fake that swallows mail: an operator who forgot to configure
-/// SMTP gets one warning per attempted mail, not silent success.
-#[derive(Debug, Default)]
-pub struct KeinVersand;
-
-#[async_trait]
-impl MailSender for KeinVersand {
-    async fn send(&self, _mail: Mail) -> ResultReport<(), MailError> {
-        Err(error_stack::Report::new(MailError::NichtKonfiguriert))
-    }
-}

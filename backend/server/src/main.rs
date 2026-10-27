@@ -7,14 +7,14 @@ use error_stack::{Report, ResultExt};
 use logandaim_api::{errors::InternalServerError, openapi_service};
 use logandaim_core::{
     App,
-    adapters::InMemorySigning,
+    adapters::{InMemorySigning, InMemoryThrottle, NullMailSender},
     application::{AuthContext, IdentityProviderConfiguration},
-    domain::{EmailAdresse, konto::SigningKeyId},
+    domain::EmailAdresse,
     ports::MailSender,
     service::{Beförderung, SystemadministratorBefördern},
 };
 use logandaim_filesystemstore::FileSystemObjectStore;
-use logandaim_smtp::{KeinVersand, SmtpKonfiguration, SmtpMailSender, Verschlüsselung};
+use logandaim_smtp::{SmtpKonfiguration, SmtpMailSender, Verschlüsselung};
 use logandaim_sqlite::SQLiteInstance;
 use poem::http::StatusCode;
 use poem::middleware::{CatchPanic, Compression, Cors, Middleware, RequestId, ReuseId, Tracing};
@@ -27,29 +27,16 @@ use tracing_setup::init_tracing;
 #[error("Backend server fatal error")]
 pub struct BackendServerError;
 
-/// Build the signing key: read the configured PEM, or generate a throwaway one.
+/// Read the configured PEM, or generate a throwaway key.
 ///
-/// A configured path is honoured and a malformed file is fatal — a deployment that points
-/// at a key expects that key. Without a path the process generates a fresh keypair, which
-/// is what a throwaway run wants: nothing to generate beforehand, and every restart simply
-/// invalidates the sessions it issued. Each session row stores the public key it was issued
-/// under, so verification never needs a key table (AC-17).
+/// A malformed configured file is fatal: a deployment that points at a key expects that
+/// key. Without a path every restart invalidates the sessions it issued.
 fn build_signing_key(
     config: &config::ServerConfig,
 ) -> Result<InMemorySigning, Report<BackendServerError>> {
-    let kid = SigningKeyId::new(config.signing_key_id.clone()).map_err(|_| {
-        Report::new(BackendServerError).attach(format!(
-            "signing key id `{}` is not a valid row id",
-            config.signing_key_id
-        ))
-    })?;
-
     let Some(path) = &config.signing_key_path else {
-        tracing::info!(
-            kid = %kid.as_str(),
-            "no signing key configured; generated a throwaway key for this process"
-        );
-        return Ok(InMemorySigning::random(kid));
+        tracing::info!("no signing key configured; generated a throwaway key for this process");
+        return Ok(InMemorySigning::random());
     };
 
     let pem = std::fs::read_to_string(path).map_err(|source| {
@@ -59,8 +46,8 @@ fn build_signing_key(
         ))
     })?;
 
-    let keypair = logandaim_core::domain::konto::SigningKeypair::from_pkcs8_pem(kid, &pem)
-        .map_err(|_| {
+    let keypair =
+        logandaim_core::domain::konto::SigningKeypair::from_pkcs8_pem(&pem).map_err(|_| {
             Report::new(BackendServerError).attach(format!(
                 "signing key `{}` is not a valid PKCS#8 Ed25519 key",
                 path.display()
@@ -80,11 +67,7 @@ fn catch_panic() -> CatchPanic<impl poem::middleware::PanicHandler> {
     })
 }
 
-/// Build the mail port from configuration.
-///
-/// No relay configured is not an error: the server starts, and every attempted mail logs a
-/// warning. Refusing to start would make a mail misconfiguration an outage of the whole
-/// product, including the parts that do not send mail.
+/// Build the mail port. No relay is not an error: mail fails and is logged (NFR-5).
 fn lade_mail_sender(
     config: &config::ServerConfig,
 ) -> Result<Arc<dyn MailSender>, Report<BackendServerError>> {
@@ -92,7 +75,7 @@ fn lade_mail_sender(
         tracing::warn!(
             "kein SMTP-Relay konfiguriert; Transaktionsmails schlagen fehl und werden geloggt"
         );
-        return Ok(Arc::new(KeinVersand));
+        return Ok(Arc::new(NullMailSender));
     };
 
     let absender = EmailAdresse::normalisiert(&config.smtp_absender).map_err(|_| {
@@ -121,12 +104,7 @@ fn lade_mail_sender(
     Ok(Arc::new(sender))
 }
 
-/// Origins the browser app is served from.
-///
-/// An allowlist, not a prefix match on `http://localhost:`: an origin that merely *starts*
-/// with a loopback prefix is a different origin, and the old prefix test let one through.
-/// The frontend origin is deployment data, so it comes from configuration; the dev server's
-/// documented ports are added for a developer machine that runs the app on another port.
+/// Origin allowlist: the configured frontend plus the documented dev-server ports.
 fn allowed_origins(config: &config::ServerConfig) -> Vec<poem::http::HeaderValue> {
     let mut origins = vec![config.frontend_basis_url.clone()];
 
@@ -142,7 +120,6 @@ fn allowed_origins(config: &config::ServerConfig) -> Vec<poem::http::HeaderValue
         config.bind_address, config.bind_port
     ));
 
-    // A deployment behind another origin names it rather than widening the list.
     if let Ok(extra) = std::env::var("LOGANDAIM_CORS_ORIGIN") {
         origins.extend(
             extra
@@ -159,11 +136,7 @@ fn allowed_origins(config: &config::ServerConfig) -> Vec<poem::http::HeaderValue
         .collect()
 }
 
-/// CORS for the browser app.
-///
-/// Credentials are allowed because the refresh cookie is one. The `__Host-` cookie is
-/// `SameSite=Lax`, so it is not sent on a cross-site POST either way; this is the second
-/// line, not the first.
+/// CORS for the browser app; credentials are allowed because the refresh cookie is one.
 fn cors(config: &config::ServerConfig) -> Cors {
     Cors::new()
         .allow_credentials(true)
@@ -181,12 +154,8 @@ fn cors(config: &config::ServerConfig) -> Cors {
         ])
 }
 
-/// Promote the configured address to `Systemadministrator`.
-///
-/// `Systemadministrator` is never granted by an API path (rule 9), so a deployment
-/// promotes one address from configuration. Idempotent: a second start finds the role
-/// already set. An address that has not registered yet is not an error — the account is
-/// promoted on a later start — so a fresh deployment boots before its superuser exists.
+/// Promote the configured address to `Systemadministrator`; idempotent, and an address
+/// without a Konto yet is not an error.
 async fn bootstrap_superuser(app: &App) -> Result<(), Report<BackendServerError>> {
     let Some(email) = std::env::var("LOGANDAIM_SUPERUSER_EMAIL")
         .ok()
@@ -249,7 +218,7 @@ async fn main() -> Result<(), Report<BackendServerError>> {
         .uow_provider(Box::new(sqlite.clone()))
         .object_store(Arc::new(object_store))
         .signing(Arc::new(signing_key))
-        .throttle(Arc::new(logandaim_core::adapters::InMemoryThrottle::new()))
+        .throttle(Arc::new(InMemoryThrottle::new()))
         .mail_sender(mail_sender)
         .konto(konto)
         .build();

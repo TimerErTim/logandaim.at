@@ -1,12 +1,15 @@
 use std::sync::Arc;
 
-use crate::adapters::{BlankPdfRenderer, InMemoryObjectStore, SystemClock};
+use tracing::instrument;
+
+use crate::adapters::{
+    BlankPdfRenderer, InMemoryObjectStore, InMemorySigning, InMemoryThrottle, NullMailSender,
+    SystemClock,
+};
 use crate::application::context::ContextPorts;
 use crate::ports::{Clock, MailSender, ObjectStore, PdfRenderer, Signing, Throttle};
 use crate::service::UseCase;
 use crate::uow::UnitOfWorkProvider;
-use error_stack::IntoReport;
-use tracing::instrument;
 
 pub mod uow;
 
@@ -32,13 +35,17 @@ pub use errors::ThreadSafeError;
 #[derive(bon::Builder)]
 pub struct App {
     pub uow_provider: Box<dyn UnitOfWorkProvider>,
-    /// The configured signing key behind an application port. The algorithm beneath it is
-    /// domain code; startup only supplies key material.
+    /// Key material behind an application port; the algorithm beneath it is domain code.
+    /// The default is a fresh keypair per process, which is right for a throwaway run and
+    /// wrong for a deployment that must not end every session on restart.
+    #[builder(default = Arc::new(InMemorySigning::random()))]
     pub signing: Arc<dyn Signing>,
-    /// Client-scoped rate limiting. No default: a deployment must choose a store rather
-    /// than silently run without throttles.
+    /// Client-scoped rate limiting. `InMemoryThrottle` is the production adapter for a
+    /// single-process deployment, so it is also the default.
+    #[builder(default = Arc::new(InMemoryThrottle::new()))]
     pub throttle: Arc<dyn Throttle>,
-    /// Transaction mail. No default, for the same reason.
+    /// Transaction mail. No relay configured fails every send and logs it (NFR-5).
+    #[builder(default = Arc::new(NullMailSender))]
     pub mail_sender: Arc<dyn MailSender>,
     /// Mailed link targets and token identity. Deployment data, not behaviour.
     pub konto: IdentityProviderConfiguration,
@@ -68,7 +75,7 @@ impl App {
         &self,
         auth: AuthContext,
         use_case: U,
-    ) -> ResultReport<O, <U::Error as IntoReport>::Context> {
+    ) -> ResultReport<O, <U::Error as error_stack::IntoReport>::Context> {
         use_case.perform(self.new_execution_context(auth)).await
     }
 
