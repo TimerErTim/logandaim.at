@@ -11,7 +11,6 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::konto::{
         BenutzerId, NeueSession, RenewableSession, SecretTokenHash, Session, SessionId,
-        SigningKeyId,
     },
     ports::{RepositoryError, RepositoryResult, SessionRepository},
 };
@@ -24,7 +23,7 @@ use crate::{
     },
 };
 
-const SELECT: &str = r#"SELECT id, benutzer_id, refresh_token_hash, signing_key_id, public_key,
+const SELECT: &str = r#"SELECT id, benutzer_id, refresh_token_hash, public_key,
     created_at, expires_at, spent_at, revoked_at, _version FROM "sessions""#;
 
 fn option_datetime(raw: Option<String>) -> RepositoryResult<Option<chrono::DateTime<chrono::Utc>>> {
@@ -36,29 +35,25 @@ fn session_from_row(row: &Row) -> RepositoryResult<Versioned<Session>> {
     let id_raw: String = row.get(0).contextualize(RepositoryError::Data)?;
     let benutzer_id_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
     let refresh_token_hash_raw: String = row.get(2).contextualize(RepositoryError::Data)?;
-    let signing_key_id_raw: String = row.get(3).contextualize(RepositoryError::Data)?;
-    let public_key: String = row.get(4).contextualize(RepositoryError::Data)?;
-    let created_at_raw: String = row.get(5).contextualize(RepositoryError::Data)?;
-    let expires_at_raw: String = row.get(6).contextualize(RepositoryError::Data)?;
-    let spent_at_raw: Option<String> = row.get(7).contextualize(RepositoryError::Data)?;
-    let revoked_at_raw: Option<String> = row.get(8).contextualize(RepositoryError::Data)?;
+    let public_key: String = row.get(3).contextualize(RepositoryError::Data)?;
+    let created_at_raw: String = row.get(4).contextualize(RepositoryError::Data)?;
+    let expires_at_raw: String = row.get(5).contextualize(RepositoryError::Data)?;
+    let spent_at_raw: Option<String> = row.get(6).contextualize(RepositoryError::Data)?;
+    let revoked_at_raw: Option<String> = row.get(7).contextualize(RepositoryError::Data)?;
 
     let id = parse_uuid(&id_raw).contextualize(RepositoryError::Data)?;
     let benutzer_id = parse_uuid(&benutzer_id_raw).contextualize(RepositoryError::Data)?;
     let refresh_token_hash =
         SecretTokenHash::from_hex(refresh_token_hash_raw).change_context(RepositoryError::Data)?;
-    let signing_key_id =
-        SigningKeyId::new(signing_key_id_raw).change_context(RepositoryError::Data)?;
     let created_at = parse_datetime(&created_at_raw).contextualize(RepositoryError::Data)?;
     let expires_at = parse_datetime(&expires_at_raw).contextualize(RepositoryError::Data)?;
 
     Ok(Versioned::new(
-        parse_version(row, 9)?,
+        parse_version(row, 8)?,
         Session::from_parts(
             SessionId(id),
             BenutzerId(benutzer_id),
             refresh_token_hash,
-            signing_key_id,
             public_key,
             created_at,
             expires_at,
@@ -83,14 +78,13 @@ impl SessionRepository for SQLiteSessionRepository {
 
         tx.execute(
             r#"INSERT INTO "sessions"
-               (id, benutzer_id, refresh_token_hash, signing_key_id, public_key, created_at,
+               (id, benutzer_id, refresh_token_hash, public_key, created_at,
                 expires_at, spent_at, revoked_at, _version)
-               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, NULL, NULL, 0)"#,
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, NULL, NULL, 0)"#,
             (
                 id.0.to_string(),
                 session.benutzer_id().0.to_string(),
                 session.refresh_token_hash().as_str().to_string(),
-                session.signing_key_id().as_str().to_string(),
                 session.public_key_hex().to_string(),
                 format_datetime(session.created_at()),
                 format_datetime(session.expires_at()),
@@ -157,14 +151,13 @@ impl SessionRepository for SQLiteSessionRepository {
         update_versioned(
             tx,
             r#"UPDATE "sessions" SET benutzer_id = ?2, refresh_token_hash = ?3,
-                   signing_key_id = ?4, public_key = ?5, created_at = ?6, expires_at = ?7,
-                   spent_at = ?8, revoked_at = ?9, _version = ?10 + 1
-               WHERE id = ?1 AND _version = ?10"#,
+                   public_key = ?4, created_at = ?5, expires_at = ?6,
+                   spent_at = ?7, revoked_at = ?8, _version = ?9 + 1
+               WHERE id = ?1 AND _version = ?9"#,
             (
                 session.id().0.to_string(),
                 session.benutzer_id().0.to_string(),
                 session.refresh_token_hash().as_str().to_string(),
-                session.signing_key_id().as_str().to_string(),
                 session.public_key_hex().to_string(),
                 format_datetime(session.created_at()),
                 format_datetime(session.expires_at()),

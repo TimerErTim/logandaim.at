@@ -60,7 +60,6 @@ impl UpMigration<libsql::Transaction, libsql::Error> for Migration {
                 id TEXT PRIMARY KEY,
                 benutzer_id TEXT NOT NULL REFERENCES "benutzer" (id) ON DELETE CASCADE,
                 refresh_token_hash TEXT NOT NULL UNIQUE,
-                signing_key_id TEXT NOT NULL,
                 public_key TEXT NOT NULL,
                 created_at TEXT NOT NULL,
                 expires_at TEXT NOT NULL,

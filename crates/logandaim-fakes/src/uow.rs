@@ -9,7 +9,10 @@ use logandaim_core::{
     uow::{UnitOfWorkImpl, UnitOfWorkProvider},
 };
 
-use crate::repository::{FakeDatastore, FakeSchussRepository, KontoRepositories};
+use crate::repository::{
+    FakeBenutzerRepository, FakeDatastore, FakeEmailBestätigungRepository, FakeKontoRepository,
+    FakePasswortWiederherstellungRepository, FakeSchussRepository, FakeSessionRepository,
+};
 
 /// Fake UoW with real transaction semantics: `begin` snapshots the backing datastore,
 /// repositories write into the snapshot, `commit` publishes the snapshot back.
@@ -55,20 +58,30 @@ pub struct FakeUnitOfWork {
     /// Snapshot the repositories write into; discarded on rollback.
     transaction_datastore: Arc<FakeDatastore>,
     schüsse: FakeSchussRepository,
-    konto: KontoRepositories,
+    benutzer: FakeBenutzerRepository,
+    konten: FakeKontoRepository,
+    sessions: FakeSessionRepository,
+    bestätigungen: FakeEmailBestätigungRepository,
+    wiederherstellungen: FakePasswortWiederherstellungRepository,
 }
 
 impl FakeUnitOfWork {
     pub fn new(log: Arc<Mutex<Vec<UoWEvent>>>, datastore: Arc<FakeDatastore>) -> Self {
         let transaction_datastore = Arc::new(FakeDatastore::clone(datastore.as_ref()));
-        let schüsse = FakeSchussRepository::new(Arc::clone(&transaction_datastore));
-        let konto = KontoRepositories::new(Arc::clone(&transaction_datastore));
         Self {
             log,
             backing_datastore: datastore,
+            schüsse: FakeSchussRepository::new(Arc::clone(&transaction_datastore)),
+            benutzer: FakeBenutzerRepository::new(Arc::clone(&transaction_datastore)),
+            konten: FakeKontoRepository::new(Arc::clone(&transaction_datastore)),
+            sessions: FakeSessionRepository::new(Arc::clone(&transaction_datastore)),
+            bestätigungen: FakeEmailBestätigungRepository::new(
+                Arc::clone(&transaction_datastore),
+            ),
+            wiederherstellungen: FakePasswortWiederherstellungRepository::new(
+                transaction_datastore.clone(),
+            ),
             transaction_datastore,
-            schüsse,
-            konto,
         }
     }
 }
@@ -92,23 +105,23 @@ impl UnitOfWorkImpl for FakeUnitOfWork {
     }
 
     fn benutzer(&self) -> &dyn BenutzerRepository {
-        &self.konto.benutzer
+        &self.benutzer
     }
 
     fn konten(&self) -> &dyn KontoRepository {
-        &self.konto.konten
+        &self.konten
     }
 
     fn sessions(&self) -> &dyn SessionRepository {
-        &self.konto.sessions
+        &self.sessions
     }
 
     fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {
-        &self.konto.bestätigungen
+        &self.bestätigungen
     }
 
     fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {
-        &self.konto.wiederherstellungen
+        &self.wiederherstellungen
     }
 }
 
