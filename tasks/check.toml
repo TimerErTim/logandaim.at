@@ -10,6 +10,10 @@ description = "Check the linting of the code"
 # `lint:check:ts`, which would silently drop `tsc --noEmit` from the gate.
 depends = ["lint:crates", "lint:frontend", "lint:check:ts"]
 
+["check:docs"]
+description = "Check the crates documentation"
+run = "cargo doc --workspace --no-deps --all-features"
+
 ["check:openapi"]
 description = "Fail when the generated OpenAPI client differs from the exported spec"
 depends = ["sync:openapi"]
@@ -40,6 +44,7 @@ run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-release.mjs"
 description = "Check the code"
 depends = [
     "check:format",
+    "check:docs",
     "check:lint",
     "check:openapi",
     "check:design",

@@ -54,6 +54,11 @@ lettre = { version = "0.11.20", default-features = false, features = ["builder",
 zeroize = { version = "1", features = ["alloc"] }
 getrandom = "0.3.4"
 
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"
+invalid_rust_codeblocks = "deny"
+private_intra_doc_links = "deny"
+
 [profile.release]
 codegen-units = 1 # Allows LLVM to perform better optimization.
 lto = true # Enables link-time-optimizations.

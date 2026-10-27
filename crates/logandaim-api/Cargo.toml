@@ -56,6 +56,9 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 # through `tokio::net`, so it cannot run on `pollster`.
 tokio = { workspace = true, features = ["rt", "macros"] }
 
+[lints]
+workspace = true
+
 [[bin]]
 name = "export_spec"
 required-features = ["openapi"]
