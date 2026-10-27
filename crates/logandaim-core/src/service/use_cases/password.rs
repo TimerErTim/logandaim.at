@@ -13,7 +13,7 @@ use crate::{
         EmailAdresse,
         konto::{KlartextPasswort, NeuePasswortWiederherstellung, SecretToken, hash_password},
     },
-    ports::{ClientKey, Mail, ThrottleAction},
+    ports::{ClientKey, Mail, ThrottleAction, not_found_as_none},
     service::UseCase,
 };
 
@@ -64,11 +64,7 @@ impl UseCase<()> for PasswortVergessen {
             .change_context(PasswortVergessenFehler::KontoLaden)?;
 
         let ergebnis = async {
-            let konto = uow
-                .konten()
-                .find_by_email(&self.email)
-                .await
-                .map_err(IntoReport::into_report)
+            let konto = not_found_as_none(uow.konten().find_by_email(&self.email).await)
                 .change_context(PasswortVergessenFehler::KontoLaden)?;
 
             let Some(konto) = konto else {

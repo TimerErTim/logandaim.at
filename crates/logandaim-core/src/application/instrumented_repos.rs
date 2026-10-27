@@ -110,7 +110,7 @@ impl_instrumented_repo!(
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
         fn find_by_id(&self, id: KontoId) -> RepositoryResult<Versioned<Konto>>;
         #[instrument(skip(self, email), fields(email = email.as_ref()), level = "trace", err(Debug))]
-        fn find_by_email(&self, email: &EmailAdresse) -> RepositoryResult<Option<Versioned<Konto>>>;
+        fn find_by_email(&self, email: &EmailAdresse) -> RepositoryResult<Versioned<Konto>>;
         #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
         fn find_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Konto>>>;
         #[instrument(skip(self, konto), level = "debug", err(Debug))]

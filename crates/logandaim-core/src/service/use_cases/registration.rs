@@ -14,7 +14,7 @@ use crate::{
             SecretToken, hash_password,
         },
     },
-    ports::{ClientKey, Mail, ThrottleAction},
+    ports::{ClientKey, Mail, ThrottleAction, not_found_as_none},
     service::{SessionAusgestellt, UseCase},
 };
 
@@ -64,11 +64,7 @@ impl UseCase<()> for RegistrierungStarten {
             .await
             .change_context(RegistrierungStartenFehler::KontoPrüfen)?;
 
-        let vorhandenes_konto = uow
-            .konten()
-            .find_by_email(&self.email)
-            .await
-            .map_err(IntoReport::into_report)
+        let vorhandenes_konto = not_found_as_none(uow.konten().find_by_email(&self.email).await)
             .change_context(RegistrierungStartenFehler::KontoPrüfen);
 
         let vorhandenes_konto = uow
@@ -236,11 +232,7 @@ impl UseCase<SessionAusgestellt> for RegistrierungAbschließen {
                 .change_context(RegistrierungAbschliessenFehler::BestätigungSpeichern)?;
 
             let email = bestätigung.email().clone();
-            let belegt = uow
-                .konten()
-                .find_by_email(&email)
-                .await
-                .map_err(IntoReport::into_report)
+            let belegt = not_found_as_none(uow.konten().find_by_email(&email).await)
                 .change_context(RegistrierungAbschliessenFehler::KontoAnlegen)?;
             if belegt.is_some() {
                 // The address gained a Konto while this token was outstanding (rule 4).

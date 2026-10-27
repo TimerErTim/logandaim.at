@@ -108,10 +108,7 @@ impl KontoRepository for SQLiteKontoRepository {
         konto_from_row(&row)
     }
 
-    async fn find_by_email(
-        &self,
-        email: &EmailAdresse,
-    ) -> RepositoryResult<Option<Versioned<Konto>>> {
+    async fn find_by_email(&self, email: &EmailAdresse) -> RepositoryResult<Versioned<Konto>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
@@ -128,10 +125,10 @@ impl KontoRepository for SQLiteKontoRepository {
             .await
             .contextualize_with(libsql_error_to_persistence_error)?
         else {
-            return Ok(None);
+            return Err(RepositoryError::NotFound.into());
         };
 
-        konto_from_row(&row).map(Some)
+        konto_from_row(&row)
     }
 
     async fn find_by_benutzer(

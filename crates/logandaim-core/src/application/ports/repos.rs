@@ -11,6 +11,18 @@ use crate::domain::{EmailAdresse, NeuerSchuss, Schuss, SchussId};
 
 pub type RepositoryResult<T> = ResultReport<T, RepositoryError>;
 
+/// `Ok(None)` when the lookup found no row, every other failure kept as it is.
+///
+/// A repository answers `NotFound`, so a caller that treats absence as a normal outcome asks
+/// for that translation explicitly instead of the port widening its return type.
+pub fn not_found_as_none<T>(result: RepositoryResult<T>) -> RepositoryResult<Option<T>> {
+    match result {
+        Ok(wert) => Ok(Some(wert)),
+        Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => Ok(None),
+        Err(fehler) => Err(fehler),
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum RepositoryError {
     #[error("entity not found")]
@@ -89,12 +101,8 @@ pub trait KontoRepository: Send + Sync {
 
     async fn find_by_id(&self, id: KontoId) -> RepositoryResult<Versioned<Konto>>;
 
-    /// `Ok(None)` when no Konto holds the address: the login path needs that distinction,
-    /// not an error.
-    async fn find_by_email(
-        &self,
-        email: &EmailAdresse,
-    ) -> RepositoryResult<Option<Versioned<Konto>>>;
+    /// `NotFound` when no Konto holds the address; callers match on the error.
+    async fn find_by_email(&self, email: &EmailAdresse) -> RepositoryResult<Versioned<Konto>>;
 
     async fn find_by_benutzer(
         &self,

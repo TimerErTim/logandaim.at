@@ -12,6 +12,7 @@ use crate::{
         EmailAdresse,
         konto::{Benutzer, BenutzerId, KlartextPasswort, Rolle, verify_password},
     },
+    ports::not_found_as_none,
     service::UseCase,
 };
 
@@ -298,11 +299,7 @@ impl UseCase<Beförderung> for SystemadministratorBefördern {
             .change_context(SystemadministratorBefördernFehler::KontoLaden)?;
 
         let ergebnis = async {
-            let Some(konto) = uow
-                .konten()
-                .find_by_email(&self.email)
-                .await
-                .map_err(IntoReport::into_report)
+            let Some(konto) = not_found_as_none(uow.konten().find_by_email(&self.email).await)
                 .change_context(SystemadministratorBefördernFehler::KontoLaden)?
             else {
                 return Ok(Beförderung::KeinKonto);
