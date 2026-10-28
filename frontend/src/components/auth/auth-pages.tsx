@@ -150,10 +150,7 @@ export function RegistrationPage() {
         <>
           {sent ? (
             <Alert variant="success" icon={<CheckCircle2 aria-hidden="true" />}>
-              <p>
-                Sie erhalten eine
-                E-Mail mit dem Bestätigungslink.
-              </p>
+              <p>Sie erhalten eine E-Mail mit dem Bestätigungslink.</p>
             </Alert>
           ) : null}
           <form className="space-y-4" onSubmit={start}>
