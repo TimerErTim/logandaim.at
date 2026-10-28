@@ -54,7 +54,6 @@ export class HttpLogandaimApi implements LogandaimApi {
     const path = new URL(template.url).pathname;
     if (
       response.status !== 401 ||
-      !token ||
       path.endsWith("/session/erneuern") ||
       path.endsWith("/session/abmelden") ||
       path.endsWith("/anmeldung") ||
@@ -65,6 +64,7 @@ export class HttpLogandaimApi implements LogandaimApi {
     ) {
       return response;
     }
+    if (!token) return response;
     if (getAuthSnapshot().accessToken !== token) return makeRequest();
     if (!this.renewal) {
       this.renewal = fetch(`${this.baseUrl}/session/erneuern`, {

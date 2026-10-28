@@ -108,12 +108,16 @@ fn lade_mail_sender(
 fn allowed_origins(config: &config::ServerConfig) -> Vec<poem::http::HeaderValue> {
     let mut origins = vec![config.frontend_basis_url.clone()];
 
-    origins.extend([4173u16, 3000u16].into_iter().flat_map(|port| {
-        [
-            format!("http://127.0.0.1:{port}"),
-            format!("http://localhost:{port}"),
-        ]
-    }));
+    origins.extend(
+        [4173u16, 3001, 3002, 3003, 3004, 3005, 3006]
+            .into_iter()
+            .flat_map(|port| {
+                [
+                    format!("http://127.0.0.1:{port}"),
+                    format!("http://localhost:{port}"),
+                ]
+            }),
+    );
 
     origins.push(format!(
         "http://{}:{}",
