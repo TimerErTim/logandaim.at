@@ -46,6 +46,56 @@ impl Default for InMemoryThrottle {
 
 #[async_trait::async_trait]
 impl Throttle for InMemoryThrottle {
+    async fn check_blocked(
+        &self,
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: DateTime<Utc>,
+    ) -> ResultReport<(), ThrottleError> {
+        let mut windows = self
+            .windows
+            .lock()
+            .expect("the throttle mutex is not poisoned");
+        let entry = windows
+            .entry((client.clone(), action.as_str()))
+            .or_insert_with(|| Window {
+                start: now,
+                count: 0,
+            });
+        if now - entry.start >= action.window() {
+            entry.start = now;
+            entry.count = 0;
+        }
+        if entry.count >= action.threshold() {
+            return Err(error_stack::Report::new(ThrottleError::TooManyAttempts));
+        }
+        Ok(())
+    }
+
+    async fn increment_failure(
+        &self,
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: DateTime<Utc>,
+    ) -> ResultReport<(), ThrottleError> {
+        let mut windows = self
+            .windows
+            .lock()
+            .expect("the throttle mutex is not poisoned");
+        let entry = windows
+            .entry((client.clone(), action.as_str()))
+            .or_insert_with(|| Window {
+                start: now,
+                count: 0,
+            });
+        if now - entry.start >= action.window() {
+            entry.start = now;
+            entry.count = 0;
+        }
+        entry.count = entry.count.saturating_add(1);
+        Ok(())
+    }
+
     async fn check_and_count(
         &self,
         client: &ClientKey,
@@ -104,23 +154,58 @@ mod tests {
     }
 
     #[test_log::test(pollster::test)]
+    async fn fehlversuche_erschöpfen_das_budget_und_blockieren_weitere_anfragen() {
+        let throttle = InMemoryThrottle::new();
+        let client = client("a");
+        let action = ThrottleAction::Erneuerung;
+
+        for _ in 0..action.threshold() {
+            throttle
+                .increment_failure(&client, action, now())
+                .await
+                .unwrap();
+        }
+        assert!(
+            throttle
+                .check_blocked(&client, action, now())
+                .await
+                .is_err()
+        );
+
+        let later = now() + action.window();
+        assert!(throttle.check_blocked(&client, action, later).await.is_ok());
+    }
+
+    #[test_log::test(pollster::test)]
+    async fn gültige_anfragen_verbrauchen_das_budget_nicht() {
+        let throttle = InMemoryThrottle::new();
+        let client = client("a");
+        let action = ThrottleAction::Erneuerung;
+
+        for _ in 0..20 {
+            throttle
+                .check_blocked(&client, action, now())
+                .await
+                .unwrap();
+        }
+        assert!(throttle.check_blocked(&client, action, now()).await.is_ok());
+    }
+
+    #[test_log::test(pollster::test)]
     async fn das_budget_wird_genau_einmal_ausgeschöpft() {
         let throttle = InMemoryThrottle::new();
         let client = client("a");
         let action = ThrottleAction::RegistrierungStart;
 
-        for i in 0..action.threshold() {
-            assert!(
-                throttle
-                    .check_and_count(&client, action, now())
-                    .await
-                    .is_ok(),
-                "Versuch {i} liegt im Budget"
-            );
+        for _ in 0..action.threshold() {
+            throttle
+                .increment_failure(&client, action, now())
+                .await
+                .unwrap();
         }
         assert!(
             throttle
-                .check_and_count(&client, action, now())
+                .check_blocked(&client, action, now())
                 .await
                 .is_err()
         );
@@ -134,24 +219,19 @@ mod tests {
 
         for _ in 0..action.threshold() {
             throttle
-                .check_and_count(&client, action, now())
+                .increment_failure(&client, action, now())
                 .await
                 .unwrap();
         }
         assert!(
             throttle
-                .check_and_count(&client, action, now())
+                .check_blocked(&client, action, now())
                 .await
                 .is_err()
         );
 
         let later = now() + action.window();
-        assert!(
-            throttle
-                .check_and_count(&client, action, later)
-                .await
-                .is_ok()
-        );
+        assert!(throttle.check_blocked(&client, action, later).await.is_ok());
     }
 
     #[test_log::test(pollster::test)]
@@ -162,13 +242,13 @@ mod tests {
 
         for _ in 0..ThrottleAction::RegistrierungStart.threshold() {
             throttle
-                .check_and_count(&a, ThrottleAction::RegistrierungStart, now())
+                .increment_failure(&a, ThrottleAction::RegistrierungStart, now())
                 .await
                 .unwrap();
         }
         assert!(
             throttle
-                .check_and_count(&a, ThrottleAction::RegistrierungStart, now())
+                .check_blocked(&a, ThrottleAction::RegistrierungStart, now())
                 .await
                 .is_err()
         );
@@ -176,13 +256,13 @@ mod tests {
         // Another client, and another action of the same client, are unaffected.
         assert!(
             throttle
-                .check_and_count(&b, ThrottleAction::RegistrierungStart, now())
+                .check_blocked(&b, ThrottleAction::RegistrierungStart, now())
                 .await
                 .is_ok()
         );
         assert!(
             throttle
-                .check_and_count(&a, ThrottleAction::Anmeldung, now())
+                .check_blocked(&a, ThrottleAction::Anmeldung, now())
                 .await
                 .is_ok()
         );
@@ -196,23 +276,18 @@ mod tests {
 
         for _ in 0..action.threshold() {
             throttle
-                .check_and_count(&client, action, now())
+                .increment_failure(&client, action, now())
                 .await
                 .unwrap();
         }
         assert!(
             throttle
-                .check_and_count(&client, action, now())
+                .check_blocked(&client, action, now())
                 .await
                 .is_err()
         );
 
         throttle.reset(&client, action).await.unwrap();
-        assert!(
-            throttle
-                .check_and_count(&client, action, now())
-                .await
-                .is_ok()
-        );
+        assert!(throttle.check_blocked(&client, action, now()).await.is_ok());
     }
 }

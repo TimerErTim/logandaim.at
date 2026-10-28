@@ -8,11 +8,11 @@
 
 use std::sync::Arc;
 
-use error_stack::Report;
+use error_stack::{Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
-    ports::ClientKey,
+    ports::{ClientKey, ThrottleAction},
     service::{
         Abmeldung, AbmeldungFehler, Anmeldung, AnmeldungFehler, BenutzerAnzeigen,
         BenutzerAnzeigenFehler, BenutzerLöschen, BenutzerLöschenFehler, Erneuerung,
@@ -22,6 +22,7 @@ use logandaim_core::{
         SchussRegistrierenFehler, SessionAusgestellt, WertungBerechnen, WertungFehler,
     },
 };
+use tracing::warn;
 
 pub mod requests;
 
@@ -109,8 +110,29 @@ impl LogandaimAppApi {
         refresh_token: String,
         client_key: ClientKey,
     ) -> ResultReport<SessionAusgestellt, ErneuerungFehler> {
-        let refresh_token = logandaim_core::domain::konto::RefreshToken::try_from(refresh_token)
-            .map_err(|_| Report::new(ErneuerungFehler::SessionUngültig))?;
+        let jetzt = self.app.clock.now();
+        self.app
+            .throttle
+            .check_blocked(&client_key, ThrottleAction::Erneuerung, jetzt)
+            .await
+            .change_context(ErneuerungFehler::Gedrosselt)?;
+
+        let refresh_token = match logandaim_core::domain::konto::RefreshToken::try_from(
+            refresh_token,
+        ) {
+            Ok(token) => token,
+            Err(_) => {
+                if let Err(fehler) = self
+                    .app
+                    .throttle
+                    .increment_failure(&client_key, ThrottleAction::Erneuerung, jetzt)
+                    .await
+                {
+                    warn!(fehler = %fehler, "der Erneuerungsversuch konnte nicht gezählt werden");
+                }
+                return Err(Report::new(ErneuerungFehler::SessionUngültig));
+            }
+        };
 
         let ausgestellt = self
             .app

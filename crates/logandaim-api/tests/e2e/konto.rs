@@ -240,15 +240,40 @@ async fn throttling_bei_erneuerung_loescht_das_gueltige_cookie_nicht() {
     let harness = E2eHarness::new().await;
     let (_, cookie, _, _) = registriere(&harness, "anna@muster.at").await;
 
-    // Spend the five-renewal budget while retaining the newest valid cookie.
+    // Valid reloads never spend the failure budget.
     let mut cookie = cookie;
-    for _ in 0..5 {
-        let (status, _, set_cookie) = harness
+    for _ in 0..7 {
+        let (status, body, set_cookie) = harness
             .client
             .post_cookie("/api/session/erneuern", Some(&cookie))
             .await;
-        assert_eq!(status, StatusCode::OK);
+        assert_eq!(status, StatusCode::OK, "{body}");
         cookie = refresh_cookie(&set_cookie.expect("successful renewal rotates cookie"));
+    }
+
+    let (status, body, set_cookie) = harness
+        .client
+        .post_cookie("/api/session/erneuern", Some(&cookie))
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "valid renewals stay unthrottled: {body}"
+    );
+    assert!(set_cookie.is_some(), "the valid cookie continues to rotate");
+}
+
+#[test_log::test(pollster::test)]
+async fn ungueltige_erneuerungen_werden_gezaehlt_und_blockieren_gueltiges_cookie_nicht_weg() {
+    let harness = E2eHarness::new().await;
+    let (_, cookie, _, _) = registriere(&harness, "anna@muster.at").await;
+
+    for _ in 0..5 {
+        let (status, _, _) = harness
+            .client
+            .post_cookie("/api/session/erneuern", Some("invalid-refresh-token"))
+            .await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
     }
 
     let (status, _, set_cookie) = harness
@@ -269,7 +294,7 @@ async fn throttling_bei_erneuerung_loescht_das_gueltige_cookie_nicht() {
         .post_cookie("/api/session/erneuern", Some(&cookie))
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    assert!(rotated_cookie.is_some(), "the same cookie still renews");
+    assert!(rotated_cookie.is_some(), "the valid cookie still renews");
 }
 
 #[test_log::test(pollster::test)]

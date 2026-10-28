@@ -12,6 +12,7 @@ logandaim-core = { path = "../logandaim-core" }
 
 thiserror = { workspace = true }
 error-stack = { workspace = true }
+tracing = { workspace = true }
 
 async-trait = { workspace = true }
 sha2 = { workspace = true }

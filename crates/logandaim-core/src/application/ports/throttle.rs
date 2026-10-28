@@ -88,8 +88,23 @@ pub enum ThrottleError {
 /// thresholds above are the product rule, the store is an adapter choice.
 #[async_trait::async_trait]
 pub trait Throttle: Send + Sync {
-    /// Count one attempt. `Err(TooManyAttempts)` once the budget is spent; the caller
-    /// answers 429 and does the work only on `Ok`.
+    /// Check whether this client has exhausted an action's failure budget.
+    async fn check_blocked(
+        &self,
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: DateTime<Utc>,
+    ) -> ResultReport<(), ThrottleError>;
+
+    /// Count an invalid attempt toward the action's failure budget.
+    async fn increment_failure(
+        &self,
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: DateTime<Utc>,
+    ) -> ResultReport<(), ThrottleError>;
+
+    /// Count an attempt and refuse it once the budget is exhausted.
     async fn check_and_count(
         &self,
         client: &ClientKey,
@@ -97,8 +112,7 @@ pub trait Throttle: Send + Sync {
         now: DateTime<Utc>,
     ) -> ResultReport<(), ThrottleError>;
 
-    /// Forget one action's counter for this client. Called on a successful login, so an
-    /// owner who mistyped is not punished for the rest of the window (rule 5).
+    /// Forget one action's counter for this client after a successful login (rule 5).
     async fn reset(
         &self,
         client: &ClientKey,

@@ -76,6 +76,26 @@ impl InstrumentedThrottle {
 #[async_trait]
 impl Throttle for InstrumentedThrottle {
     #[instrument(skip(self, client), fields(action = action.as_str(), ip = %client.ip), level = "debug", err(Debug))]
+    async fn check_blocked(
+        &self,
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> ResultReport<(), ThrottleError> {
+        self.inner.check_blocked(client, action, now).await
+    }
+
+    #[instrument(skip(self, client), fields(action = action.as_str(), ip = %client.ip), level = "debug", err(Debug))]
+    async fn increment_failure(
+        &self,
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> ResultReport<(), ThrottleError> {
+        self.inner.increment_failure(client, action, now).await
+    }
+
+    #[instrument(skip(self, client), fields(action = action.as_str(), ip = %client.ip), level = "debug", err(Debug))]
     async fn check_and_count(
         &self,
         client: &ClientKey,

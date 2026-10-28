@@ -55,7 +55,7 @@ impl UseCase<SessionAusgestellt> for Erneuerung {
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SessionAusgestellt, Self::Error> {
         let jetzt = ctx.clock().now();
         ctx.throttle()
-            .check_and_count(&self.client_key, ThrottleAction::Erneuerung, jetzt)
+            .check_blocked(&self.client_key, ThrottleAction::Erneuerung, jetzt)
             .await
             .change_context(ErneuerungFehler::Gedrosselt)?;
 
@@ -132,10 +132,34 @@ impl UseCase<SessionAusgestellt> for Erneuerung {
         }
         .await;
 
-        match uow
+        let (ergebnis, ungültig) = match ergebnis {
+            Ok(ausgang) => {
+                let ungültig = matches!(&ausgang, Erneuerungsausgang::Wiederholung);
+                (Ok(ausgang), ungültig)
+            }
+            Err(fehler)
+                if matches!(fehler.current_context(), ErneuerungFehler::SessionUngültig) =>
+            {
+                (Ok(Erneuerungsausgang::Wiederholung), true)
+            }
+            Err(fehler) => (Err(fehler), false),
+        };
+        let ausgang = uow
             .finish(ergebnis, ErneuerungFehler::SessionSpeichern)
-            .await?
-        {
+            .await?;
+
+        if ungültig {
+            if let Err(fehler) = ctx
+                .throttle()
+                .increment_failure(&self.client_key, ThrottleAction::Erneuerung, jetzt)
+                .await
+            {
+                tracing::warn!(fehler = %fehler, "der Erneuerungsversuch konnte nicht gezählt werden");
+            }
+            return Err(Report::new(ErneuerungFehler::SessionUngültig));
+        }
+
+        match ausgang {
             Erneuerungsausgang::Ok(ausgestellt) => Ok(ausgestellt),
             Erneuerungsausgang::Wiederholung => Err(Report::new(ErneuerungFehler::SessionUngültig)),
         }

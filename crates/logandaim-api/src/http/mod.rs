@@ -16,7 +16,7 @@ use error_stack::Report;
 use logandaim_core::{
     App, ResultReport,
     service::{
-        AbmeldungFehler, BenutzerAnzeigenFehler, BenutzerLöschenFehler, ErneuerungFehler,
+        AbmeldungFehler, BenutzerAnzeigenFehler, BenutzerLöschenFehler,
         PasswortWiederherstellenFehler,
     },
 };
@@ -174,10 +174,10 @@ impl LogandaimApiSpec {
             user_agent.0.as_deref(),
             accept_language.0.as_deref(),
         );
-        let ergebnis = match refresh.0.filter(|token| !token.is_empty()) {
-            Some(token) => self.app_api.session_erneuern(token, client_key).await,
-            None => Err(Report::new(ErneuerungFehler::SessionUngültig)),
-        };
+        let ergebnis = self
+            .app_api
+            .session_erneuern(refresh.0.unwrap_or_default(), client_key)
+            .await;
         NewSessionResponse::from(ergebnis.map(|ausgestellt| {
             jwt::encode_session(ausgestellt, self.app_api.inner_app().signing.as_ref())
                 .expect("the JOSE header serialises")
