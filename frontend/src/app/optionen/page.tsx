@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/api/auth-provider";
-import { ApiError } from "@/api/errors";
+import { apiErrorMessage } from "@/api/errors";
 import { useAuthMutations } from "@/api/hooks";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -30,15 +30,12 @@ export default function OptionsPage() {
     if (phase.status === "anonymous") router.replace("/anmeldung");
   }, [phase.status, router]);
 
-  const deleteError = auth.deleteAccount.error;
-  const message =
-    deleteError instanceof ApiError && deleteError.status === 401
-      ? "Das Passwort ist falsch oder die Sitzung ist abgelaufen."
-      : deleteError instanceof ApiError && deleteError.structured?.message
-        ? deleteError.structured.message
-        : deleteError
-          ? "Das Konto konnte nicht gelöscht werden. Bitte versuchen Sie es später erneut."
-          : null;
+  const message = apiErrorMessage(auth.deleteAccount.error, {
+    unauthorized: "Das Passwort ist falsch oder die Sitzung ist abgelaufen.",
+    badRequest: "Das Passwort muss 8 bis 128 Zeichen lang sein.",
+    fallback:
+      "Das Konto konnte nicht gelöscht werden. Bitte versuchen Sie es später erneut.",
+  });
 
   function deleteAccount() {
     auth.deleteAccount.mutate(
@@ -108,12 +105,17 @@ export default function OptionsPage() {
               sofort; diese Aktion kann nicht rückgängig gemacht werden.
             </DialogDescription>
           </DialogHeader>
-          <Field label="Passwort">
+          <Field
+            label="Passwort"
+            hint="Geben Sie zur Bestätigung Ihr aktuelles Passwort ein."
+          >
             <Input
               type="password"
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              minLength={8}
+              maxLength={128}
               required
             />
           </Field>

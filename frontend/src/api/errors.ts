@@ -24,3 +24,38 @@ export class ApiError extends Error {
     return new ApiError(String(error), undefined, status);
   }
 }
+
+export function apiErrorMessage(
+  error: unknown,
+  messages: {
+    unauthorized?: string;
+    badRequest?: string;
+    tooManyRequests?: string;
+    fallback: string;
+  },
+): string | null {
+  if (!error) return null;
+
+  if (error instanceof ApiError) {
+    const message = error.structured?.message?.trim();
+    const genericMessage =
+      message?.toLocaleLowerCase("de-DE") === "die anfrage ist ungültig" ||
+      message?.toLocaleLowerCase("de-DE") === "validation error";
+    if (
+      message &&
+      !genericMessage &&
+      error.status !== undefined &&
+      error.status < 500
+    ) {
+      return message.charAt(0).toLocaleUpperCase("de-DE") + message.slice(1);
+    }
+    if (error.status === 401 && messages.unauthorized)
+      return messages.unauthorized;
+    if (error.status === 400 && messages.badRequest) return messages.badRequest;
+    if (error.status === 429 && messages.tooManyRequests) {
+      return messages.tooManyRequests;
+    }
+  }
+
+  return messages.fallback;
+}

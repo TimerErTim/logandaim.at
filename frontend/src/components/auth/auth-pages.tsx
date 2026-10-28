@@ -4,7 +4,7 @@ import { CheckCircle2, CircleAlert } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
-import { ApiError } from "@/api/errors";
+import { apiErrorMessage } from "@/api/errors";
 import { useAuthMutations } from "@/api/hooks";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -17,17 +17,25 @@ function useMailToken() {
   return useSearchParams().get("token") ?? "";
 }
 
-function AuthError({ error }: { error: unknown }) {
-  if (!error) return null;
-  const status = error instanceof ApiError ? error.status : undefined;
-  const message =
-    status === 401
-      ? "E-Mail-Adresse oder Passwort ist falsch."
-      : status === 400
-        ? "Der Link ist ungültig oder abgelaufen."
-        : error instanceof ApiError && error.structured?.message
-          ? error.structured.message
-          : "Die Anfrage konnte nicht verarbeitet werden. Bitte versuchen Sie es später erneut.";
+function AuthError({
+  error,
+  unauthorized,
+  badRequest,
+  tooManyRequests,
+}: {
+  error: unknown;
+  unauthorized?: string;
+  badRequest?: string;
+  tooManyRequests?: string;
+}) {
+  const message = apiErrorMessage(error, {
+    unauthorized,
+    badRequest,
+    tooManyRequests,
+    fallback:
+      "Die Anfrage konnte nicht verarbeitet werden. Bitte versuchen Sie es später erneut.",
+  });
+  if (!message) return null;
   return (
     <Alert variant="error" icon={<CircleAlert aria-hidden="true" />}>
       <p>{message}</p>
@@ -87,7 +95,11 @@ export function LoginPage() {
             onChange={(event) => setPassword(event.target.value)}
           />
         </Field>
-        <AuthError error={auth.login.error} />
+        <AuthError
+          error={auth.login.error}
+          unauthorized="E-Mail-Adresse oder Passwort ist falsch."
+          tooManyRequests="Zu viele Anmeldeversuche. Bitte warten Sie und versuchen Sie es erneut."
+        />
         <Button
           type="submit"
           size="lg"
@@ -160,7 +172,11 @@ export function RegistrationPage() {
                 onChange={(event) => setEmail(event.target.value)}
               />
             </Field>
-            <AuthError error={auth.registerStart.error} />
+            <AuthError
+              error={auth.registerStart.error}
+              badRequest="Bitte geben Sie eine gültige E-Mail-Adresse ein."
+              tooManyRequests="Zu viele Registrierungsversuche. Bitte warten Sie und versuchen Sie es erneut."
+            />
             <Button
               type="submit"
               size="lg"
@@ -178,17 +194,27 @@ export function RegistrationPage() {
           <p className="text-sm text-secondary">
             Legen Sie ein Passwort fest, um die Registrierung abzuschließen.
           </p>
-          <Field label="Passwort" hint="Mindestens 8 Zeichen.">
+          <Field label="Passwort" hint="8 bis 128 Zeichen.">
             <Input
               autoComplete="new-password"
               type="password"
               minLength={8}
+              maxLength={128}
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
           </Field>
-          <AuthError error={auth.registerFinish.error} />
+          <AuthError
+            error={auth.registerFinish.error}
+            badRequest={
+              Array.from(password).length < 8 ||
+              Array.from(password).length > 128
+                ? "Das Passwort muss 8 bis 128 Zeichen lang sein."
+                : "Der Bestätigungslink ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen Link an."
+            }
+            tooManyRequests="Zu viele Registrierungsversuche. Bitte warten Sie und versuchen Sie es erneut."
+          />
           <Button
             type="submit"
             size="lg"
@@ -255,7 +281,11 @@ export function PasswordPage() {
                 onChange={(event) => setEmail(event.target.value)}
               />
             </Field>
-            <AuthError error={auth.forgotPassword.error} />
+            <AuthError
+              error={auth.forgotPassword.error}
+              badRequest="Bitte geben Sie eine gültige E-Mail-Adresse ein."
+              tooManyRequests="Zu viele Anfragen. Bitte warten Sie und versuchen Sie es erneut."
+            />
             <Button
               type="submit"
               size="lg"
@@ -271,17 +301,27 @@ export function PasswordPage() {
         </>
       ) : (
         <form className="space-y-4" onSubmit={reset}>
-          <Field label="Neues Passwort" hint="Mindestens 8 Zeichen.">
+          <Field label="Neues Passwort" hint="8 bis 128 Zeichen.">
             <Input
               autoComplete="new-password"
               type="password"
               minLength={8}
+              maxLength={128}
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
           </Field>
-          <AuthError error={auth.resetPassword.error} />
+          <AuthError
+            error={auth.resetPassword.error}
+            badRequest={
+              Array.from(password).length < 8 ||
+              Array.from(password).length > 128
+                ? "Das Passwort muss 8 bis 128 Zeichen lang sein."
+                : "Der Wiederherstellungslink ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen Link an."
+            }
+            tooManyRequests="Zu viele Anfragen. Bitte warten Sie und versuchen Sie es erneut."
+          />
           {auth.resetPassword.isSuccess ? (
             <Alert variant="success" icon={<CheckCircle2 aria-hidden="true" />}>
               <p>
