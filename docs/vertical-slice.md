@@ -29,9 +29,9 @@ ubiquitous-language term of the slice); never invent vocabulary that the specs d
 | SQLite repo | `crates/logandaim-sqlite/src/repos/<begriff>.rs` | Row parsing and saving, using the helpers in `repos/common.rs`. |
 | SQLite UoW | `crates/logandaim-sqlite/src/uow.rs` | Repository field plus accessor. |
 | API schema | `crates/logandaim-api/src/schema/<begriff>.rs` | OpenAPI DTOs and `From` conversions from the domain. |
-| API requests | `crates/logandaim-api/src/api/requests/<begriff>.rs` | Inbound DTOs and `From` into use-case inputs. |
+| API requests | `crates/logandaim-api/src/api/requests/<begriff>.rs` | Inbound DTOs and conversion into use-case inputs. Requests for the `konto` domain live in `requests/konto.rs`. |
 | API facade | `crates/logandaim-api/src/api/mod.rs` | One thin `LogandaimAppApi` method per operation. |
-| HTTP routes | `crates/logandaim-api/src/spec.rs` | The `#[oai]` route methods. |
+| HTTP routes | `crates/logandaim-api/src/http/mod.rs` | The `#[oai]` route methods; HTTP auth, JWT, cookie, extractors, and responses live in `http/auth.rs`, `http/jwt.rs`, `http/cookie.rs`, `http/extractors.rs`, and `http/responses/`. |
 | Status mapping | `crates/logandaim-api/src/errors/http_status.rs` | `HttpStatusMapping` impls for the new error types. |
 | Shared cases | `crates/logandaim-core/tests/cases/<begriff>.rs` | Cases reused by the fake and SQLite harnesses. |
 | API e2e | `crates/logandaim-api/tests/e2e/<begriff>.rs` | HTTP-level assertions including status codes. |

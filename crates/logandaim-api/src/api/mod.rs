@@ -1,17 +1,10 @@
 //! Typed facade between HTTP and use cases.
 //!
 //! Everything here is a thin translation: request → use case → schema. No business rules.
-//! Use-case errors pass through unchanged; `HttpStatusMapping` in `errors/http_status.rs`
-//! turns them into status codes. Nothing here touches `poem`: the HTTP edge lives in
-//! `spec.rs` behind the `openapi` feature, so the library compiles without it.
-//!
-//! Two responsibilities are genuinely this layer's:
-//!
-//! - **The access token's envelope.** Core signs bytes; this facade serialises the claims,
-//!   base64url-encodes them, and asks core for the signature (`auth::jwt`).
-//! - **Turning a bearer header into an [`AuthContext`].** A token that verifies is then
-//!   handed to `SessionPrüfen`, which is what makes a *revoked* session fail even though
-//!   its signature is still valid (AC-17).
+//! Use-case errors pass through unchanged; `errors/http_status.rs` maps them to status codes.
+//! Nothing here touches `poem`: the HTTP edge lives in `http/mod.rs` behind the `openapi`
+//! feature, so the library compiles without it. Requests are grouped in `api/requests/`; the
+//! HTTP edge owns JWT encoding and bearer verification (`http/jwt.rs`, `http/auth.rs`).
 
 use std::sync::Arc;
 

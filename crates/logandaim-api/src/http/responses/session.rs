@@ -37,8 +37,8 @@ pub struct SessionResponseContent {
 
 /// A session response: the access token in the body, the refresh token in the cookie.
 ///
-/// Every variant touches the cookie and carries `Cache-Control: no-store`. A failure
-/// clears it, because a failed renewal must not leave the previous token usable.
+/// Every variant carries `Cache-Control: no-store`. A 401 clears the unusable refresh
+/// cookie; other client errors leave it alone, including a throttled renewal.
 #[derive(ApiResponse)]
 pub enum NewSessionResponse {
     #[oai(status = 200)]
@@ -51,7 +51,7 @@ pub enum NewSessionResponse {
     ClientError(
         StatusCode,
         Json<StructuredError>,
-        #[oai(header = "Set-Cookie")] String,
+        #[oai(header = "Set-Cookie")] Option<String>,
         #[oai(header = "Cache-Control")] String,
     ),
     #[oai(status = 500)]
@@ -86,12 +86,9 @@ where
                         NO_STORE.to_owned(),
                     );
                 }
-                Self::ClientError(
-                    status,
-                    Json(fehler.into()),
-                    clear_cookie_header(REFRESH_COOKIE, refresh_cookie_config()),
-                    NO_STORE.to_owned(),
-                )
+                let cookie = (status == StatusCode::UNAUTHORIZED)
+                    .then(|| clear_cookie_header(REFRESH_COOKIE, refresh_cookie_config()));
+                Self::ClientError(status, Json(fehler.into()), cookie, NO_STORE.to_owned())
             }
         }
     }

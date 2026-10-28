@@ -67,6 +67,9 @@ type BreadcrumbSegment = {
 
 const routeLabels: Record<string, string> = {
   schuss: "Schuss",
+  anmeldung: "Anmelden",
+  registrierung: "Registrieren",
+  passwort: "Passwort wiederherstellen",
 };
 
 export function breadcrumbsForPathname(

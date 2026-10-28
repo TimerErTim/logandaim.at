@@ -41,8 +41,8 @@ on reuse.
      configuration and are verified on every request, so a token minted for another deployment or
      audience is refused even with a valid signature; they were added during implementation and are
      therefore not in the originally approved text.
-   - **Refresh token:** an opaque random 256-bit value, valid **one month**, stored only as a salted
-     hash. Accepted **exactly once**: a renewal spends it and returns a new pair.
+   - **Refresh token:** an opaque random 256-bit value, valid **one month**, stored only as an
+     unsalted SHA-256 hash. Accepted **exactly once**: a renewal spends it and returns a new pair.
 2. **The session row carries the state.** `sessions` holds the refresh-token hash, the public key
    that issued the access token, and a `revoked_at` column. Every authenticated request does two
    checks beyond the signature: the signature must verify against the public key stored on the row,
@@ -138,7 +138,7 @@ and is not part of the contract; the contract lives in SPEC-konto's rules and ac
 | `email_bestätigungen` | `id`, `email` (normalized, **not** a `konto_id` — the `Konto` does not exist yet), `token_hash`, `expires_at`, `spent_at` |
 | `passwort_wiederherstellungen` | `id`, `konto_id`, `token_hash`, `expires_at`, `spent_at` |
 
-Implemented in `crates/logandaim-sqlite/src/migrations/v0002_konto.rs`. The table and column names
+Implemented in `crates/logandaim-sqlite/src/migrations/v0002_konto.rs`; the HTTP edge is in `crates/logandaim-api/src/http/` (`mod.rs`, `jwt.rs`, `auth.rs`, `cookie.rs`, `extractors.rs`, `responses/`), the typed facade in `crates/logandaim-api/src/api/mod.rs`, and account request DTOs in `crates/logandaim-api/src/api/requests/konto.rs`. The table and column names
 are English because they name the technical objects above (`Session`, `SigningKey`), not product
 nouns; `benutzer`, `konten` and `passwort_wiederherstellungen` keep their German names because those
 *are* product nouns. Every row carries `_version` for optimistic concurrency, as the other tables do.
@@ -165,16 +165,17 @@ German domain paths as in ADR-0001, JSON keys `camelCase` UTF-8.
 | `POST /api/registrierung/start` | Step 1 (`eMailAdresse`) → identical response for free and taken addresses; mails a confirmation for a free one (rule 4). |
 | `POST /api/registrierung/abschluss` | Step 2 (`token`, `passwort`) → creates `Benutzer` + `Konto`, marks confirmed, returns the first token pair (rule 3). |
 | `POST /api/anmeldung` | Log in (`eMailAdresse`, `passwort`) → access token in the body, refresh token as the `__Host-` cookie. |
-| `POST /api/anmeldung/erneuerung` | Renew (refresh cookie) → new token pair, old refresh spent, cookie re-set (rule 12). |
-| `POST /api/anmeldung/abmeldung` | Log out → revokes the current session and clears the refresh cookie. |
-| `POST /api/passwort-vergessen` | Request recovery mail; same response for unknown addresses. |
-| `POST /api/passwort-wiederherstellen` | Set new `Passwort` (`token`, `neuesPasswort`) → ends all sessions. |
-| `GET /api/benutzer` | The logged-in `Benutzer` (`id`, `eMailAdresse`, `rolle`). |
+| `POST /api/session/erneuern` | Renew (refresh cookie) → access token, old refresh spent, cookie re-set (rule 12). |
+| `POST /api/session/abmelden` | Log out → revokes the current session and clears the refresh cookie. |
+| `POST /api/passwort/vergessen` | Request recovery mail; same response for unknown addresses. |
+| `POST /api/passwort/wiederherstellen` | Set new `Passwort` (`token`, `neuesPasswort`) → ends all sessions. |
+| `GET /api/benutzer` | The logged-in `Benutzer` (`id`, `eMailAdresse`). |
 | `POST /api/benutzer/löschung` | `Benutzer-Löschung` (`passwort` re-entry + confirmation). |
 
 Error shape follows the existing structured errors: 400 validation or bad token, 401 not logged in
-or revoked session, 403 wrong authority, 409 state conflict, 429 throttled. Registration has **no**
-409: a taken address is swallowed at step 1.
+or revoked session, 403 wrong authority, 409 state conflict, 429 throttled. A 401 renewal clears the
+refresh cookie; other client errors, including 429, leave it unchanged. Registration has **no** 409:
+a taken address is swallowed at step 1.
 
 ### Token verification (sketch)
 

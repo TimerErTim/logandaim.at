@@ -60,10 +60,11 @@ Naming ladder: `NeuerSchuss` (domain) → `SchussRegistrieren` (use case) → re
 type keeps its German domain noun; the module it lives in does not.
 
 **The domain concept stays German; the technical makeup around it is English.** A port keeps its
-German noun (`BenutzerRepository`, `PasswortWiederherstellung`, `Drossel`) because that noun *is* the
-ubiquitous language. Everything that dresses it is English: methods (`find_by_id`, `find_all`,
+German noun (`BenutzerRepository`, `PasswortWiederherstellung`) because that noun *is* the
+ubiquitous language. Technical port names stay English (`Throttle` in
+`application/ports/throttle.rs`). Everything that dresses a domain noun is English: methods (`find_by_id`, `find_all`,
 `create`, `update`, `delete`, `delete_by_benutzer`, `check_and_count`, `is_authenticated`), modules
-(`repos.rs`, `throttle.rs`, `login.rs`, `password.rs`, `requests/benutzer.rs`), DTO suffixes
+(`repos.rs`, `throttle.rs`, `login.rs`, `password.rs`, `api/requests/konto.rs`), DTO suffixes
 (`…Request`), and error plumbing. `KundenRepository::find_by_id`, never
 `KundenSpeicher::bekomme_durch_identität`.
 
@@ -152,12 +153,13 @@ adapters emit `debug!`/`trace!` events only, never duplicate spans.
 `--no-default-features`. Schema DTOs are separate from domain types; request DTOs are `…Request` and
 convert with `From`/`TryFrom`.
 
-`LogandaimApiSpec` in `spec.rs` is the whole HTTP edge: the `#[OpenApi]` handlers, the response
-envelopes with their headers, and the cookie. Handlers take native `poem_openapi` extractors — never
-a raw `&Request`. It also resolves the HTTP status: a `StatusCode` attached to the report first, then
-`HttpStatusMapping` on the current context, then the first nested mapped context, else 500. An
-orchestration error variant returns `None` so the domain error beneath it can speak. Statuses are
-attached at the API boundary, never in the domain.
+`LogandaimApiSpec` in `crates/logandaim-api/src/http/mod.rs` is the HTTP edge: `#[OpenApi]` handlers
+and native `poem_openapi` extractors. Its supporting HTTP code is split into `http/auth.rs`,
+`http/jwt.rs`, `http/cookie.rs`, `http/extractors.rs`, and `http/responses/`. The typed facade is
+`api/mod.rs`; request DTOs are grouped by domain under `api/requests/`. HTTP status mapping lives in
+`errors/http_status.rs`: an attached `StatusCode` wins, then the current context, then the first
+nested mapped context, else 500. An orchestration error variant returns `None` so the domain error
+beneath it can speak. Statuses are attached at the API boundary, never in the domain.
 
 After any schema or route change, run `mise run sync:openapi`; `mise run check` fails on drift.
 
@@ -191,8 +193,9 @@ state goes through the TanStack Query hooks in `frontend/src/api/hooks/`, with k
 optimistic updates.
 
 Configuration is static and baked in at build time (`NEXT_PUBLIC_LOGANDAIM_*`); there is no runtime
-config file and no async bootstrap. See [`docs/vertical-slice.md`](../docs/vertical-slice.md) for
-the seam and the state rules.
+config file and no async bootstrap. Keep the access token in frontend memory only; never persist it
+to `localStorage` or a cookie. The refresh token is held in the API's `HttpOnly` cookie. See
+[`docs/vertical-slice.md`](../docs/vertical-slice.md) for the seam and the state rules.
 
 **UI work starts by reading [`.cursor/rules/design-system.mdc`](rules/design-system.mdc).** It owns
 tokens, components, contrast, touch targets, and the `/dev` gallery; this file does not. Values live

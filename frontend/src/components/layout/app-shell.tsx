@@ -1,8 +1,10 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import { LogIn, LogOut, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuthSession } from "@/api/auth-provider";
+import { useAuthMutations, useBenutzerQuery } from "@/api/hooks";
 import { usePageChrome } from "@/components/layout/page-chrome";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const breadcrumbs = breadcrumbsForPathname(pathname, breadcrumbLabel);
   const actions = navActionsForPathname(pathname);
+  const { bootstrapped } = useAuthSession();
+  const benutzer = useBenutzerQuery();
+  const auth = useAuthMutations();
+  const onAuthRoute = ["/anmeldung", "/registrierung", "/passwort"].includes(
+    pathname.replace(/\/$/, ""),
+  );
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
@@ -78,11 +86,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex shrink-0 items-center gap-2">
               {actions.map((action) => (
                 <Link key={action.href} href={action.href}>
-                  <Button size="sm" variant="primary">
+                  <Button size="sm" variant="secondary">
                     {action.label}
                   </Button>
                 </Link>
               ))}
+              {bootstrapped && benutzer.data ? (
+                <>
+                  <span className="hidden max-w-48 truncate text-sm text-secondary sm:block">
+                    {benutzer.data.eMailAdresse}
+                  </span>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    aria-label="Abmelden"
+                    disabled={auth.logout.isPending}
+                    onClick={() => auth.logout.mutate()}
+                  >
+                    <LogOut />
+                  </Button>
+                </>
+              ) : !onAuthRoute ? (
+                <Link href="/anmeldung">
+                  <Button
+                    size="sm"
+                    variant={onAuthRoute ? "secondary" : "primary"}
+                  >
+                    <LogIn />
+                    Anmelden
+                  </Button>
+                </Link>
+              ) : null}
             </div>
           </div>
         </header>

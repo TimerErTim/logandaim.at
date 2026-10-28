@@ -236,6 +236,43 @@ async fn ac6_falsches_passwort_und_unbekannte_adresse_sind_ununterscheidbar() {
 // ------------------------------------------------------------------------ AC-7, AC-7a
 
 #[test_log::test(pollster::test)]
+async fn throttling_bei_erneuerung_loescht_das_gueltige_cookie_nicht() {
+    let harness = E2eHarness::new().await;
+    let (_, cookie, _, _) = registriere(&harness, "anna@muster.at").await;
+
+    // Spend the five-renewal budget while retaining the newest valid cookie.
+    let mut cookie = cookie;
+    for _ in 0..5 {
+        let (status, _, set_cookie) = harness
+            .client
+            .post_cookie("/api/session/erneuern", Some(&cookie))
+            .await;
+        assert_eq!(status, StatusCode::OK);
+        cookie = refresh_cookie(&set_cookie.expect("successful renewal rotates cookie"));
+    }
+
+    let (status, _, set_cookie) = harness
+        .client
+        .post_cookie("/api/session/erneuern", Some(&cookie))
+        .await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+    assert!(
+        set_cookie
+            .as_ref()
+            .is_none_or(|header| !header.contains("Max-Age=0")),
+        "a throttled renewal must not clear the valid cookie: {set_cookie:?}"
+    );
+
+    harness.vorspulen(Duration::hours(1));
+    let (status, body, rotated_cookie) = harness
+        .client
+        .post_cookie("/api/session/erneuern", Some(&cookie))
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(rotated_cookie.is_some(), "the same cookie still renews");
+}
+
+#[test_log::test(pollster::test)]
 async fn ac7_erneuerung_rotiert_und_das_alte_refresh_token_ist_verbraucht() {
     let harness = E2eHarness::new().await;
     let (_, erster_cookie, _, _) = registriere(&harness, "anna@muster.at").await;

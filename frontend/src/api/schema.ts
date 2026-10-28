@@ -254,7 +254,7 @@ export interface paths {
                 };
                 "4XX": {
                     headers: {
-                        "SET-COOKIE": string;
+                        "SET-COOKIE"?: string;
                         "CACHE-CONTROL": string;
                         [name: string]: unknown;
                     };
@@ -316,7 +316,7 @@ export interface paths {
                 };
                 "4XX": {
                     headers: {
-                        "SET-COOKIE": string;
+                        "SET-COOKIE"?: string;
                         "CACHE-CONTROL": string;
                         [name: string]: unknown;
                     };
@@ -377,7 +377,7 @@ export interface paths {
                 };
                 "4XX": {
                     headers: {
-                        "SET-COOKIE": string;
+                        "SET-COOKIE"?: string;
                         "CACHE-CONTROL": string;
                         [name: string]: unknown;
                     };

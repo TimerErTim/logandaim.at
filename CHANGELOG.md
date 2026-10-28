@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-<!-- Intentionally empty until the first release. Entries start with the first user-facing release. -->
+### Added
+- Added account screens for registration, sign-in, and password recovery.
 
 [Unreleased]: https://github.com/TimerErTim/logandaim.at/commits/main

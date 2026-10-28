@@ -28,13 +28,14 @@ Resolution order: **config path → file → env → CLI**.
 
 Default file: `logandaim-server.json` in the current working directory. Override with `LOGANDAIM_CONFIG_PATH` or `--config-path`. Missing default file falls back to built-in defaults. An explicit path that is missing or malformed is an error.
 
-mise sets environment variables for the server suitable for a dev environment automatically.
+mise sets environment variables for the server suitable for a dev environment automatically. `SUBPATH` (default `/`) sets the API mount prefix; routes are served below `<SUBPATH>/api`.
 
 | Source | Keys |
 |--------|------|
 | File (camelCase JSON) | `bindAddress`, `bindPort`, `subpath`, `databaseUrl`, `objectStoreDir`, `logDir`, `signingKeyPath`, `tokenIssuer`, `tokenAudience`, `frontendBasisUrl`, `smtpHost`, `smtpPort`, `smtpVerschlüsselung`, `smtpBenutzername`, `smtpPasswort`, `smtpAbsender` |
 | Env / CLI | `LOGANDAIM_BIND_ADDRESS` / `--bind-address`, `LOGANDAIM_BIND_PORT` / `--bind-port`, `SUBPATH` / `--subpath`, `LOGANDAIM_DATABASE_URL` / `--database-url`, `LOGANDAIM_OBJECT_STORE_DIR` / `--object-store-dir`, `LOGANDAIM_LOG_DIR` / `--log-dir`, `LOGANDAIM_SIGNING_KEY_PATH` / `--signing-key-path`, `LOGANDAIM_TOKEN_ISSUER` / `--token-issuer`, `LOGANDAIM_TOKEN_AUDIENCE` / `--token-audience`, `LOGANDAIM_FRONTEND_BASIS_URL` / `--frontend-basis-url`, `LOGANDAIM_SMTP_HOST` / `--smtp-host`, `LOGANDAIM_SMTP_PORT` / `--smtp-port`, `LOGANDAIM_SMTP_VERSCHLUESSELUNG` / `--smtp-verschlüsselung`, `LOGANDAIM_SMTP_BENUTZERNAME` / `--smtp-benutzername`, `LOGANDAIM_SMTP_PASSWORT` / `--smtp-passwort`, `LOGANDAIM_SMTP_ABSENDER` / `--smtp-absender` |
 | Accounts (env only) | `LOGANDAIM_SUPERUSER_EMAIL` — the address promoted to `Systemadministrator` at startup |
+| CORS (env only) | `LOGANDAIM_CORS_ORIGIN` — optional comma-separated extra allowed origins; the configured frontend origin and documented loopback dev origins are allowed by default |
 | Tracing | `LOGANDAIM_LOG_LEVEL` (default `info`) |
 
 Notes on the account keys:
