@@ -66,27 +66,38 @@ export class HttpLogandaimApi implements LogandaimApi {
       return response;
     }
     if (getAuthSnapshot().accessToken !== token) return makeRequest();
-    try {
-      if (!this.renewal) {
-        this.renewal = fetch(`${this.baseUrl}/session/erneuern`, {
-          method: "POST",
-          credentials: "include",
+    if (!this.renewal) {
+      this.renewal = fetch(`${this.baseUrl}/session/erneuern`, {
+        method: "POST",
+        credentials: "include",
+      })
+        .then(async (renewed) => {
+          if (!renewed.ok) {
+            let error: unknown = `Session renewal failed (${renewed.status})`;
+            try {
+              error = await renewed.json();
+            } catch {
+              // Keep a useful status-bearing message for non-JSON responses.
+            }
+            throw ApiError.fromUnknown(error, renewed.status);
+          }
+          const content = (await renewed.json()) as { accessToken: string };
+          setAccessToken(content.accessToken);
         })
-          .then(async (renewed) => {
-            if (!renewed.ok) throw new Error("Session renewal failed");
-            const content = (await renewed.json()) as { accessToken: string };
-            setAccessToken(content.accessToken);
-          })
-          .finally(() => {
-            this.renewal = null;
-          });
-      }
-      await this.renewal;
-      return makeRequest();
-    } catch {
-      setAccessToken(null);
-      return response;
+        .finally(() => {
+          this.renewal = null;
+        });
     }
+    try {
+      await this.renewal;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setAccessToken(null);
+        return response;
+      }
+      throw error;
+    }
+    return makeRequest();
   }
 
   accessTokenSetzen(token: string | null): void {

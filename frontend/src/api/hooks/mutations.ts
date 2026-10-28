@@ -23,13 +23,16 @@ export function useWertungMutation() {
 
 export function useAuthMutations() {
   const { api } = useLogandaimApi();
-  const { clearSession } = useAuthSession();
+  const { clearSession, markAuthenticated } = useAuthSession();
   const queryClient = useQueryClient();
-  const loggedIn = () =>
-    queryClient.invalidateQueries({ queryKey: logandaimKeys.benutzer() });
+  const loggedIn = () => {
+    markAuthenticated();
+    return queryClient.invalidateQueries({
+      queryKey: logandaimKeys.benutzer(),
+    });
+  };
   const clear = () => {
     clearSession();
-    queryClient.removeQueries({ queryKey: logandaimKeys.benutzer() });
   };
 
   return {

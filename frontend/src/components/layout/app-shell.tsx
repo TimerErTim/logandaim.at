@@ -1,12 +1,13 @@
 "use client";
 
-import { LogIn, LogOut, Menu } from "lucide-react";
+import { CircleAlert, LogIn, LogOut, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthSession } from "@/api/auth-provider";
 import { useAuthMutations, useBenutzerQuery } from "@/api/hooks";
 import { usePageChrome } from "@/components/layout/page-chrome";
 import { Sidebar } from "@/components/layout/sidebar";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   breadcrumbsForPathname,
@@ -21,7 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const breadcrumbs = breadcrumbsForPathname(pathname, breadcrumbLabel);
   const actions = navActionsForPathname(pathname);
-  const { bootstrapped } = useAuthSession();
+  const { accessToken, bootstrapped, bootstrapError } = useAuthSession();
   const benutzer = useBenutzerQuery();
   const auth = useAuthMutations();
   const onAuthRoute = ["/anmeldung", "/registrierung", "/passwort"].includes(
@@ -91,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </Button>
                 </Link>
               ))}
-              {bootstrapped && benutzer.data ? (
+              {bootstrapped && accessToken && benutzer.data ? (
                 <>
                   <span className="hidden max-w-48 truncate text-sm text-secondary sm:block">
                     {benutzer.data.eMailAdresse}
@@ -101,7 +102,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     variant="secondary"
                     aria-label="Abmelden"
                     disabled={auth.logout.isPending}
-                    onClick={() => auth.logout.mutate()}
+                    onClick={() =>
+                      auth.logout.mutate(undefined, {
+                        onSuccess: () => window.location.assign("/"),
+                      })
+                    }
                   >
                     <LogOut />
                   </Button>
@@ -121,7 +126,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main className="flex-1 overflow-y-auto">
+          {bootstrapError ? (
+            <div className="mx-auto w-full max-w-5xl px-6 pt-6">
+              <Alert
+                variant="warning"
+                icon={<CircleAlert aria-hidden="true" />}
+              >
+                <p>
+                  Ihre Sitzung konnte nicht überprüft werden. Bitte laden Sie
+                  die Seite erneut oder melden Sie sich an.
+                </p>
+              </Alert>
+            </div>
+          ) : null}
+          {children}
+        </main>
       </div>
     </div>
   );

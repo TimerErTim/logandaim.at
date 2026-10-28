@@ -2,8 +2,8 @@
 
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { type FormEvent, useState } from "react";
 import { ApiError } from "@/api/errors";
 import { useAuthMutations } from "@/api/hooks";
 import { Alert } from "@/components/ui/alert";
@@ -14,13 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 
 function useMailToken() {
-  const [token, setToken] = useState("");
-  useEffect(
-    () =>
-      setToken(new URLSearchParams(window.location.search).get("token") ?? ""),
-    [],
-  );
-  return [token, setToken] as const;
+  return useSearchParams().get("token") ?? "";
 }
 
 function AuthError({ error }: { error: unknown }) {
@@ -129,7 +123,7 @@ export function LoginPage() {
 export function RegistrationPage() {
   const router = useRouter();
   const auth = useAuthMutations();
-  const [token] = useMailToken();
+  const token = useMailToken();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [sent, setSent] = useState(false);
@@ -222,8 +216,9 @@ export function RegistrationPage() {
 }
 
 export function PasswordPage() {
+  const router = useRouter();
   const auth = useAuthMutations();
-  const [token] = useMailToken();
+  const token = useMailToken();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [sent, setSent] = useState(false);
@@ -233,7 +228,10 @@ export function PasswordPage() {
   }
   function reset(event: FormEvent) {
     event.preventDefault();
-    auth.resetPassword.mutate({ token, neuesPasswort: password });
+    auth.resetPassword.mutate(
+      { token, neuesPasswort: password },
+      { onSuccess: () => router.replace("/anmeldung") },
+    );
   }
   return (
     <AuthCard title="Passwort wiederherstellen">

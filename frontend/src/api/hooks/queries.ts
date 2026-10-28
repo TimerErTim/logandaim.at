@@ -13,11 +13,11 @@ export function useHealthQuery() {
 
 export function useBenutzerQuery() {
   const { api } = useLogandaimApi();
-  const { bootstrapped } = useAuthSession();
+  const { accessToken, bootstrapped, bootstrapError } = useAuthSession();
   return useQuery({
     queryKey: logandaimKeys.benutzer(),
     queryFn: () => api.benutzerAbrufen(),
-    enabled: bootstrapped,
+    enabled: bootstrapped && Boolean(accessToken) && !bootstrapError,
     retry: false,
   });
 }
