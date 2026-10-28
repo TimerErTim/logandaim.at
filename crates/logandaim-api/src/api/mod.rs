@@ -113,7 +113,7 @@ impl LogandaimAppApi {
         let jetzt = self.app.clock.now();
         self.app
             .throttle
-            .check_blocked(&client_key, ThrottleAction::Erneuerung, jetzt)
+            .check(&client_key, ThrottleAction::Erneuerung, jetzt)
             .await
             .change_context(ErneuerungFehler::Gedrosselt)?;
 
@@ -125,7 +125,7 @@ impl LogandaimAppApi {
                 if let Err(fehler) = self
                     .app
                     .throttle
-                    .increment_failure(&client_key, ThrottleAction::Erneuerung, jetzt)
+                    .increment(&client_key, ThrottleAction::Erneuerung, jetzt)
                     .await
                 {
                     warn!(fehler = %fehler, "der Erneuerungsversuch konnte nicht gezählt werden");

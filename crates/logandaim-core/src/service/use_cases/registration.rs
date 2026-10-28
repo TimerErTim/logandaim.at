@@ -55,7 +55,7 @@ impl UseCase<()> for RegistrierungStarten {
         let jetzt = ctx.clock().now();
 
         ctx.throttle()
-            .check_and_count(&self.client_key, ThrottleAction::RegistrierungStart, jetzt)
+            .check_and_increment(&self.client_key, ThrottleAction::RegistrierungStart, jetzt)
             .await
             .change_context(RegistrierungStartenFehler::Gedrosselt)?;
 
@@ -185,7 +185,7 @@ impl UseCase<SessionAusgestellt> for RegistrierungAbschließen {
         let jetzt = ctx.clock().now();
 
         ctx.throttle()
-            .check_and_count(
+            .check_and_increment(
                 &self.client_key,
                 ThrottleAction::RegistrierungAbschluss,
                 jetzt,

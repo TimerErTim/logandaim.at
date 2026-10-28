@@ -709,13 +709,38 @@ async fn ac16_registrierung_ist_auf_fünf_pro_stunde_gedrosselt() {
 #[test_log::test(pollster::test)]
 async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
     let harness = E2eHarness::new().await;
+    registriere(&harness, "anna@muster.at").await;
+
+    // Failed logins count, but a successful login clears those failures.
+    for _ in 0..4 {
+        let (status, _) = harness
+            .client
+            .post_json(
+                "/api/anmeldung",
+                json!({ "eMailAdresse": "anna@muster.at", "passwort": "falsch-falsch" }),
+            )
+            .await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+    }
+    let (status, _) = harness
+        .client
+        .post_json(
+            "/api/anmeldung",
+            json!({ "eMailAdresse": "anna@muster.at", "passwort": PASSWORT }),
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "correct credentials succeed before the limit"
+    );
 
     for i in 0..20 {
         let (status, _) = harness
             .client
             .post_json(
                 "/api/anmeldung",
-                json!({ "eMailAdresse": "niemand@muster.at", "passwort": PASSWORT }),
+                json!({ "eMailAdresse": "anna@muster.at", "passwort": "falsch-falsch" }),
             )
             .await;
         assert_eq!(
@@ -725,11 +750,12 @@ async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
         );
     }
 
+    // A correct password is blocked too once the client's failure budget is spent.
     let (status, _) = harness
         .client
         .post_json(
             "/api/anmeldung",
-            json!({ "eMailAdresse": "niemand@muster.at", "passwort": PASSWORT }),
+            json!({ "eMailAdresse": "anna@muster.at", "passwort": PASSWORT }),
         )
         .await;
     assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);

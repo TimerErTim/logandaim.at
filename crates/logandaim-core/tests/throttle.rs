@@ -65,25 +65,54 @@ async fn ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client() {
         assert_ne!(
             text(ergebnis.unwrap_err()),
             AnmeldungFehler::Gedrosselt.to_string(),
-            "innerhalb des Budgets ist die Antwort ein Zugangsfehler, keine Drosselung"
+            "within 20 failures the result remains an authentication error"
         );
     }
 
-    let einundzwanzigster = app
+    let twenty_first = app
         .execute(
             AuthContext::Anonymous,
             Anmeldung {
                 email: adresse("niemand@muster.at"),
                 passwort: passwort(),
-                client_key: client,
+                client_key: client.clone(),
             },
         )
         .await;
     assert_eq!(
-        text(einundzwanzigster.unwrap_err()),
+        text(twenty_first.unwrap_err()),
         AnmeldungFehler::Gedrosselt.to_string()
     );
 
+    let correct_login = app
+        .execute(
+            AuthContext::Anonymous,
+            Anmeldung {
+                email: adresse("anna@muster.at"),
+                passwort: passwort(),
+                client_key: client.clone(),
+            },
+        )
+        .await;
+    assert_eq!(
+        text(correct_login.unwrap_err()),
+        AnmeldungFehler::Gedrosselt.to_string(),
+        "a correct password cannot bypass the upfront throttle check"
+    );
+
+    let different_action = app
+        .execute(
+            AuthContext::Anonymous,
+            RegistrierungStarten {
+                email: adresse("person@muster.at"),
+                client_key: client.clone(),
+            },
+        )
+        .await;
+    assert!(
+        different_action.is_ok(),
+        "the login throttle is action-scoped"
+    );
     // Another client is unaffected: the limit is never per address.
     let anderer_client = app
         .execute(

@@ -89,7 +89,7 @@ pub enum ThrottleError {
 #[async_trait::async_trait]
 pub trait Throttle: Send + Sync {
     /// Check whether this client has exhausted an action's failure budget.
-    async fn check_blocked(
+    async fn check(
         &self,
         client: &ClientKey,
         action: ThrottleAction,
@@ -97,7 +97,7 @@ pub trait Throttle: Send + Sync {
     ) -> ResultReport<(), ThrottleError>;
 
     /// Count an invalid attempt toward the action's failure budget.
-    async fn increment_failure(
+    async fn increment(
         &self,
         client: &ClientKey,
         action: ThrottleAction,
@@ -105,7 +105,7 @@ pub trait Throttle: Send + Sync {
     ) -> ResultReport<(), ThrottleError>;
 
     /// Count an attempt and refuse it once the budget is exhausted.
-    async fn check_and_count(
+    async fn check_and_increment(
         &self,
         client: &ClientKey,
         action: ThrottleAction,

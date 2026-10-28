@@ -52,7 +52,7 @@ impl UseCase<()> for PasswortVergessen {
         let jetzt = ctx.clock().now();
 
         ctx.throttle()
-            .check_and_count(&self.client_key, ThrottleAction::Wiederherstellung, jetzt)
+            .check_and_increment(&self.client_key, ThrottleAction::Wiederherstellung, jetzt)
             .await
             .change_context(PasswortVergessenFehler::Gedrosselt)?;
 

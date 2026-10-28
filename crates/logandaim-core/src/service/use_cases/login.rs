@@ -59,7 +59,7 @@ impl UseCase<SessionAusgestellt> for Anmeldung {
         let jetzt = ctx.clock().now();
 
         ctx.throttle()
-            .check_and_count(&self.client_key, ThrottleAction::Anmeldung, jetzt)
+            .check(&self.client_key, ThrottleAction::Anmeldung, jetzt)
             .await
             .change_context(AnmeldungFehler::Gedrosselt)?;
 
@@ -112,10 +112,26 @@ impl UseCase<SessionAusgestellt> for Anmeldung {
         }
         .await;
 
-        let ausgestellt = uow.finish(ergebnis, AnmeldungFehler::KontoLaden).await?;
+        let ausgestellt = match uow.finish(ergebnis, AnmeldungFehler::KontoLaden).await {
+            Ok(ausgestellt) => ausgestellt,
+            Err(fehler)
+                if matches!(
+                    fehler.current_context(),
+                    AnmeldungFehler::ZugangsdatenFalsch
+                ) =>
+            {
+                if let Err(fehler) = ctx
+                    .throttle()
+                    .increment(&self.client_key, ThrottleAction::Anmeldung, jetzt)
+                    .await
+                {
+                    tracing::warn!(fehler = %fehler, "der fehlgeschlagene Anmeldeversuch konnte nicht gezählt werden");
+                }
+                return Err(fehler);
+            }
+            Err(fehler) => return Err(fehler),
+        };
 
-        // A successful login clears the client's failure budget, so one mistyped
-        // Passwort is not held against it for the rest of the window (rule 5).
         if let Err(fehler) = ctx
             .throttle()
             .reset(&self.client_key, ThrottleAction::Anmeldung)
