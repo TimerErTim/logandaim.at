@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAuthSession } from "../auth-provider";
+
+import { useAuth } from "../auth-provider";
 import { useLogandaimApi } from "../provider";
 import { logandaimKeys } from "../query-keys";
 
@@ -13,11 +14,11 @@ export function useHealthQuery() {
 
 export function useBenutzerQuery() {
   const { api } = useLogandaimApi();
-  const { accessToken, bootstrapped, bootstrapError } = useAuthSession();
+  const phase = useAuth();
   return useQuery({
     queryKey: logandaimKeys.benutzer(),
     queryFn: () => api.benutzerAbrufen(),
-    enabled: bootstrapped && Boolean(accessToken) && !bootstrapError,
+    enabled: phase.status === "authenticated",
     retry: false,
   });
 }

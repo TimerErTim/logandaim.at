@@ -5,10 +5,11 @@ import { createContext, type ReactNode, useContext, useMemo } from "react";
 
 import { config } from "@/lib/config";
 import { createLogandaimApi } from "./index";
-import type { LogandaimApi } from "./logandaim-api";
+import type { AuthSession, LogandaimApi } from "./logandaim-api";
 
 type LogandaimApiContextValue = {
   api: LogandaimApi;
+  authSession: AuthSession;
   apiBaseUrl: string;
   dev: boolean;
 };
@@ -25,7 +26,7 @@ export function LogandaimApiProvider({ children }: { children: ReactNode }) {
   // One transport instance per client; `config` never changes at runtime.
   const value = useMemo<LogandaimApiContextValue>(
     () => ({
-      api: createLogandaimApi(),
+      ...createLogandaimApi(),
       apiBaseUrl: config.apiBaseUrl,
       dev: config.dev,
     }),

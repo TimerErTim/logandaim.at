@@ -17,12 +17,24 @@ export interface LogandaimApi {
   registrierungStarten(eMailAdresse: string): Promise<void>;
   registrierungAbschliessen(token: string, passwort: string): Promise<void>;
   anmelden(eMailAdresse: string, passwort: string): Promise<void>;
-  sessionErneuern(): Promise<void>;
-  sessionAbmelden(): Promise<void>;
   passwortVergessen(eMailAdresse: string): Promise<void>;
   passwortWiederherstellen(token: string, neuesPasswort: string): Promise<void>;
   benutzerAbrufen(): Promise<Benutzer>;
-  accessTokenSetzen(token: string | null): void;
+}
+
+/** Authentication lifecycle exposed without transport credentials or protocol details. */
+export type AuthPhase =
+  | { status: "checking" }
+  | { status: "anonymous" }
+  | { status: "authenticated" }
+  | { status: "unavailable"; error: unknown };
+
+/** Session lifecycle boundary; implementations own credentials and renewal mechanics. */
+export interface AuthSession {
+  restore(): Promise<void>;
+  logout(): Promise<void>;
+  getSnapshot(): AuthPhase;
+  subscribe(listener: () => void): () => void;
 }
 
 export type Benutzer = components["schemas"]["Benutzer"];

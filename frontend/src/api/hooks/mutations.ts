@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuthSession } from "../auth-provider";
+
 import { useLogandaimApi } from "../provider";
 import { logandaimKeys } from "../query-keys";
 
@@ -22,17 +22,12 @@ export function useWertungMutation() {
 }
 
 export function useAuthMutations() {
-  const { api } = useLogandaimApi();
-  const { clearSession, markAuthenticated } = useAuthSession();
+  const { api, authSession } = useLogandaimApi();
   const queryClient = useQueryClient();
-  const loggedIn = () => {
-    markAuthenticated();
-    return queryClient.invalidateQueries({
-      queryKey: logandaimKeys.benutzer(),
-    });
-  };
+  const loggedIn = () =>
+    queryClient.invalidateQueries({ queryKey: logandaimKeys.benutzer() });
   const clear = () => {
-    clearSession();
+    queryClient.removeQueries({ queryKey: logandaimKeys.benutzer() });
   };
 
   return {
@@ -68,7 +63,7 @@ export function useAuthMutations() {
       onSuccess: clear,
     }),
     logout: useMutation({
-      mutationFn: api.sessionAbmelden.bind(api),
+      mutationFn: () => authSession.logout(),
       onSettled: clear,
     }),
   };

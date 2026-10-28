@@ -3,7 +3,7 @@
 import { CircleAlert, LogIn, LogOut, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuthSession } from "@/api/auth-provider";
+import { useAuth } from "@/api/auth-provider";
 import { useAuthMutations, useBenutzerQuery } from "@/api/hooks";
 import { usePageChrome } from "@/components/layout/page-chrome";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const breadcrumbs = breadcrumbsForPathname(pathname, breadcrumbLabel);
   const actions = navActionsForPathname(pathname);
-  const { accessToken, bootstrapped, bootstrapError } = useAuthSession();
+  const phase = useAuth();
   const benutzer = useBenutzerQuery();
   const auth = useAuthMutations();
   const onAuthRoute = ["/anmeldung", "/registrierung", "/passwort"].includes(
@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </Button>
                 </Link>
               ))}
-              {bootstrapped && accessToken && benutzer.data ? (
+              {phase.status === "authenticated" && benutzer.data ? (
                 <>
                   <span className="hidden max-w-48 truncate text-sm text-secondary sm:block">
                     {benutzer.data.eMailAdresse}
@@ -127,7 +127,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 overflow-y-auto">
-          {bootstrapError ? (
+          {phase.status === "unavailable" ? (
             <div className="mx-auto w-full max-w-5xl px-6 pt-6">
               <Alert
                 variant="warning"
