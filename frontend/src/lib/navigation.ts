@@ -34,6 +34,8 @@ export function isExactPath(pathname: string, href: string): boolean {
 export const paths = {
   home: "/",
   schuss: "/schuss",
+  profil: "/profil",
+  optionen: "/optionen",
 } as const;
 
 /** Add one item per product area. */
@@ -70,6 +72,8 @@ const routeLabels: Record<string, string> = {
   anmeldung: "Anmelden",
   registrierung: "Registrieren",
   passwort: "Passwort wiederherstellen",
+  profil: "Profil",
+  optionen: "Optionen",
 };
 
 export function breadcrumbsForPathname(

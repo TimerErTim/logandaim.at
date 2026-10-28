@@ -1,6 +1,13 @@
 "use client";
 
-import { CircleAlert, LogIn, LogOut, Menu } from "lucide-react";
+import {
+  CircleAlert,
+  LogIn,
+  LogOut,
+  Menu,
+  Settings2,
+  UserRound,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/api/auth-provider";
@@ -9,6 +16,14 @@ import { usePageChrome } from "@/components/layout/page-chrome";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   breadcrumbsForPathname,
   homeNavItem,
@@ -93,24 +108,51 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Link>
               ))}
               {phase.status === "authenticated" && benutzer.data ? (
-                <>
-                  <span className="hidden max-w-48 truncate text-sm text-secondary sm:block">
-                    {benutzer.data.eMailAdresse}
-                  </span>
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    aria-label="Abmelden"
-                    disabled={auth.logout.isPending}
-                    onClick={() =>
-                      auth.logout.mutate(undefined, {
-                        onSuccess: () => window.location.assign("/"),
-                      })
-                    }
-                  >
-                    <LogOut />
-                  </Button>
-                </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      aria-label="Profilmenü öffnen"
+                      disabled={
+                        auth.logout.isPending || auth.deleteAccount.isPending
+                      }
+                    >
+                      <UserRound />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel className="normal-case">
+                      <span className="block truncate text-secondary">
+                        Angemeldet als
+                      </span>
+                      <span className="mt-1 block truncate text-sm font-medium text-ink">
+                        {benutzer.data.eMailAdresse}
+                      </span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profil">
+                        <UserRound aria-hidden="true" /> Profil
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/optionen">
+                        <Settings2 aria-hidden="true" /> Optionen
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        auth.logout.mutate(undefined, {
+                          onSuccess: () => window.location.assign("/"),
+                        })
+                      }
+                    >
+                      <LogOut aria-hidden="true" /> Abmelden
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : !onAuthRoute ? (
                 <Link href="/anmeldung">
                   <Button

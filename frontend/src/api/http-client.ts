@@ -229,4 +229,14 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
       }),
     );
   }
+
+  async benutzerLoeschen(passwort: string, bestätigt: boolean): Promise<void> {
+    await this.authenticated(() =>
+      this.client.POST("/benutzer/löschung", {
+        body: { passwort, bestätigt },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+    this.setAccessToken(null);
+  }
 }

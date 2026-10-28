@@ -20,6 +20,7 @@ export interface LogandaimApi {
   passwortVergessen(eMailAdresse: string): Promise<void>;
   passwortWiederherstellen(token: string, neuesPasswort: string): Promise<void>;
   benutzerAbrufen(): Promise<Benutzer>;
+  benutzerLoeschen(passwort: string, bestätigt: boolean): Promise<void>;
 }
 
 /** Authentication lifecycle exposed without transport credentials or protocol details. */

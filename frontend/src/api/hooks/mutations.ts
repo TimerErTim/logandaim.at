@@ -66,5 +66,15 @@ export function useAuthMutations() {
       mutationFn: () => authSession.logout(),
       onSettled: clear,
     }),
+    deleteAccount: useMutation({
+      mutationFn: ({
+        passwort,
+        bestätigt,
+      }: {
+        passwort: string;
+        bestätigt: boolean;
+      }) => api.benutzerLoeschen(passwort, bestätigt),
+      onSettled: clear,
+    }),
   };
 }
