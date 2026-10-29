@@ -378,8 +378,8 @@
     "semantic_hash": ""
   },
   "frontend/src/api/schema.ts": {
-    "mtime": 1793304059.2514396,
-    "seen": 1793304084.062879,
+    "mtime": 1793312827.1345618,
+    "seen": 1793312934.411156,
     "ast_hash": "89a253e73f54c833957a0afaa7a4277e",
     "semantic_hash": ""
   },
@@ -1212,9 +1212,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/ui/paper-rule.tsx": {
-    "mtime": 1793262754.3154461,
-    "seen": 1793294298.4647036,
-    "ast_hash": "115d2b5b067d799876dfcc1787ba95df",
+    "mtime": 1793311581.030974,
+    "seen": 1793312763.617849,
+    "ast_hash": "d3cc0d7e208b1d993132c17d754e53f4",
     "semantic_hash": ""
   },
   "assets/logandaim-bildmarke-lightmode.svg": {
@@ -1776,9 +1776,9 @@
     "semantic_hash": ""
   },
   "frontend/src/app/verwaltung/anlage/page.tsx": {
-    "mtime": 1793303483.9896812,
-    "seen": 1793303709.8420672,
-    "ast_hash": "fdf1b1d5640ede7deddfcdaa5be07208",
+    "mtime": 1793312893.2145388,
+    "seen": 1793312934.4120197,
+    "ast_hash": "40ddf46b5f3ef8fbe49d37dffe472c84",
     "semantic_hash": ""
   },
   "frontend/src/app/verwaltung/page.tsx": {

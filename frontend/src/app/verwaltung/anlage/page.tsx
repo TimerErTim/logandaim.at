@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 
 import { useAuth } from "@/api/auth-provider";
 import { apiErrorMessage } from "@/api/errors";
@@ -16,6 +16,7 @@ import {
   type AnlageAdresse,
   type AnlageKontakt,
   AnlageVerwaltungRolle,
+  type ParcoursInput,
   type ZielInput,
 } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
@@ -24,11 +25,11 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
-import { HatchBand } from "@/components/ui/paper-rule";
 import { Input } from "@/components/ui/input";
+import { HatchBand } from "@/components/ui/paper-rule";
 import { Select } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -143,7 +144,7 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
         </TabsContent>
 
         <TabsContent value="parcours">
-          <ParcoursListe anlage={anlage} />
+          <ParcoursListe anlage={anlage} gesperrt={deaktiviert} />
         </TabsContent>
 
         <TabsContent value="verwaltung">
@@ -377,76 +378,233 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
 
 // ------------------------------------------------------------------------ Parcours
 
-function ParcoursListe({ anlage }: { anlage: Anlage }) {
+const neuerPflock = () => ({
+  id: crypto.randomUUID(),
+  bezeichnung: "",
+  farbe: "",
+});
+
+function ParcoursListe({
+  anlage,
+  gesperrt,
+}: {
+  anlage: Anlage;
+  gesperrt: boolean;
+}) {
+  const { parcoursHinzufuegen } = useStammdatenMutations();
+  const aktiveZiele = anlage.ziele.filter((ziel) => ziel.zustand === "Aktiv");
+  const [name, setName] = useState("");
+  const [pflock, setPflock] = useState(() => ({
+    ...neuerPflock(),
+    bezeichnung: "Rot",
+    farbe: "Rot",
+  }));
+  const [ausgewaehlteZiele, setAusgewaehlteZiele] = useState<string[]>([]);
+
+  function toggleZiel(zielId: string, ausgewaehlt: boolean) {
+    setAusgewaehlteZiele((aktuell) =>
+      ausgewaehlt
+        ? [...aktuell, zielId]
+        : aktuell.filter((id) => id !== zielId),
+    );
+  }
+
+  function parcoursErstellen(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const eingabe: ParcoursInput = {
+      name,
+      pflöcke: [pflock],
+      platzierungen: ausgewaehlteZiele.map((zielId) => ({
+        zielId,
+        abstände: [],
+      })),
+    };
+    parcoursHinzufuegen.mutate([anlage.id, eingabe], {
+      onSuccess: () => {
+        setName("");
+        setPflock(neuerPflock());
+        setAusgewaehlteZiele([]);
+      },
+    });
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Parcours der Anlage</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {anlage.parcours.length === 0 ? (
-          <p className="text-sm text-secondary">Noch kein Parcours erfasst.</p>
-        ) : (
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeader>Name</TableHeader>
-                <TableHeader>Pflöcke</TableHeader>
-                <TableHeader>Platzierungen</TableHeader>
-                <TableHeader>Status</TableHeader>
-                <TableHeader>
-                  <span className="sr-only">Öffnen</span>
-                </TableHeader>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {anlage.parcours.map((parcours) => (
-                <TableRow key={parcours.id}>
-                  <TableCell className="font-medium">{parcours.name}</TableCell>
-                  <TableCell>
-                    <span className="flex flex-wrap gap-3 text-sm">
-                      {parcours.pflöcke.map((pflock) => (
-                        <PflockMarker key={pflock.id} farbe={pflock.farbe} />
-                      ))}
-                    </span>
-                    <span className="sr-only">
-                      {parcours.pflöcke
-                        .map((pflock) => pflock.bezeichnung)
-                        .join(", ")}
-                    </span>
-                  </TableCell>
-                  <TableCell className="tabular-nums">
-                    {parcours.platzierungen.length}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        parcours.zustand === "Archiviert"
-                          ? "warning"
-                          : "success"
+    <div className="space-y-0">
+      {!gesperrt ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Parcours anlegen</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {aktiveZiele.length === 0 ? (
+              <Alert variant="warning">
+                Erfassen Sie zuerst mindestens ein aktives Ziel, damit Sie es
+                dem Parcours zuordnen können.
+              </Alert>
+            ) : null}
+            {parcoursHinzufuegen.isError ? (
+              <Alert variant="error">
+                {apiErrorMessage(parcoursHinzufuegen.error, {
+                  unauthorized:
+                    "Sie dürfen an dieser Anlage keine Parcours anlegen.",
+                  badRequest:
+                    "Bitte prüfen Sie den Parcoursnamen und die Zielauswahl.",
+                  fallback: "Der Parcours konnte nicht angelegt werden.",
+                })}
+              </Alert>
+            ) : null}
+            <form className="space-y-4" onSubmit={parcoursErstellen}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Parcoursname">
+                  <Input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    disabled={parcoursHinzufuegen.isPending}
+                    required
+                  />
+                </Field>
+                <Field label="Pflockbezeichnung">
+                  <Input
+                    value={pflock.bezeichnung}
+                    onChange={(event) =>
+                      setPflock((aktuell) => ({
+                        ...aktuell,
+                        bezeichnung: event.target.value,
+                      }))
+                    }
+                    disabled={parcoursHinzufuegen.isPending}
+                    required
+                  />
+                </Field>
+                <Field label="Pflockfarbe">
+                  <div className="flex items-center gap-3">
+                    <Input
+                      value={pflock.farbe}
+                      onChange={(event) =>
+                        setPflock((aktuell) => ({
+                          ...aktuell,
+                          farbe: event.target.value,
+                        }))
                       }
-                    >
-                      {parcours.zustand === "Archiviert"
-                        ? "Archiviert"
-                        : "Aktiv"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="secondary" size="sm" asChild>
-                      <Link
-                        href={`${paths.verwaltungParcours}?id=${parcours.id}&anlage=${anlage.id}`}
-                      >
-                        Öffnen
-                      </Link>
-                    </Button>
-                  </TableCell>
+                      disabled={parcoursHinzufuegen.isPending}
+                      required
+                    />
+                    <PflockMarker farbe={pflock.farbe} />
+                  </div>
+                </Field>
+              </div>
+              <section className="space-y-2">
+                <h3 className="text-sm font-semibold text-ink">
+                  Ziele im Parcours
+                </h3>
+                <div className="grid gap-x-4 sm:grid-cols-2">
+                  {aktiveZiele.map((ziel) => (
+                    <Checkbox
+                      key={ziel.id}
+                      label={`${ziel.tiername} · Gruppe ${ziel.zielgruppe}`}
+                      checked={ausgewaehlteZiele.includes(ziel.id)}
+                      onChange={(event) =>
+                        toggleZiel(ziel.id, event.target.checked)
+                      }
+                      disabled={parcoursHinzufuegen.isPending}
+                    />
+                  ))}
+                </div>
+              </section>
+              <p className="text-xs text-secondary">
+                Der Parcours startet mit einem Pflock. Weitere Pflöcke und
+                Distanzen können Sie nach dem Anlegen bearbeiten.
+              </p>
+              <Button
+                type="submit"
+                disabled={
+                  !aktiveZiele.length ||
+                  !ausgewaehlteZiele.length ||
+                  parcoursHinzufuegen.isPending
+                }
+              >
+                {parcoursHinzufuegen.isPending
+                  ? "Parcours wird angelegt…"
+                  : "Parcours anlegen"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+      {!gesperrt ? <HatchBand className="my-2" /> : null}
+      <Card>
+        <CardHeader>
+          <CardTitle>Parcours der Anlage</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {anlage.parcours.length === 0 ? (
+            <p className="text-sm text-secondary">
+              Noch kein Parcours erfasst.
+            </p>
+          ) : (
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableHeader>Name</TableHeader>
+                  <TableHeader>Pflöcke</TableHeader>
+                  <TableHeader>Platzierungen</TableHeader>
+                  <TableHeader>Status</TableHeader>
+                  <TableHeader>
+                    <span className="sr-only">Öffnen</span>
+                  </TableHeader>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+              </TableHead>
+              <TableBody>
+                {anlage.parcours.map((parcours) => (
+                  <TableRow key={parcours.id}>
+                    <TableCell className="font-medium">
+                      {parcours.name}
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex flex-wrap gap-3 text-sm">
+                        {parcours.pflöcke.map((pflock) => (
+                          <PflockMarker key={pflock.id} farbe={pflock.farbe} />
+                        ))}
+                      </span>
+                      <span className="sr-only">
+                        {parcours.pflöcke
+                          .map((pflock) => pflock.bezeichnung)
+                          .join(", ")}
+                      </span>
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {parcours.platzierungen.length}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          parcours.zustand === "Archiviert"
+                            ? "warning"
+                            : "success"
+                        }
+                      >
+                        {parcours.zustand === "Archiviert"
+                          ? "Archiviert"
+                          : "Aktiv"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="secondary" size="sm" asChild>
+                        <Link
+                          href={`${paths.verwaltungParcours}?id=${parcours.id}&anlage=${anlage.id}`}
+                        >
+                          Öffnen
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
