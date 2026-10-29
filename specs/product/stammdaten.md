@@ -3,7 +3,7 @@ id: SPEC-stammdaten
 title: Master data (Anlage, Parcours, Ziel, Pflock) and Anlage administration
 status: PO-approved
 owner: TimerErTim
-issues: [10]
+issues: [10, 73]
 superseded_by: null
 ---
 
