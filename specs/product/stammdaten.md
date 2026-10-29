@@ -97,10 +97,11 @@ Rules:
    task. The M1 pilot sites are Breitenstein and Wallhalla Pregarten; their data is entered manually.
    The October 23 PO decision on issue #10 is retained.
 2. A `Systemadministrator` creates an `Anlage`. An Anlage may initially have no Administrator.
-   Only a `Systemadministrator` or that Anlage's `Administrator` may create or edit the Anlage's
-   name, address, and contact details. A `Systemadministrator` or `Administrator` may grant or
-   revoke `AnlageVerwaltungen`; an Anlage must retain at least one Administrator once one has been
-   assigned. The last Administrator cannot revoke their own `AnlageVerwaltung`.
+   Only a `Systemadministrator` or that Anlage's `Administrator` may create, edit, or deactivate
+   the Anlage or change its name, address, and contact details. A `Systemadministrator` or
+   `Administrator` may grant or revoke `AnlageVerwaltungen`; an Anlage must retain at least one
+   Administrator once one has been assigned. The last Administrator cannot revoke their own
+   `AnlageVerwaltung`.
 3. Anlage names need not be unique. An Anlage's address has required street, postal code,
    locality, and country fields. Contact name, email, phone, and website are each optional,
    structured fields; all may be omitted.
@@ -130,8 +131,9 @@ Rules:
    in each Parcours.
 10. Only a `Systemadministrator`, an `Administrator`, or a `Mitarbeiter` of that Anlage may create,
     edit, reorder, or remove its Parcours, Ziel, Zielplatzierung, and Pflock setup. Only a
-    `Systemadministrator` or that Anlage's `Administrator` may edit Anlage descriptive fields or
-    manage its `AnlageVerwaltungen`. Staff authority never crosses Anlagen.
+    `Systemadministrator` or that Anlage's `Administrator` may create or edit the Anlage's
+    descriptive fields, deactivate it, or manage its `AnlageVerwaltungen`. Staff authority never
+    crosses Anlagen.
 11. Deactivation removes an Anlage and all its Parcours from active listings and prevents new
     Runden there. Existing Runden remain readable with their snapshots. Any Anlage, Parcours, Ziel,
     or Pflock setup referenced by a logged or in-progress Runde snapshot or its Schüsse is archived,
@@ -204,8 +206,9 @@ Rules:
 - AC-9: When an archer views a Runde, it displays the captured Parcours identity/name, ordered
   Ziele, animal names, target groups, Pflock labels/colors/order, and optional distances as they were
   when the Runde started, regardless of later master-data edits.
-- AC-10: When an Anlage is deactivated, it and its Parcours disappear from active selection and new
-  Runden are refused; old Runden remain readable with their snapshots.
+- AC-10: When a `Systemadministrator` or that Anlage's `Administrator` deactivates an Anlage, it
+  and its Parcours disappear from active selection and new Runden are refused; old Runden remain
+  readable with their snapshots. A Mitarbeiter cannot deactivate an Anlage.
 - AC-11: Removing a Ziel, Parcours, Anlage, or Pflock setup referenced by a logged or in-progress
   Runde snapshot or its Schüsse archives the referenced master data and prevents new use. Old
   snapshots, Schüsse, and per-Ziel history remain unchanged. Archived data cannot be restored.
@@ -235,7 +238,7 @@ an import path and pilot entry are checked in the admin UI.
 | 2026-10-29 | Per-Anlage authority is `AnlageVerwaltung` with `Administrator` and `Mitarbeiter`; a Benutzer never creates an Anlage directly. | TimerErTim (PO), aligned with charter and konto |
 | 2026-10-29 | Ziel identity represents a physical target at one Anlage and may be used in several Parcours there. A physical replacement starts a new identity. | TimerErTim (PO) |
 | 2026-10-29 | Pflock labels/colors and far-to-near order are defined per Parcours; distances are optional per Zielplatzierung and Pflock label. Staff choose labels/colors; there is no fixed global palette. | TimerErTim (PO) |
-| 2026-10-29 | Anlage address is structured and required; contact fields are structured and optional. Anlage descriptions are editable by Systemadministrator or that Anlage's Administrator. | TimerErTim (PO) |
+| 2026-10-29 | Anlage address is structured and required; contact fields are structured and optional. Anlage descriptions and deactivation are controlled by Systemadministrator or that Anlage's Administrator. | TimerErTim (PO) |
 | 2026-10-29 | A created Anlage may initially have no Administrator; after one is assigned, at least one must remain. | TimerErTim (PO) |
 | 2026-10-29 | Anlage names need not be unique; animal names are required; contact fields are individually optional; Pflock labels are unique per Parcours. | TimerErTim (PO) |
 | 2026-10-29 | History-referenced master data is archived and cannot be restored; data without history may be deleted. Inactive Anlagen are unavailable for new Runden. | TimerErTim (PO) |
