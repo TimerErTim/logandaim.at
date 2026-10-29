@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
+import { HatchBand } from "@/components/ui/paper-rule";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
@@ -702,7 +703,7 @@ function Stammdaten({
   const [kontakt, setKontakt] = useState<AnlageKontakt>(anlage.kontakt);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-0">
       <Card>
         <CardHeader>
           <CardTitle>Beschreibende Daten</CardTitle>
@@ -783,7 +784,7 @@ function Stammdaten({
               </Field>
             </div>
 
-            <Separator />
+            <HatchBand className="-my-3" height="sm" />
             <section className="space-y-4">
               <div>
                 <h3 className="font-serif text-lg font-semibold text-ink">
@@ -870,7 +871,7 @@ function Stammdaten({
 
       {gesperrt ? null : (
         <>
-          <Separator />
+          <HatchBand className="my-2" />
           <Card>
             <CardHeader>
               <CardTitle>Anlage deaktivieren</CardTitle>
