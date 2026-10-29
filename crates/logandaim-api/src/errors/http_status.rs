@@ -5,11 +5,11 @@ use logandaim_core::domain::schuss::SchussFehler;
 use logandaim_core::domain::zeitraum::ZeitraumFehler;
 use logandaim_core::ports::{ObjectStoreError, RepositoryError};
 use logandaim_core::service::{
-    AbmeldungFehler, AnmeldungFehler, BenutzerAnzeigenFehler, BenutzerLöschenFehler,
-    ErneuerungFehler, PasswortVergessenFehler, PasswortWiederherstellenFehler,
-    RegistrierungAbschliessenFehler, RegistrierungStartenFehler, RundeAbschliessenFehler,
-    RundeAnzeigenFehler, RundeStartenFehler, RundenAnzeigenFehler, SchussRegistrierenFehler,
-    SessionPrüfenFehler, StammdatenFehler, SystemadministratorBefördernFehler,
+    AbmeldungFehler, AnmeldungFehler, BenutzerLöschenFehler, ErneuerungFehler,
+    PasswortVergessenFehler, PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler,
+    RegistrierungStartenFehler, RundeAbschliessenFehler, RundeAnzeigenFehler, RundeStartenFehler,
+    RundenAnzeigenFehler, SchussRegistrierenFehler, SessionPrüfenFehler, StammdatenFehler,
+    SystemadministratorBefördernFehler,
 };
 
 use super::ValidationError;
@@ -59,7 +59,6 @@ fn nested_http_status<C: ThreadSafeError>(error: &Report<C>) -> Option<StatusCod
         .or_else(|| mapped::<C, RegistrierungAbschliessenFehler>(error))
         .or_else(|| mapped::<C, PasswortVergessenFehler>(error))
         .or_else(|| mapped::<C, PasswortWiederherstellenFehler>(error))
-        .or_else(|| mapped::<C, BenutzerAnzeigenFehler>(error))
         .or_else(|| mapped::<C, BenutzerLöschenFehler>(error))
         .or_else(|| mapped::<C, SystemadministratorBefördernFehler>(error))
         .or_else(|| mapped::<C, RepositoryError>(error))
@@ -248,13 +247,6 @@ http_status!(PasswortWiederherstellenFehler {
     SessionSpeichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
-http_status!(BenutzerAnzeigenFehler {
-    NichtAngemeldet => StatusCode::UNAUTHORIZED,
-    NichtErlaubt => StatusCode::FORBIDDEN,
-    BenutzerLaden => StatusCode::INTERNAL_SERVER_ERROR,
-    KontoLaden => StatusCode::INTERNAL_SERVER_ERROR,
-});
-
 http_status!(BenutzerLöschenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
@@ -356,10 +348,6 @@ mod tests {
         assert_eq!(
             status(ErneuerungFehler::SessionUngültig),
             StatusCode::UNAUTHORIZED
-        );
-        assert_eq!(
-            status(BenutzerAnzeigenFehler::NichtErlaubt),
-            StatusCode::FORBIDDEN
         );
         assert_eq!(
             status(BenutzerLöschenFehler::PasswortFalsch),

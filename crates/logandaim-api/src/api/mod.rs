@@ -21,25 +21,22 @@ use logandaim_core::{
     service::{
         Abmeldung, AbmeldungFehler, AnlageAnzeigen, AnlageBeschreibendeDatenÄndern,
         AnlageDeaktivieren, AnlageVerwaltungEntziehen, AnlageVerwaltungGewähren,
-        AnlageVerwaltungÄndern, AnlagenAnzeigen, Anmeldung, AnmeldungFehler, BenutzerAnzeigen,
-        BenutzerAnzeigenFehler, BenutzerLöschen, BenutzerLöschenFehler, Erneuerung,
-        ErneuerungFehler, ParcoursAnzeigen, ParcoursEntfernen, ParcoursHinzufügen,
-        ParcoursSetupÄndern, ParcoursUmbenennen, PasswortVergessen, PasswortVergessenFehler,
-        PasswortWiederherstellen, PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler,
-        RegistrierungAbschließen, RegistrierungStarten, RegistrierungStartenFehler,
-        RundeAbschliessen, RundeAbschliessenFehler, RundeAnzeigen, RundeAnzeigenFehler,
-        RundeStarten, RundeStartenFehler, RundenAnzeigen, RundenAnzeigenFehler, SchussRegistrieren,
-        SchussRegistrierenFehler, SessionAusgestellt, StammdatenFehler, ZielEntfernen,
-        ZielErsetzen, ZielHinzufügen, ZielÄndern,
+        AnlageVerwaltungÄndern, AnlagenAnzeigen, Anmeldung, AnmeldungFehler, BenutzerLöschen,
+        BenutzerLöschenFehler, Erneuerung, ErneuerungFehler, ParcoursAnzeigen, ParcoursEntfernen,
+        ParcoursHinzufügen, ParcoursSetupÄndern, ParcoursUmbenennen, PasswortVergessen,
+        PasswortVergessenFehler, PasswortWiederherstellen, PasswortWiederherstellenFehler,
+        RegistrierungAbschliessenFehler, RegistrierungAbschließen, RegistrierungStarten,
+        RegistrierungStartenFehler, RundeAbschliessen, RundeAbschliessenFehler, RundeAnzeigen,
+        RundeAnzeigenFehler, RundeStarten, RundeStartenFehler, RundenAnzeigen,
+        RundenAnzeigenFehler, SchussRegistrieren, SchussRegistrierenFehler, SessionAusgestellt,
+        StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern,
     },
 };
 use tracing::warn;
 
 pub mod requests;
 
-use crate::schema::{
-    Anlage, AnlagenZeile, Benutzer, ParcoursÖffentlich, Runde, RundenZeile, Schuss,
-};
+use crate::schema::{Anlage, AnlagenZeile, ParcoursÖffentlich, Runde, RundenZeile, Schuss};
 
 #[derive(Clone)]
 pub struct LogandaimAppApi {
@@ -429,25 +426,6 @@ impl LogandaimAppApi {
     }
 
     // ---------------------------------------------------------------- Benutzer
-
-    /// The caller's own Benutzer, or another one when a Systemadministrator asks.
-    pub async fn benutzer_anzeigen(
-        &self,
-        auth: AuthContext,
-        benutzer_id: Option<uuid::Uuid>,
-    ) -> ResultReport<Benutzer, BenutzerAnzeigenFehler> {
-        let ansicht = self
-            .app
-            .execute(
-                auth,
-                BenutzerAnzeigen {
-                    benutzer_id: benutzer_id.map(logandaim_core::domain::konto::BenutzerId),
-                },
-            )
-            .await?;
-
-        Ok((ansicht.benutzer, ansicht.email).into())
-    }
 
     pub async fn benutzer_löschen(
         &self,

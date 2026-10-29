@@ -1,41 +1,41 @@
 # Graph Report - logandaim.at  (2026-10-29)
 
 ## Corpus Check
-- 277 files · ~168,650 words
+- 277 files · ~168,062 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4039 nodes · 10595 edges · 179 communities (158 shown, 13 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 208 edges (avg confidence: 0.85)
+- 4030 nodes · 10575 edges · 182 communities (161 shown, 13 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 207 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c0840ca3`
+- Built from commit: `387f7741`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - PdfRenderer
 - arc_up
-- CONTRIBUTING.md
+- Specifications
 - biome.json
 - yams-persistence
 - Seminar — Domain-Spezifikation
 - useAuth
 - ExecutionContext
 - http_status.rs
-- NeuerSchuss
+- ParcoursId
 - logandaim-filesystemstore/src/lib.rs
 - compilerOptions
-- sections.tsx
-- in_memory_object_store.rs
+- page.dev.tsx
+- ObjectStore
 - token.rs
 - Zeitraum
 - E
 - Datenschutz — Data protection, privacy, and legal obligations
 - KlartextPasswort
 - Clock
-- Punkte
+- cn
 - parse_uuid
 - <Title>
 - Make invalid state unrepresentable
@@ -54,7 +54,7 @@
 - wal_connection_race.rs
 - validation_error.rs
 - PasswortWiederherstellung
-- SQLiteKontoRepository
+- Konto
 - CookieConfig
 - claims_for_session
 - .get_current_version
@@ -62,12 +62,12 @@
 - RundeId
 - konto/session.rs
 - components.json
-- Harness
-- App
+- domain/mod.rs
+- LogandaimApiTestClient
 - SQLiteSchussRepository
 - domain/kontakt.rs
 - Signature
-- cn
+- demo-page.tsx
 - logandaim.at — Product Charter
 - dependencies
 - DateTime
@@ -81,7 +81,7 @@
 - release-version.mjs
 - Product Requirements Document (PRD) & Konzeptbericht
 - logandaim-core
-- Session
+- SQLiteSessionRepository
 - preis.rs
 - check-version.mjs
 - ClientKey
@@ -95,13 +95,13 @@
 - StammdatenFehler
 - Contributing and project management
 - spend_open_recoveries
-- unwrap
+- HttpLogandaimApi
 - schema/stammdaten.rs
 - mailpit.rs
 - .begin
 - FakeUnitOfWork
-- domain/mod.rs
-- ZielId
+- ziel.rs
+- ParcoursSnapshot
 - String
 - check-design.mjs
 - File Icon
@@ -113,23 +113,23 @@
 - SQLiteInstance
 - UpMigration
 - config.rs
-- FakeObjectStore
+- e2e/stammdaten.rs
 - .add_dyn
 - UnitOfWorkImpl
-- parcours.rs
-- format_datetime
+- Pflock
+- SQLiteBenutzerRepository
 - LockedUnitOfWorkImpl
 - NewSessionResponse
-- user.rs
-- ObjectStore
+- AnlageVerwaltungRolle
+- AnlageAktiv
 - EmailAdresse
-- app-shell.tsx
+- navigation.ts
 - Versioned
 - BenutzerId
 - anlage_aus_zeile
 - pull_request_template.md
 - LogandaimApi
-- SQLiteEmailBestätigungRepository
+- parcours.rs
 - Ländercode
 - Appendix: implementation sketch (non-normative)
 - Stammdaten — Master data and `Anlage` administration
@@ -139,16 +139,16 @@
 - logandaim-api.ts
 - Anlage-Anfrage — Requesting a new Anlage
 - SecretTokenHash
-- SessionAusgestellt
+- revoke_all_sessions
 - StructuredError
 - StreamBinaryResponse
 - e2e/konto.rs
 - cases/runde.rs
 - migration_error_to_persistence_error
 - ADR-0001: Baseline architecture
-- HttpLogandaimApi
-- devDependencies
-- anlage/mod.rs
+- .authenticated
+- ZielId
+- AnlageName
 - dates.ts
 - SQLiteUnitOfWork
 - Signing
@@ -159,44 +159,47 @@
 - apply_up_migrations
 - instrumented.rs
 - Versioned<T>
-- Konto
+- KontoId
 - ADR-0002: Session cookie auth across frontend and API origins
 - .from
 - m1-overseer.md
 - Modes
 - AccessTokenClaims
-- schema.ts
-- ParcoursId
+- ApiError
+- anlage/mod.rs
 - m1-reviewer.md
-- UseCase
-- menge
+- ParcoursFehler
+- domain/runde.rs
 - InstrumentedUnitOfWork
 - Zuordnung
-- .begin
-- .poll_next
-- react
-- scripts
-- client_key
+- Deferred capabilities
+- Session
+- PasswordPage
+- Ok
+- Self
 - Migration
 - openapi_service
 - provider.tsx
 - .auth_context
-- Zuordnung
+- neuer_benutzer
 - RundeStartenRequest
-- Specifications
-- KontoFehler
+- Zuordnung
+- LoginPage
+- BenutzerRolle
+- E2eHarness
+- App
 - mise
 
 ## God Nodes (most connected - your core abstractions)
 1. `Versioned` - 165 edges
-2. `BenutzerId` - 114 edges
+2. `BenutzerId` - 112 edges
 3. `cn()` - 101 edges
 4. `AnlageId` - 89 edges
 5. `ZielId` - 81 edges
 6. `ParcoursId` - 61 edges
-7. `ExecutionContext` - 56 edges
-8. `AuthContext` - 54 edges
-9. `FakeDatastore` - 54 edges
+7. `ExecutionContext` - 55 edges
+8. `FakeDatastore` - 54 edges
+9. `AuthContext` - 53 edges
 10. `react` - 52 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -219,7 +222,7 @@
 - **diffx Code Review Workflow** — agents_skills_diffx_start_review_skill, agents_skills_diffx_server, agents_skills_diffx_finish_review_skill [EXTRACTED 1.00]
 - **YAMS Hexagonal Backend Layers** — cursor_agents_md_driving_adapters, cursor_agents_md_yams_api, cursor_agents_md_yams_core, cursor_agents_md_yams_persistence [EXTRACTED 1.00]
 
-## Communities (179 total, 13 thin omitted)
+## Communities (182 total, 13 thin omitted)
 
 ### Community 0 - "PdfRenderer"
 Cohesion: 0.10
@@ -229,9 +232,9 @@ Nodes (18): blank_renderer_returns_pdf_prefix(), BlankPdfRenderer, ResultReport,
 Cohesion: 0.06
 Nodes (42): AppliedLog, Cell, arc_down(), arc_up(), FakeDownMigration, FakeMigrationTarget, FakeUpMigration, Arc (+34 more)
 
-### Community 2 - "CONTRIBUTING.md"
-Cohesion: 0.17
-Nodes (9): Added, Changelog, Removed, [Unreleased], Checklist, Release description, Release pull request, Test evidence (+1 more)
+### Community 2 - "Specifications"
+Cohesion: 0.10
+Nodes (16): Added, Changelog, Removed, [Unreleased], Checklist, Release description, Release pull request, Test evidence (+8 more)
 
 ### Community 3 - "biome.json"
 Cohesion: 0.08
@@ -246,40 +249,40 @@ Cohesion: 0.07
 Nodes (25): Abrechnung — Domain-Spezifikation, Aggregates (Type-State), Geplant (nicht in diesem Slice), Invarianten, Stub-Umfang, Tagesabschluss-Ablauf, Use Cases, Wertobjekte (+17 more)
 
 ### Community 6 - "useAuth"
-Cohesion: 0.11
-Nodes (31): AuthProvider(), useAuth(), apiErrorMessage(), useAnlageMutation(), useAuthMutations(), useStammdatenMutations(), useAnlagenQuery(), useAnlageQuery() (+23 more)
+Cohesion: 0.10
+Nodes (36): AuthProvider(), useAuth(), apiErrorMessage(), useAnlageMutation(), useAuthMutations(), useStammdatenMutations(), useAnlagenQuery(), useAnlageQuery() (+28 more)
 
 ### Community 7 - "ExecutionContext"
-Cohesion: 0.23
-Nodes (20): ExecutionContext, UnitOfWork, aktive_anlage(), aktive_anlage_ändern(), anlage_laden(), anmeldung(), benutzer_laden(), berechtigt_für_anlage() (+12 more)
+Cohesion: 0.10
+Nodes (53): ExecutionContext, UnitOfWork, Context, Output, ResultReport, UseCase, aktive_anlage(), aktive_anlage_ändern() (+45 more)
 
 ### Community 8 - "http_status.rs"
 Cohesion: 0.07
 Nodes (28): Report, Result, Uuid, Wertungszone, SchussErstellungRequest, HttpStatusMapping, mapped(), nested_http_status() (+20 more)
 
-### Community 9 - "NeuerSchuss"
-Cohesion: 0.12
-Nodes (11): NeuerSchuss, pfeil(), Err, FromStr, IntoIterator, Item, Result, Self (+3 more)
+### Community 9 - "ParcoursId"
+Cohesion: 0.10
+Nodes (14): adresse(), Anlage, AnlageIn<S>, AnlagenSicht, ist_systemadministrator_oder_verwalter(), Benutzer, From, Option (+6 more)
 
 ### Community 10 - "logandaim-filesystemstore/src/lib.rs"
-Cohesion: 0.20
-Nodes (19): delete_missing_is_already_deleted(), delete_removes_object(), ensure_deleted_swallows_already_deleted(), FileSystemObjectStore, key_to_path(), missing_is_none(), overwrites_existing(), put_get_roundtrip() (+11 more)
+Cohesion: 0.13
+Nodes (27): delete_missing_is_already_deleted(), delete_removes_object(), ensure_deleted_swallows_already_deleted(), FileStream, FileSystemObjectStore, key_to_path(), missing_is_none(), overwrites_existing() (+19 more)
 
 ### Community 12 - "compilerOptions"
 Cohesion: 0.11
 Nodes (18): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+10 more)
 
-### Community 13 - "sections.tsx"
-Cohesion: 0.07
-Nodes (41): PLATES, ComponentSection(), Example(), ThemePlate(), touchTargetOutline, AA_NORMAL_TEXT, contrastRatio(), NAMED_COLOURS (+33 more)
+### Community 13 - "page.dev.tsx"
+Cohesion: 0.08
+Nodes (25): PLATES, AA_NORMAL_TEXT, contrastRatio(), NAMED_COLOURS, parseColour(), relativeLuminance(), PaperFurnitureSection(), AlertSection() (+17 more)
 
-### Community 14 - "in_memory_object_store.rs"
-Cohesion: 0.21
-Nodes (15): delete_missing_is_already_deleted(), delete_removes_object(), ensure_deleted_swallows_already_deleted(), get_missing_is_none(), InMemoryObjectStore, put_overwrites(), put_then_get_roundtrip(), FxHashMap (+7 more)
+### Community 14 - "ObjectStore"
+Cohesion: 0.07
+Nodes (36): delete_missing_is_already_deleted(), delete_removes_object(), ensure_deleted_swallows_already_deleted(), get_missing_is_none(), InMemoryObjectStore, put_overwrites(), put_then_get_roundtrip(), FxHashMap (+28 more)
 
 ### Community 15 - "token.rs"
-Cohesion: 0.13
-Nodes (22): AccessToken, basis64url(), basis64url_decode(), debug_gibt_das_token_nicht_preis(), hash_ist_stabil_und_vergleicht_konstantzeitig(), konstantzeit_vergleich_erkennt_jedes_gekippte_byte(), parsing_ist_ein_roundtrip_über_die_bytes(), refresh_token_roundtrip() (+14 more)
+Cohesion: 0.11
+Nodes (24): AccessToken, basis64url(), basis64url_decode(), constant_time_eq(), debug_gibt_das_token_nicht_preis(), hash_ist_stabil_und_vergleicht_konstantzeitig(), konstantzeit_vergleich_erkennt_jedes_gekippte_byte(), parsing_ist_ein_roundtrip_über_die_bytes() (+16 more)
 
 ### Community 16 - "Zeitraum"
 Cohesion: 0.21
@@ -295,19 +298,19 @@ Nodes (19): Analytics, Benchmarks, Consent, Data export, Datenschutz — Data pr
 
 ### Community 19 - "KlartextPasswort"
 Cohesion: 0.11
-Nodes (25): KontoFehler, argon2(), debug_gibt_das_passwort_nicht_preis(), dummy_verify(), dummy_verify_akzeptiert_jedes_gültige_passwort(), falsches_passwort_wird_abgelehnt(), gleiches_passwort_ergibt_verschiedene_hashes(), hash_password() (+17 more)
+Nodes (24): KontoFehler, argon2(), debug_gibt_das_passwort_nicht_preis(), dummy_verify(), dummy_verify_akzeptiert_jedes_gültige_passwort(), falsches_passwort_wird_abgelehnt(), gleiches_passwort_ergibt_verschiedene_hashes(), hash_password() (+16 more)
 
 ### Community 20 - "Clock"
 Cohesion: 0.09
 Nodes (17): DateTime, NaiveDate, Utc, SystemClock, Clock, DateTime, NaiveDate, Send (+9 more)
 
-### Community 21 - "Punkte"
+### Community 21 - "cn"
 Cohesion: 0.14
-Nodes (9): IntoIterator, Item, Zielergebnis, Rundenergebnis, Punkte, Add, I, Zielergebnis (+1 more)
+Nodes (25): ComponentSection(), Example(), ThemePlate(), touchTargetOutline, GridPaper(), Legend(), LegendEntry, RingMark (+17 more)
 
 ### Community 22 - "parse_uuid"
-Cohesion: 0.18
-Nodes (18): delete_versioned(), format_naive_date(), parse_decimal(), parse_menge(), parse_naive_date(), parse_uuid(), parse_version(), Decimal (+10 more)
+Cohesion: 0.15
+Nodes (22): delete_versioned(), format_datetime(), format_naive_date(), parse_datetime(), parse_decimal(), parse_menge(), parse_naive_date(), parse_uuid() (+14 more)
 
 ### Community 23 - "<Title>"
 Cohesion: 0.15
@@ -338,12 +341,12 @@ Cohesion: 0.24
 Nodes (11): ErrorReportExt, Result<T, E>, C, Error, Report, Result, Send, Sync (+3 more)
 
 ### Community 30 - "Konto — Benutzer, registration, and login"
-Cohesion: 0.07
-Nodes (28): Acceptance criteria, Account security, Administration, Approval, Auth audit, Decision log, Deferred capabilities, Domain terms and business rules (+20 more)
+Cohesion: 0.12
+Nodes (16): Acceptance criteria, Approval, Decision log, Domain terms and business rules, Implementation sketches, Konto — Benutzer, registration, and login, Outcome, Problem (+8 more)
 
 ### Community 31 - "EmailBestätigung"
-Cohesion: 0.17
-Nodes (14): bestätigung(), BestätigungId, EmailBestätigung, from_parts_roundtrip(), jetzt(), neue_bestätigung_gilt_24_stunden(), NeueBestätigung, DateTime (+6 more)
+Cohesion: 0.09
+Nodes (26): bestätigung(), BestätigungId, EmailBestätigung, from_parts_roundtrip(), jetzt(), neue_bestätigung_gilt_24_stunden(), NeueBestätigung, DateTime (+18 more)
 
 ### Community 32 - "jwt.rs"
 Cohesion: 0.17
@@ -354,12 +357,12 @@ Cohesion: 0.16
 Nodes (12): RepoStorage, Box, Pin, Self, InstrumentedAnlageRepository, InstrumentedBenutzerRepository, InstrumentedEmailBestätigungRepository, InstrumentedKontoRepository (+4 more)
 
 ### Community 34 - "cases/konto.rs"
-Cohesion: 0.18
-Nodes (38): pruefen(), ac10_wiederherstellung_antwortet_für_jede_adresse_gleich(), ac11_neues_passwort_beendet_alle_sessions_und_ist_einmalig(), ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei(), ac12_löschung_ohne_bestätigung_oder_mit_falschem_passwort_scheitert(), ac13_anonymer_zugriff_wird_verweigert(), ac14_fremden_benutzer_liest_nur_ein_systemadministrator(), ac17_fremder_schlüssel_passt_nicht_zur_session_zeile() (+30 more)
+Cohesion: 0.10
+Nodes (52): Benutzer, SessionAusgestellt, SessionPrüfen, build(), fremder_schluessel(), Harness, jetzt(), pruefen() (+44 more)
 
 ### Community 35 - "anlage/page.tsx"
 Cohesion: 0.14
-Nodes (31): useHealthQuery(), HomePage(), ZONEN, leeresZiel, leer, PageChromeContext, PageChromeContextValue, SetBreadcrumbLabel() (+23 more)
+Nodes (32): ZONEN, leeresZiel, leer, PageChromeContext, PageChromeContextValue, SetBreadcrumbLabel(), usePageChrome(), PflockMarker() (+24 more)
 
 ### Community 36 - "base_app_builder"
 Cohesion: 0.50
@@ -371,19 +374,19 @@ Nodes (3): app(), parallel_execute_fn_survives_wal_connection_init(), Arc
 
 ### Community 39 - "PasswortWiederherstellung"
 Cohesion: 0.09
-Nodes (25): KontoId, Uuid, from_parts_roundtrip(), gilt_60_minuten(), jetzt(), NeuePasswortWiederherstellung, PasswortWiederherstellung, PasswortWiederherstellungId (+17 more)
+Nodes (23): from_parts_roundtrip(), gilt_60_minuten(), jetzt(), NeuePasswortWiederherstellung, PasswortWiederherstellung, PasswortWiederherstellungId, DateTime, Option (+15 more)
 
-### Community 40 - "SQLiteKontoRepository"
-Cohesion: 0.20
-Nodes (10): konto_from_row(), Arc, EmailAdresse, Mutex, Option, RepositoryResult, Row, Transaction (+2 more)
+### Community 40 - "Konto"
+Cohesion: 0.12
+Nodes (12): KontoRepository, Konto, konto_from_row(), Arc, EmailAdresse, Mutex, Option, RepositoryResult (+4 more)
 
 ### Community 42 - "CookieConfig"
 Cohesion: 0.19
 Nodes (16): attribute(), clear_cookie_header(), CookieConfig, das_löschen_setzt_max_age_auch_ohne_lebensdauer(), das_löschen_trifft_dasselbe_cookie(), die_attribute_sind_vollständig(), die_lebensdauer_und_die_session_variante_setzen_max_age(), die_vorgaben_schreiben_nur_das_nötigste() (+8 more)
 
 ### Community 44 - "claims_for_session"
-Cohesion: 0.15
-Nodes (15): claims_for_session(), new_session(), DateTime, NeueSession, Utc, RegistrierungAbschließen, RegistrierungStarten, RegistrierungStartenFehler (+7 more)
+Cohesion: 0.08
+Nodes (29): Report, Result, Anmeldung, AnmeldungFehler, EmailAdresse, claims_for_session(), new_session(), DateTime (+21 more)
 
 ### Community 46 - ".get_current_version"
 Cohesion: 0.21
@@ -394,24 +397,24 @@ Cohesion: 0.25
 Nodes (7): File map, leaf to root, Frontend API seam, Frontend state rules, Order to work in, Vertical slices, Where things belong, Why `RepoStorage` has that pointer wiring
 
 ### Community 48 - "RundeId"
-Cohesion: 0.13
-Nodes (16): ac2_drei_fehlschüsse_null(), ac5_ab_viertem_pfeil_null(), anonymisieren_entfernt_den_benutzer(), die_faltung_ist_unabhängig_von_der_eingabereihenfolge(), ergebnis(), from_parts_roundtrip(), menge(), pfeil_null_wird_abgelehnt() (+8 more)
+Cohesion: 0.07
+Nodes (29): Wertungszone, schuss(), ac2_drei_fehlschüsse_null(), ac5_ab_viertem_pfeil_null(), anonymisieren_entfernt_den_benutzer(), die_faltung_ist_unabhängig_von_der_eingabereihenfolge(), ergebnis(), from_parts_roundtrip() (+21 more)
 
 ### Community 49 - "konto/session.rs"
-Cohesion: 0.20
-Nodes (17): abgelaufene_session_ist_ungültig(), eine_verbrauchte_session_kann_nicht_erneut_erneuert_werden(), eine_widerrufene_session_kann_nicht_erneuert_werden(), erneuerung_macht_ok_zu_refreshed_und_legt_die_folge_an(), from_parts_roundtrip_über_alle_drei_zustände(), jetzt(), neue_session_ist_gültig_und_läuft_in_einem_monat_ab(), Refreshed (+9 more)
+Cohesion: 0.27
+Nodes (12): abgelaufene_session_ist_ungültig(), eine_verbrauchte_session_kann_nicht_erneut_erneuert_werden(), eine_widerrufene_session_kann_nicht_erneuert_werden(), erneuerung_macht_ok_zu_refreshed_und_legt_die_folge_an(), from_parts_roundtrip_über_alle_drei_zustände(), jetzt(), neue_session_ist_gültig_und_läuft_in_einem_monat_ab(), Revoked (+4 more)
 
 ### Community 50 - "components.json"
 Cohesion: 0.11
 Nodes (17): aliases, components, hooks, lib, ui, utils, iconLibrary, rsc (+9 more)
 
-### Community 51 - "Harness"
-Cohesion: 0.16
-Nodes (12): build(), fremder_schluessel(), Harness, jetzt(), AppBuilder, Arc, DateTime, Duration (+4 more)
+### Community 51 - "domain/mod.rs"
+Cohesion: 0.13
+Nodes (10): AnlageVerwaltung, IntoIterator, Item, Zielergebnis, Rundenergebnis, Punkte, Add, I (+2 more)
 
-### Community 52 - "App"
-Cohesion: 0.07
-Nodes (59): assert_status_ok(), base_app_builder(), befördere_zum_systemadministrator(), cookie_response(), E2eHarness, json_response(), LogandaimApiTestClient, neuer_benutzer() (+51 more)
+### Community 52 - "LogandaimApiTestClient"
+Cohesion: 0.27
+Nodes (10): cookie_response(), json_response(), LogandaimApiTestClient, Option, StatusCode, Value, Vec, Route (+2 more)
 
 ### Community 53 - "SQLiteSchussRepository"
 Cohesion: 0.17
@@ -425,21 +428,21 @@ Nodes (28): alle_felder_duerfen_fehlen(), AnlageKontakt, jedes_feld_ist_einzeln_
 Cohesion: 0.14
 Nodes (14): falscher_schlüssel_wird_abgelehnt(), gekipptes_byte_wird_abgelehnt(), jedes_byte_ist_signierbar(), kaputtes_pem_wird_abgelehnt(), keypair(), Debug, Formatter, KontoFehler (+6 more)
 
-### Community 56 - "cn"
-Cohesion: 0.07
-Nodes (54): GridPaper(), Legend(), LegendEntry, RingMark, RingPlot(), ScaleBar(), DataFiguresSection(), SeriesPlot() (+46 more)
+### Community 56 - "demo-page.tsx"
+Cohesion: 0.06
+Nodes (64): CHECKPOINTS, MESSREIHE, Row, START_ROWS, statusVariant, Zone, ZONEN, InkedControlsSection() (+56 more)
 
 ### Community 57 - "logandaim.at — Product Charter"
 Cohesion: 0.13
 Nodes (15): Accessibility, Decision log, Domain terms, Import, Language and copy, logandaim.at — Product Charter, Milestones, MVP scope (+7 more)
 
 ### Community 58 - "dependencies"
-Cohesion: 0.07
-Nodes (28): dependencies, class-variance-authority, clsx, @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities, lucide-react, next (+20 more)
+Cohesion: 0.04
+Nodes (47): dependencies, class-variance-authority, clsx, @dnd-kit/core, @dnd-kit/sortable, @dnd-kit/utilities, lucide-react, next (+39 more)
 
 ### Community 59 - "DateTime"
-Cohesion: 0.15
-Nodes (11): NeueSession, RefreshedSession, RenewableSession, RevokedSession, DateTime, Error, Into, Result (+3 more)
+Cohesion: 0.18
+Nodes (8): NeueSession, RefreshedSession, RenewableSession, RevokedSession, DateTime, Into, TryFrom, Utc
 
 ### Community 61 - "cases/stammdaten.rs"
 Cohesion: 0.13
@@ -450,16 +453,16 @@ Cohesion: 0.15
 Nodes (12): Acceptance criteria, Decision log, Open questions, Outcome, Problem, Requirements, Revision history, Roles (+4 more)
 
 ### Community 63 - "Mail"
-Cohesion: 0.06
-Nodes (34): AsyncSmtpTransport, NullMailSender, ResultReport, adresse(), der_link_wird_aus_der_basis_url_und_der_route_gebaut(), ein_schrägstrich_am_ende_erzeugt_keinen_doppelten(), Mail, MailArt (+26 more)
+Cohesion: 0.07
+Nodes (32): AsyncSmtpTransport, NullMailSender, ResultReport, adresse(), der_link_wird_aus_der_basis_url_und_der_route_gebaut(), ein_schrägstrich_am_ende_erzeugt_keinen_doppelten(), Mail, MailArt (+24 more)
 
 ### Community 64 - "layout.tsx"
 Cohesion: 0.13
 Nodes (12): DEV_PAGE_EXTENSIONS, PROD_PAGE_EXTENSIONS, geistMono, inter, lora, metadata, Providers(), AppChrome() (+4 more)
 
 ### Community 65 - "AnlageId"
-Cohesion: 0.10
-Nodes (17): LogandaimAppApi, Anlage, AnlagenZeile, Arc, Benutzer, Option, ParcoursÖffentlich, ResultReport (+9 more)
+Cohesion: 0.11
+Nodes (14): LogandaimAppApi, Anlage, AnlagenZeile, Arc, ParcoursÖffentlich, ResultReport, Runde, RundenZeile (+6 more)
 
 ### Community 66 - "Runde"
 Cohesion: 0.09
@@ -477,9 +480,9 @@ Nodes (15): 1. Executive Summary & Vision, 2. Stakeholder & Rollenmodell, 3.1 Do
 Cohesion: 0.39
 Nodes (8): logandaim-api, logandaim-core, logandaim-fakes, logandaim-filesystemstore, logandaim-server, logandaim-smtp, logandaim-sqlite, molting
 
-### Community 70 - "Session"
-Cohesion: 0.11
-Nodes (17): Session, SessionId, FakeSessionRepository, NeueSession, option_datetime(), Arc, DateTime, Mutex (+9 more)
+### Community 70 - "SQLiteSessionRepository"
+Cohesion: 0.20
+Nodes (12): option_datetime(), Arc, DateTime, Mutex, Option, RepositoryResult, Row, Transaction (+4 more)
 
 ### Community 71 - "preis.rs"
 Cohesion: 0.07
@@ -494,8 +497,8 @@ Cohesion: 0.15
 Nodes (17): InstrumentedThrottle, DateTime, ResultReport, Utc, ClientKey, DateTime, Duration, Into (+9 more)
 
 ### Community 74 - "package.json"
-Cohesion: 0.04
-Nodes (48): name, private, version, ComposedPageSection(), DemoPage(), CHECKPOINTS, CheckpointSliderSection(), INITIAL_ROWS (+40 more)
+Cohesion: 0.05
+Nodes (39): name, private, version, ComposedPageSection(), DemoPage(), CHECKPOINTS, INITIAL_ROWS, Row (+31 more)
 
 ### Community 75 - "diffx-finish-review"
 Cohesion: 1.00
@@ -506,8 +509,8 @@ Cohesion: 0.40
 Nodes (4): ADR-0003: Design system and dev-only gallery, Consequences, Context, Decision
 
 ### Community 77 - "FakeDatastore"
-Cohesion: 0.09
-Nodes (24): FakeAnlageRepository, FakeBenutzerRepository, FakeDatastore, FakeEmailBestätigungRepository, FakeKontoRepository, FakeRundeRepository, FakeSchussRepository, Anlage (+16 more)
+Cohesion: 0.08
+Nodes (26): FakeAnlageRepository, FakeBenutzerRepository, FakeDatastore, FakeKontoRepository, FakeMailSender, FakeRundeRepository, FakeSchussRepository, FakeSessionRepository (+18 more)
 
 ### Community 80 - ".finish"
 Cohesion: 0.29
@@ -522,8 +525,12 @@ Cohesion: 0.12
 Nodes (16): Agents, Before the first release, Branches, CHANGELOG scope, Checks, Code comments, Commits, Contributing and project management (+8 more)
 
 ### Community 83 - "spend_open_recoveries"
-Cohesion: 0.13
-Nodes (16): RegistrierungAbschlussRequest, Report, Result, AnmeldungFehler, PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen, PasswortWiederherstellenFehler (+8 more)
+Cohesion: 0.18
+Nodes (11): PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen, PasswortWiederherstellenFehler, DateTime, EmailAdresse, Error, Report (+3 more)
+
+### Community 84 - "HttpLogandaimApi"
+Cohesion: 0.17
+Nodes (4): HttpLogandaimApi, unwrap(), AuthPhase, checking
 
 ### Community 86 - "schema/stammdaten.rs"
 Cohesion: 0.10
@@ -538,20 +545,20 @@ Cohesion: 0.33
 Nodes (4): main(), Box, RepositoryResult, Unimplemented
 
 ### Community 89 - "FakeUnitOfWork"
-Cohesion: 0.20
+Cohesion: 0.22
 Nodes (10): FakeUnitOfWork, FakeUnitOfWorkProvider, Arc, Box, Default, Mutex, RepositoryResult, Self (+2 more)
 
-### Community 90 - "domain/mod.rs"
+### Community 90 - "ziel.rs"
 Cohesion: 0.10
-Nodes (18): AnlageVerwaltung, aendern_haelt_die_identitaet(), archiviertes_ziel_verweigert_jede_aenderung(), from_parts_roundtrip(), NeuesZiel, AsRef, Err, FromStr (+10 more)
+Nodes (17): aendern_haelt_die_identitaet(), archiviertes_ziel_verweigert_jede_aenderung(), from_parts_roundtrip(), NeuesZiel, AsRef, Err, FromStr, Result (+9 more)
 
-### Community 91 - "ZielId"
-Cohesion: 0.09
-Nodes (27): Zielverwendung, reihenfolge_aendern_haelt_die_zielmenge(), ziel(), from_parts_roundtrip(), leerer_name_wird_abgelehnt(), ParcoursSnapshot, pflock(), quelle() (+19 more)
+### Community 91 - "ParcoursSnapshot"
+Cohesion: 0.10
+Nodes (22): from_parts_roundtrip(), leerer_name_wird_abgelehnt(), ParcoursSnapshot, pflock(), quelle(), AsRef, Into, Option (+14 more)
 
 ### Community 92 - "String"
-Cohesion: 0.21
-Nodes (19): From, String, LogandaimApiSpec, Anlage, AnlagenZeile, Benutzer, From, Json (+11 more)
+Cohesion: 0.24
+Nodes (17): From, String, LogandaimApiSpec, Anlage, AnlagenZeile, From, Json, Option (+9 more)
 
 ### Community 93 - "check-design.mjs"
 Cohesion: 0.20
@@ -573,52 +580,56 @@ Nodes (13): Migration, Error, Option, Result, Transaction, Migration, Error, Opt
 Cohesion: 0.09
 Nodes (45): Cli, cli_overlay(), ConfigError, env_or_cli_overlay_beats_file(), file_values_used_when_no_overlay(), load(), load_file(), loads_json_file() (+37 more)
 
-### Community 103 - "FakeObjectStore"
-Cohesion: 0.18
-Nodes (10): FakeObjectStore, Arc, FxHashMap, Mutex, ObjectStoreError, ObjectStream, Option, ResultReport (+2 more)
+### Community 103 - "e2e/stammdaten.rs"
+Cohesion: 0.31
+Nodes (17): befördere_zum_systemadministrator(), ac11_eine_deaktivierte_anlage_ist_lesbar_aber_nicht_schreibbar(), ac11_und_ac12_ein_ziel_ohne_historie_wird_geloescht_mit_historie_archiviert(), ac13_die_parcoursliste_ist_oeffentlich_und_zeigt_nur_aktive_parcours(), ac1_nur_ein_systemadministrator_legt_eine_anlage_an(), ac2_der_letzte_administrator_kann_nicht_entzogen_werden(), ac2_verwaltung_gewaehren_und_einen_mitarbeiter_zulassen(), ac3_ein_unangemeldetes_schreiben_antwortet_401() (+9 more)
 
 ### Community 105 - ".add_dyn"
 Cohesion: 0.23
 Nodes (12): MigrationRegistry, MigrationRegistry<dyn DownMigration<T, E>>, MigrationRegistry<dyn UpMigration<T, E>>, MigrationRegistry<M>, Arc, Default, From, I (+4 more)
 
 ### Community 106 - "UnitOfWorkImpl"
-Cohesion: 0.26
-Nodes (8): ExecutionSource, Arc<T>, Box, RepositoryResult, Send, Sync, UnitOfWorkImpl, UnitOfWorkProvider
+Cohesion: 0.23
+Nodes (9): ExecutionSource, Arc<T>, Send, Sync, UnitOfWorkImpl, UnitOfWorkProvider, RepositoryError, ResultReport (+1 more)
 
-### Community 107 - "parcours.rs"
-Cohesion: 0.09
-Nodes (28): Abstand, ac11_archivierter_parcours_verweigert_jede_aenderung(), ac4_dasselbe_ziel_darf_nur_einmal_vorkommen(), ac6_abstaende_nehmen_von_fern_nach_nah_streng_ab(), ac6_fehlende_abstaende_sind_erlaubt(), ac6_pflock_bezeichnungen_sind_eindeutig(), ac6_reihenfolge_ist_unabhaengig_von_der_farbe(), drei_pflöcke() (+20 more)
+### Community 107 - "Pflock"
+Cohesion: 0.16
+Nodes (8): NeuerParcours, ParcoursName, Pflock, PflockBezeichnung, PflockFarbe, AsRef, S, Self
 
-### Community 108 - "format_datetime"
-Cohesion: 0.19
-Nodes (13): benutzer_from_row(), Arc, Benutzer, Mutex, Option, RepositoryResult, Row, Transaction (+5 more)
+### Community 108 - "SQLiteBenutzerRepository"
+Cohesion: 0.24
+Nodes (9): benutzer_from_row(), Arc, Benutzer, Mutex, Option, RepositoryResult, Row, Transaction (+1 more)
+
+### Community 109 - "LockedUnitOfWorkImpl"
+Cohesion: 0.38
+Nodes (3): LockedUnitOfWorkImpl, Box, RepositoryResult
 
 ### Community 110 - "NewSessionResponse"
 Cohesion: 0.18
 Nodes (17): InternalServerError, Self, EndSessionResponse, EndSessionResponse<T>, NewSessionResponse, refresh_cookie_config(), From, Json (+9 more)
 
-### Community 111 - "user.rs"
+### Community 111 - "AnlageVerwaltungRolle"
 Cohesion: 0.16
-Nodes (13): Beförderung, BenutzerAnsicht, BenutzerAnzeigen, BenutzerAnzeigenFehler, BenutzerLöschen, BenutzerLöschenFehler, Benutzer, EmailAdresse (+5 more)
+Nodes (8): AnlageArchiviert, AnlageVerwaltung, AnlageVerwaltungRolle, Archiviert, DateTime, FromStr, Self, Utc
 
-### Community 112 - "ObjectStore"
-Cohesion: 0.23
-Nodes (11): collect_object(), ObjectStore, ObjectStoreError, once_stream(), ObjectStream, Option, Result, ResultReport (+3 more)
+### Community 112 - "AnlageAktiv"
+Cohesion: 0.26
+Nodes (6): AnlageAktiv, AnlageFehler, Err, Pflock, Result, Zielplatzierung
 
 ### Community 113 - "EmailAdresse"
 Cohesion: 0.21
 Nodes (8): domain::EmailAdresse, EmailAdresse, Error, Example, From, Result, Self, TryFrom
 
-### Community 114 - "app-shell.tsx"
-Cohesion: 0.13
-Nodes (22): Sidebar(), SidebarLink(), SidebarProps, DropdownMenu, DropdownMenuContent(), DropdownMenuGroup, DropdownMenuItem(), DropdownMenuLabel() (+14 more)
+### Community 114 - "navigation.ts"
+Cohesion: 0.16
+Nodes (15): Sidebar(), SidebarLink(), SidebarProps, BreadcrumbSegment, breadcrumbsForPathname(), homeNavItem, isExactPath(), isNavItemActive() (+7 more)
 
 ### Community 115 - "Versioned"
-Cohesion: 0.07
-Nodes (21): AnlageRepository, BenutzerRepository, EmailBestätigungRepository, KontoRepository, PasswortWiederherstellungRepository, RepositoryError, Anlage, Benutzer (+13 more)
+Cohesion: 0.05
+Nodes (20): AnlageRepository, BenutzerRepository, EmailBestätigungRepository, PasswortWiederherstellungRepository, RepositoryError, Anlage, Benutzer, EmailAdresse (+12 more)
 
 ### Community 116 - "BenutzerId"
-Cohesion: 0.15
+Cohesion: 0.14
 Nodes (15): befoerderung_ist_eine_domain_mutation(), Benutzer, BenutzerId, from_parts_roundtrip(), jetzt(), NeuerBenutzer, registrierung_ist_immer_ein_benutzer(), Rolle (+7 more)
 
 ### Community 117 - "anlage_aus_zeile"
@@ -633,9 +644,9 @@ Nodes (5): Acceptance criteria, Behavior, Checklist, Notes, Test evidence
 Cohesion: 0.06
 Nodes (4): LogandaimApi, AnlageVerwaltungRolle, Administrator, Mitarbeiter
 
-### Community 120 - "SQLiteEmailBestätigungRepository"
-Cohesion: 0.22
-Nodes (10): bestätigung_from_row(), Arc, EmailAdresse, Mutex, Option, RepositoryResult, Row, Transaction (+2 more)
+### Community 120 - "parcours.rs"
+Cohesion: 0.19
+Nodes (11): ac11_archivierter_parcours_verweigert_jede_aenderung(), ac4_dasselbe_ziel_darf_nur_einmal_vorkommen(), ac6_abstaende_nehmen_von_fern_nach_nah_streng_ab(), ac6_fehlende_abstaende_sind_erlaubt(), ac6_pflock_bezeichnungen_sind_eindeutig(), ac6_reihenfolge_ist_unabhaengig_von_der_farbe(), drei_pflöcke(), ein_parcours_braucht_mindestens_einen_pflock() (+3 more)
 
 ### Community 121 - "Ländercode"
 Cohesion: 0.11
@@ -654,28 +665,28 @@ Cohesion: 0.33
 Nodes (5): Backend Abstraction, Developer Experience, State Management Transition, UI Framework Upgrade, YAMS Frontend Migration Specification
 
 ### Community 125 - "Benutzer"
-Cohesion: 0.36
-Nodes (6): Benutzer, NeueSession, EmailAdresse, From, Self, Uuid
+Cohesion: 0.31
+Nodes (8): Benutzer, BenutzerRolle, NeueSession, EmailAdresse, From, Self, Uuid, DomainBenutzerRolle
 
 ### Community 126 - "Runde"
 Cohesion: 0.10
-Nodes (17): abschliessen_ist_einmalig(), anonymisieren_laesst_den_snapshot_unberuehrt(), jetzt(), NeueRunde, DateTime, Err, FromStr, Option (+9 more)
+Nodes (16): abschliessen_ist_einmalig(), anonymisieren_laesst_den_snapshot_unberuehrt(), jetzt(), NeueRunde, DateTime, Err, FromStr, Option (+8 more)
 
 ### Community 127 - "logandaim-api.ts"
-Cohesion: 0.09
-Nodes (26): JsonClient, AnlageAdresse, AnlageErstellungInput, AnlageKontakt, AnlagenZeile, AnlageVerwaltung, Benutzer, Parcours (+18 more)
+Cohesion: 0.06
+Nodes (41): JsonClient, AnlageAdresse, AnlageKontakt, AnlagenZeile, AnlageVerwaltung, Benutzer, Parcours, ParcoursInput (+33 more)
 
 ### Community 128 - "Anlage-Anfrage — Requesting a new Anlage"
 Cohesion: 0.18
 Nodes (11): Acceptance criteria, Anlage-Anfrage — Requesting a new Anlage, Decision log, Domain terms and business rules, Open questions, Outcome, Problem, Revision history (+3 more)
 
 ### Community 129 - "SecretTokenHash"
-Cohesion: 0.13
-Nodes (5): hash(), SessionIn<S>, constant_time_eq(), From, SecretTokenHash
+Cohesion: 0.17
+Nodes (4): hash(), SessionIn<S>, From, SecretTokenHash
 
-### Community 131 - "SessionAusgestellt"
-Cohesion: 0.13
-Nodes (17): Benutzer, SessionAusgestellt, Abmeldung, AbmeldungFehler, Erneuerung, ErneuerungFehler, Erneuerungsausgang, revoke_all_sessions() (+9 more)
+### Community 131 - "revoke_all_sessions"
+Cohesion: 0.16
+Nodes (12): Abmeldung, AbmeldungFehler, ErneuerungFehler, Erneuerungsausgang, revoke_all_sessions(), DateTime, Error, F (+4 more)
 
 ### Community 132 - "StructuredError"
 Cohesion: 0.33
@@ -687,7 +698,7 @@ Nodes (20): C, From, Json, ObjectStream, PlainText, Report, Result, Self (+12 mo
 
 ### Community 134 - "e2e/konto.rs"
 Cohesion: 0.13
-Nodes (21): ac10_wiederherstellung_antwortet_fuer_jede_adresse_gleich(), ac11_neues_passwort_beendet_alle_sessions_und_ist_einmalig(), ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei(), ac12_löschung_ohne_bestätigung_oder_mit_falschem_passwort_scheitert(), ac14_fremden_benutzer_liest_nur_ein_systemadministrator(), ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client(), ac17_signatur_wird_gegen_den_schlüssel_der_session_zeile_geprüft(), ac17_widerrufene_session_wird_abgelehnt() (+13 more)
+Nodes (20): ac10_wiederherstellung_antwortet_fuer_jede_adresse_gleich(), ac11_neues_passwort_beendet_alle_sessions_und_ist_einmalig(), ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei(), ac12_löschung_ohne_bestätigung_oder_mit_falschem_passwort_scheitert(), ac15_drossel_greift_erst_nach_zwanzig_fehlversuchen_pro_client(), ac17_signatur_wird_gegen_den_schlüssel_der_session_zeile_geprüft(), ac17_widerrufene_session_wird_abgelehnt(), ac18_abgelaufenes_access_token_wird_abgelehnt() (+12 more)
 
 ### Community 135 - "cases/runde.rs"
 Cohesion: 0.24
@@ -701,24 +712,24 @@ Nodes (4): libsql_error_to_persistence_error(), migration_error_to_persistence_e
 Cohesion: 0.40
 Nodes (5): ADR-0001: Baseline architecture, Appendix: spelling German identifiers, Consequences, Context, Decision
 
-### Community 138 - "HttpLogandaimApi"
-Cohesion: 0.20
-Nodes (4): HttpLogandaimApi, Anlage, Runde, ZielInput
+### Community 138 - ".authenticated"
+Cohesion: 0.19
+Nodes (4): Anlage, AnlageErstellungInput, Runde, ZielInput
 
-### Community 139 - "devDependencies"
-Cohesion: 0.20
-Nodes (10): devDependencies, babel-plugin-react-compiler, @biomejs/biome, openapi-typescript, tailwindcss, @tailwindcss/postcss, @types/node, @types/react (+2 more)
+### Community 139 - "ZielId"
+Cohesion: 0.27
+Nodes (9): Abstand, PflockId, reihenfolge_aendern_haelt_die_zielmenge(), Option, Vec, ziel(), Zielplatzierung, ZielId (+1 more)
 
-### Community 140 - "anlage/mod.rs"
-Cohesion: 0.06
-Nodes (33): ac2_die_letzte_administrator_verwaltung_kann_nicht_entzogen_werden(), ac2_eine_verwaltung_existiert_nur_einmal_pro_benutzer(), Aktiv, AnlageArchiviert, AnlageIn, AnlageIn<S>, AnlageName, AnlageNameLeer (+25 more)
+### Community 140 - "AnlageName"
+Cohesion: 0.16
+Nodes (8): AnlageIn, AnlageName, AnlageNameLeer, NeueAnlage, AnlageAdresse, AnlageKontakt, AsRef, S
 
 ### Community 141 - "dates.ts"
 Cohesion: 0.23
 Nodes (5): datetimeLocalForDate(), defaultDatetimeLocal(), isoDateFromInstant(), todayIsoDate(), toIsoDate()
 
 ### Community 142 - "SQLiteUnitOfWork"
-Cohesion: 0.15
+Cohesion: 0.16
 Nodes (8): Arc, Box, Mutex, Option, RepositoryResult, Self, Transaction, SQLiteUnitOfWork
 
 ### Community 144 - "Signing"
@@ -746,20 +757,20 @@ Cohesion: 0.24
 Nodes (7): InstrumentedMailSender, InstrumentedObjectStore, InstrumentedPdfRenderer, Arc, ObjectStoreError, ObjectStream, Option
 
 ### Community 151 - "Versioned<T>"
-Cohesion: 0.11
-Nodes (13): Clone, Debug, Deref, Option, Self, T, Target, Versioned<T> (+5 more)
+Cohesion: 0.13
+Nodes (10): Clone, Debug, Deref, T, Target, Versioned<T>, DerefMut, FnOnce (+2 more)
 
-### Community 152 - "Konto"
+### Community 152 - "KontoId"
 Cohesion: 0.21
-Nodes (12): email(), from_parts_roundtrip(), hash(), jetzt(), Konto, neues_konto_bestätigt_die_adresse(), NeuesKonto, DateTime (+4 more)
+Nodes (12): email(), from_parts_roundtrip(), hash(), jetzt(), KontoId, neues_konto_bestätigt_die_adresse(), NeuesKonto, DateTime (+4 more)
 
 ### Community 153 - "ADR-0002: Session cookie auth across frontend and API origins"
 Cohesion: 0.20
 Nodes (10): ADR-0002: Session cookie auth across frontend and API origins, Alternatives considered, API surface (sketch), Appendix: implementation sketch (non-normative), Authorisation (sketch), Consequences, Context, Data model (sketch) (+2 more)
 
 ### Community 154 - ".from"
-Cohesion: 0.14
-Nodes (13): Cookie, AnmeldungRequest, BenutzerLöschungRequest, PasswortVergessenRequest, PasswortWiederherstellenRequest, RegistrierungStartRequest, EmailAdresse, RealIp (+5 more)
+Cohesion: 0.15
+Nodes (17): Cookie, AnmeldungRequest, BenutzerLöschungRequest, PasswortVergessenRequest, PasswortWiederherstellenRequest, RegistrierungAbschlussRequest, RegistrierungStartRequest, EmailAdresse (+9 more)
 
 ### Community 155 - "m1-overseer.md"
 Cohesion: 0.29
@@ -773,53 +784,49 @@ Nodes (5): address-review, fix-ci, implement, merge-base, Modes
 Cohesion: 0.22
 Nodes (17): abgelaufenes_token_wird_abgelehnt(), AccessTokenClaims, claims(), fenster_mit_exp_vor_iat_wird_abgelehnt(), gültiges_fenster_wird_akzeptiert(), herkunft_muss_exakt_stimmen(), iat_in_der_zukunft_wird_abgelehnt(), iat_innerhalb_der_toleranz_wird_akzeptiert() (+9 more)
 
-### Community 158 - "schema.ts"
-Cohesion: 0.10
-Nodes (18): ApiError, AnlageZustand, Aktiv, Archiviert, components, $defs, operations, paths (+10 more)
-
-### Community 159 - "ParcoursId"
-Cohesion: 0.12
-Nodes (19): ac11_archivieren_entfernt_das_ziel_aus_den_parcours(), ac12_entfernen_loescht_das_ziel_und_seine_platzierungen(), ac4_ein_parcours_verwendet_nur_ziele_dieser_anlage(), ac4_ein_ziel_kann_in_mehreren_parcours_liegen(), ac7_der_snapshot_ist_eine_wertkopie(), adresse(), Anlage, AnlageAktiv (+11 more)
+### Community 159 - "anlage/mod.rs"
+Cohesion: 0.19
+Nodes (17): ac11_archivieren_entfernt_das_ziel_aus_den_parcours(), ac12_entfernen_loescht_das_ziel_und_seine_platzierungen(), ac2_die_letzte_administrator_verwaltung_kann_nicht_entzogen_werden(), ac2_eine_verwaltung_existiert_nur_einmal_pro_benutzer(), ac4_ein_parcours_verwendet_nur_ziele_dieser_anlage(), ac4_ein_ziel_kann_in_mehreren_parcours_liegen(), ac7_der_snapshot_ist_eine_wertkopie(), Aktiv (+9 more)
 
 ### Community 160 - "m1-reviewer.md"
 Cohesion: 0.40
 Nodes (4): Do not touch the working copy, Mode re-review, Mode review, Reply (caveman, ≤3 lines)
 
-### Community 161 - "UseCase"
-Cohesion: 0.10
-Nodes (33): Context, Output, ResultReport, UseCase, AnlageAnsicht, AnlageAnzeigen, AnlageBeschreibendeDatenÄndern, AnlageDeaktivieren (+25 more)
-
-### Community 162 - "menge"
+### Community 161 - "ParcoursFehler"
 Cohesion: 0.31
-Nodes (8): ac8_die_faltung_ist_unabhaengig_von_der_menge_reihenfolge(), ac8_die_summe_ist_die_summe_der_zielergebnisse(), ac8_ein_ziel_ausserhalb_des_snapshots_zaehlt_nicht(), ac8_ziele_ohne_schuss_werden_uebersprungen(), eine_leere_runde_hat_null(), menge(), Wertungszone, schuss()
+Nodes (4): from_parts_roundtrip(), Parcours, ParcoursFehler, Result
+
+### Community 162 - "domain/runde.rs"
+Cohesion: 0.31
+Nodes (7): ac8_die_faltung_ist_unabhaengig_von_der_menge_reihenfolge(), ac8_die_summe_ist_die_summe_der_zielergebnisse(), ac8_ein_ziel_ausserhalb_des_snapshots_zaehlt_nicht(), ac8_ziele_ohne_schuss_werden_uebersprungen(), eine_leere_runde_hat_null(), menge(), RundeZustandUnbekannt
 
 ### Community 163 - "InstrumentedUnitOfWork"
-Cohesion: 0.17
+Cohesion: 0.18
 Nodes (5): InstrumentedUnitOfWork, Box, Pin, RepositoryResult, Self
 
 ### Community 164 - "Zuordnung"
 Cohesion: 0.26
 Nodes (9): domain::Wertungszone, From, Option, Self, Uuid, Schuss, Wertungszone, Zielergebnis (+1 more)
 
-### Community 165 - ".begin"
-Cohesion: 0.50
-Nodes (3): RepositoryError, ResultReport, SQLiteInstance
+### Community 165 - "Deferred capabilities"
+Cohesion: 0.17
+Nodes (12): Account security, Administration, Auth audit, Deferred capabilities, Email change, Email delivery, Email verification, External identity providers (+4 more)
 
-### Community 166 - ".poll_next"
-Cohesion: 0.22
-Nodes (8): FileStream, Context, Item, Pin, Self, File, Poll, Stream
+### Community 166 - "Session"
+Cohesion: 0.14
+Nodes (14): KontoFehler, Refreshed, Renewable, Error, From, Option, Result, S (+6 more)
 
-### Community 167 - "react"
-Cohesion: 0.09
-Nodes (14): AuthError(), LoginPage(), PasswordPage(), RegistrationPage(), useMailToken(), AlertProps, alertVariants, iconColour (+6 more)
+### Community 167 - "PasswordPage"
+Cohesion: 0.18
+Nodes (3): PasswordPage(), RegistrationPage(), useMailToken()
 
-### Community 168 - "scripts"
-Cohesion: 0.22
-Nodes (9): scripts, build, check:format, check:lint, check:ts, dev, fix:format, fix:lint (+1 more)
+### Community 168 - "Ok"
+Cohesion: 0.28
+Nodes (5): Benutzer, Ok, Default, Example, Self
 
-### Community 169 - "client_key"
-Cohesion: 0.57
-Nodes (7): andere_ip_oder_anderer_client_ergeben_andere_schlüssel(), client_key(), fehlende_header_sind_kein_fehler(), gleiche_kennung_ergibt_gleichen_schlüssel(), ip(), Option, RealIp
+### Community 169 - "Self"
+Cohesion: 0.28
+Nodes (4): Option, Self, UnitOfWork<'a>, Ordering
 
 ### Community 170 - "Migration"
 Cohesion: 0.28
@@ -837,41 +844,49 @@ Nodes (7): createLogandaimApi(), AuthSession, LogandaimApiContext, LogandaimApiC
 Cohesion: 0.33
 Nodes (4): bearer_token(), LogandaimApiSpec, Option, ResultReport
 
-### Community 174 - "Zuordnung"
-Cohesion: 0.39
-Nodes (4): DateTime, Option, Utc, Zuordnung
+### Community 174 - "neuer_benutzer"
+Cohesion: 0.37
+Nodes (15): neuer_benutzer(), ac7_ein_archivierter_parcours_startet_keine_runde(), ac7_ein_unbekannter_parcours_antwortet_404(), ac7_eine_runde_startet_nur_angemeldet(), ac9_die_rundenliste_zeigt_nur_eigene_runden(), ac9_ein_schuss_ausserhalb_des_snapshots_antwortet_409(), ac9_ein_schuss_in_eine_fremde_runde_antwortet_403(), ac9_eine_beendete_runde_nimmt_keinen_schuss_mehr_an() (+7 more)
 
 ### Community 175 - "RundeStartenRequest"
 Cohesion: 0.38
 Nodes (5): From, Self, Uuid, RundeStarten, RundeStartenRequest
 
-### Community 176 - "Specifications"
-Cohesion: 0.29
-Nodes (7): Language, Layout, Legacy, Lifecycle, Specifications, Traceability, Writing a feature spec
+### Community 176 - "Zuordnung"
+Cohesion: 0.39
+Nodes (4): DateTime, Option, Utc, Zuordnung
 
-### Community 177 - "KontoFehler"
+### Community 178 - "BenutzerRolle"
 Cohesion: 0.67
-Nodes (3): KontoFehler, From, SessionNotRenewable
+Nodes (3): BenutzerRolle, Benutzer, Systemadministrator
+
+### Community 179 - "E2eHarness"
+Cohesion: 0.24
+Nodes (9): assert_status_ok(), base_app_builder(), E2eHarness, Arc, Duration, Self, test_konfiguration(), test_signing_key() (+1 more)
+
+### Community 180 - "App"
+Cohesion: 0.23
+Nodes (8): App, Arc, Box, Context, F, ResultReport, O, U
 
 ## Knowledge Gaps
-- **494 isolated node(s):** `ValidationError`, `LogandaimApiSpec`, `AnlageVerwaltungRolleUnbekannt`, `ZustandUnbekannt`, `KontoFehler` (+489 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1096 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **496 isolated node(s):** `ValidationError`, `LogandaimApiSpec`, `AnlageVerwaltungRolleUnbekannt`, `ZustandUnbekannt`, `KontoFehler` (+491 more)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 1091 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **13 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `String` connect `String` to `SecretTokenHash`, `arc_up`, `SessionAusgestellt`, `StructuredError`, `StreamBinaryResponse`, `e2e/konto.rs`, `anlage/mod.rs`, `in_memory_object_store.rs`, `token.rs`, `Signing`, `InMemorySigning`, `KlartextPasswort`, `SQLiteRundeRepository`, `parse_uuid`, `Konto`, `.from`, `ContextPorts`, `AccessTokenClaims`, `jwt.rs`, `cases/konto.rs`, `Zuordnung`, `CookieConfig`, `konto/session.rs`, `Harness`, `App`, `SQLiteSchussRepository`, `domain/kontakt.rs`, `Signature`, `DateTime`, `Mail`, `AnlageId`, `Runde`, `Session`, `preis.rs`, `ClientKey`, `StammdatenFehler`, `spend_open_recoveries`, `schema/stammdaten.rs`, `mailpit.rs`, `FakeUnitOfWork`, `domain/mod.rs`, `ZielId`, `tests/throttle.rs`, `config.rs`, `FakeObjectStore`, `parcours.rs`, `format_datetime`, `NewSessionResponse`, `EmailAdresse`, `anlage_aus_zeile`, `Ländercode`, `Benutzer`?**
-  _High betweenness centrality (0.292) - this node is a cross-community bridge._
-- **Why does `BenutzerId` connect `BenutzerId` to `SecretTokenHash`, `SessionAusgestellt`, `ExecutionContext`, `anlage/mod.rs`, `application/auth.rs`, `SQLiteRundeRepository`, `Konto`, `AccessTokenClaims`, `ParcoursId`, `jwt.rs`, `UseCase`, `menge`, `cases/konto.rs`, `SQLiteKontoRepository`, `claims_for_session`, `Zuordnung`, `RundeId`, `konto/session.rs`, `SQLiteSchussRepository`, `DateTime`, `cases/stammdaten.rs`, `AnlageId`, `Session`, `FakeDatastore`, `StammdatenFehler`, `String`, `format_datetime`, `user.rs`, `Versioned`, `anlage_aus_zeile`, `Runde`?**
-  _High betweenness centrality (0.086) - this node is a cross-community bridge._
-- **Why does `E` connect `E` to `cases/konto.rs`, `SessionAusgestellt`, `StructuredError`, `StreamBinaryResponse`, `tests/throttle.rs`, `.add_dyn`, `NewSessionResponse`, `App`, `apply_up_migrations`, `.contextualize_with`?**
-  _High betweenness centrality (0.052) - this node is a cross-community bridge._
+- **Why does `String` connect `String` to `SecretTokenHash`, `arc_up`, `StructuredError`, `StreamBinaryResponse`, `e2e/konto.rs`, `ParcoursId`, `AnlageName`, `ObjectStore`, `token.rs`, `Signing`, `InMemorySigning`, `KlartextPasswort`, `SQLiteRundeRepository`, `parse_uuid`, `.from`, `ContextPorts`, `AccessTokenClaims`, `jwt.rs`, `ParcoursFehler`, `cases/konto.rs`, `Zuordnung`, `Session`, `Ok`, `CookieConfig`, `neuer_benutzer`, `E2eHarness`, `LogandaimApiTestClient`, `SQLiteSchussRepository`, `domain/kontakt.rs`, `Signature`, `DateTime`, `Mail`, `AnlageId`, `Runde`, `SQLiteSessionRepository`, `preis.rs`, `ClientKey`, `StammdatenFehler`, `schema/stammdaten.rs`, `mailpit.rs`, `FakeUnitOfWork`, `ziel.rs`, `ParcoursSnapshot`, `tests/throttle.rs`, `config.rs`, `e2e/stammdaten.rs`, `Pflock`, `NewSessionResponse`, `EmailAdresse`, `anlage_aus_zeile`, `Ländercode`, `Benutzer`?**
+  _High betweenness centrality (0.271) - this node is a cross-community bridge._
+- **Why does `BenutzerId` connect `BenutzerId` to `SecretTokenHash`, `revoke_all_sessions`, `ExecutionContext`, `ParcoursId`, `application/auth.rs`, `SQLiteRundeRepository`, `KontoId`, `AccessTokenClaims`, `anlage/mod.rs`, `jwt.rs`, `domain/runde.rs`, `cases/konto.rs`, `Session`, `Konto`, `claims_for_session`, `RundeId`, `konto/session.rs`, `Zuordnung`, `SQLiteSchussRepository`, `DateTime`, `cases/stammdaten.rs`, `AnlageId`, `SQLiteSessionRepository`, `FakeDatastore`, `StammdatenFehler`, `String`, `SQLiteBenutzerRepository`, `AnlageVerwaltungRolle`, `AnlageAktiv`, `Versioned`, `anlage_aus_zeile`, `Runde`?**
+  _High betweenness centrality (0.085) - this node is a cross-community bridge._
+- **Why does `E` connect `E` to `cases/konto.rs`, `revoke_all_sessions`, `StructuredError`, `StreamBinaryResponse`, `tests/throttle.rs`, `.add_dyn`, `NewSessionResponse`, `App`, `apply_up_migrations`, `.contextualize_with`?**
+  _High betweenness centrality (0.049) - this node is a cross-community bridge._
 - **Are the 5 inferred relationships involving `BenutzerId` (e.g. with `claims()` and `decode()`) actually correct?**
   _`BenutzerId` has 5 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 14 inferred relationships involving `AnlageId` (e.g. with `.anlage_anzeigen()` and `.anlage_deaktivieren()`) actually correct?**
   _`AnlageId` has 14 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `ValidationError`, `LogandaimApiSpec`, `AnlageVerwaltungRolleUnbekannt` to the rest of the system?**
-  _494 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _496 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `PdfRenderer` be split into smaller, more focused modules?**
   _Cohesion score 0.09885057471264368 - nodes in this community are weakly interconnected._

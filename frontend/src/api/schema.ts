@@ -1629,15 +1629,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * The caller's own Benutzer. `?benutzerId=` names another one and needs
-         *     `Systemadministrator`.
-         */
+        /** The authenticated Benutzer, including its account-level role. */
         get: {
             parameters: {
-                query?: {
-                    benutzerId?: string;
-                };
+                query?: never;
                 header?: {
                     Authorization?: string;
                 };
@@ -1863,6 +1858,7 @@ export interface components {
              * @example test@example.com
              */
             eMailAdresse: string;
+            rolle: components["schemas"]["BenutzerRolle"];
         };
         /**
          * BenutzerLöschungRequest
@@ -1873,6 +1869,11 @@ export interface components {
             /** @description Must be `true`; a missing flag is a refusal, never a default. */
             "best\u00E4tigt": boolean;
         };
+        /**
+         * @description Account-level role of a Benutzer.
+         * @enum {string}
+         */
+        BenutzerRolle: BenutzerRolle;
         /**
          * Ok
          * @description Acknowledgement of a request that has nothing to return.
@@ -2212,6 +2213,10 @@ export enum AnlageVerwaltungRolle {
 export enum AnlageZustand {
     Aktiv = "Aktiv",
     Archiviert = "Archiviert"
+}
+export enum BenutzerRolle {
+    Benutzer = "Benutzer",
+    Systemadministrator = "Systemadministrator"
 }
 export enum RundeZustand {
     InBearbeitung = "InBearbeitung",

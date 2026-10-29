@@ -8,7 +8,27 @@ use uuid::Uuid;
 
 use logandaim_core::domain;
 
+use logandaim_core::domain::konto::Rolle as DomainBenutzerRolle;
+
 use crate::schema::EmailAdresse;
+
+/// Account-level role of a Benutzer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub enum BenutzerRolle {
+    Benutzer,
+    Systemadministrator,
+}
+
+impl From<DomainBenutzerRolle> for BenutzerRolle {
+    fn from(rolle: DomainBenutzerRolle) -> Self {
+        match rolle {
+            DomainBenutzerRolle::Benutzer => Self::Benutzer,
+            DomainBenutzerRolle::Systemadministrator => Self::Systemadministrator,
+        }
+    }
+}
 
 /// The logged-in Benutzer as `GET /benutzer` answers it.
 #[derive(Debug, Clone)]
@@ -19,6 +39,7 @@ use crate::schema::EmailAdresse;
 pub struct Benutzer {
     pub id: Uuid,
     pub e_mail_adresse: EmailAdresse,
+    pub rolle: BenutzerRolle,
 }
 
 impl From<(domain::konto::Benutzer, domain::EmailAdresse)> for Benutzer {
@@ -26,6 +47,7 @@ impl From<(domain::konto::Benutzer, domain::EmailAdresse)> for Benutzer {
         Self {
             id: benutzer.id().0,
             e_mail_adresse: email.into(),
+            rolle: benutzer.rolle().into(),
         }
     }
 }

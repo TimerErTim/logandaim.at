@@ -7,7 +7,11 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/api/auth-provider";
 import { apiErrorMessage } from "@/api/errors";
-import { useAnlagenQuery, useStammdatenMutations } from "@/api/hooks";
+import {
+  useAnlagenQuery,
+  useBenutzerQuery,
+  useStammdatenMutations,
+} from "@/api/hooks";
 import type { AnlageErstellungInput } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { Alert } from "@/components/ui/alert";
@@ -40,6 +44,7 @@ const leer: AnlageErstellungInput = {
 export default function VerwaltungPage() {
   const phase = useAuth();
   const anlagen = useAnlagenQuery();
+  const benutzer = useBenutzerQuery();
   const { anlageErstellen } = useStammdatenMutations();
   const router = useRouter();
   const [form, setForm] = useState<AnlageErstellungInput>(leer);
@@ -48,8 +53,7 @@ export default function VerwaltungPage() {
     if (phase.status === "anonymous") router.replace("/anmeldung");
   }, [phase.status, router]);
 
-  const istSystemadministrator =
-    anlagen.data?.some((zeile) => zeile.istSystemadministrator) ?? false;
+  const istSystemadministrator = benutzer.data?.rolle === "Systemadministrator";
 
   function absenden(event: React.FormEvent) {
     event.preventDefault();

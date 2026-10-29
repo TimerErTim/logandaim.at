@@ -12,20 +12,20 @@
 //! - **Every auth response is `Cache-Control: no-store`.**
 //! - **Protected handlers answer 401 instead of running with `Anonymous`.**
 
-use error_stack::Report;
+use error_stack::{IntoReport, Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
     domain::{AnlageId, ParcoursId, RundeId, ZielId, konto::BenutzerId},
     service::{
-        AbmeldungFehler, BenutzerAnzeigenFehler, BenutzerLöschenFehler,
-        PasswortWiederherstellenFehler, RundeAbschliessenFehler, RundeAnzeigenFehler,
-        RundeStartenFehler, RundenAnzeigenFehler, SchussRegistrierenFehler, StammdatenFehler,
+        AbmeldungFehler, BenutzerLöschenFehler, PasswortWiederherstellenFehler,
+        RundeAbschliessenFehler, RundeAnzeigenFehler, RundeStartenFehler, RundenAnzeigenFehler,
+        SchussRegistrierenFehler, StammdatenFehler,
     },
 };
 use poem::web::RealIp;
 use poem_openapi::{
     OpenApi, OpenApiService, ServerObject,
-    param::{Cookie, Header, Path, Query},
+    param::{Cookie, Header, Path},
     payload::Json,
 };
 use uuid::Uuid;
@@ -634,18 +634,53 @@ impl LogandaimApiSpec {
         EndSessionResponse::from(ergebnis.map(|()| Ok { ok: true }))
     }
 
-    /// The caller's own Benutzer. `?benutzerId=` names another one and needs
-    /// `Systemadministrator`.
+    /// The authenticated Benutzer, including its account-level role.
     #[oai(path = "/benutzer", method = "get")]
     async fn benutzer_anzeigen(
         &self,
         #[oai(name = "Authorization")] authorization: Header<Option<String>>,
-        #[oai(name = "benutzerId")] benutzer_id: Query<Option<Uuid>>,
     ) -> UncachedJsonResponse<Benutzer> {
-        let ergebnis: ResultReport<Benutzer, BenutzerAnzeigenFehler> =
+        let ergebnis: ResultReport<Benutzer, StammdatenFehler> =
             match self.auth_context(authorization.0.as_deref()).await {
-                Ok(auth) => self.app_api.benutzer_anzeigen(auth, benutzer_id.0).await,
-                Err(_) => Err(Report::new(BenutzerAnzeigenFehler::NichtAngemeldet)),
+                Ok(auth) => {
+                    self.app_api
+                        .inner_app()
+                        .execute_fn(auth, async |ctx| {
+                            let benutzer_id = ctx
+                                .auth()
+                                .require_benutzer_id()
+                                .change_context(StammdatenFehler::NichtAngemeldet)?;
+                            let uow = ctx
+                                .enter()
+                                .await
+                                .change_context(StammdatenFehler::BenutzerLaden)?;
+                            let ergebnis = async {
+                                let benutzer = uow
+                                    .benutzer()
+                                    .find_by_id(benutzer_id)
+                                    .await
+                                    .map_err(IntoReport::into_report)
+                                    .change_context(StammdatenFehler::BenutzerLaden)?;
+                                let konten = uow
+                                    .konten()
+                                    .find_by_benutzer(benutzer_id)
+                                    .await
+                                    .map_err(IntoReport::into_report)
+                                    .change_context(StammdatenFehler::BenutzerLaden)?;
+                                let Some(konto) = konten.into_iter().next() else {
+                                    return Err(Report::new(StammdatenFehler::BenutzerLaden));
+                                };
+                                Ok((benutzer.into_data(), konto.email().clone()))
+                            }
+                            .await;
+                            let (benutzer, email) = uow
+                                .finish(ergebnis, StammdatenFehler::BenutzerLaden)
+                                .await?;
+                            Ok((benutzer, email).into())
+                        })
+                        .await
+                }
+                Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
             };
         UncachedJsonResponse::from(ergebnis)
     }

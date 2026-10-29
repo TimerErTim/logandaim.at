@@ -104,6 +104,9 @@ async fn parcours_hinzufügen(
 async fn admin_und_benutzer(harness: &E2eHarness) -> (String, String, String, String) {
     let (admin, admin_id) = neuer_benutzer(harness, "admin@muster.at").await;
     befördere_zum_systemadministrator(harness, "admin@muster.at").await;
+    let (status, body) = harness.client.get_json_auth("/api/benutzer", &admin).await;
+    assert_eq!(status, StatusCode::OK, "Rolle laden: {body}");
+    assert_eq!(body["rolle"], "Systemadministrator");
     let (benutzer, benutzer_id) = neuer_benutzer(harness, "anna@muster.at").await;
     (admin, admin_id, benutzer, benutzer_id)
 }
