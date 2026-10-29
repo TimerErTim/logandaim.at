@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Home, Target } from "lucide-react";
+import { Home, ListMusic, Route, Target } from "lucide-react";
 
 export type NavAction = {
   label: string;
@@ -33,7 +33,11 @@ export function isExactPath(pathname: string, href: string): boolean {
 
 export const paths = {
   home: "/",
-  schuss: "/schuss",
+  parcours: "/parcours",
+  runden: "/runden",
+  verwaltung: "/verwaltung",
+  verwaltungAnlage: "/verwaltung/anlage",
+  verwaltungParcours: "/verwaltung/parcours",
   profil: "/profil",
   optionen: "/optionen",
 } as const;
@@ -44,11 +48,30 @@ export const sidebarCategories: NavCategory[] = [
     label: "Logbuch",
     items: [
       {
-        id: "schuss",
-        label: "Schuss",
-        href: paths.schuss,
+        id: "runden",
+        label: "Runden",
+        href: paths.runden,
+        icon: ListMusic,
+        recursive: true,
+      },
+      {
+        id: "parcours",
+        label: "Parcours",
+        href: paths.parcours,
         icon: Target,
         recursive: false,
+      },
+    ],
+  },
+  {
+    label: "Verwaltung",
+    items: [
+      {
+        id: "verwaltung",
+        label: "Anlagen",
+        href: paths.verwaltung,
+        icon: Route,
+        recursive: true,
       },
     ],
   },
@@ -68,7 +91,11 @@ type BreadcrumbSegment = {
 };
 
 const routeLabels: Record<string, string> = {
-  schuss: "Schuss",
+  parcours: "Parcours",
+  runden: "Runden",
+  verwaltung: "Verwaltung",
+  anlage: "Anlage",
+  detail: "Runde",
   anmeldung: "Anmelden",
   registrierung: "Registrieren",
   passwort: "Passwort wiederherstellen",

@@ -220,6 +220,12 @@ Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour 
   label · dotted-leader · value metric pairs.
 - **Sortable `Table` rows** use `@dnd-kit` with a dedicated per-row handle, never the whole row; the
   handle meets the touch rule and has a distinct accessible name per row. Machine values are mono.
+- **`PflockSwatch`** — master data stores a Pflock's colour as a *word* ("Rot", "Blau"), so it
+  cannot come from the palette. The swatch receives that value through the `--pflock-farbe` custom
+  property and paints `bg-[var(--pflock-farbe)]`; it is the one inline style that names data rather
+  than a token. The swatch is `aria-hidden` and always paired with its word (`PflockMarker`), because
+  colour is never the only signal. Band colours on `CheckpointSlider` are the same idea, supplied as
+  props; the design system owns no palette for either.
 - **`Progress`** — a measured band with fifth-ticks on a divided track. `rounded-sm`: a progress
   track's roundness would mean nothing.
 - **`Field`** — owns label, hint, and error placement; use it instead of hand-assembling label +

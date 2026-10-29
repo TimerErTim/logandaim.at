@@ -7,7 +7,10 @@ use crate::domain::konto::{
     NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
     PasswortWiederherstellung, PasswortWiederherstellungId, SecretTokenHash, Session, SessionId,
 };
-use crate::domain::{EmailAdresse, NeuerSchuss, Schuss, SchussId};
+use crate::domain::{
+    Anlage, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParcoursId, Runde, RundeId,
+    Schuss, SchussId, ZielId,
+};
 
 pub type RepositoryResult<T> = ResultReport<T, RepositoryError>;
 
@@ -57,15 +60,84 @@ pub enum RepositoryError {
 ///
 /// A missing mutator is a sign the rule belongs to the use case; a purpose-built method
 /// such as `revoke_all` is a sign the logic belongs to a use case loop over `find_by_*`.
+/// The `Anlage` aggregate's repository. `Ziel` and `Parcours` are children, so they have
+/// no repository of their own: one `update` writes the root and replaces its child rows in
+/// the same transaction.
+#[async_trait]
+pub trait AnlageRepository: Send + Sync {
+    async fn create(&self, anlage: NeueAnlage) -> RepositoryResult<Versioned<Anlage>>;
+
+    /// Load either lifecycle state, so a caller can answer "is this archived?" without a
+    /// second method.
+    async fn find_by_id(&self, id: AnlageId) -> RepositoryResult<Versioned<Anlage>>;
+
+    /// Every active Anlage, as full aggregates. Fine for two pilot sites; a read-model
+    /// port is the escape hatch if the list grows.
+    async fn find_aktiv(&self) -> RepositoryResult<Vec<Versioned<Anlage>>>;
+
+    /// Every Anlage this Benutzer holds a `AnlageVerwaltung` in, active or archived.
+    async fn find_by_verwaltung(
+        &self,
+        benutzer_id: BenutzerId,
+    ) -> RepositoryResult<Vec<Versioned<Anlage>>>;
+
+    /// Write the whole aggregate back: the root row and every child row, guarded by the
+    /// root `_version`.
+    async fn update(&self, anlage: &mut Versioned<Anlage>) -> RepositoryResult<()>;
+
+    async fn delete(&self, anlage: Versioned<Anlage>) -> RepositoryResult<()>;
+}
+
+#[async_trait]
+pub trait RundeRepository: Send + Sync {
+    async fn create(&self, runde: NeueRunde) -> RepositoryResult<Versioned<Runde>>;
+
+    async fn find_by_id(&self, id: RundeId) -> RepositoryResult<Versioned<Runde>>;
+
+    /// Every Runde this Benutzer logged, including anonymised rows are excluded because
+    /// they no longer match.
+    async fn find_by_benutzer(
+        &self,
+        benutzer_id: BenutzerId,
+    ) -> RepositoryResult<Vec<Versioned<Runde>>>;
+
+    async fn update(&self, runde: &mut Versioned<Runde>) -> RepositoryResult<()>;
+
+    async fn delete(&self, runde: Versioned<Runde>) -> RepositoryResult<()>;
+
+    /// Whether any logged or in-progress Runde still refers to this Anlage (AC-11/AC-12).
+    ///
+    /// The history-reference lookups live here, not on `AnlageRepository`, because the
+    /// references are written by `Runde` and read as an index: a master-data removal is then
+    /// one index read, never a scan of the aggregate it is about to change.
+    async fn exists_referencing_anlage(&self, id: AnlageId) -> RepositoryResult<bool>;
+
+    /// Whether any Runde refers to this Parcours.
+    async fn exists_referencing_parcours(&self, id: ParcoursId) -> RepositoryResult<bool>;
+
+    /// Whether any Runde's captured route contains this Ziel identity.
+    async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool>;
+}
+
+/// A `Schuss` is a standalone aggregate root: it carries `runde_id`, `ziel_id`, and its
+/// `Zuordnung`, so it can be listed per Runde, per Ziel, or per Benutzer without loading
+/// the aggregates it references.
 #[async_trait]
 pub trait SchussRepository: Send + Sync {
     async fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Versioned<Schuss>>;
 
     async fn find_by_id(&self, id: SchussId) -> RepositoryResult<Versioned<Schuss>>;
 
-    /// Load the given Schüsse. IDs that do not exist are omitted; callers decide whether
-    /// that is an error.
-    async fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+    async fn find_by_runde(&self, runde_id: RundeId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+
+    /// Per-physical-Ziel history, independent of which Runde or Parcours produced it
+    /// (AC-8).
+    async fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+
+    async fn find_by_benutzer(
+        &self,
+        benutzer_id: BenutzerId,
+    ) -> RepositoryResult<Vec<Versioned<Schuss>>>;
 
     async fn update(&self, schuss: &mut Versioned<Schuss>) -> RepositoryResult<()>;
 

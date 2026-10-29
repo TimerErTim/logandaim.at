@@ -145,6 +145,7 @@ reason it had to be made.
 | 2026-10-25 | **A composed page is part of the review.** Plate 16 renders one whole screen, because parts can pass individually while the assembled page fails on density, hierarchy, or neighbouring contrast. |
 | 2026-10-25 | **`Field` labels are attached, not drawn.** The composed page exposed that `Label` was a styled `span`, so every field was announced without a name. No token or contrast check could have caught it. |
 | 2026-10-26 | **The 44px touch minimum is real, not asserted.** Hit-testing found 40 of 46 controls under 44px despite the rule: `inset-y` without `inset-x-0` collapsed the overlay, `inset` was eaten by the contour, and replaced elements generate no `::before` box at all. Fields are now drawn at 44px, overlays sized for their contour, dense rows grown, captions made part of the target. 182 controls across 16 plates pass. |
+| 2026-10-29 | **A Pflock's colour is a value, not a token.** Master data stores a colour *word* ("Rot", "Blau"), so a swatch cannot map it through the palette. `PflockSwatch` sets `--pflock-farbe` to the stored value and paints `bg-[var(--pflock-farbe)]`; the word is always drawn beside it, so colour never carries the meaning alone. This is the one inline style that references a data value rather than a token. |
 
 ## Revision history
 
@@ -154,3 +155,4 @@ reason it had to be made.
 | 2026-10-25 | Identity decided, then replaced by Bogenschuss Logbuch; tokens, components, rule, and gallery follow. |
 | 2026-10-25 | Canonical palette, role-restricted contrast, domain-free gallery, one name per colour, inked controls with `--border-control`, paper furniture, and the composed page. |
 | 2026-10-26 | Touch targets verified by hit-testing. Spec compressed to intent and history; the operational rules now live only in the design rule. |
+| 2026-10-29 | Pflock swatch: a data colour painted through `--pflock-farbe`. |

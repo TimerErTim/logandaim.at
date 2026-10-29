@@ -1,7 +1,11 @@
 export { useAuth } from "../auth-provider";
+export { useAuthMutations, useStammdatenMutations } from "./mutations";
 export {
-  useAuthMutations,
-  useSchussRegistrierenMutation,
-  useWertungMutation,
-} from "./mutations";
-export { useBenutzerQuery, useHealthQuery } from "./queries";
+  useAnlagenQuery,
+  useAnlageQuery,
+  useBenutzerQuery,
+  useHealthQuery,
+  useParcoursQuery,
+  useRundenQuery,
+  useRundeQuery,
+} from "./queries";

@@ -3,15 +3,17 @@ use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 use logandaim_core::{
     ports::{
-        BenutzerRepository, EmailBestätigungRepository, KontoRepository,
-        PasswortWiederherstellungRepository, RepositoryResult, SchussRepository, SessionRepository,
+        AnlageRepository, BenutzerRepository, EmailBestätigungRepository, KontoRepository,
+        PasswortWiederherstellungRepository, RepositoryResult, RundeRepository, SchussRepository,
+        SessionRepository,
     },
     uow::{UnitOfWorkImpl, UnitOfWorkProvider},
 };
 
 use crate::repository::{
-    FakeBenutzerRepository, FakeDatastore, FakeEmailBestätigungRepository, FakeKontoRepository,
-    FakePasswortWiederherstellungRepository, FakeSchussRepository, FakeSessionRepository,
+    FakeAnlageRepository, FakeBenutzerRepository, FakeDatastore, FakeEmailBestätigungRepository,
+    FakeKontoRepository, FakePasswortWiederherstellungRepository, FakeRundeRepository,
+    FakeSchussRepository, FakeSessionRepository,
 };
 
 /// Fake UoW with real transaction semantics: `begin` snapshots the backing datastore,
@@ -57,6 +59,8 @@ pub struct FakeUnitOfWork {
     backing_datastore: Arc<FakeDatastore>,
     /// Snapshot the repositories write into; discarded on rollback.
     transaction_datastore: Arc<FakeDatastore>,
+    anlagen: FakeAnlageRepository,
+    runden: FakeRundeRepository,
     schüsse: FakeSchussRepository,
     benutzer: FakeBenutzerRepository,
     konten: FakeKontoRepository,
@@ -71,6 +75,8 @@ impl FakeUnitOfWork {
         Self {
             log,
             backing_datastore: datastore,
+            anlagen: FakeAnlageRepository::new(Arc::clone(&transaction_datastore)),
+            runden: FakeRundeRepository::new(Arc::clone(&transaction_datastore)),
             schüsse: FakeSchussRepository::new(Arc::clone(&transaction_datastore)),
             benutzer: FakeBenutzerRepository::new(Arc::clone(&transaction_datastore)),
             konten: FakeKontoRepository::new(Arc::clone(&transaction_datastore)),
@@ -98,6 +104,14 @@ impl UnitOfWorkImpl for FakeUnitOfWork {
     async fn rollback(self: Box<Self>) -> RepositoryResult<()> {
         self.log.lock().unwrap().push(UoWEvent::Rollback);
         Ok(())
+    }
+
+    fn anlagen(&self) -> &dyn AnlageRepository {
+        &self.anlagen
+    }
+
+    fn runden(&self) -> &dyn RundeRepository {
+        &self.runden
     }
 
     fn schüsse(&self) -> &dyn SchussRepository {

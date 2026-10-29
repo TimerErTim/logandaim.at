@@ -4,7 +4,7 @@ use chrono::{DateTime, Duration, Utc};
 use logandaim_core::{
     App,
     adapters::{InMemorySigning, InMemoryThrottle},
-    application::{AppBuilder, AuthContext, IdentityProviderConfiguration, SetUowProvider},
+    application::{AppBuilder, IdentityProviderConfiguration, SetUowProvider},
     domain::konto::AccessTokenClaims,
     ports::{Clock, Signing},
     service::SessionPrüfen,
@@ -117,9 +117,4 @@ pub fn build(builder: AppBuilder<SetUowProvider>) -> Harness {
 /// Fixed instant shared by every case, so lifetimes are compared against one clock.
 pub fn jetzt() -> DateTime<Utc> {
     DateTime::from_timestamp(1_700_000_000, 0).expect("static timestamp is valid")
-}
-
-/// Anonymous caller, for cases that do not authenticate.
-pub fn anonym() -> AuthContext {
-    AuthContext::Anonymous
 }

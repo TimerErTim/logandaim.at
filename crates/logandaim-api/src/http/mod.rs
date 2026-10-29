@@ -15,15 +15,17 @@
 use error_stack::Report;
 use logandaim_core::{
     App, ResultReport,
+    domain::{AnlageId, ParcoursId, RundeId, ZielId, konto::BenutzerId},
     service::{
         AbmeldungFehler, BenutzerAnzeigenFehler, BenutzerLöschenFehler,
-        PasswortWiederherstellenFehler,
+        PasswortWiederherstellenFehler, RundeAbschliessenFehler, RundeAnzeigenFehler,
+        RundeStartenFehler, RundenAnzeigenFehler, SchussRegistrierenFehler, StammdatenFehler,
     },
 };
 use poem::web::RealIp;
 use poem_openapi::{
     OpenApi, OpenApiService, ServerObject,
-    param::{Cookie, Header, Query},
+    param::{Cookie, Header, Path, Query},
     payload::Json,
 };
 use uuid::Uuid;
@@ -40,12 +42,14 @@ use crate::{
     api::{
         LogandaimAppApi,
         requests::{
-            AnmeldungRequest, BenutzerLöschungRequest, PasswortVergessenRequest,
+            AnlageErstellungRequest, AnlageVerwaltungRequest, AnlageÄnderungRequest,
+            AnmeldungRequest, BenutzerLöschungRequest, ParcoursErstellungRequest,
+            ParcoursSetupRequest, ParcoursUmbenennenRequest, PasswortVergessenRequest,
             PasswortWiederherstellenRequest, RegistrierungAbschlussRequest,
-            RegistrierungStartRequest, SchussErstellungRequest, WertungRequest,
+            RegistrierungStartRequest, RundeStartenRequest, SchussErstellungRequest, ZielRequest,
         },
     },
-    schema::{Benutzer, Ok, Schuss, Wertung},
+    schema::{Anlage, AnlagenZeile, Benutzer, Ok, ParcoursÖffentlich, Runde, RundenZeile, Schuss},
 };
 
 pub struct LogandaimApiSpec {
@@ -77,17 +81,418 @@ impl LogandaimApiSpec {
         Json("OK".to_string())
     }
 
-    #[oai(path = "/schuss", method = "post")]
-    async fn schuss_registrieren(
+    // ------------------------------------------------------------------ master data
+
+    /// Only a Systemadministrator may create an Anlage (AC-1).
+    #[oai(path = "/anlagen", method = "post")]
+    async fn anlage_erstellen(
         &self,
-        body: Json<SchussErstellungRequest>,
-    ) -> TypicalJsonResponse<Schuss> {
-        self.app_api.schuss_registrieren(body.0).await.into()
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        body: Json<AnlageErstellungRequest>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => self.app_api.anlage_erstellen(auth, body.0).await,
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
     }
 
-    #[oai(path = "/wertung", method = "post")]
-    async fn wertung_berechnen(&self, body: Json<WertungRequest>) -> TypicalJsonResponse<Wertung> {
-        self.app_api.wertung_berechnen(body.0).await.into()
+    /// The Anlagen the caller may administer. Archived ones are not listed.
+    #[oai(path = "/anlagen", method = "get")]
+    async fn anlagen_anzeigen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+    ) -> TypicalJsonResponse<Vec<AnlagenZeile>> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => self.app_api.anlagen_anzeigen(auth).await,
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Archived Anlagen stay readable: only their writes answer 409 (AC-11).
+    #[oai(path = "/anlagen/:anlage_id", method = "get")]
+    async fn anlage_anzeigen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .anlage_anzeigen(auth, AnlageId(anlage_id.0))
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Rewrites the Anlage's own fields (name, address, contact). Administrator only (AC-3).
+    #[oai(path = "/anlagen/:anlage_id", method = "put")]
+    async fn anlage_ändern(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        body: Json<AnlageÄnderungRequest>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .anlage_ändern(auth, AnlageId(anlage_id.0), body.0)
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Irreversible: no route reactivates an Anlage (AC-10).
+    #[oai(path = "/anlagen/:anlage_id/deaktivierung", method = "post")]
+    async fn anlage_deaktivieren(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .anlage_deaktivieren(auth, AnlageId(anlage_id.0))
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Grant a role to an existing Benutzer. Administrator only (AC-2).
+    #[oai(path = "/anlagen/:anlage_id/verwaltungen", method = "post")]
+    async fn verwaltung_gewähren(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        body: Json<AnlageVerwaltungRequest>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .verwaltung_gewähren(auth, AnlageId(anlage_id.0), body.0)
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Change an existing role. The target is in the path, so the body only names the role.
+    #[oai(path = "/anlagen/:anlage_id/verwaltungen/:benutzer_id", method = "put")]
+    async fn verwaltung_ändern(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        benutzer_id: Path<Uuid>,
+        body: Json<AnlageVerwaltungRequest>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .verwaltung_ändern(
+                        auth,
+                        AnlageId(anlage_id.0),
+                        BenutzerId(benutzer_id.0),
+                        body.0,
+                    )
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Revoke a role. The last Administrator cannot be revoked (AC-2).
+    #[oai(
+        path = "/anlagen/:anlage_id/verwaltungen/:benutzer_id",
+        method = "delete"
+    )]
+    async fn verwaltung_entziehen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        benutzer_id: Path<Uuid>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .verwaltung_entziehen(auth, AnlageId(anlage_id.0), BenutzerId(benutzer_id.0))
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Add a physical Ziel (AC-5). A Mitarbeiter may; the Anlage fields are not touched.
+    #[oai(path = "/anlagen/:anlage_id/ziele", method = "post")]
+    async fn ziel_hinzufügen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        body: Json<ZielRequest>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .ziel_hinzufügen(auth, AnlageId(anlage_id.0), body.0)
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Edit details; the identity and its history stay (AC-5).
+    #[oai(path = "/anlagen/:anlage_id/ziele/:ziel_id", method = "put")]
+    async fn ziel_ändern(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        ziel_id: Path<Uuid>,
+        body: Json<ZielRequest>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .ziel_ändern(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0), body.0)
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Replace the physical target: a new identity that inherits the slot, not the history.
+    #[oai(path = "/anlagen/:anlage_id/ziele/:ziel_id/ersatz", method = "post")]
+    async fn ziel_ersetzen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        ziel_id: Path<Uuid>,
+        body: Json<ZielRequest>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .ziel_ersetzen(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0), body.0)
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Archive when history references it, delete when nothing does (AC-11, AC-12).
+    #[oai(path = "/anlagen/:anlage_id/ziele/:ziel_id", method = "delete")]
+    async fn ziel_entfernen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        ziel_id: Path<Uuid>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .ziel_entfernen(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0))
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Create a Parcours with its Pflock setup and route (AC-4, AC-6).
+    #[oai(path = "/anlagen/:anlage_id/parcours", method = "post")]
+    async fn parcours_hinzufügen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        body: Json<ParcoursErstellungRequest>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .parcours_hinzufügen(auth, AnlageId(anlage_id.0), body.0)
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Replace the whole shooting setup; existing Runden keep their snapshot (AC-7).
+    #[oai(
+        path = "/anlagen/:anlage_id/parcours/:parcours_id/setup",
+        method = "put"
+    )]
+    async fn parcours_setup_ändern(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        parcours_id: Path<Uuid>,
+        body: Json<ParcoursSetupRequest>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .parcours_setup_ändern(
+                        auth,
+                        AnlageId(anlage_id.0),
+                        ParcoursId(parcours_id.0),
+                        body.0,
+                    )
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Rename a Parcours. Its identity and every existing snapshot stay (AC-9).
+    #[oai(path = "/anlagen/:anlage_id/parcours/:parcours_id", method = "put")]
+    async fn parcours_umbenennen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        parcours_id: Path<Uuid>,
+        body: Json<ParcoursUmbenennenRequest>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .parcours_umbenennen(
+                        auth,
+                        AnlageId(anlage_id.0),
+                        ParcoursId(parcours_id.0),
+                        body.0,
+                    )
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Archive when a Runde captured it, delete when none did (AC-11, AC-12).
+    #[oai(path = "/anlagen/:anlage_id/parcours/:parcours_id", method = "delete")]
+    async fn parcours_entfernen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        parcours_id: Path<Uuid>,
+    ) -> TypicalJsonResponse<Anlage> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .parcours_entfernen(auth, AnlageId(anlage_id.0), ParcoursId(parcours_id.0))
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Public: every active Parcours of every active Anlage, no header needed (AC-13).
+    #[oai(path = "/parcours", method = "get")]
+    async fn parcours_anzeigen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+    ) -> TypicalJsonResponse<Vec<ParcoursÖffentlich>> {
+        // A broken token is answered as anonymous here, never as an error: this route is
+        // public, and a stale token must not hide master data from its own reader.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(logandaim_core::application::AuthContext::Anonymous);
+        self.app_api.parcours_anzeigen(auth).await.into()
+    }
+
+    // ------------------------------------------------------------------ Runden
+
+    /// Start a Runde. The snapshot is captured in the same transaction (AC-7).
+    #[oai(path = "/runden", method = "post")]
+    async fn runde_starten(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        body: Json<RundeStartenRequest>,
+    ) -> TypicalJsonResponse<Runde> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => self.app_api.runde_starten(auth, body.0).await,
+            Err(_) => Err(Report::new(RundeStartenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// The caller's own Runden, newest first.
+    #[oai(path = "/runden", method = "get")]
+    async fn runden_anzeigen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+    ) -> TypicalJsonResponse<Vec<RundenZeile>> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => self.app_api.runden_anzeigen(auth).await,
+            Err(_) => Err(Report::new(RundenAnzeigenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Owner or Systemadministrator; staff never read another Benutzer's Runde (AC-13).
+    #[oai(path = "/runden/:runde_id", method = "get")]
+    async fn runde_anzeigen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        runde_id: Path<Uuid>,
+    ) -> TypicalJsonResponse<Runde> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => self.app_api.runde_anzeigen(auth, RundeId(runde_id.0)).await,
+            Err(_) => Err(Report::new(RundeAnzeigenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Close the caller's own Runde; afterwards it refuses further Schüsse.
+    #[oai(path = "/runden/:runde_id/abschluss", method = "post")]
+    async fn runde_abschliessen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        runde_id: Path<Uuid>,
+    ) -> TypicalJsonResponse<Runde> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .runde_abschliessen(auth, RundeId(runde_id.0))
+                    .await
+            }
+            Err(_) => Err(Report::new(RundeAbschliessenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Log one arrow. The owner comes from the token; the Ziel must be in the snapshot.
+    #[oai(path = "/runden/:runde_id/schüsse", method = "post")]
+    async fn schuss_registrieren(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        runde_id: Path<Uuid>,
+        body: Json<SchussErstellungRequest>,
+    ) -> TypicalJsonResponse<Schuss> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .schuss_registrieren(auth, RundeId(runde_id.0), body.0)
+                    .await
+            }
+            Err(_) => Err(Report::new(SchussRegistrierenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
     }
 
     // ------------------------------------------------------------------ konto
@@ -265,8 +670,17 @@ pub fn openapi_service(
     app: App,
     server_urls: impl IntoIterator<Item = impl Into<ServerObject>>,
 ) -> OpenApiService<LogandaimApiSpec, ()> {
+    openapi_service_from_api(LogandaimAppApi::new(app), server_urls)
+}
+
+/// The same service over a facade the caller already holds, so a harness can keep an
+/// `Arc<App>` for direct use-case calls without building a second app.
+pub fn openapi_service_from_api(
+    app_api: LogandaimAppApi,
+    server_urls: impl IntoIterator<Item = impl Into<ServerObject>>,
+) -> OpenApiService<LogandaimApiSpec, ()> {
     let mut service = OpenApiService::new(
-        LogandaimApiSpec::from(app),
+        LogandaimApiSpec::from(app_api),
         "logandaim.at API",
         env!("CARGO_PKG_VERSION"),
     )

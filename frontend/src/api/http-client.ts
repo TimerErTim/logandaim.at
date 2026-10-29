@@ -2,13 +2,22 @@ import createClient from "openapi-fetch";
 
 import { ApiError } from "./errors";
 import type {
+  Anlage,
+  AnlageErstellungInput,
+  AnlagenZeile,
+  AnlageVerwaltungRolle,
   AuthPhase,
   AuthSession,
   Benutzer,
   LogandaimApi,
+  ParcoursInput,
+  ParcoursSetupInput,
+  ParcoursÖffentlich,
+  Runde,
+  RundenZeile,
   Schuss,
   SchussErstellungInput,
-  Wertung,
+  ZielInput,
 } from "./logandaim-api";
 import type { paths } from "./schema";
 
@@ -157,19 +166,242 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     };
   }
 
-  async schussRegistrieren(erstellung: SchussErstellungInput): Promise<Schuss> {
+  // ---------------------------------------------------------------- master data
+
+  async anlagenAnzeigen(): Promise<AnlagenZeile[]> {
     return this.authenticated(() =>
-      this.client.POST("/schuss", {
-        body: erstellung,
+      this.client.GET("/anlagen", { headers: this.authorizationHeaders() }),
+    );
+  }
+
+  async anlageAnzeigen(id: string): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.GET("/anlagen/{anlage_id}", {
+        params: { path: { anlage_id: id } },
         headers: this.authorizationHeaders(),
       }),
     );
   }
 
-  async wertungBerechnen(schussIds: string[]): Promise<Wertung> {
+  async anlageErstellen(anlage: AnlageErstellungInput): Promise<Anlage> {
     return this.authenticated(() =>
-      this.client.POST("/wertung", {
-        body: { schussIds },
+      this.client.POST("/anlagen", {
+        body: anlage,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async anlageAendern(
+    id: string,
+    anlage: AnlageErstellungInput,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.PUT("/anlagen/{anlage_id}", {
+        params: { path: { anlage_id: id } },
+        body: anlage,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async anlageDeaktivieren(id: string): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.POST("/anlagen/{anlage_id}/deaktivierung", {
+        params: { path: { anlage_id: id } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async verwaltungGewaehren(
+    anlageId: string,
+    benutzerId: string,
+    rolle: AnlageVerwaltungRolle,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.POST("/anlagen/{anlage_id}/verwaltungen", {
+        params: { path: { anlage_id: anlageId } },
+        body: { benutzerId, rolle },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async verwaltungAendern(
+    anlageId: string,
+    benutzerId: string,
+    rolle: AnlageVerwaltungRolle,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.PUT("/anlagen/{anlage_id}/verwaltungen/{benutzer_id}", {
+        params: { path: { anlage_id: anlageId, benutzer_id: benutzerId } },
+        body: { benutzerId, rolle },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async verwaltungEntziehen(
+    anlageId: string,
+    benutzerId: string,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.DELETE("/anlagen/{anlage_id}/verwaltungen/{benutzer_id}", {
+        params: { path: { anlage_id: anlageId, benutzer_id: benutzerId } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async zielHinzufuegen(anlageId: string, ziel: ZielInput): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.POST("/anlagen/{anlage_id}/ziele", {
+        params: { path: { anlage_id: anlageId } },
+        body: ziel,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async zielAendern(
+    anlageId: string,
+    zielId: string,
+    ziel: ZielInput,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.PUT("/anlagen/{anlage_id}/ziele/{ziel_id}", {
+        params: { path: { anlage_id: anlageId, ziel_id: zielId } },
+        body: ziel,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async zielErsetzen(
+    anlageId: string,
+    zielId: string,
+    ziel: ZielInput,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.POST("/anlagen/{anlage_id}/ziele/{ziel_id}/ersatz", {
+        params: { path: { anlage_id: anlageId, ziel_id: zielId } },
+        body: ziel,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async zielEntfernen(anlageId: string, zielId: string): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.DELETE("/anlagen/{anlage_id}/ziele/{ziel_id}", {
+        params: { path: { anlage_id: anlageId, ziel_id: zielId } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async parcoursHinzufuegen(
+    anlageId: string,
+    parcours: ParcoursInput,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.POST("/anlagen/{anlage_id}/parcours", {
+        params: { path: { anlage_id: anlageId } },
+        body: parcours,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async parcoursSetupAendern(
+    anlageId: string,
+    parcoursId: string,
+    setup: ParcoursSetupInput,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.PUT("/anlagen/{anlage_id}/parcours/{parcours_id}/setup", {
+        params: { path: { anlage_id: anlageId, parcours_id: parcoursId } },
+        body: setup,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async parcoursUmbenennen(
+    anlageId: string,
+    parcoursId: string,
+    name: string,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.PUT("/anlagen/{anlage_id}/parcours/{parcours_id}", {
+        params: { path: { anlage_id: anlageId, parcours_id: parcoursId } },
+        body: { name },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async parcoursEntfernen(
+    anlageId: string,
+    parcoursId: string,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.DELETE("/anlagen/{anlage_id}/parcours/{parcours_id}", {
+        params: { path: { anlage_id: anlageId, parcours_id: parcoursId } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async parcoursAnzeigen(): Promise<ParcoursÖffentlich[]> {
+    // Public by design (AC-13): never renew a session for it, and send no header at all.
+    return unwrap(await this.client.GET("/parcours"));
+  }
+
+  // ---------------------------------------------------------------- Runden
+
+  async rundenAnzeigen(): Promise<RundenZeile[]> {
+    return this.authenticated(() =>
+      this.client.GET("/runden", { headers: this.authorizationHeaders() }),
+    );
+  }
+
+  async rundeStarten(parcoursId: string): Promise<Runde> {
+    return this.authenticated(() =>
+      this.client.POST("/runden", {
+        body: { parcoursId },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async rundeAnzeigen(id: string): Promise<Runde> {
+    return this.authenticated(() =>
+      this.client.GET("/runden/{runde_id}", {
+        params: { path: { runde_id: id } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async rundeAbschliessen(id: string): Promise<Runde> {
+    return this.authenticated(() =>
+      this.client.POST("/runden/{runde_id}/abschluss", {
+        params: { path: { runde_id: id } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async schussRegistrieren(
+    rundeId: string,
+    schuss: SchussErstellungInput,
+  ): Promise<Schuss> {
+    return this.authenticated(() =>
+      this.client.POST("/runden/{runde_id}/schüsse", {
+        params: { path: { runde_id: rundeId } },
+        body: schuss,
         headers: this.authorizationHeaders(),
       }),
     );

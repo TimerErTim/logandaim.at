@@ -8,10 +8,11 @@ use crate::ResultReport;
 use crate::application::instrumented_repos::RepoStorage;
 use crate::application::uow::UnitOfWorkImpl;
 use crate::ports::{
-    BenutzerRepository, ClientKey, EmailBestätigungRepository, KontoRepository, Mail, MailError,
-    MailSender, ObjectStore, ObjectStoreError, ObjectStream, PasswortWiederherstellungRepository,
-    PdfDokument, PdfRenderError, PdfRenderer, RepositoryResult, SchussRepository,
-    SessionRepository, Throttle, ThrottleAction, ThrottleError,
+    AnlageRepository, BenutzerRepository, ClientKey, EmailBestätigungRepository, KontoRepository,
+    Mail, MailError, MailSender, ObjectStore, ObjectStoreError, ObjectStream,
+    PasswortWiederherstellungRepository, PdfDokument, PdfRenderError, PdfRenderer,
+    RepositoryResult, RundeRepository, SchussRepository, SessionRepository, Throttle,
+    ThrottleAction, ThrottleError,
 };
 
 #[derive(Clone)]
@@ -159,6 +160,14 @@ impl UnitOfWorkImpl for InstrumentedUnitOfWork {
     async fn rollback(self: Box<Self>) -> RepositoryResult<()> {
         let RepoStorage { uow, .. } = *Pin::into_inner(self.storage);
         uow.rollback().await
+    }
+
+    fn anlagen(&self) -> &dyn AnlageRepository {
+        &self.storage.anlagen
+    }
+
+    fn runden(&self) -> &dyn RundeRepository {
+        &self.storage.runden
     }
 
     fn schüsse(&self) -> &dyn SchussRepository {

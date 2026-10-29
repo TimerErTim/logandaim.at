@@ -38,25 +38,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/schuss": {
+    "/anlagen": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** The Anlagen the caller may administer. Archived ones are not listed. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["AnlagenZeile"][];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
         put?: never;
+        /** Only a Systemadministrator may create an Anlage (AC-1). */
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    Authorization?: string;
+                };
                 path?: never;
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["SchussErstellungRequest"];
+                    "application/json; charset=utf-8": components["schemas"]["AnlageErstellungRequest"];
                 };
             };
             responses: {
@@ -65,7 +105,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["Schuss"];
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
                     };
                 };
                 500: {
@@ -92,25 +132,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/wertung": {
+    "/anlagen/{anlage_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        post: {
+        /** Archived Anlagen stay readable: only their writes answer 409 (AC-11). */
+        get: {
             parameters: {
                 query?: never;
-                header?: never;
-                path?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        /** Rewrites the Anlage's own fields (name, address, contact). Administrator only (AC-3). */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["WertungRequest"];
+                    "application/json; charset=utf-8": components["schemas"]["Anlage\u00C4nderungRequest"];
                 };
             };
             responses: {
@@ -119,7 +202,976 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["Wertung"];
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/deaktivierung": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Irreversible: no route reactivates an Anlage (AC-10). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/verwaltungen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Grant a role to an existing Benutzer. Administrator only (AC-2). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["AnlageVerwaltungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/verwaltungen/{benutzer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change an existing role. The target is in the path, so the body only names the role. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    benutzer_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["AnlageVerwaltungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Revoke a role. The last Administrator cannot be revoked (AC-2). */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    benutzer_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/ziele": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a physical Ziel (AC-5). A Mitarbeiter may; the Anlage fields are not touched. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/ziele/{ziel_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Edit details; the identity and its history stay (AC-5). */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Archive when history references it, delete when nothing does (AC-11, AC-12). */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/ziele/{ziel_id}/ersatz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace the physical target: a new identity that inherits the slot, not the history. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/parcours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a Parcours with its Pflock setup and route (AC-4, AC-6). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ParcoursErstellungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/parcours/{parcours_id}/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace the whole shooting setup; existing Runden keep their snapshot (AC-7). */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    parcours_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ParcoursSetupRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/parcours/{parcours_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Rename a Parcours. Its identity and every existing snapshot stay (AC-9). */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    parcours_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ParcoursUmbenennenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Archive when a Runde captured it, delete when none did (AC-11, AC-12). */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    parcours_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/parcours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public: every active Parcours of every active Anlage, no header needed (AC-13). */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Parcours\u00D6ffentlich"][];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's own Runden, newest first. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["RundenZeile"][];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Start a Runde. The snapshot is captured in the same transaction (AC-7). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["RundeStartenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Owner or Systemadministrator; staff never read another Benutzer's Runde (AC-13). */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}/abschluss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Close the caller's own Runde; afterwards it refuses further Schüsse. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}/sch\u00FCsse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Log one arrow. The owner comes from the token; the Ziel must be in the snapshot. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["SchussErstellungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Schuss"];
                     };
                 };
                 500: {
@@ -697,6 +1749,99 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Anlage
+         * @description `GET /anlagen/{id}`: the Anlage with its whole master data.
+         */
+        Anlage: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            adresse: components["schemas"]["AnlageAdresse"];
+            kontakt: components["schemas"]["AnlageKontakt"];
+            zustand: components["schemas"]["AnlageZustand"];
+            verwaltungen: components["schemas"]["AnlageVerwaltung"][];
+            ziele: components["schemas"]["Ziel"][];
+            parcours: components["schemas"]["Parcours"][];
+        };
+        /**
+         * AnlageAdresse
+         * @description One structured address. Every field is required (SPEC-stammdaten AC-1).
+         */
+        AnlageAdresse: {
+            "stra\u00DFe": string;
+            postleitzahl: string;
+            ort: string;
+            /** @description ISO 3166-1 alpha-2, e.g. `AT`. */
+            "l\u00E4ndercode": string;
+        };
+        /**
+         * AnlageErstellungRequest
+         * @description Create an Anlage (AC-1).
+         */
+        AnlageErstellungRequest: {
+            name: string;
+            adresse: components["schemas"]["AnlageAdresse"];
+            kontakt: components["schemas"]["AnlageKontakt"];
+        };
+        /**
+         * AnlageKontakt
+         * @description Optional contact details; each may be absent on its own (AC-1).
+         */
+        AnlageKontakt: {
+            name?: string;
+            /**
+             * E-Mail-Adresse
+             * @example test@example.com
+             */
+            email?: string;
+            telefon?: string;
+            website?: string;
+        };
+        /** AnlageVerwaltung */
+        AnlageVerwaltung: {
+            /** Format: uuid */
+            benutzerId: string;
+            rolle: components["schemas"]["AnlageVerwaltungRolle"];
+        };
+        /**
+         * AnlageVerwaltungRequest
+         * @description Grant or change one AnlageVerwaltung (AC-2).
+         */
+        AnlageVerwaltungRequest: {
+            /** Format: uuid */
+            benutzerId: string;
+            rolle: components["schemas"]["AnlageVerwaltungRolle"];
+        };
+        /**
+         * @description The Anlage's role inside one Anlage (AC-2, AC-3).
+         * @enum {string}
+         */
+        AnlageVerwaltungRolle: AnlageVerwaltungRolle;
+        /**
+         * @description `Aktiv` or `Archiviert`. Archived reads answer `200` with this state; writes to them
+         *     answer `409` (AC-10, AC-11).
+         * @enum {string}
+         */
+        AnlageZustand: AnlageZustand;
+        /**
+         * AnlagenZeile
+         * @description One row of `GET /anlagen`, with the caller's role so the UI can gate its controls.
+         */
+        AnlagenZeile: {
+            anlage: components["schemas"]["Anlage"];
+            rolle?: components["schemas"]["AnlageVerwaltungRolle"];
+            istSystemadministrator: boolean;
+        };
+        /**
+         * AnlageÄnderungRequest
+         * @description Edit the Anlage's descriptive fields (AC-3).
+         */
+        "Anlage\u00C4nderungRequest": {
+            name: string;
+            adresse: components["schemas"]["AnlageAdresse"];
+            kontakt: components["schemas"]["AnlageKontakt"];
+        };
         /** AnmeldungRequest */
         AnmeldungRequest: {
             /**
@@ -741,6 +1886,51 @@ export interface components {
         Ok: {
             ok: boolean;
         };
+        /** Parcours */
+        Parcours: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            zustand: components["schemas"]["AnlageZustand"];
+            /** @description Far to near, never inferred from a colour (AC-6). */
+            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            /** @description In route order. */
+            platzierungen: components["schemas"]["Zielplatzierung"][];
+        };
+        /**
+         * ParcoursErstellungRequest
+         * @description Create a Parcours with its Pflock setup and route (AC-4, AC-6).
+         */
+        ParcoursErstellungRequest: {
+            name: string;
+            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            platzierungen: components["schemas"]["Zielplatzierung"][];
+        };
+        /**
+         * ParcoursSetupRequest
+         * @description Replace a Parcours' whole shooting setup (AC-6, AC-7).
+         */
+        ParcoursSetupRequest: {
+            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            platzierungen: components["schemas"]["Zielplatzierung"][];
+        };
+        /**
+         * ParcoursUmbenennenRequest
+         * @description Rename a Parcours (AC-9: existing snapshots keep the old name).
+         */
+        ParcoursUmbenennenRequest: {
+            name: string;
+        };
+        /**
+         * ParcoursÖffentlich
+         * @description One active Parcours with the Anlage that holds it, for starting a Runde (AC-13).
+         */
+        "Parcours\u00D6ffentlich": {
+            /** Format: uuid */
+            anlageId: string;
+            anlageName: string;
+            parcours: components["schemas"]["Parcours"];
+        };
         /** PasswortVergessenRequest */
         PasswortVergessenRequest: {
             /**
@@ -753,6 +1943,22 @@ export interface components {
         PasswortWiederherstellenRequest: {
             token: string;
             neuesPasswort: string;
+        };
+        /**
+         * Pflock
+         * @description One shooting position. The colour is caller data, not a design token (AC-6).
+         */
+        Pflock: {
+            /** Format: uuid */
+            id: string;
+            bezeichnung: string;
+            farbe: string;
+        };
+        /** PflockAbstand */
+        PflockAbstand: {
+            pflock: string;
+            /** Format: uint32 */
+            meter: number;
         };
         /**
          * RegistrierungAbschlussRequest
@@ -774,33 +1980,130 @@ export interface components {
             eMailAdresse: string;
         };
         /**
+         * Runde
+         * @description `GET /runden/{id}`: the whole read model of one Runde.
+         */
+        Runde: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            anlageId: string;
+            /** Format: uuid */
+            parcoursId: string;
+            /** @description As captured at the start, not the Parcours' current name (AC-9). */
+            parcoursName: string;
+            zuordnung: components["schemas"]["Zuordnung"];
+            zustand: components["schemas"]["RundeZustand"];
+            begonnenAm: string;
+            abgeschlossenAm?: string;
+            "pfl\u00F6cke": components["schemas"]["SnapshotPflock"][];
+            ziele: components["schemas"]["SnapshotZiel"][];
+            /** Format: uint32 */
+            gesamtErsterTreffer: number;
+            /** Format: uint32 */
+            gesamtMehrschuss: number;
+            /** Format: uint64 */
+            zieleMitErgebnis: number;
+        };
+        /**
+         * RundeStartenRequest
+         * @description Start a Runde at one active Parcours (AC-7).
+         */
+        RundeStartenRequest: {
+            /** Format: uuid */
+            parcoursId: string;
+        };
+        /** @enum {string} */
+        RundeZustand: RundeZustand;
+        /**
+         * RundenZeile
+         * @description One row of `GET /runden`.
+         */
+        RundenZeile: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            anlageId: string;
+            /** Format: uuid */
+            parcoursId: string;
+            parcoursName: string;
+            zustand: components["schemas"]["RundeZustand"];
+            begonnenAm: string;
+            abgeschlossenAm?: string;
+        };
+        /**
          * Schuss
-         * @description One logged arrow, translated from the domain.
+         * @description One logged arrow.
          */
         Schuss: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
+            rundeId: string;
+            /** Format: uuid */
             zielId: string;
-            /** Format: uint64 */
+            zuordnung: components["schemas"]["Zuordnung"];
+            /**
+             * Format: uint64
+             * @description 1-based position of the arrow at its Ziel.
+             */
             pfeil: number;
             wertungszone: components["schemas"]["Wertungszone"];
         };
         /**
          * SchussErstellungRequest
-         * @description Inbound request for registering one Schuss at a Ziel. `pfeil` is validated by
-         *     `domain::NeuerSchuss` when the use case builds it.
+         * @description Register one Schuss inside the caller's own open Runde (AC-9).
          */
         SchussErstellungRequest: {
             /** Format: uuid */
             zielId: string;
-            /** Format: uint64 */
+            /**
+             * Format: uint64
+             * @description 1-based; `0` is rejected as an invalid request.
+             */
             pfeil: number;
             wertungszone: components["schemas"]["Wertungszone"];
         };
         /** SessionResponseContent */
         SessionResponseContent: {
             accessToken: string;
+        };
+        /**
+         * SnapshotAbstand
+         * @description One Pflock label with its captured distance.
+         */
+        SnapshotAbstand: {
+            pflock: string;
+            /** Format: uint32 */
+            meter: number;
+        };
+        /**
+         * SnapshotPflock
+         * @description One captured Pflock, in far-to-near order.
+         */
+        SnapshotPflock: {
+            bezeichnung: string;
+            /** @description Caller data ("Rot", "Blau"), never a design token. */
+            farbe: string;
+            /**
+             * Format: uint64
+             * @description 0-based, far to near.
+             */
+            position: number;
+        };
+        /**
+         * SnapshotZiel
+         * @description One captured Ziel: identity, animal name, target group, distances as they were.
+         */
+        SnapshotZiel: {
+            /** Format: uuid */
+            zielId: string;
+            tiername: string;
+            /** Format: uint8 */
+            zielgruppe: number;
+            "abst\u00E4nde": components["schemas"]["SnapshotAbstand"][];
+            /** @description Absent for a Ziel without any Schuss (AC-6 of SPEC-wertung). */
+            ergebnis?: components["schemas"]["Zielergebnis"] & unknown;
         };
         /** StructuredError */
         StructuredError: {
@@ -809,10 +2112,39 @@ export interface components {
             sources: components["schemas"]["StructuredError"][];
         };
         /**
-         * Wertung
-         * @description Result of a Wertung calculation: the two Wertungen plus first-arrow hit info.
+         * @description API mirror of [`domain::Wertungszone`]. Kept separate so the domain never learns
+         *     about OpenAPI, serde, or HTTP.
+         * @enum {string}
          */
-        Wertung: {
+        Wertungszone: Wertungszone;
+        /** Ziel */
+        Ziel: {
+            /** Format: uuid */
+            id: string;
+            tiername: string;
+            /**
+             * Format: uint8
+             * @description 1–4 (AC-5).
+             */
+            zielgruppe: number;
+            zustand: components["schemas"]["AnlageZustand"];
+            /** @description Where this physical Ziel currently lies, across this Anlage's active Parcours. */
+            verwendungen: components["schemas"]["Zielverwendung"][];
+        };
+        /**
+         * ZielRequest
+         * @description Add or edit a Ziel (AC-5).
+         */
+        ZielRequest: {
+            tiername: string;
+            /** Format: uint8 */
+            zielgruppe: number;
+        };
+        /**
+         * Zielergebnis
+         * @description The fold of every Schuss at one Ziel: both Wertungen plus first-arrow hit.
+         */
+        Zielergebnis: {
             /** Format: uint32 */
             ersterTreffer: number;
             /** Format: uint32 */
@@ -822,18 +2154,49 @@ export interface components {
             "anzahlSch\u00FCsse": number;
         };
         /**
-         * WertungRequest
-         * @description Inbound request for summarizing a selection of Schüsse.
+         * Zielplatzierung
+         * @description One Ziel's place in a Parcours, with its distances keyed by Pflock identity.
          */
-        WertungRequest: {
-            schussIds: string[];
+        Zielplatzierung: {
+            /** Format: uuid */
+            zielId: string;
+            /** @description Pflock id to metres. A missing entry means "no distance configured". */
+            "abst\u00E4nde": components["schemas"]["ZielplatzierungAbstand"][];
+        };
+        /** ZielplatzierungAbstand */
+        ZielplatzierungAbstand: {
+            /** Format: uuid */
+            pflockId: string;
+            /** Format: uint32 */
+            meter: number;
         };
         /**
-         * @description API mirror of [`domain::Wertungszone`]. Kept separate so the domain never learns
-         *     about OpenAPI, serde, or HTTP.
-         * @enum {string}
+         * Zielverwendung
+         * @description One Parcours' use of one Ziel, with that Parcours' own distances (AC-8).
          */
-        Wertungszone: Wertungszone;
+        Zielverwendung: {
+            /** Format: uuid */
+            parcoursId: string;
+            parcoursName: string;
+            /** Format: uint64 */
+            parcoursOrdnung: number;
+            /**
+             * Format: uint64
+             * @description 0-based position in that Parcours' route.
+             */
+            position: number;
+            /** @description Pflock label to metres, far to near. */
+            "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
+        };
+        /**
+         * Zuordnung
+         * @description Who a row belongs to. An anonymised row names no Benutzer (SPEC-datenschutz).
+         */
+        Zuordnung: {
+            /** Format: uuid */
+            benutzerId?: string;
+            anonymisiertAm?: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -842,6 +2205,18 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
+export enum AnlageVerwaltungRolle {
+    Administrator = "Administrator",
+    Mitarbeiter = "Mitarbeiter"
+}
+export enum AnlageZustand {
+    Aktiv = "Aktiv",
+    Archiviert = "Archiviert"
+}
+export enum RundeZustand {
+    InBearbeitung = "InBearbeitung",
+    Abgeschlossen = "Abgeschlossen"
+}
 export enum Wertungszone {
     Spot = "Spot",
     Kill = "Kill",
