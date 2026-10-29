@@ -36,7 +36,7 @@ export function HatchBand({
   /** `sm` is a breath between blocks, `md` between sections, `lg` before a footer. */
   height?: "sm" | "md" | "lg";
 }) {
-  const heightClass = { sm: "h-6", md: "h-10", lg: "h-16" }[height];
+  const heightClass = { sm: "h-4", md: "h-6", lg: "h-10" }[height];
 
   return (
     <div

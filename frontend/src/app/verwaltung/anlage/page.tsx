@@ -784,7 +784,6 @@ function Stammdaten({
               </Field>
             </div>
 
-            <HatchBand className="-my-3" height="sm" />
             <section className="space-y-4">
               <div>
                 <h3 className="font-serif text-lg font-semibold text-ink">
