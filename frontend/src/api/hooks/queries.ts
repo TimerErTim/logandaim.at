@@ -38,6 +38,21 @@ export function useAnlagenQuery() {
   });
 }
 
+export function useBenutzerNachEmailQuery(
+  anlageId: string,
+  email: string,
+  enabled: boolean,
+) {
+  const { api } = useLogandaimApi();
+  const phase = useAuth();
+  return useQuery({
+    queryKey: logandaimKeys.anlagen.benutzerSuche(anlageId, email),
+    queryFn: () => api.benutzerNachEmailSuchen(anlageId, email),
+    enabled: phase.status === "authenticated" && enabled && Boolean(email),
+    retry: false,
+  });
+}
+
 export function useAnlageQuery(id: string | null) {
   const { api } = useLogandaimApi();
   const phase = useAuth();

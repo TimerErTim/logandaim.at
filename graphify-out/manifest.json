@@ -180,9 +180,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/http-client.ts": {
-    "mtime": 1793293750.2438195,
-    "seen": 1793294298.4645565,
-    "ast_hash": "e7b5e1a3f8f4930a626eb26c1d0324df",
+    "mtime": 1793303507.1736805,
+    "seen": 1793303709.839617,
+    "ast_hash": "2e8f692d6da40044f4bda55f938d7ef5",
     "semantic_hash": ""
   },
   "frontend/src/api/index.ts": {
@@ -210,9 +210,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/hooks/index.ts": {
-    "mtime": 1793293461.3279383,
-    "seen": 1793294298.4645517,
-    "ast_hash": "40fd728e1fcbdf3083755165a84149cb",
+    "mtime": 1793303116.689831,
+    "seen": 1793303709.8394322,
+    "ast_hash": "44ef8b7228141462b549f67c7be5b646",
     "semantic_hash": ""
   },
   "frontend/src/api/hooks/mutations.ts": {
@@ -222,15 +222,15 @@
     "semantic_hash": ""
   },
   "frontend/src/api/hooks/queries.ts": {
-    "mtime": 1793293121.7880347,
-    "seen": 1793294298.4645548,
-    "ast_hash": "c48b99e13c01f08c831f82f35f51b024",
+    "mtime": 1793303108.0178304,
+    "seen": 1793303709.8396115,
+    "ast_hash": "8f452cc09eaa1bb1f866eb16ed86e82c",
     "semantic_hash": ""
   },
   "frontend/src/api/query-keys.ts": {
-    "mtime": 1793293111.156036,
-    "seen": 1793294298.4645617,
-    "ast_hash": "90dab037a9780330146fe14c8a0bb0be",
+    "mtime": 1793303361.8577037,
+    "seen": 1793303709.8401701,
+    "ast_hash": "412a3540919717a71e4fa4cce3b46558",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/alert.tsx": {
@@ -372,15 +372,15 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/navigation.ts": {
-    "mtime": 1793293153.5680323,
-    "seen": 1793294298.4648023,
-    "ast_hash": "5ab81ad28f81fb96af49389b7ebe5ab4",
+    "mtime": 1793301293.6874802,
+    "seen": 1793301496.796261,
+    "ast_hash": "968af99de5c6da05e381c0a536d7fa9f",
     "semantic_hash": ""
   },
   "frontend/src/api/schema.ts": {
-    "mtime": 1793298583.9135711,
-    "seen": 1793298601.2225084,
-    "ast_hash": "7b22e993e8f8a8bd381e19f9edf8a715",
+    "mtime": 1793304059.2514396,
+    "seen": 1793304084.062879,
+    "ast_hash": "89a253e73f54c833957a0afaa7a4277e",
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
@@ -570,9 +570,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/api/mod.rs": {
-    "mtime": 1793298481.139334,
-    "seen": 1793298601.2128606,
-    "ast_hash": "7bcdc15e319c09b375347d284a5d5186",
+    "mtime": 1793303415.0297217,
+    "seen": 1793303709.828598,
+    "ast_hash": "ec8b2e077fe84892cfcbbc07fe0098c5",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/api/requests/mod.rs": {
@@ -906,9 +906,9 @@
     "semantic_hash": ""
   },
   "frontend/src/api/logandaim-api.ts": {
-    "mtime": 1793293750.2358193,
-    "seen": 1793294298.464559,
-    "ast_hash": "bd2813f836d9a0721a63727d1be5f4f0",
+    "mtime": 1793303421.813714,
+    "seen": 1793303709.8400402,
+    "ast_hash": "b2f722704b6b3a028c492265faae0e2a",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/README.md": {
@@ -1290,9 +1290,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/schema/konto.rs": {
-    "mtime": 1793297946.4597309,
-    "seen": 1793298285.4626937,
-    "ast_hash": "82b46c1e3542b38187903f39ad1d1a0d",
+    "mtime": 1793302982.7698452,
+    "seen": 1793303709.830664,
+    "ast_hash": "55306b9c0ca0c405c1d882328f090735",
     "semantic_hash": ""
   },
   "crates/logandaim-api/tests/e2e/konto.rs": {
@@ -1572,9 +1572,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/http/mod.rs": {
-    "mtime": 1793298481.179334,
-    "seen": 1793298601.213932,
-    "ast_hash": "9b66684bdc666dbfd409efc54d3dbf5a",
+    "mtime": 1793303417.8897154,
+    "seen": 1793303709.830389,
+    "ast_hash": "8b22f99424b37abe516a61458784113d",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/http/responses/mod.rs": {
@@ -1644,9 +1644,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/api/requests/stammdaten.rs": {
-    "mtime": 1793293751.095819,
-    "seen": 1793294298.4625134,
-    "ast_hash": "0c72d526e711d99fdde18a941fe7c6be",
+    "mtime": 1793302127.3101506,
+    "seen": 1793302213.7141557,
+    "ast_hash": "8e89dc42d3403f7722615fca954a10c0",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/schema/runde.rs": {
@@ -1656,9 +1656,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/schema/stammdaten.rs": {
-    "mtime": 1793293751.151819,
-    "seen": 1793294298.4626794,
-    "ast_hash": "8f155a6a44ac52e01d8e2b3a85d733a2",
+    "mtime": 1793302170.8221188,
+    "seen": 1793302213.7167308,
+    "ast_hash": "2a031934733ef86d6cbfccdfa64f353d",
     "semantic_hash": ""
   },
   "crates/logandaim-api/tests/e2e/runde.rs": {
@@ -1668,9 +1668,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-api/tests/e2e/stammdaten.rs": {
-    "mtime": 1793298118.2793367,
-    "seen": 1793298285.4631908,
-    "ast_hash": "e4af97ade16337fcd25d62d0e0d2d675",
+    "mtime": 1793303566.029667,
+    "seen": 1793303709.831191,
+    "ast_hash": "765107733844fff4a64e478d0f34be52",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/anlage/adresse.rs": {
@@ -1776,15 +1776,15 @@
     "semantic_hash": ""
   },
   "frontend/src/app/verwaltung/anlage/page.tsx": {
-    "mtime": 1793293750.2438195,
-    "seen": 1793294298.4645832,
-    "ast_hash": "d929d47bdffb7a44f06bbb55503eff7c",
+    "mtime": 1793303483.9896812,
+    "seen": 1793303709.8420672,
+    "ast_hash": "fdf1b1d5640ede7deddfcdaa5be07208",
     "semantic_hash": ""
   },
   "frontend/src/app/verwaltung/page.tsx": {
-    "mtime": 1793298375.619399,
-    "seen": 1793298601.2233825,
-    "ast_hash": "10866d5ab722b5d79703be3106b65ecb",
+    "mtime": 1793301656.1782649,
+    "seen": 1793301778.9003346,
+    "ast_hash": "d24af401df7b1ee2df89042025af298d",
     "semantic_hash": ""
   },
   "frontend/src/app/verwaltung/parcours/page.tsx": {
@@ -1809,6 +1809,12 @@
     "mtime": 1793294829.3514519,
     "seen": 1793295734.6275592,
     "ast_hash": "a78a7ad827d108203be20cec761190a0",
+    "semantic_hash": ""
+  },
+  "frontend/src/app/verwaltung/anlage/neu/page.tsx": {
+    "mtime": 1793301656.946265,
+    "seen": 1793301778.9003286,
+    "ast_hash": "54640cd90174b6b6215d4476dc8c6b85",
     "semantic_hash": ""
   }
 }

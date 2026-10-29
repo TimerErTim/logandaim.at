@@ -18,6 +18,16 @@ use crate::schema::EmailAdresse;
 
 // ------------------------------------------------------------------ Anlage
 
+/// Country codes currently accepted for Anlage addresses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub enum CountryCode {
+    AT,
+    DE,
+    CH,
+}
+
 /// One structured address. Every field is required (SPEC-stammdaten AC-1).
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
@@ -28,8 +38,7 @@ pub struct AnlageAdresse {
     pub straße: String,
     pub postleitzahl: String,
     pub ort: String,
-    /// ISO 3166-1 alpha-2, e.g. `AT`.
-    pub ländercode: String,
+    pub ländercode: CountryCode,
 }
 
 /// Optional contact details; each may be absent on its own (AC-1).
@@ -240,13 +249,23 @@ impl TryFrom<AnlageVerwaltungRolle> for domain::AnlageVerwaltungRolle {
     }
 }
 
+impl From<domain::Ländercode> for CountryCode {
+    fn from(code: domain::Ländercode) -> Self {
+        match code {
+            domain::Ländercode::AT => Self::AT,
+            domain::Ländercode::DE => Self::DE,
+            domain::Ländercode::CH => Self::CH,
+        }
+    }
+}
+
 impl From<domain::AnlageAdresse> for AnlageAdresse {
     fn from(adresse: domain::AnlageAdresse) -> Self {
         Self {
             straße: adresse.straße().to_owned(),
             postleitzahl: adresse.postleitzahl().to_owned(),
             ort: adresse.ort().to_owned(),
-            ländercode: adresse.ländercode().as_str().to_owned(),
+            ländercode: adresse.ländercode().into(),
         }
     }
 }

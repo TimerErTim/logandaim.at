@@ -16,7 +16,7 @@ use error_stack::{Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
-    domain::{AnlageId, ParcoursId, RundeId, ZielId, konto::BenutzerId},
+    domain::{AnlageId, EmailAdresse, ParcoursId, RundeId, ZielId, konto::BenutzerId},
     ports::{ClientKey, ThrottleAction},
     service::{
         Abmeldung, AbmeldungFehler, AnlageAnzeigen, AnlageBeschreibendeDatenÄndern,
@@ -30,6 +30,7 @@ use logandaim_core::{
         RundeAnzeigenFehler, RundeStarten, RundeStartenFehler, RundenAnzeigen,
         RundenAnzeigenFehler, SchussRegistrieren, SchussRegistrierenFehler, SessionAusgestellt,
         StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern,
+        darf_anlage_verwalten,
     },
 };
 use tracing::warn;
@@ -426,6 +427,99 @@ impl LogandaimAppApi {
     }
 
     // ---------------------------------------------------------------- Benutzer
+
+    /// Resolve one account by exact email for assigning AnlageVerwaltung. A Systemadministrator
+    /// or the active Anlage's Administrator may search; no partial/bulk enumeration is exposed.
+    pub async fn benutzer_nach_email_suchen(
+        &self,
+        auth: AuthContext,
+        anlage_id: AnlageId,
+        e_mail_adresse: String,
+    ) -> ResultReport<Vec<crate::schema::BenutzerSuchtreffer>, StammdatenFehler> {
+        self.app
+            .execute_fn(auth, async |ctx| {
+                let e_mail_adresse = EmailAdresse::normalisiert(e_mail_adresse)
+                    .map_err(|_| Report::new(StammdatenFehler::UngültigeAnfrage))?;
+                let benutzer_id = ctx
+                    .auth()
+                    .require_benutzer_id()
+                    .change_context(StammdatenFehler::NichtAngemeldet)?;
+                let uow = ctx
+                    .enter()
+                    .await
+                    .change_context(StammdatenFehler::AnlageLaden)?;
+
+                let ergebnis = async {
+                    let benutzer = uow
+                        .benutzer()
+                        .find_by_id(benutzer_id)
+                        .await
+                        .map_err(error_stack::IntoReport::into_report)
+                        .change_context(StammdatenFehler::BenutzerLaden)?;
+                    let anlage = match uow.anlagen().find_by_id(anlage_id).await {
+                        Ok(anlage) => anlage,
+                        Err(fehler)
+                            if fehler
+                                .downcast_ref::<logandaim_core::ports::RepositoryError>()
+                                .is_some_and(|error| {
+                                    matches!(
+                                        error,
+                                        logandaim_core::ports::RepositoryError::NotFound
+                                    )
+                                }) =>
+                        {
+                            return Err(error_stack::Report::new(StammdatenFehler::NichtGefunden));
+                        }
+                        Err(fehler) => {
+                            return Err(fehler.change_context(StammdatenFehler::AnlageLaden));
+                        }
+                    };
+                    if !darf_anlage_verwalten(&benutzer, &anlage, benutzer_id) {
+                        return Err(error_stack::Report::new(StammdatenFehler::NichtErlaubt));
+                    }
+                    if anlage.ist_archiviert() {
+                        return Err(error_stack::Report::new(StammdatenFehler::Archiviert));
+                    }
+
+                    let email = &e_mail_adresse;
+                    match uow.konten().find_by_email(email).await {
+                        Ok(konto) => {
+                            if anlage
+                                .verwaltungen()
+                                .iter()
+                                .any(|verwaltung| verwaltung.benutzer_id() == konto.benutzer_id())
+                            {
+                                return Ok(Vec::new());
+                            }
+                            let benutzer = uow
+                                .benutzer()
+                                .find_by_id(konto.benutzer_id())
+                                .await
+                                .map_err(error_stack::IntoReport::into_report)
+                                .change_context(StammdatenFehler::BenutzerLaden)?;
+                            Ok(vec![(benutzer.into_data(), email.clone()).into()])
+                        }
+                        Err(fehler)
+                            if fehler
+                                .downcast_ref::<logandaim_core::ports::RepositoryError>()
+                                .is_some_and(|error| {
+                                    matches!(
+                                        error,
+                                        logandaim_core::ports::RepositoryError::NotFound
+                                    )
+                                }) =>
+                        {
+                            Ok(Vec::new())
+                        }
+                        Err(fehler) => Err(fehler.change_context(StammdatenFehler::BenutzerLaden)),
+                    }
+                }
+                .await;
+
+                uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await
+            })
+            .await
+    }
 
     pub async fn benutzer_löschen(
         &self,

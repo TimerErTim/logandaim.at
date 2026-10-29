@@ -2,12 +2,19 @@ import {
   AnlageVerwaltungRolle,
   AnlageZustand,
   type components,
+  CountryCode as Ländercode,
   RundeZustand,
   Wertungszone,
 } from "./schema";
 
 /** Re-exported so components import their vocabulary from one place. */
-export { AnlageVerwaltungRolle, AnlageZustand, RundeZustand, Wertungszone };
+export {
+  AnlageVerwaltungRolle,
+  AnlageZustand,
+  Ländercode,
+  RundeZustand,
+  Wertungszone,
+};
 
 /**
  * Transport-neutral API surface. Replacing this implementation is the seam for a
@@ -23,6 +30,10 @@ export interface LogandaimApi {
   anlageAendern(id: string, anlage: AnlageErstellungInput): Promise<Anlage>;
   anlageDeaktivieren(id: string): Promise<Anlage>;
 
+  benutzerNachEmailSuchen(
+    anlageId: string,
+    eMailAdresse: string,
+  ): Promise<BenutzerSuchtreffer[]>;
   verwaltungGewaehren(
     anlageId: string,
     benutzerId: string,
@@ -105,6 +116,7 @@ export interface AuthSession {
 type Schemas = components["schemas"];
 
 export type Benutzer = Schemas["Benutzer"];
+export type BenutzerSuchtreffer = Schemas["BenutzerSuchtreffer"];
 export type Anlage = Schemas["Anlage"];
 export type AnlagenZeile = Schemas["AnlagenZeile"];
 export type AnlageAdresse = Schemas["AnlageAdresse"];

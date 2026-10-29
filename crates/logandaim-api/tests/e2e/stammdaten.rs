@@ -204,6 +204,51 @@ async fn ac2_verwaltung_gewaehren_und_einen_mitarbeiter_zulassen() {
 }
 
 #[test_log::test(pollster::test)]
+async fn ac2_systemadministrator_sucht_benutzer_exakt_nach_email() {
+    let harness = E2eHarness::new().await;
+    let (admin, _, benutzer, benutzer_id) = admin_und_benutzer(&harness).await;
+    let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+
+    let (status, treffer) = harness
+        .client
+        .get_json_auth(
+            &format!("/api/anlagen/{anlage_id}/benutzer-suche?e_mail_adresse=anna%40muster.at"),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "AC-2: exakte Suche: {treffer}");
+    assert_eq!(treffer[0]["id"], benutzer_id);
+    assert_eq!(treffer[0]["eMailAdresse"], "anna@muster.at");
+
+    let (status, nicht_gefunden) = harness
+        .client
+        .get_json_auth(
+            &format!("/api/anlagen/{anlage_id}/benutzer-suche?e_mail_adresse=niemand%40muster.at"),
+            &admin,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "AC-2: unbekannte Adresse: {nicht_gefunden}"
+    );
+    assert_eq!(nicht_gefunden, json!([]));
+
+    let (status, _) = harness
+        .client
+        .get_json_auth(
+            &format!("/api/anlagen/{anlage_id}/benutzer-suche?e_mail_adresse=anna%40muster.at"),
+            &benutzer,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "AC-2: Benutzer darf nicht suchen"
+    );
+}
+
+#[test_log::test(pollster::test)]
 async fn ac2_der_letzte_administrator_kann_nicht_entzogen_werden() {
     let harness = E2eHarness::new().await;
     let (admin, admin_id, _, benutzer_id) = admin_und_benutzer(&harness).await;

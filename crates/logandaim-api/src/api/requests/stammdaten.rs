@@ -23,7 +23,7 @@ use logandaim_core::{
 
 use crate::schema::{
     AnlageAdresse as AnlageAdresseSchema, AnlageKontakt as AnlageKontaktSchema,
-    AnlageVerwaltungRolle as RolleSchema, Pflock as PflockSchema,
+    AnlageVerwaltungRolle as RolleSchema, CountryCode as LändercodeSchema, Pflock as PflockSchema,
     Zielplatzierung as ZielplatzierungSchema,
 };
 
@@ -36,7 +36,11 @@ fn name(wert: String) -> Result<AnlageName, Report<StammdatenFehler>> {
 }
 
 fn adresse(wert: AnlageAdresseSchema) -> Result<AnlageAdresse, Report<StammdatenFehler>> {
-    let ländercode = Ländercode::from_str(&wert.ländercode).map_err(|_| ungültig())?;
+    let ländercode = match wert.ländercode {
+        LändercodeSchema::AT => Ländercode::AT,
+        LändercodeSchema::DE => Ländercode::DE,
+        LändercodeSchema::CH => Ländercode::CH,
+    };
     AnlageAdresse::neu(wert.straße, wert.postleitzahl, wert.ort, ländercode).map_err(|_| ungültig())
 }
 

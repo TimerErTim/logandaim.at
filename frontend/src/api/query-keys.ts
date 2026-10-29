@@ -6,6 +6,12 @@ export const logandaimKeys = {
   anlagen: {
     all: () => [...logandaimKeys.root, "anlagen"] as const,
     detail: (id: string) => [...logandaimKeys.anlagen.all(), id] as const,
+    benutzerSuche: (anlageId: string, email: string) =>
+      [
+        ...logandaimKeys.anlagen.detail(anlageId),
+        "benutzer-suche",
+        email,
+      ] as const,
   },
   parcours: {
     /** The public list (AC-13). */

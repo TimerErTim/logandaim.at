@@ -3,6 +3,7 @@ export { useAuthMutations, useStammdatenMutations } from "./mutations";
 export {
   useAnlagenQuery,
   useAnlageQuery,
+  useBenutzerNachEmailQuery,
   useBenutzerQuery,
   useHealthQuery,
   useParcoursQuery,

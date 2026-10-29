@@ -25,7 +25,7 @@ use logandaim_core::{
 use poem::web::RealIp;
 use poem_openapi::{
     OpenApi, OpenApiService, ServerObject,
-    param::{Cookie, Header, Path},
+    param::{Cookie, Header, Path, Query},
     payload::Json,
 };
 use uuid::Uuid;
@@ -177,6 +177,25 @@ impl LogandaimApiSpec {
             Ok(auth) => {
                 self.app_api
                     .verwaltung_gewähren(auth, AnlageId(anlage_id.0), body.0)
+                    .await
+            }
+            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        };
+        ergebnis.into()
+    }
+
+    /// Exact-email lookup used only by a caller who may manage this active Anlage.
+    #[oai(path = "/anlagen/:anlage_id/benutzer-suche", method = "get")]
+    async fn benutzer_nach_email_suchen(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        anlage_id: Path<Uuid>,
+        e_mail_adresse: Query<String>,
+    ) -> TypicalJsonResponse<Vec<crate::schema::BenutzerSuchtreffer>> {
+        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
+            Ok(auth) => {
+                self.app_api
+                    .benutzer_nach_email_suchen(auth, AnlageId(anlage_id.0), e_mail_adresse.0)
                     .await
             }
             Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),

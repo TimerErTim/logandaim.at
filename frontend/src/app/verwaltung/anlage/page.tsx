@@ -6,9 +6,15 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/api/auth-provider";
 import { apiErrorMessage } from "@/api/errors";
-import { useAnlageQuery, useStammdatenMutations } from "@/api/hooks";
+import {
+  useAnlageQuery,
+  useBenutzerNachEmailQuery,
+  useStammdatenMutations,
+} from "@/api/hooks";
 import {
   type Anlage,
+  type AnlageAdresse,
+  type AnlageKontakt,
   AnlageVerwaltungRolle,
   type ZielInput,
 } from "@/api/logandaim-api";
@@ -152,6 +158,7 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
             }
             laeuft={mutations.anlageDeaktivieren.isPending}
             fehler={mutations.anlageDeaktivieren.error}
+            aenderungSpeichert={mutations.anlageAendern}
           />
         </TabsContent>
       </Tabs>
@@ -453,15 +460,23 @@ function Verwaltungen({
 }) {
   const { verwaltungGewaehren, verwaltungEntziehen, verwaltungAendern } =
     useStammdatenMutations();
-  const [benutzerId, setBenutzerId] = useState("");
+  const [emailEingabe, setEmailEingabe] = useState("");
+  const [emailAbfrage, setEmailAbfrage] = useState("");
+  const [ausgewaehlteBenutzerId, setAusgewaehlteBenutzerId] = useState("");
   const [rolle, setRolle] = useState<AnlageVerwaltungRolle>(
     AnlageVerwaltungRolle.Mitarbeiter,
+  );
+  const benutzerSuche = useBenutzerNachEmailQuery(
+    anlage.id,
+    emailAbfrage,
+    emailAbfrage.length > 0,
   );
 
   const fehler =
     verwaltungGewaehren.error ??
     verwaltungEntziehen.error ??
     verwaltungAendern.error;
+  const suchfehler = benutzerSuche.error;
 
   return (
     <Card>
@@ -477,7 +492,7 @@ function Verwaltungen({
           <Table>
             <TableHead>
               <TableRow>
-                <TableHeader>Benutzer</TableHeader>
+                <TableHeader>Benutzer-ID</TableHeader>
                 <TableHeader>Rolle</TableHeader>
                 <TableHeader>
                   <span className="sr-only">Aktionen</span>
@@ -548,41 +563,116 @@ function Verwaltungen({
 
         {gesperrt ? null : (
           <form
-            className="grid items-end gap-4 sm:grid-cols-3"
+            className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_auto]"
             onSubmit={(event) => {
               event.preventDefault();
-              verwaltungGewaehren.mutate([anlage.id, benutzerId, rolle], {
-                onSuccess: () => setBenutzerId(""),
-              });
+              const email = emailEingabe.trim();
+              setEmailAbfrage(email);
+              setAusgewaehlteBenutzerId("");
             }}
           >
-            <Field label="Benutzer-ID" hint="Kennung des Benutzers">
+            <Field
+              label="Benutzerin oder Benutzer per E-Mail finden"
+              hint="Es wird nur nach der vollständigen E-Mail-Adresse gesucht."
+            >
               <Input
-                value={benutzerId}
-                onChange={(event) => setBenutzerId(event.target.value)}
+                type="email"
+                autoComplete="off"
+                value={emailEingabe}
+                onChange={(event) => {
+                  setEmailEingabe(event.target.value);
+                  setEmailAbfrage("");
+                  setAusgewaehlteBenutzerId("");
+                }}
                 required
               />
             </Field>
-            <Field label="Rolle">
-              <Select
-                value={rolle}
-                onChange={(event) =>
-                  setRolle(event.target.value as AnlageVerwaltungRolle)
-                }
-              >
-                <option value={AnlageVerwaltungRolle.Mitarbeiter}>
-                  Mitarbeiter
-                </option>
-                <option value={AnlageVerwaltungRolle.Administrator}>
-                  Administrator
-                </option>
-              </Select>
-            </Field>
-            <Button type="submit" disabled={verwaltungGewaehren.isPending}>
-              Vergeben
+            <Button type="submit" variant="secondary">
+              Suchen
             </Button>
           </form>
         )}
+
+        {emailAbfrage ? (
+          <div className="space-y-3">
+            {benutzerSuche.isFetching ? (
+              <p className="text-sm text-secondary">Suche läuft …</p>
+            ) : benutzerSuche.data?.length ? (
+              <Field label="Gefundenes Konto auswählen">
+                <Select
+                  value={ausgewaehlteBenutzerId}
+                  onChange={(event) =>
+                    setAusgewaehlteBenutzerId(event.target.value)
+                  }
+                >
+                  <option value="">Konto auswählen …</option>
+                  {benutzerSuche.data.map((benutzer) => (
+                    <option key={benutzer.id} value={benutzer.id}>
+                      {benutzer.eMailAdresse}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            ) : benutzerSuche.isSuccess ? (
+              <p className="text-sm text-secondary">
+                Für diese E-Mail-Adresse wurde kein Konto gefunden.
+              </p>
+            ) : null}
+            {suchfehler ? (
+              <Alert variant="error">
+                {apiErrorMessage(suchfehler, {
+                  unauthorized: "Bitte melden Sie sich an.",
+                  badRequest:
+                    "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+                  fallback: "Die Suche konnte nicht durchgeführt werden.",
+                })}
+              </Alert>
+            ) : null}
+            {benutzerSuche.data?.length && !gesperrt ? (
+              <form
+                className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_auto]"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!ausgewaehlteBenutzerId) return;
+                  verwaltungGewaehren.mutate(
+                    [anlage.id, ausgewaehlteBenutzerId, rolle],
+                    {
+                      onSuccess: () => {
+                        setEmailEingabe("");
+                        setEmailAbfrage("");
+                        setAusgewaehlteBenutzerId("");
+                      },
+                    },
+                  );
+                }}
+              >
+                <Field label="Rolle für dieses Konto">
+                  <Select
+                    value={rolle}
+                    onChange={(event) =>
+                      setRolle(event.target.value as AnlageVerwaltungRolle)
+                    }
+                  >
+                    <option value={AnlageVerwaltungRolle.Mitarbeiter}>
+                      Mitarbeiter
+                    </option>
+                    <option value={AnlageVerwaltungRolle.Administrator}>
+                      Administrator
+                    </option>
+                  </Select>
+                </Field>
+                <Button
+                  type="submit"
+                  disabled={
+                    !ausgewaehlteBenutzerId || verwaltungGewaehren.isPending
+                  }
+                >
+                  Verwaltung vergeben
+                </Button>
+              </form>
+            ) : null}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -596,15 +686,20 @@ function Stammdaten({
   onDeaktivieren,
   laeuft,
   fehler,
+  aenderungSpeichert,
 }: {
   anlage: Anlage;
   gesperrt: boolean;
   onDeaktivieren: () => void;
   laeuft: boolean;
   fehler: unknown;
+  aenderungSpeichert: ReturnType<
+    typeof useStammdatenMutations
+  >["anlageAendern"];
 }) {
-  const { anlageAendern } = useStammdatenMutations();
   const [name, setName] = useState(anlage.name);
+  const [adresse, setAdresse] = useState<AnlageAdresse>(anlage.adresse);
+  const [kontakt, setKontakt] = useState<AnlageKontakt>(anlage.kontakt);
 
   return (
     <div className="space-y-4">
@@ -614,38 +709,157 @@ function Stammdaten({
         </CardHeader>
         <CardContent>
           <form
-            className="grid items-end gap-4 sm:grid-cols-3"
+            className="space-y-6"
             onSubmit={(event) => {
               event.preventDefault();
-              anlageAendern.mutate([
+              aenderungSpeichert.mutate([
                 anlage.id,
-                {
-                  ...anlage,
-                  name,
-                  adresse: anlage.adresse,
-                  kontakt: anlage.kontakt,
-                },
+                { ...anlage, name, adresse, kontakt },
               ]);
             }}
           >
-            <Field label="Name">
-              <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                disabled={gesperrt}
-                required
-              />
-            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Anlagenname" className="sm:col-span-2">
+                <Input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  disabled={gesperrt}
+                  required
+                />
+              </Field>
+              <Field label="Straße und Hausnummer">
+                <Input
+                  value={adresse.straße}
+                  onChange={(event) =>
+                    setAdresse((old) => ({
+                      ...old,
+                      straße: event.target.value,
+                    }))
+                  }
+                  disabled={gesperrt}
+                  required
+                />
+              </Field>
+              <Field label="Postleitzahl">
+                <Input
+                  value={adresse.postleitzahl}
+                  onChange={(event) =>
+                    setAdresse((old) => ({
+                      ...old,
+                      postleitzahl: event.target.value,
+                    }))
+                  }
+                  disabled={gesperrt}
+                  required
+                />
+              </Field>
+              <Field label="Ort">
+                <Input
+                  value={adresse.ort}
+                  onChange={(event) =>
+                    setAdresse((old) => ({ ...old, ort: event.target.value }))
+                  }
+                  disabled={gesperrt}
+                  required
+                />
+              </Field>
+              <Field label="Land">
+                <Select
+                  value={adresse.ländercode}
+                  onChange={(event) =>
+                    setAdresse((old) => ({
+                      ...old,
+                      ländercode: event.target
+                        .value as AnlageAdresse["ländercode"],
+                    }))
+                  }
+                  disabled={gesperrt}
+                  required
+                >
+                  <option value="AT">Österreich</option>
+                  <option value="DE">Deutschland</option>
+                  <option value="CH">Schweiz</option>
+                </Select>
+              </Field>
+            </div>
+
+            <Separator />
+            <section className="space-y-4">
+              <div>
+                <h3 className="font-serif text-lg font-semibold text-ink">
+                  Kontaktdaten
+                </h3>
+                <p className="text-sm text-secondary">
+                  Alle Angaben sind optional.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Verein oder Betreiber" optional>
+                  <Input
+                    value={kontakt.name ?? ""}
+                    onChange={(event) =>
+                      setKontakt((old) => ({
+                        ...old,
+                        name: event.target.value || undefined,
+                      }))
+                    }
+                    disabled={gesperrt}
+                  />
+                </Field>
+                <Field label="E-Mail-Adresse" optional>
+                  <Input
+                    type="email"
+                    value={kontakt.email ?? ""}
+                    onChange={(event) =>
+                      setKontakt((old) => ({
+                        ...old,
+                        email: event.target.value || undefined,
+                      }))
+                    }
+                    disabled={gesperrt}
+                  />
+                </Field>
+                <Field label="Telefon" optional>
+                  <Input
+                    type="tel"
+                    value={kontakt.telefon ?? ""}
+                    onChange={(event) =>
+                      setKontakt((old) => ({
+                        ...old,
+                        telefon: event.target.value || undefined,
+                      }))
+                    }
+                    disabled={gesperrt}
+                  />
+                </Field>
+                <Field label="Website" optional>
+                  <Input
+                    type="url"
+                    value={kontakt.website ?? ""}
+                    onChange={(event) =>
+                      setKontakt((old) => ({
+                        ...old,
+                        website: event.target.value || undefined,
+                      }))
+                    }
+                    disabled={gesperrt}
+                  />
+                </Field>
+              </div>
+            </section>
+
             <Button
               type="submit"
-              disabled={gesperrt || anlageAendern.isPending}
+              disabled={gesperrt || aenderungSpeichert.isPending}
             >
-              Speichern
+              {aenderungSpeichert.isPending
+                ? "Wird gespeichert…"
+                : "Stammdaten speichern"}
             </Button>
           </form>
-          {anlageAendern.isError ? (
+          {aenderungSpeichert.isError ? (
             <Alert variant="error" className="mt-4">
-              {apiErrorMessage(anlageAendern.error, {
+              {apiErrorMessage(aenderungSpeichert.error, {
                 badRequest: "Bitte prüfen Sie die Eingaben.",
                 fallback: "Die Änderung konnte nicht gespeichert werden.",
               })}

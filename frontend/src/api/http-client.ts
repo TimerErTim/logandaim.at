@@ -9,6 +9,7 @@ import type {
   AuthPhase,
   AuthSession,
   Benutzer,
+  BenutzerSuchtreffer,
   LogandaimApi,
   ParcoursInput,
   ParcoursSetupInput,
@@ -209,6 +210,21 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     return this.authenticated(() =>
       this.client.POST("/anlagen/{anlage_id}/deaktivierung", {
         params: { path: { anlage_id: id } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async benutzerNachEmailSuchen(
+    anlageId: string,
+    eMailAdresse: string,
+  ): Promise<BenutzerSuchtreffer[]> {
+    return this.authenticated(() =>
+      this.client.GET("/anlagen/{anlage_id}/benutzer-suche", {
+        params: {
+          path: { anlage_id: anlageId },
+          query: { e_mail_adresse: eMailAdresse },
+        },
         headers: this.authorizationHeaders(),
       }),
     );

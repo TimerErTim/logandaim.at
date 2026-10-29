@@ -37,6 +37,7 @@ export const paths = {
   runden: "/runden",
   verwaltung: "/verwaltung",
   verwaltungAnlage: "/verwaltung/anlage",
+  verwaltungAnlageNeu: "/verwaltung/anlage/neu",
   verwaltungParcours: "/verwaltung/parcours",
   profil: "/profil",
   optionen: "/optionen",

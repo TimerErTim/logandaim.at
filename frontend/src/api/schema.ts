@@ -344,6 +344,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/anlagen/{anlage_id}/benutzer-suche": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exact-email lookup used only by a caller who may manage this active Anlage. */
+        get: {
+            parameters: {
+                query: {
+                    e_mail_adresse: string;
+                };
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["BenutzerSuchtreffer"][];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/anlagen/{anlage_id}/verwaltungen/{benutzer_id}": {
         parameters: {
             query?: never;
@@ -1767,8 +1824,7 @@ export interface components {
             "stra\u00DFe": string;
             postleitzahl: string;
             ort: string;
-            /** @description ISO 3166-1 alpha-2, e.g. `AT`. */
-            "l\u00E4ndercode": string;
+            "l\u00E4ndercode": components["schemas"]["CountryCode"];
         };
         /**
          * AnlageErstellungRequest
@@ -1874,6 +1930,24 @@ export interface components {
          * @enum {string}
          */
         BenutzerRolle: BenutzerRolle;
+        /**
+         * BenutzerSuchtreffer
+         * @description The single account found by an exact email lookup for Anlage administration.
+         */
+        BenutzerSuchtreffer: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * E-Mail-Adresse
+             * @example test@example.com
+             */
+            eMailAdresse: string;
+        };
+        /**
+         * @description Country codes currently accepted for Anlage addresses.
+         * @enum {string}
+         */
+        CountryCode: CountryCode;
         /**
          * Ok
          * @description Acknowledgement of a request that has nothing to return.
@@ -2217,6 +2291,11 @@ export enum AnlageZustand {
 export enum BenutzerRolle {
     Benutzer = "Benutzer",
     Systemadministrator = "Systemadministrator"
+}
+export enum CountryCode {
+    AT = "AT",
+    DE = "DE",
+    CH = "CH"
 }
 export enum RundeZustand {
     InBearbeitung = "InBearbeitung",
