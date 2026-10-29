@@ -2,6 +2,7 @@ export { useAuth } from "../auth-provider";
 export { useAuthMutations, useStammdatenMutations } from "./mutations";
 export {
   useAnlagenQuery,
+  useAnlagenVerzeichnisQuery,
   useAnlageQuery,
   useBenutzerNachEmailQuery,
   useBenutzerQuery,

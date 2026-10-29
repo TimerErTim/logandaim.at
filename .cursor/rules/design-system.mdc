@@ -187,7 +187,9 @@ variants, Radix where behaviour is non-trivial, `cn` (`clsx` + `tailwind-merge`)
 Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour variants elsewhere.
 
 - **`Button`** — `icon` draws at `md` height with a `::before` 44px target, so mixed rows stay
-  aligned. `secondary` is a hairline on paper; `destructive` is a hairline in the failure red.
+ aligned. `field` is `h-11 px-4`: the drawn height of `Input`/`Select`/`Textarea`, so a button in a
+ `FormRow` sits on the same line as the field beside it. It is already 44px, so it carries no
+ overlay. `secondary` is a hairline on paper; `destructive` is a hairline in the failure red.
 - **`Card`** — a sheet, carries `paper`. `CardTitle` is `font-serif`; `CardHeader` closes with a
   `rule-ticks-quiet` hairline so the title block reads as a printed form head.
 - **`Badge`** — a stamp: hairline, tracked caps, tinted, names its status in words. `primary` is the
@@ -220,18 +222,31 @@ Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour 
   label · dotted-leader · value metric pairs.
 - **Sortable `Table` rows** use `@dnd-kit` with a dedicated per-row handle, never the whole row; the
   handle meets the touch rule and has a distinct accessible name per row. Machine values are mono.
-- **`PflockSwatch`** — master data stores a Pflock's colour as a *word* ("Rot", "Blau"), so it
-  cannot come from the palette. The swatch receives that value through the `--pflock-farbe` custom
+- **`PflockSwatch`** — master data stores a Pflock's colour as a validated `#rrggbb`, so it cannot
+  come from the palette. The swatch receives that value through the `--pflock-farbe` custom
   property and paints `bg-[var(--pflock-farbe)]`; it is the one inline style that names data rather
-  than a token. The swatch is `aria-hidden` and always paired with its word (`PflockMarker`), because
-  colour is never the only signal. Band colours on `CheckpointSlider` are the same idea, supplied as
-  props; the design system owns no palette for either.
+  than a token. The swatch is `aria-hidden` and always paired with the stored hex (`PflockMarker`),
+  because colour is never the only signal. Band colours on `CheckpointSlider` are the same idea,
+  supplied as props; the design system owns no palette for either.
+- **`PflockFarbeFeld`** — the colour picker for a Pflock: a `fieldset`-backed group of 44×44 swatch
+  buttons (the club's vocabulary, hardcoded as *data*) plus a native `<input type="color">` for a
+  custom value. Selection is `border-primary` **and** an ink check on a paper chip **and**
+  `aria-pressed`; each option carries its German colour name as its accessible name, since a swatch
+  alone is not a name. The stored value is drawn in mono beside them.
 - **`Progress`** — a measured band with fifth-ticks on a divided track. `rounded-sm`: a progress
   track's roundness would mean nothing.
 - **`Field`** — owns label, hint, and error placement; use it instead of hand-assembling label +
-  input. The label is a real `<label>` attached with `htmlFor`: `Field` mints an id for a single
-  control child that has none and leaves a control that already names itself alone. A caption drawn
-  above an unnamed input is not a labelled field, and no token or contrast check detects that.
+ input. The label is a real `<label>` attached with `htmlFor`: `Field` mints an id for a single
+ control child that has none and leaves a control that already names itself alone. A caption drawn
+ above an unnamed input is not a labelled field, and no token or contrast check detects that.
+ The label row is a fixed `min-h-[18px]`, `items-center`, so a field with an `optional` marker and
+ one without start their control at the same y.
+- **`FormRow` and `FormActions`** — the row-shaped form. `FormRow` is `grid items-start` with a
+ caller-chosen column count; its `actions` slot renders `FormActions`, which reserves the label row
+ as `pt-6` (18px label + 6px gap) and is `self-start`. Alignment is by the *control row*, never by
+ the bottom edge: **never use `items-end` on a form row**, because a hint or error under one field
+ then lifts its control above its neighbour and the row stops reading as one line. Put
+ `Button size="field"` in `FormActions`, not `md`.
 - **Layout and workflow** (`app-shell`, `sidebar`, `page-chrome`, `workflow-steps`) compose from
   primitives. The active nav item is a filled treatment plus `aria-current`, never colour alone.
 

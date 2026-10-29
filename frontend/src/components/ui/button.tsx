@@ -51,6 +51,11 @@ const buttonVariants = cva(
         md: "h-10 px-4 before:absolute before:inset-x-0 before:-inset-y-[4px] before:content-['']",
         // The full 44px touch minimum, drawn as such.
         lg: "h-11 px-6 text-base",
+        // The height of a field, not of a button: `Input`, `Select`, and `Textarea`
+        // are replaced elements drawn at 44px, so a button in a `FormRow` has to be
+        // drawn at the same height to sit on the same line. No overlay — it is
+        // already the touch minimum.
+        field: "h-11 px-4",
         // Drawn at `md` size so it aligns with its neighbours; the hit area grows on
         // both axes, since an icon is not wide enough to reach 44 on its own.
         icon: "size-10 before:absolute before:-inset-[5px] before:content-['']",

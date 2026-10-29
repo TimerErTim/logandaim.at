@@ -65,14 +65,14 @@ master data never breaks recorded history.
 1. **Create an Anlage.** A `Systemadministrator` enters the Anlage's name, structured address,
    and optional contact details in the admin UI. The Anlage may temporarily have no
    `Administrator`; one can be assigned later.
-2. **Set up a Parcours.** An authorized staff member creates a Parcours, chooses its Pflock labels
-   and far-to-near order, adds Ziele belonging to the same Anlage, sets any per-Ziel distances for
-   those Pflock labels, and arranges the Ziele in route order.
+2. **Set up a Parcours.** An authorized staff member creates a Parcours, chooses the colour of
+   each Pflock and its far-to-near order, adds Ziele belonging to the same Anlage, sets any
+   per-Ziel distances for those Pflocks, and arranges the Ziele in route order.
 3. **Maintain a course.** Staff edit the route, Ziel details, Pflock setup, or distances. The edits
    apply to Runden started afterwards. A Runde already in progress and every completed Runde keep
    the setup captured when that Runde started.
 4. **Review history.** An archer opens an old Runde and sees its Parcours name, ordered Ziele,
-   target details, Pflock labels/order, and configured distances as captured at start. The physical
+   target details, Pflock colours/order, and configured distances as captured at start. The physical
    Ziel's history remains continuous across Parcours and edits at the same Anlage.
 5. **Close or remove data.** Staff deactivate an Anlage or remove a master-data item. History-
    referenced records are archived and excluded from new use; records without history may be
@@ -86,8 +86,8 @@ master data never breaks recorded history.
 | `AnlageVerwaltung` | One Benutzer's role (`Administrator` or `Mitarbeiter`) inside one Anlage. |
 | `Parcours` | Named route at one Anlage, containing an ordered arrangement of that Anlage's physical Ziele and one Pflock setup. |
 | `Ziel` | One physical 3D target belonging to one Anlage, with an animal name and target group 1–4. |
-| `Zielplatzierung` | One physical Ziel's use in one Parcours. It carries optional distances for that Parcours' Pflock labels. |
-| `Pflock` | A shooting-position label in one Parcours' setup, ordered far to near; its color/label is chosen by Anlage staff. |
+| `Zielplatzierung` | One physical Ziel's use in one Parcours. It carries optional distances for that Parcours' Pflock colours. |
+| `Pflock` | A shooting position in one Parcours' setup, identified by its colour and ordered far to near. The colour is chosen by Anlage staff and unique within the Parcours. |
 | `Parcours-Snapshot` | Immutable copy of the Parcours shooting setup captured when a Runde starts. |
 | `Archivierung` | Removal of history-referenced master data from current use while retaining its identity and historical references. It is not reversible. |
 
@@ -113,33 +113,38 @@ Rules:
    Editing its details or moving it within or between Parcours at the same Anlage does not change
    identity or break per-Ziel shot-history continuity. Replacing the physical target creates a new
    Ziel identity; it does not inherit the old target's history.
-6. Each Parcours defines its own unique Pflock labels/colors and explicit far-to-near order. There
-   is no product-wide fixed palette, and order is never inferred from color. Every Zielplatzierung
-   may optionally define a distance in meters for each Pflock label in that Parcours. A missing
-   distance is allowed and has no meter estimate. Configured distances are positive and strictly
-   decrease from farther to nearer Pflocks.
+6. Each Parcours defines its own Pflock colours and explicit far-to-near order. A Pflock is
+   identified by its colour alone — it carries no label — and the colour must be unique within
+   the Parcours. A colour is a `#rrggbb` hex value; there is no product-wide fixed palette, and
+   order is never inferred from colour. Every Zielplatzierung may optionally define a distance in
+   meters for each Pflock of that Parcours. A missing distance is allowed and has no meter
+   estimate. Configured distances are positive and strictly decrease from farther to nearer
+   Pflocks.
 7. Parcours edits after logged Runden are allowed. They affect only Runden started after the edit;
    the edit does not rewrite any existing or in-progress Runde snapshot. A Parcours version is the
    effective setup at a point in time; versions are not separately managed objects.
 8. When a Runde starts, its immutable snapshot contains the Parcours identity and name and, in
    route order, each Ziel identity, animal name, target group, and its Parcours-specific Pflock
-   labels/colors/order and optional distances. The snapshot is the source for displaying that
+   colours/order and optional distances. The snapshot is the source for displaying that
    Runde's setup even if current master data later changes or is archived.
 9. A Ziel's Schüsse refer to its physical Ziel identity, not its position in a route. Per-Ziel
    history and progress therefore continue across Runden, route edits, and Parcours at the same
    Anlage. A Ziel in multiple Parcours has a separate Zielplatzierung and distance configuration
-   in each Parcours.
+   in each Parcours. A configured distance belongs to a Pflock of that Parcours, so it is keyed
+   by the Pflock and not by its colour's position in the order.
 10. Only a `Systemadministrator`, an `Administrator`, or a `Mitarbeiter` of that Anlage may create,
     edit, reorder, or remove its Parcours, Ziel, Zielplatzierung, and Pflock setup. Only a
     `Systemadministrator` or that Anlage's `Administrator` may create or edit the Anlage's
     descriptive fields, deactivate it, or manage its `AnlageVerwaltungen`. Staff authority never
     crosses Anlagen.
 11. Deactivation removes an Anlage and all its Parcours from active listings and prevents new
-    Runden there. Existing Runden remain readable with their snapshots. Any Anlage, Parcours, Ziel,
-    or Pflock setup referenced by a logged or in-progress Runde snapshot or its Schüsse is archived,
-    not destroyed; archived data cannot be restored. Master data without any such history reference
-    may be deleted outright. Removing a referenced Ziel removes it from current Parcours
-    arrangements while preserving its identity, Schüsse, and past snapshots.
+   Runden there. An archived Anlage is readable only by a `Systemadministrator`: its staff and
+   every other Benutzer receive 403, and it is absent from every list. Existing Runden remain
+   readable with their snapshots. Any Anlage, Parcours, Ziel, or Pflock setup referenced by a
+   logged or in-progress Runde snapshot or its Schüsse is archived, not destroyed; archived data
+   cannot be restored. Master data without any such history reference may be deleted outright.
+   Removing a referenced Ziel removes it from current Parcours arrangements while preserving its
+   identity, Schüsse, and past snapshots.
 12. Active Parcours and their setup are publicly readable for selecting and logging a Runde.
     Anlage staff may read aggregate statistics for their Anlage, but cannot read another Benutzer's
     Runden or Schüsse. A Systemadministrator may act across Anlagen.
@@ -154,7 +159,7 @@ Rules:
 - FR-2: Grant, change, and revoke per-Anlage `AnlageVerwaltungen`, preserving at least one
   Administrator after the first is assigned (rule 2).
 - FR-3: Create and maintain Parcours, ordered Zielplatzierungen, physical Ziele, and Parcours-level
-  Pflock labels/order and per-placement distances (rules 4–6, 10).
+  Pflock colours/order and per-placement distances (rules 4–6, 10).
 - FR-4: Record an immutable full Parcours-Snapshot when each Runde starts (rules 7–8).
 - FR-5: Preserve per-physical-Ziel shot history across Parcours and edits at the same Anlage
   (rules 5 and 9).
@@ -193,22 +198,24 @@ Rules:
 - AC-5: A Ziel requires a non-empty animal name and target group 1–4; a missing animal name or a
   target group outside that range is rejected. Replacing the physical target creates a new identity;
   editing details or route placement preserves identity and history continuity.
-- AC-6: Each Parcours stores unique Pflock labels/colors and an explicit far-to-near order
-  independent of color. Each Zielplatzierung may configure distinct distances for those labels.
-  Missing distances are accepted; configured distances must be positive and strictly decrease far to
-  near.
+- AC-6: Each Parcours stores Pflock colours that are unique within it and an explicit far-to-near
+  order independent of colour. A Pflock has no label; a value that is not a `#rrggbb` hex colour is
+  rejected. Each Zielplatzierung may configure distinct distances for those Pflocks. Missing
+  distances are accepted; configured distances must be positive and strictly decrease far to near.
 - AC-7: Given a Runde started under setup L1, when staff reorder its Parcours, edit Ziel details,
-  change Pflock labels/order, or change distances, then the existing and in-progress Runde still
+  change Pflock colours/order, or change distances, then the existing and in-progress Runde still
   display L1 exactly; a Runde started after the edit captures the new setup L2.
 - AC-8: When one physical Ziel appears in Runden from different Parcours or setup versions, its
   Schüsse remain linked to that Ziel and per-Ziel history remains continuous. A Ziel in a second
   Parcours has that Parcours' own distances.
 - AC-9: When an archer views a Runde, it displays the captured Parcours identity/name, ordered
-  Ziele, animal names, target groups, Pflock labels/colors/order, and optional distances as they were
+  Ziele, animal names, target groups, Pflock colours/order, and optional distances as they were
   when the Runde started, regardless of later master-data edits.
 - AC-10: When a `Systemadministrator` or that Anlage's `Administrator` deactivates an Anlage, it
   and its Parcours disappear from active selection and new Runden are refused; old Runden remain
-  readable with their snapshots. A Mitarbeiter cannot deactivate an Anlage.
+  readable with their snapshots. After that, only a `Systemadministrator` can read the archived
+  Anlage; its own Administrator and Mitarbeiter receive 403 and it is listed nowhere. A
+  Mitarbeiter cannot deactivate an Anlage.
 - AC-11: Removing a Ziel, Parcours, Anlage, or Pflock setup referenced by a logged or in-progress
   Runde snapshot or its Schüsse archives the referenced master data and prevents new use. Old
   snapshots, Schüsse, and per-Ziel history remain unchanged. Archived data cannot be restored.
@@ -229,6 +236,42 @@ per-Ziel identity/history continuity, deactivation, archiving, and refusal of ne
 data. API e2e tests cover 401/403 authorization paths and readable active Parcours. The absence of
 an import path and pilot entry are checked in the admin UI.
 
+## Draft — Anlagen-Verzeichnis
+
+**Draft, pending PO approval.** Not part of the approved MVP contract above; the endpoint and
+schema exist, so the section records what was built and what still needs a PO decision.
+
+The archer's first screen is a public directory of active Anlagen, so a `Runde` can be started
+without knowing an `Anlage` id or holding an account. `GET /anlagen/oeffentlich` needs no
+authentication and returns every active `Anlage` with its active `Parcours` in short form.
+
+Rules:
+
+1. The directory lists active Anlagen only. A deactivated Anlage is absent, matching AC-10 and
+   rule 11; archived Parcours of an active Anlage are absent too, matching AC-11.
+2. An entry carries the Anlage's id, name, locality, and country code, plus one short record per
+   active Parcours: id, name, Pflock count, and Ziel count. The full setup stays behind the
+   authenticated `Parcours` read.
+3. The directory carries no contact data: no contact name, email address, phone number, or
+   website. Publishing personal data needs its own PO decision and a `datenschutz.md` basis.
+4. A request with a broken or expired bearer token is answered as anonymous, not as an error: the
+   route is public and a stale token must not hide master data from its own reader.
+
+Acceptance criteria:
+
+- AC-D1: `GET /anlagen/oeffentlich` without any header answers 200 with only active Anlagen.
+  A deactivated Anlage is absent, and so is a Parcours removed from an active Anlage.
+- AC-D2: Each entry carries no contact fields. The payload contains exactly id, name, locality,
+  country code, and the short Parcours records.
+- AC-D3: A request carrying an invalid bearer token is answered as anonymous (200), never as 401.
+
+Open PO questions:
+
+- Q-D1: May an Anlage's contact name, email, phone, or website be published in the directory?
+  Until answered, the payload omits all four.
+- Q-D2: Should the directory be searchable server-side by name or locality, or is client-side
+  filtering of the whole active set enough for the M1 pilot sites?
+
 ## Decision log
 
 | Date | Decision | By |
@@ -240,8 +283,10 @@ an import path and pilot entry are checked in the admin UI.
 | 2026-10-29 | Pflock labels/colors and far-to-near order are defined per Parcours; distances are optional per Zielplatzierung and Pflock label. Staff choose labels/colors; there is no fixed global palette. | TimerErTim (PO) |
 | 2026-10-29 | Anlage address is structured and required; contact fields are structured and optional. Anlage descriptions and deactivation are controlled by Systemadministrator or that Anlage's Administrator. | TimerErTim (PO) |
 | 2026-10-29 | A created Anlage may initially have no Administrator; after one is assigned, at least one must remain. | TimerErTim (PO) |
-| 2026-10-29 | Anlage names need not be unique; animal names are required; contact fields are individually optional; Pflock labels are unique per Parcours. | TimerErTim (PO) |
+| 2026-10-29 | Anlage names need not be unique; animal names are required; contact fields are individually optional; Pflock colours are unique per Parcours. | TimerErTim (PO) |
 | 2026-10-29 | History-referenced master data is archived and cannot be restored; data without history may be deleted. Inactive Anlagen are unavailable for new Runden. | TimerErTim (PO) |
+| 2026-10-29 | An archived Anlage is readable only by a `Systemadministrator`; its staff and every other Benutzer get 403, and it appears in no list. | TimerErTim (PO) |
+| 2026-10-29 | A Pflock is identified by its colour alone: the label is dropped, the stored value is a validated lowercase `#rrggbb`, and order remains explicit and never derived from colour. | TimerErTim (PO) |
 | 2026-10-29 | M1 pilot Anlagen are Breitenstein and Wallhalla Pregarten; enter their master data in the admin UI, with no seed task. | TimerErTim (PO) |
 | 2026-10-29 | Anlage requests are post-MVP (#68), outside this slice. Only a `Systemadministrator` creates an Anlage; acceptance of a request grants the requester its first `Administrator` `AnlageVerwaltung`. | TimerErTim (PO) |
 
@@ -251,3 +296,5 @@ an import path and pilot entry are checked in the admin UI.
 |------|--------|----|
 | 2026-10-23 | Initial draft from issue #10 and PO decisions on seeding and Parcours version snapshots. | Agent (MiMo) |
 | 2026-10-29 | Synced with the current charter/konto role model and interactively respecified the data model, full Runde snapshot, Ziel identity, Pflock configuration, authorization, Anlage lifecycle, and history retention; clarified deactivation authority and post-MVP Anlage requests. | Agent (Cursor) |
+| 2026-10-29 | Archived Anlagen become readable only by a `Systemadministrator` (rule 11, AC-10), and the Pflock label is replaced by a unique `#rrggbb` colour (rule 6, AC-6). | Agent (Cursor) |
+| 2026-10-29 | Added the Draft "Anlagen-Verzeichnis" section for the public directory endpoint, with no contact data pending a PO decision. | Agent (Cursor) |

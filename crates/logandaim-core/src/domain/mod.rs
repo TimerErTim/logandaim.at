@@ -36,7 +36,6 @@ pub use anlage::ParcoursId;
 pub use anlage::ParcoursName;
 pub use anlage::ParcoursSnapshot;
 pub use anlage::Pflock;
-pub use anlage::PflockBezeichnung;
 pub use anlage::PflockFarbe;
 pub use anlage::PflockId;
 pub use anlage::SnapshotPflock;

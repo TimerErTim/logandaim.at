@@ -132,6 +132,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/anlagen/oeffentlich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Public: the active Anlagen and the Parcours each offers. No header needed. */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage\u00D6ffentlich"][];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/anlagen/{anlage_id}": {
         parameters: {
             query?: never;
@@ -139,7 +192,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Archived Anlagen stay readable: only their writes answer 409 (AC-11). */
+        /** An archived Anlage answers only to a Systemadministrator; its writes still 409 (AC-11). */
         get: {
             parameters: {
                 query?: never;
@@ -1893,6 +1946,21 @@ export interface components {
             adresse: components["schemas"]["AnlageAdresse"];
             kontakt: components["schemas"]["AnlageKontakt"];
         };
+        /**
+         * AnlageÖffentlich
+         * @description One active Anlage in the public directory.
+         *
+         *     Public, so it carries no contact data: an email or phone number is personal data and no
+         *     spec approved publishing it.
+         */
+        "Anlage\u00D6ffentlich": {
+            /** Format: uuid */
+            anlageId: string;
+            name: string;
+            ort: string;
+            "l\u00E4ndercode": components["schemas"]["CountryCode"];
+            parcours: components["schemas"]["ParcoursKurz"][];
+        };
         /** AnmeldungRequest */
         AnmeldungRequest: {
             /**
@@ -1982,6 +2050,19 @@ export interface components {
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
         /**
+         * ParcoursKurz
+         * @description One active Parcours as the public directory names it (counts only, no setup).
+         */
+        ParcoursKurz: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: uint64 */
+            "anzahlPfl\u00F6cke": number;
+            /** Format: uint64 */
+            anzahlZiele: number;
+        };
+        /**
          * ParcoursSetupRequest
          * @description Replace a Parcours' whole shooting setup (AC-6, AC-7).
          */
@@ -2021,16 +2102,20 @@ export interface components {
         };
         /**
          * Pflock
-         * @description One shooting position. The colour is caller data, not a design token (AC-6).
+         * @description One shooting position: its colour (`#rrggbb`) identifies it, and no label exists.
          */
         Pflock: {
             /** Format: uuid */
             id: string;
-            bezeichnung: string;
+            /** @description Caller data, never a design token (AC-6). */
             farbe: string;
         };
-        /** PflockAbstand */
+        /**
+         * PflockAbstand
+         * @description One Pflock colour with the distance captured for it.
+         */
         PflockAbstand: {
+            /** @description The Pflock's colour as `#rrggbb`. */
             pflock: string;
             /** Format: uint32 */
             meter: number;
@@ -2145,9 +2230,10 @@ export interface components {
         };
         /**
          * SnapshotAbstand
-         * @description One Pflock label with its captured distance.
+         * @description One Pflock colour with its captured distance.
          */
         SnapshotAbstand: {
+            /** @description The captured Pflock's colour as `#rrggbb`. */
             pflock: string;
             /** Format: uint32 */
             meter: number;
@@ -2157,8 +2243,7 @@ export interface components {
          * @description One captured Pflock, in far-to-near order.
          */
         SnapshotPflock: {
-            bezeichnung: string;
-            /** @description Caller data ("Rot", "Blau"), never a design token. */
+            /** @description Caller data (`#rrggbb`), never a design token. */
             farbe: string;
             /**
              * Format: uint64

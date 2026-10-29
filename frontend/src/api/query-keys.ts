@@ -17,6 +17,10 @@ export const logandaimKeys = {
     /** The public list (AC-13). */
     all: () => [...logandaimKeys.root, "parcours"] as const,
   },
+  anlagenVerzeichnis: {
+    /** The public Anlagen directory: readable without a session. */
+    all: () => [...logandaimKeys.root, "anlagen-verzeichnis"] as const,
+  },
   runden: {
     all: () => [...logandaimKeys.root, "runden"] as const,
     detail: (id: string) => [...logandaimKeys.runden.all(), id] as const,

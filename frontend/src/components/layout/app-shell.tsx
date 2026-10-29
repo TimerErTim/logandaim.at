@@ -11,7 +11,11 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/api/auth-provider";
-import { useAuthMutations, useBenutzerQuery } from "@/api/hooks";
+import {
+  useAnlagenQuery,
+  useAuthMutations,
+  useBenutzerQuery,
+} from "@/api/hooks";
 import { usePageChrome } from "@/components/layout/page-chrome";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Alert } from "@/components/ui/alert";
@@ -27,8 +31,8 @@ import {
 import {
   breadcrumbsForPathname,
   homeNavItem,
-  navActionsForPathname,
   sidebarCategories,
+  visibleSidebarCategories,
 } from "@/lib/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -36,20 +40,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { breadcrumbLabel } = usePageChrome();
 
   const breadcrumbs = breadcrumbsForPathname(pathname, breadcrumbLabel);
-  const actions = navActionsForPathname(pathname);
   const phase = useAuth();
   const benutzer = useBenutzerQuery();
+  const anlagen = useAnlagenQuery();
   const auth = useAuthMutations();
   const onAuthRoute = ["/anmeldung", "/registrierung", "/passwort"].includes(
     pathname.replace(/\/$/, ""),
   );
 
+  const categories = visibleSidebarCategories(sidebarCategories, {
+    istSystemadministrator: benutzer.data?.rolle === "Systemadministrator",
+    anzahlAnlagen: anlagen.data?.length ?? 0,
+  });
+
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
+      <a
+        href="#main"
+        className="sr-only rounded-sm px-4 py-2 text-sm font-medium text-ink focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        Zum Inhalt springen
+      </a>
+
       <input id="main-drawer" type="checkbox" className="peer hidden" />
 
       <Sidebar
-        categories={sidebarCategories}
+        categories={categories}
         homeItem={homeNavItem}
         pathname={pathname}
       />
@@ -100,13 +116,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
 
             <div className="flex shrink-0 items-center gap-2">
-              {actions.map((action) => (
-                <Link key={action.href} href={action.href}>
-                  <Button size="sm" variant="secondary">
-                    {action.label}
-                  </Button>
-                </Link>
-              ))}
               {phase.status === "authenticated" && benutzer.data ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -168,7 +177,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
+        <main id="main" tabIndex={-1} className="flex-1 overflow-y-auto">
           {phase.status === "unavailable" ? (
             <div className="mx-auto w-full max-w-5xl px-6 pt-6">
               <Alert

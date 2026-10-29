@@ -281,7 +281,7 @@ mod tests {
         ParcoursSnapshot::neu(
             ParcoursId(Uuid::from_u128(7)),
             "Waldrunde",
-            vec![SnapshotPflock::neu("Weit".to_owned(), "Rot".to_owned(), 0).unwrap()],
+            vec![SnapshotPflock::neu("#c0392b".to_owned(), 0).unwrap()],
             ziele
                 .iter()
                 .map(|&(id, tiername)| {

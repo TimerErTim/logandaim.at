@@ -21,20 +21,20 @@ use crate::schema::{Zielergebnis, Zuordnung};
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SnapshotPflock {
-    pub bezeichnung: String,
-    /// Caller data ("Rot", "Blau"), never a design token.
+    /// Caller data (`#rrggbb`), never a design token.
     pub farbe: String,
     /// 0-based, far to near.
     pub position: usize,
 }
 
-/// One Pflock label with its captured distance.
+/// One Pflock colour with its captured distance.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SnapshotAbstand {
+    /// The captured Pflock's colour as `#rrggbb`.
     pub pflock: String,
     pub meter: u32,
 }
@@ -119,7 +119,6 @@ impl From<domain::RundeZustand> for RundeZustand {
 impl From<domain::SnapshotPflock> for SnapshotPflock {
     fn from(pflock: domain::SnapshotPflock) -> Self {
         Self {
-            bezeichnung: pflock.bezeichnung().to_owned(),
             farbe: pflock.farbe().to_owned(),
             position: pflock.position(),
         }

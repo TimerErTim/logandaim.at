@@ -10,17 +10,16 @@ use logandaim_core::{
     application::AuthContext,
     domain::{
         Abstand, AnlageAdresse, AnlageId, AnlageKontakt, AnlageName, EmailAdresse, Ländercode,
-        ParcoursId, ParcoursName, Pflock, PflockBezeichnung, PflockFarbe, PflockId, RundeZustand,
-        Tiername, Wertungszone, ZielId, Zielgruppe, Zielplatzierung, Zuordnung,
+        ParcoursId, ParcoursName, Pflock, PflockFarbe, PflockId, RundeZustand, Tiername,
+        Wertungszone, ZielId, Zielgruppe, Zielplatzierung, Zuordnung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
     ports::ClientKey,
     service::{
         AnlageDeaktivieren, AnlageErstellen, ParcoursEntfernen, ParcoursHinzufügen,
-        ParcoursUmbenennen, RegistrierungAbschließen, RegistrierungStarten, RundeAbschliessen,
-        RundeAbschliessenFehler, RundeAnzeigen, RundeAnzeigenFehler, RundeStarten,
-        RundeStartenFehler, RundenAnzeigen, SchussRegistrieren, SchussRegistrierenFehler,
+        RegistrierungAbschließen, RegistrierungStarten, RundeAbschliessen, RundeAbschliessenFehler,
+        RundeStarten, RundeStartenFehler, SchussRegistrieren, SchussRegistrierenFehler,
         SessionAusgestellt, SystemadministratorBefördern, ZielHinzufügen,
     },
 };
@@ -125,16 +124,8 @@ async fn parcours_mit_einem_ziel(
     let weit = PflockId(uuid::Uuid::new_v4());
     let nah = PflockId(uuid::Uuid::new_v4());
     let pflöcke = vec![
-        Pflock::neu(
-            weit,
-            PflockBezeichnung::neu("Weit").expect("gültig"),
-            PflockFarbe::neu("Rot").expect("gültig"),
-        ),
-        Pflock::neu(
-            nah,
-            PflockBezeichnung::neu("Nah").expect("gültig"),
-            PflockFarbe::neu("Blau").expect("gültig"),
-        ),
+        Pflock::neu(weit, PflockFarbe::neu("#c0392b").expect("gültig")),
+        Pflock::neu(nah, PflockFarbe::neu("#1b4f9c").expect("gültig")),
     ];
     let platzierung = Zielplatzierung::neu(
         ziel_id,
@@ -165,64 +156,10 @@ async fn parcours_mit_einem_ziel(
 
 // --------------------------------------------------------------------------- AC-9
 
-#[test_log::test(pollster::test)]
-async fn ac9_eine_runde_zeigt_den_schnappschuss_wie_beim_start() {
-    let harness = harness().await;
-    let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let (anlage_id, ziel_id, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
-
-    let runde = harness
-        .app()
-        .execute(admin, RundeStarten { parcours_id })
-        .await
-        .expect("die Runde startet");
-    assert_eq!(runde.parcours_id(), parcours_id);
-    assert_eq!(runde.snapshot().parcours_name(), "Waldrunde");
-
-    // Rename the Parcours after the fact: the captured name must not move.
-    harness
-        .app()
-        .execute(
-            admin,
-            ParcoursUmbenennen {
-                anlage_id,
-                parcours_id,
-                name: ParcoursName::neu("Neue Runde").expect("gültig"),
-            },
-        )
-        .await
-        .expect("umbenennen");
-
-    let ansicht = harness
-        .app()
-        .execute(
-            admin,
-            RundeAnzeigen {
-                runde_id: runde.id(),
-            },
-        )
-        .await
-        .expect("die Runde ist lesbar");
-
-    assert_eq!(
-        ansicht.runde.snapshot().parcours_name(),
-        "Waldrunde",
-        "AC-9: der Name bleibt der beim Start"
-    );
-    assert_eq!(ansicht.ziele.len(), 1);
-    assert_eq!(ansicht.ziele[0].ziel_id, ziel_id);
-    assert_eq!(ansicht.ziele[0].tiername, "Keiler");
-    assert_eq!(ansicht.ziele[0].zielgruppe, 2);
-    assert_eq!(
-        ansicht.ziele[0].abstände,
-        vec![("Weit".to_owned(), 40), ("Nah".to_owned(), 20)]
-    );
-    let pflöcke = ansicht.runde.snapshot().pflöcke();
-    assert_eq!(pflöcke[0].bezeichnung(), "Weit");
-    assert_eq!(pflöcke[0].farbe(), "Rot");
-    assert_eq!(pflöcke[1].bezeichnung(), "Nah");
-    assert_eq!(pflöcke[1].farbe(), "Blau");
-}
+// The Runde read is composed at the HTTP edge now; its snapshot payload is pinned there
+// (`e2e/runde.rs::ac9_eine_runde_zeigt_beide_wertungen_und_den_snapshot`). The rule that a
+// captured snapshot never moves is proven by `ac7_ac9_der_snapshot_bleibt_von_spaeteren_
+// aenderungen_unberuehrt` in `stammdaten.rs`.
 
 // --------------------------------------------------------------------------- Starten
 
@@ -554,57 +491,6 @@ async fn eine_fremde_runde_wird_nicht_abgeschlossen() {
     ));
 }
 
-#[test_log::test(pollster::test)]
-async fn die_eigene_liste_zeigt_nur_eigene_runden_neueste_zuerst() {
-    let harness = harness().await;
-    let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
-    let (_, _, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
-
-    let erste = harness
-        .app()
-        .execute(anna, RundeStarten { parcours_id })
-        .await
-        .expect("Annas erste Runde");
-    harness.vorspulen(chrono::Duration::minutes(5));
-    let zweite = harness
-        .app()
-        .execute(anna, RundeStarten { parcours_id })
-        .await
-        .expect("Annas zweite Runde");
-    harness
-        .app()
-        .execute(admin, RundeStarten { parcours_id })
-        .await
-        .expect("eine fremde Runde");
-
-    let eigene = harness
-        .app()
-        .execute(anna, RundenAnzeigen)
-        .await
-        .expect("Annas Liste ist lesbar");
-    assert_eq!(eigene.len(), 2);
-    assert_eq!(eigene[0].id(), zweite.id());
-    assert_eq!(eigene[1].id(), erste.id());
-}
-
-#[test_log::test(pollster::test)]
-async fn eine_unbekannte_runde_ist_404() {
-    let harness = harness().await;
-    let admin = systemadministrator(&harness, "admin@muster.at").await;
-
-    let fehler = harness
-        .app()
-        .execute(
-            admin,
-            RundeAnzeigen {
-                runde_id: logandaim_core::domain::RundeId(uuid::Uuid::new_v4()),
-            },
-        )
-        .await
-        .expect_err("eine unbekannte Runde ist 404");
-    assert!(matches!(
-        fehler.current_context(),
-        RundeAnzeigenFehler::NichtGefunden
-    ));
-}
+// The list read and its newest-first order live at the HTTP edge
+// (`e2e/runde.rs::die_rundenliste_zeigt_die_eigenen_runden_neueste_zuerst`), because
+// `RundenAnzeigen` is no longer a use case.

@@ -49,7 +49,10 @@ use crate::{
             RegistrierungStartRequest, RundeStartenRequest, SchussErstellungRequest, ZielRequest,
         },
     },
-    schema::{Anlage, AnlagenZeile, Benutzer, Ok, ParcoursÖffentlich, Runde, RundenZeile, Schuss},
+    schema::{
+        Anlage, AnlagenZeile, AnlageÖffentlich, Benutzer, Ok, ParcoursÖffentlich, Runde,
+        RundenZeile, Schuss,
+    },
 };
 
 pub struct LogandaimApiSpec {
@@ -110,7 +113,24 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Archived Anlagen stay readable: only their writes answer 409 (AC-11).
+    /// Public: the active Anlagen and the Parcours each offers. No header needed.
+    //
+    // The static segment wins over `/anlagen/:anlage_id`, so registration order is safe.
+    #[oai(path = "/anlagen/oeffentlich", method = "get")]
+    async fn anlagen_verzeichnis(
+        &self,
+        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+    ) -> TypicalJsonResponse<Vec<AnlageÖffentlich>> {
+        // A broken token is answered as anonymous here, never as an error: this route is
+        // public, and a stale token must not hide the directory from its own reader.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(logandaim_core::application::AuthContext::Anonymous);
+        self.app_api.anlagen_verzeichnis(auth).await.into()
+    }
+
+    /// An archived Anlage answers only to a Systemadministrator; its writes still 409 (AC-11).
     #[oai(path = "/anlagen/:anlage_id", method = "get")]
     async fn anlage_anzeigen(
         &self,

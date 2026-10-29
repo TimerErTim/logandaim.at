@@ -116,19 +116,21 @@ pub struct Zielverwendung {
     pub abstände: Vec<PflockAbstand>,
 }
 
+/// One Pflock colour with the distance captured for it.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PflockAbstand {
+    /// The Pflock's colour as `#rrggbb`.
     pub pflock: String,
     pub meter: u32,
 }
 
 // ------------------------------------------------------------------ Parcours
 
-/// One shooting position. The colour is caller data, not a design token (AC-6).
+/// One shooting position: its colour (`#rrggbb`) identifies it, and no label exists.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
@@ -136,7 +138,7 @@ pub struct PflockAbstand {
 #[serde(rename_all = "camelCase")]
 pub struct Pflock {
     pub id: Uuid,
-    pub bezeichnung: String,
+    /// Caller data, never a design token (AC-6).
     pub farbe: String,
 }
 
@@ -187,6 +189,36 @@ pub struct ParcoursÖffentlich {
     pub anlage_id: Uuid,
     pub anlage_name: String,
     pub parcours: Parcours,
+}
+
+/// One active Parcours as the public directory names it (counts only, no setup).
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ParcoursKurz {
+    pub id: Uuid,
+    pub name: String,
+    pub anzahl_pflöcke: usize,
+    pub anzahl_ziele: usize,
+}
+
+/// One active Anlage in the public directory.
+///
+/// Public, so it carries no contact data: an email or phone number is personal data and no
+/// spec approved publishing it.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnlageÖffentlich {
+    pub anlage_id: Uuid,
+    pub name: String,
+    pub ort: String,
+    pub ländercode: CountryCode,
+    pub parcours: Vec<ParcoursKurz>,
 }
 
 // ------------------------------------------------------------------ Anlage views
@@ -294,7 +326,6 @@ impl From<domain::Pflock> for Pflock {
     fn from(pflock: domain::Pflock) -> Self {
         Self {
             id: pflock.id().0,
-            bezeichnung: pflock.bezeichnung().as_str().to_owned(),
             farbe: pflock.farbe().as_str().to_owned(),
         }
     }
@@ -418,6 +449,29 @@ impl From<ParcoursÖffentlichAnsicht> for ParcoursÖffentlich {
             anlage_id: parcours.anlage_id.0,
             anlage_name: parcours.anlage_name.as_str().to_owned(),
             parcours: parcours.parcours.into(),
+        }
+    }
+}
+
+impl From<logandaim_core::service::ParcoursKurz> for ParcoursKurz {
+    fn from(kurz: logandaim_core::service::ParcoursKurz) -> Self {
+        Self {
+            id: kurz.id.0,
+            name: kurz.name.as_str().to_owned(),
+            anzahl_pflöcke: kurz.anzahl_pflöcke,
+            anzahl_ziele: kurz.anzahl_ziele,
+        }
+    }
+}
+
+impl From<logandaim_core::service::AnlageÖffentlich> for AnlageÖffentlich {
+    fn from(anlage: logandaim_core::service::AnlageÖffentlich) -> Self {
+        Self {
+            anlage_id: anlage.anlage_id.0,
+            name: anlage.name.as_str().to_owned(),
+            ort: anlage.ort,
+            ländercode: anlage.ländercode.into(),
+            parcours: anlage.parcours.into_iter().map(Into::into).collect(),
         }
     }
 }

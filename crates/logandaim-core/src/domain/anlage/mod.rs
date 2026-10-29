@@ -24,7 +24,7 @@ pub use adresse::{AnlageAdresse, AnlageAdresseFehler};
 pub use kontaktdaten::{AnlageKontakt, Website, WebsiteFehler};
 pub use parcours::{
     Abstand, NeuerParcours, Parcours, ParcoursFehler, ParcoursId, ParcoursName, Pflock,
-    PflockBezeichnung, PflockFarbe, PflockId, Zielplatzierung,
+    PflockFarbe, PflockId, Zielplatzierung,
 };
 pub use snapshot::{
     ParcoursSnapshot, SnapshotFehler, SnapshotPflock, SnapshotQuelle, SnapshotZiel,
@@ -329,13 +329,7 @@ impl<S> AnlageIn<S> {
             parcours
                 .pflöcke()
                 .iter()
-                .map(|pflock| {
-                    (
-                        pflock.id(),
-                        pflock.bezeichnung().as_str().to_owned(),
-                        pflock.farbe().as_str().to_owned(),
-                    )
-                })
+                .map(|pflock| (pflock.id(), pflock.farbe().as_str().to_owned()))
                 .collect(),
             ziele,
         );
@@ -362,9 +356,9 @@ impl<S> AnlageIn<S> {
                     .pflöcke()
                     .iter()
                     .filter_map(|pflock| {
-                        platzierung.abstand_für(pflock.id()).map(|abstand| {
-                            (pflock.bezeichnung().as_str().to_owned(), abstand.meter())
-                        })
+                        platzierung
+                            .abstand_für(pflock.id())
+                            .map(|abstand| (pflock.farbe().as_str().to_owned(), abstand.meter()))
                     })
                     .collect();
                 Some(Zielverwendung {
@@ -887,18 +881,17 @@ mod tests {
         ZielId(Uuid::from_u128(10))
     }
 
-    fn pflock(id: u128, label: &str) -> Pflock {
+    fn pflock(id: u128, farbe: &str) -> Pflock {
         Pflock::neu(
             PflockId(Uuid::from_u128(id)),
-            PflockBezeichnung::neu(label).unwrap(),
-            PflockFarbe::neu("Rot").unwrap(),
+            PflockFarbe::neu(farbe).unwrap(),
         )
     }
 
     fn parcours_neu(ziel: ZielId) -> NeuerParcours {
         NeuerParcours::neu(
             ParcoursName::neu("Waldrunde").unwrap(),
-            vec![pflock(1, "Weit"), pflock(2, "Nah")],
+            vec![pflock(1, "#c0392b"), pflock(2, "#1b4f9c")],
             vec![Zielplatzierung::neu(ziel, Vec::new()).unwrap()],
         )
         .unwrap()

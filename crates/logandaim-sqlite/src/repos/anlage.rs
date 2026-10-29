@@ -19,8 +19,8 @@ use logandaim_core::{
     domain::{
         Anlage, AnlageAdresse, AnlageAktiv, AnlageArchiviert, AnlageId, AnlageKontakt, AnlageName,
         AnlageVerwaltung, AnlageVerwaltungRolle, Ländercode, NeueAnlage, Parcours, ParcoursId,
-        ParcoursName, Pflock, PflockBezeichnung, PflockFarbe, PflockId, Tiername, Ziel, ZielId,
-        Zielgruppe, Zielplatzierung, Zustand,
+        ParcoursName, Pflock, PflockFarbe, PflockId, Tiername, Ziel, ZielId, Zielgruppe,
+        Zielplatzierung, Zustand,
     },
     ports::{AnlageRepository, RepositoryError, RepositoryResult},
 };
@@ -149,7 +149,7 @@ async fn lade_parcours(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResul
 async fn lade_pflöcke(tx: &Transaction, parcours_id: ParcoursId) -> RepositoryResult<Vec<Pflock>> {
     let mut rows = tx
         .query(
-            r#"SELECT id, bezeichnung, farbe FROM "pflock_setups"
+            r#"SELECT id, farbe FROM "pflock_setups"
                WHERE parcours_id = ?1 ORDER BY ordnung"#,
             [parcours_id.0.to_string()],
         )
@@ -163,11 +163,9 @@ async fn lade_pflöcke(tx: &Transaction, parcours_id: ParcoursId) -> RepositoryR
         .contextualize_with(libsql_error_to_persistence_error)?
     {
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
-        let bezeichnung: String = row.get(1).contextualize(RepositoryError::Data)?;
-        let farbe: String = row.get(2).contextualize(RepositoryError::Data)?;
+        let farbe: String = row.get(1).contextualize(RepositoryError::Data)?;
         pflöcke.push(Pflock::neu(
             PflockId(parse_uuid(&id).contextualize(RepositoryError::Data)?),
-            PflockBezeichnung::neu(&bezeichnung).change_context(RepositoryError::Data)?,
             PflockFarbe::neu(&farbe).change_context(RepositoryError::Data)?,
         ));
     }
@@ -389,12 +387,11 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
 
         for (pflock_ordnung, pflock) in parcours.pflöcke().iter().enumerate() {
             tx.execute(
-                r#"INSERT INTO "pflock_setups" (id, parcours_id, bezeichnung, farbe, ordnung)
-                   VALUES (?1, ?2, ?3, ?4, ?5)"#,
+                r#"INSERT INTO "pflock_setups" (id, parcours_id, farbe, ordnung)
+                   VALUES (?1, ?2, ?3, ?4)"#,
                 (
                     pflock.id().0.to_string(),
                     parcours_id.clone(),
-                    pflock.bezeichnung().as_str(),
                     pflock.farbe().as_str(),
                     pflock_ordnung as i64,
                 ),

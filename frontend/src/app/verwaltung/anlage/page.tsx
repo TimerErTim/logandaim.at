@@ -20,16 +20,35 @@ import {
   type ZielInput,
 } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
+import { PageHeader } from "@/components/layout/page-header";
+import {
+  PFLOCK_FARBE_STANDARD,
+  PflockFarbeFeld,
+} from "@/components/stammdaten/pflock-farbe-feld";
 import { PflockMarker } from "@/components/stammdaten/pflock-swatch";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field } from "@/components/ui/field";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Field, FormRow } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { HatchBand } from "@/components/ui/paper-rule";
+import {
+  HatchBand,
+  MarginNote,
+  SheetNumber,
+  StampMark,
+} from "@/components/ui/paper-rule";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -58,11 +77,7 @@ export default function AnlagePage() {
   }, [phase.status, router]);
 
   if (id === null) {
-    return (
-      <div className="p-6">
-        <p className="text-sm text-secondary">Anlage wird geladen …</p>
-      </div>
-    );
+    return <AnlageSkeleton />;
   }
 
   if (!id) {
@@ -77,11 +92,7 @@ export default function AnlagePage() {
   }
 
   if (anlage.isLoading) {
-    return (
-      <div className="p-6">
-        <p className="text-sm text-secondary">Anlage wird geladen …</p>
-      </div>
-    );
+    return <AnlageSkeleton />;
   }
 
   if (anlage.isError || !anlage.data) {
@@ -100,6 +111,26 @@ export default function AnlagePage() {
   return <AnlageInhalt anlage={anlage.data} />;
 }
 
+/** A printed placeholder: the head, then a ledger, before the Anlage arrives. */
+function AnlageSkeleton() {
+  return (
+    <div aria-busy="true" className="space-y-6 p-6">
+      <div className="space-y-3">
+        <Skeleton className="h-3 w-32" />
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-80" />
+        <Skeleton className="h-px w-full" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </div>
+    </div>
+  );
+}
+
 function AnlageInhalt({ anlage }: { anlage: Anlage }) {
   const mutations = useStammdatenMutations();
   const deaktiviert = anlage.zustand === "Archiviert";
@@ -108,26 +139,27 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
     <div className="space-y-6 p-6">
       <SetBreadcrumbLabel label={anlage.name} />
 
-      <header className="space-y-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink">
-            {anlage.name}
-          </h1>
-          <Badge variant={deaktiviert ? "warning" : "success"}>
-            {deaktiviert ? "Deaktiviert" : "Aktiv"}
-          </Badge>
-        </div>
-        <p className="text-sm text-secondary">
-          {anlage.adresse.straße}, {anlage.adresse.postleitzahl}{" "}
-          {anlage.adresse.ort} ({anlage.adresse.ländercode})
-        </p>
-      </header>
+      <PageHeader
+        register={["Verwaltung", "Anlagen"]}
+        title={anlage.name}
+        description={`${anlage.adresse.straße}, ${anlage.adresse.postleitzahl} ${anlage.adresse.ort} (${anlage.adresse.ländercode})`}
+        actions={
+          <>
+            <Badge variant={deaktiviert ? "warning" : "success"}>
+              {deaktiviert ? "Deaktiviert" : "Aktiv"}
+            </Badge>
+            {deaktiviert ? (
+              <StampMark className="text-impact">Deaktiviert</StampMark>
+            ) : null}
+          </>
+        }
+      />
 
       {deaktiviert ? (
         <Alert variant="warning">
-          Diese Anlage ist deaktiviert. Alle Stammdaten bleiben lesbar,
-          Änderungen werden jedoch abgelehnt. Eine Reaktivierung ist nicht
-          vorgesehen.
+          Diese Anlage ist deaktiviert. Sie ist nur noch für
+          Systemadministratoren einsehbar, nimmt keine Änderung mehr an und
+          startet keine neuen Runden. Eine Reaktivierung ist nicht vorgesehen.
         </Alert>
       ) : null}
 
@@ -188,125 +220,123 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Ziele der Anlage</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {anlage.ziele.length === 0 ? (
-            <p className="text-sm text-secondary">Noch kein Ziel erfasst.</p>
-          ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeader>Tiername</TableHeader>
-                  <TableHeader>Zielgruppe</TableHeader>
-                  <TableHeader>Verwendung</TableHeader>
-                  <TableHeader>Status</TableHeader>
-                  <TableHeader>
-                    <span className="sr-only">Aktionen</span>
-                  </TableHeader>
+      <section aria-label="Ziele der Anlage" className="space-y-2">
+        <div className="flex items-baseline gap-3">
+          <h2 className="text-sm font-semibold text-ink">Ziele der Anlage</h2>
+          <SheetNumber>{anlage.ziele.length}</SheetNumber>
+        </div>
+        {anlage.ziele.length === 0 ? (
+          <p className="text-sm text-secondary">Noch kein Ziel erfasst.</p>
+        ) : (
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeader>Tiername</TableHeader>
+                <TableHeader>Zielgruppe</TableHeader>
+                <TableHeader>Verwendung</TableHeader>
+                <TableHeader>Status</TableHeader>
+                <TableHeader>
+                  <span className="sr-only">Aktionen</span>
+                </TableHeader>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {[...aktive, ...archivierte].map((ziel) => (
+                <TableRow key={ziel.id}>
+                  <TableCell className="font-medium">{ziel.tiername}</TableCell>
+                  <TableCell className="tabular-nums">
+                    {ziel.zielgruppe}
+                  </TableCell>
+                  <TableCell className="text-secondary">
+                    {ziel.verwendungen.length === 0
+                      ? "nicht platziert"
+                      : ziel.verwendungen
+                          .map((verwendung) => verwendung.parcoursName)
+                          .join(", ")}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        ziel.zustand === "Archiviert" ? "warning" : "success"
+                      }
+                    >
+                      {ziel.zustand === "Archiviert" ? "Archiviert" : "Aktiv"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {ziel.zustand === "Aktiv" && !gesperrt ? (
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setBearbeitet(ziel.id);
+                            setForm({
+                              tiername: ziel.tiername,
+                              zielgruppe: ziel.zielgruppe,
+                            });
+                          }}
+                        >
+                          Bearbeiten
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={zielErsetzen.isPending}
+                          onClick={() =>
+                            zielErsetzen.mutate([
+                              anlage.id,
+                              ziel.id,
+                              { ...ziel, zielgruppe: ziel.zielgruppe },
+                            ])
+                          }
+                        >
+                          Ersetzen
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          disabled={zielEntfernen.isPending}
+                          onClick={() =>
+                            zielEntfernen.mutate([anlage.id, ziel.id])
+                          }
+                        >
+                          Entfernen
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-secondary">
+                        unveränderlich
+                      </span>
+                    )}
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {[...aktive, ...archivierte].map((ziel) => (
-                  <TableRow key={ziel.id}>
-                    <TableCell className="font-medium">
-                      {ziel.tiername}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {ziel.zielgruppe}
-                    </TableCell>
-                    <TableCell className="text-secondary">
-                      {ziel.verwendungen.length === 0
-                        ? "nicht platziert"
-                        : ziel.verwendungen
-                            .map((verwendung) => verwendung.parcoursName)
-                            .join(", ")}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          ziel.zustand === "Archiviert" ? "warning" : "success"
-                        }
-                      >
-                        {ziel.zustand === "Archiviert" ? "Archiviert" : "Aktiv"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ziel.zustand === "Aktiv" && !gesperrt ? (
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setBearbeitet(ziel.id);
-                              setForm({
-                                tiername: ziel.tiername,
-                                zielgruppe: ziel.zielgruppe,
-                              });
-                            }}
-                          >
-                            Bearbeiten
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            disabled={zielErsetzen.isPending}
-                            onClick={() =>
-                              zielErsetzen.mutate([
-                                anlage.id,
-                                ziel.id,
-                                { ...ziel, zielgruppe: ziel.zielgruppe },
-                              ])
-                            }
-                          >
-                            Ersetzen
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            disabled={zielEntfernen.isPending}
-                            onClick={() =>
-                              zielEntfernen.mutate([anlage.id, ziel.id])
-                            }
-                          >
-                            Entfernen
-                          </Button>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-secondary">
-                          unveränderlich
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+              ))}
+            </TableBody>
+          </Table>
+        )}
 
-          {fehler ? (
-            <Alert variant="error">
-              {apiErrorMessage(fehler, {
-                badRequest: "Bitte prüfen Sie die Eingaben.",
-                fallback: "Die Änderung konnte nicht gespeichert werden.",
-              })}
-            </Alert>
-          ) : null}
-        </CardContent>
-      </Card>
+        {fehler ? (
+          <Alert variant="error">
+            {apiErrorMessage(fehler, {
+              badRequest: "Bitte prüfen Sie die Eingaben.",
+              fallback: "Die Änderung konnte nicht gespeichert werden.",
+            })}
+          </Alert>
+        ) : null}
+      </section>
 
       {gesperrt ? null : (
-        <Card>
-          <CardHeader>
-            <CardTitle>
+        <>
+          <HatchBand />
+          <section
+            aria-label={bearbeitet ? "Ziel bearbeiten" : "Ziel hinzufügen"}
+            className="space-y-3"
+          >
+            <h2 className="text-sm font-semibold text-ink">
               {bearbeitet ? "Ziel bearbeiten" : "Ziel hinzufügen"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </h2>
             <form
-              className="grid items-end gap-4 sm:grid-cols-3"
               onSubmit={(event) => {
                 event.preventDefault();
                 if (bearbeitet) {
@@ -320,57 +350,67 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                 }
               }}
             >
-              <Field label="Tiername">
-                <Input
-                  value={form.tiername}
-                  onChange={(event) =>
-                    setForm((bisher) => ({
-                      ...bisher,
-                      tiername: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </Field>
-              <Field label="Zielgruppe" hint="1 bis 4">
-                <Select
-                  value={String(form.zielgruppe)}
-                  onChange={(event) =>
-                    setForm((bisher) => ({
-                      ...bisher,
-                      zielgruppe: Number(event.target.value),
-                    }))
-                  }
-                >
-                  {[1, 2, 3, 4].map((wert) => (
-                    <option key={wert} value={wert}>
-                      {wert}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  disabled={zielHinzufuegen.isPending || zielAendern.isPending}
-                >
-                  {bearbeitet ? "Speichern" : "Hinzufügen"}
-                </Button>
-                {bearbeitet ? (
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setBearbeitet(null);
-                      setForm(leeresZiel);
-                    }}
+              <FormRow
+                className="sm:grid-cols-3"
+                actions={
+                  <>
+                    <Button
+                      type="submit"
+                      size="field"
+                      disabled={
+                        zielHinzufuegen.isPending || zielAendern.isPending
+                      }
+                    >
+                      {bearbeitet ? "Speichern" : "Hinzufügen"}
+                    </Button>
+                    {bearbeitet ? (
+                      <Button
+                        variant="ghost"
+                        size="field"
+                        onClick={() => {
+                          setBearbeitet(null);
+                          setForm(leeresZiel);
+                        }}
+                      >
+                        Abbrechen
+                      </Button>
+                    ) : null}
+                  </>
+                }
+              >
+                <Field label="Tiername">
+                  <Input
+                    value={form.tiername}
+                    onChange={(event) =>
+                      setForm((bisher) => ({
+                        ...bisher,
+                        tiername: event.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </Field>
+                <Field label="Zielgruppe" hint="1 bis 4">
+                  <Select
+                    value={String(form.zielgruppe)}
+                    onChange={(event) =>
+                      setForm((bisher) => ({
+                        ...bisher,
+                        zielgruppe: Number(event.target.value),
+                      }))
+                    }
                   >
-                    Abbrechen
-                  </Button>
-                ) : null}
-              </div>
+                    {[1, 2, 3, 4].map((wert) => (
+                      <option key={wert} value={wert}>
+                        {wert}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </FormRow>
             </form>
-          </CardContent>
-        </Card>
+          </section>
+        </>
       )}
     </div>
   );
@@ -380,8 +420,7 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
 
 const neuerPflock = () => ({
   id: crypto.randomUUID(),
-  bezeichnung: "",
-  farbe: "",
+  farbe: PFLOCK_FARBE_STANDARD,
 });
 
 function ParcoursListe({
@@ -394,11 +433,7 @@ function ParcoursListe({
   const { parcoursHinzufuegen } = useStammdatenMutations();
   const aktiveZiele = anlage.ziele.filter((ziel) => ziel.zustand === "Aktiv");
   const [name, setName] = useState("");
-  const [pflock, setPflock] = useState(() => ({
-    ...neuerPflock(),
-    bezeichnung: "Rot",
-    farbe: "Rot",
-  }));
+  const [pflock, setPflock] = useState(neuerPflock);
   const [ausgewaehlteZiele, setAusgewaehlteZiele] = useState<string[]>([]);
 
   function toggleZiel(zielId: string, ausgewaehlt: boolean) {
@@ -429,13 +464,11 @@ function ParcoursListe({
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-6">
       {!gesperrt ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Parcours anlegen</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <section aria-label="Parcours anlegen" className="space-y-3">
+          <h2 className="text-sm font-semibold text-ink">Parcours anlegen</h2>
+          <div className="space-y-4">
             {aktiveZiele.length === 0 ? (
               <Alert variant="warning">
                 Erfassen Sie zuerst mindestens ein aktives Ziel, damit Sie es
@@ -454,7 +487,7 @@ function ParcoursListe({
               </Alert>
             ) : null}
             <form className="space-y-4" onSubmit={parcoursErstellen}>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <FormRow className="sm:grid-cols-2">
                 <Field label="Parcoursname">
                   <Input
                     value={name}
@@ -463,36 +496,15 @@ function ParcoursListe({
                     required
                   />
                 </Field>
-                <Field label="Pflockbezeichnung">
-                  <Input
-                    value={pflock.bezeichnung}
-                    onChange={(event) =>
-                      setPflock((aktuell) => ({
-                        ...aktuell,
-                        bezeichnung: event.target.value,
-                      }))
-                    }
-                    disabled={parcoursHinzufuegen.isPending}
-                    required
-                  />
-                </Field>
-                <Field label="Pflockfarbe">
-                  <div className="flex items-center gap-3">
-                    <Input
-                      value={pflock.farbe}
-                      onChange={(event) =>
-                        setPflock((aktuell) => ({
-                          ...aktuell,
-                          farbe: event.target.value,
-                        }))
-                      }
-                      disabled={parcoursHinzufuegen.isPending}
-                      required
-                    />
-                    <PflockMarker farbe={pflock.farbe} />
-                  </div>
-                </Field>
-              </div>
+                <PflockFarbeFeld
+                  label="Pflockfarbe"
+                  value={pflock.farbe}
+                  onValueChange={(farbe) =>
+                    setPflock((aktuell) => ({ ...aktuell, farbe }))
+                  }
+                  disabled={parcoursHinzufuegen.isPending}
+                />
+              </FormRow>
               <section className="space-y-2">
                 <h3 className="text-sm font-semibold text-ink">
                   Ziele im Parcours
@@ -511,12 +523,13 @@ function ParcoursListe({
                   ))}
                 </div>
               </section>
-              <p className="text-xs text-secondary">
+              <MarginNote label="Aufbau">
                 Der Parcours startet mit einem Pflock. Weitere Pflöcke und
                 Distanzen können Sie nach dem Anlegen bearbeiten.
-              </p>
+              </MarginNote>
               <Button
                 type="submit"
+                size="field"
                 disabled={
                   !aktiveZiele.length ||
                   !ausgewaehlteZiele.length ||
@@ -528,82 +541,74 @@ function ParcoursListe({
                   : "Parcours anlegen"}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       ) : null}
-      {!gesperrt ? <HatchBand className="my-2" /> : null}
-      <Card>
-        <CardHeader>
-          <CardTitle>Parcours der Anlage</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {anlage.parcours.length === 0 ? (
-            <p className="text-sm text-secondary">
-              Noch kein Parcours erfasst.
-            </p>
-          ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeader>Name</TableHeader>
-                  <TableHeader>Pflöcke</TableHeader>
-                  <TableHeader>Platzierungen</TableHeader>
-                  <TableHeader>Status</TableHeader>
-                  <TableHeader>
-                    <span className="sr-only">Öffnen</span>
-                  </TableHeader>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {anlage.parcours.map((parcours) => (
-                  <TableRow key={parcours.id}>
-                    <TableCell className="font-medium">
-                      {parcours.name}
-                    </TableCell>
-                    <TableCell>
-                      <span className="flex flex-wrap gap-3 text-sm">
-                        {parcours.pflöcke.map((pflock) => (
-                          <PflockMarker key={pflock.id} farbe={pflock.farbe} />
-                        ))}
-                      </span>
-                      <span className="sr-only">
-                        {parcours.pflöcke
-                          .map((pflock) => pflock.bezeichnung)
-                          .join(", ")}
-                      </span>
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {parcours.platzierungen.length}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          parcours.zustand === "Archiviert"
-                            ? "warning"
-                            : "success"
-                        }
+      {!gesperrt ? <HatchBand /> : null}
+      <section aria-label="Parcours der Anlage" className="space-y-2">
+        <div className="flex items-baseline gap-3">
+          <h2 className="text-sm font-semibold text-ink">
+            Parcours der Anlage
+          </h2>
+          <SheetNumber>{anlage.parcours.length}</SheetNumber>
+        </div>
+        {anlage.parcours.length === 0 ? (
+          <p className="text-sm text-secondary">Noch kein Parcours erfasst.</p>
+        ) : (
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHeader>Name</TableHeader>
+                <TableHeader>Pflöcke</TableHeader>
+                <TableHeader>Platzierungen</TableHeader>
+                <TableHeader>Status</TableHeader>
+                <TableHeader>
+                  <span className="sr-only">Öffnen</span>
+                </TableHeader>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {anlage.parcours.map((parcours) => (
+                <TableRow key={parcours.id}>
+                  <TableCell className="font-medium">{parcours.name}</TableCell>
+                  <TableCell>
+                    <span className="flex flex-wrap gap-3 text-sm">
+                      {parcours.pflöcke.map((pflock) => (
+                        <PflockMarker key={pflock.id} farbe={pflock.farbe} />
+                      ))}
+                    </span>
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {parcours.platzierungen.length}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        parcours.zustand === "Archiviert"
+                          ? "warning"
+                          : "success"
+                      }
+                    >
+                      {parcours.zustand === "Archiviert"
+                        ? "Archiviert"
+                        : "Aktiv"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="secondary" size="sm" asChild>
+                      <Link
+                        href={`${paths.verwaltungParcours}?id=${parcours.id}&anlage=${anlage.id}`}
                       >
-                        {parcours.zustand === "Archiviert"
-                          ? "Archiviert"
-                          : "Aktiv"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="secondary" size="sm" asChild>
-                        <Link
-                          href={`${paths.verwaltungParcours}?id=${parcours.id}&anlage=${anlage.id}`}
-                        >
-                          Öffnen
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                        Öffnen
+                      </Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </section>
     </div>
   );
 }
@@ -638,11 +643,12 @@ function Verwaltungen({
   const suchfehler = benutzerSuche.error;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Verwaltungen</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-6">
+      <section aria-label="Verwaltungen" className="space-y-2">
+        <div className="flex items-baseline gap-3">
+          <h2 className="text-sm font-semibold text-ink">Verwaltungen</h2>
+          <SheetNumber>{anlage.verwaltungen.length}</SheetNumber>
+        </div>
         {anlage.verwaltungen.length === 0 ? (
           <p className="text-sm text-secondary">
             Noch keine Verwaltung vergeben.
@@ -709,26 +715,40 @@ function Verwaltungen({
             </TableBody>
           </Table>
         )}
+      </section>
 
-        {fehler ? (
-          <Alert variant="error">
-            {apiErrorMessage(fehler, {
-              badRequest:
-                "Die letzte Verwaltung mit der Rolle Administrator kann nicht entzogen werden.",
-              fallback: "Die Verwaltung konnte nicht geändert werden.",
-            })}
-          </Alert>
-        ) : null}
+      {fehler ? (
+        <Alert variant="error">
+          {apiErrorMessage(fehler, {
+            badRequest:
+              "Die letzte Verwaltung mit der Rolle Administrator kann nicht entzogen werden.",
+            fallback: "Die Verwaltung konnte nicht geändert werden.",
+          })}
+        </Alert>
+      ) : null}
 
-        {gesperrt ? null : (
-          <form
-            className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_auto]"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const email = emailEingabe.trim();
-              setEmailAbfrage(email);
-              setAusgewaehlteBenutzerId("");
-            }}
+      <MarginNote label="Rollen">
+        Eine Anlage wird von Mitarbeitern gepflegt; ein Administrator darf
+        zusätzlich Verwaltungen vergeben. Die letzte Verwaltung mit der Rolle
+        Administrator kann nicht entzogen werden.
+      </MarginNote>
+
+      {gesperrt ? null : (
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            const email = emailEingabe.trim();
+            setEmailAbfrage(email);
+            setAusgewaehlteBenutzerId("");
+          }}
+        >
+          <FormRow
+            className="sm:grid-cols-[minmax(0,1fr)_auto]"
+            actions={
+              <Button type="submit" variant="secondary" size="field">
+                Suchen
+              </Button>
+            }
           >
             <Field
               label="Benutzerin oder Benutzer per E-Mail finden"
@@ -746,64 +766,74 @@ function Verwaltungen({
                 required
               />
             </Field>
-            <Button type="submit" variant="secondary">
-              Suchen
-            </Button>
-          </form>
-        )}
+          </FormRow>
+        </form>
+      )}
 
-        {emailAbfrage ? (
-          <div className="space-y-3">
-            {benutzerSuche.isFetching ? (
-              <p className="text-sm text-secondary">Suche läuft …</p>
-            ) : benutzerSuche.data?.length ? (
-              <Field label="Gefundenes Konto auswählen">
-                <Select
-                  value={ausgewaehlteBenutzerId}
-                  onChange={(event) =>
-                    setAusgewaehlteBenutzerId(event.target.value)
-                  }
-                >
-                  <option value="">Konto auswählen …</option>
-                  {benutzerSuche.data.map((benutzer) => (
-                    <option key={benutzer.id} value={benutzer.id}>
-                      {benutzer.eMailAdresse}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            ) : benutzerSuche.isSuccess ? (
-              <p className="text-sm text-secondary">
-                Für diese E-Mail-Adresse wurde kein Konto gefunden.
-              </p>
-            ) : null}
-            {suchfehler ? (
-              <Alert variant="error">
-                {apiErrorMessage(suchfehler, {
-                  unauthorized: "Bitte melden Sie sich an.",
-                  badRequest:
-                    "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
-                  fallback: "Die Suche konnte nicht durchgeführt werden.",
-                })}
-              </Alert>
-            ) : null}
-            {benutzerSuche.data?.length && !gesperrt ? (
-              <form
-                className="grid items-end gap-4 sm:grid-cols-[minmax(0,1fr)_auto]"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  if (!ausgewaehlteBenutzerId) return;
-                  verwaltungGewaehren.mutate(
-                    [anlage.id, ausgewaehlteBenutzerId, rolle],
-                    {
-                      onSuccess: () => {
-                        setEmailEingabe("");
-                        setEmailAbfrage("");
-                        setAusgewaehlteBenutzerId("");
-                      },
+      {emailAbfrage ? (
+        <div className="space-y-3">
+          {benutzerSuche.isFetching ? (
+            <p className="text-sm text-secondary">Suche läuft …</p>
+          ) : benutzerSuche.data?.length ? (
+            <Field label="Gefundenes Konto auswählen">
+              <Select
+                value={ausgewaehlteBenutzerId}
+                onChange={(event) =>
+                  setAusgewaehlteBenutzerId(event.target.value)
+                }
+              >
+                <option value="">Konto auswählen …</option>
+                {benutzerSuche.data.map((benutzer) => (
+                  <option key={benutzer.id} value={benutzer.id}>
+                    {benutzer.eMailAdresse}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : benutzerSuche.isSuccess ? (
+            <p className="text-sm text-secondary">
+              Für diese E-Mail-Adresse wurde kein Konto gefunden.
+            </p>
+          ) : null}
+          {suchfehler ? (
+            <Alert variant="error">
+              {apiErrorMessage(suchfehler, {
+                unauthorized: "Bitte melden Sie sich an.",
+                badRequest: "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+                fallback: "Die Suche konnte nicht durchgeführt werden.",
+              })}
+            </Alert>
+          ) : null}
+          {benutzerSuche.data?.length && !gesperrt ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!ausgewaehlteBenutzerId) return;
+                verwaltungGewaehren.mutate(
+                  [anlage.id, ausgewaehlteBenutzerId, rolle],
+                  {
+                    onSuccess: () => {
+                      setEmailEingabe("");
+                      setEmailAbfrage("");
+                      setAusgewaehlteBenutzerId("");
                     },
-                  );
-                }}
+                  },
+                );
+              }}
+            >
+              <FormRow
+                className="sm:grid-cols-[minmax(0,1fr)_auto]"
+                actions={
+                  <Button
+                    type="submit"
+                    size="field"
+                    disabled={
+                      !ausgewaehlteBenutzerId || verwaltungGewaehren.isPending
+                    }
+                  >
+                    Verwaltung vergeben
+                  </Button>
+                }
               >
                 <Field label="Rolle für dieses Konto">
                   <Select
@@ -820,20 +850,12 @@ function Verwaltungen({
                     </option>
                   </Select>
                 </Field>
-                <Button
-                  type="submit"
-                  disabled={
-                    !ausgewaehlteBenutzerId || verwaltungGewaehren.isPending
-                  }
-                >
-                  Verwaltung vergeben
-                </Button>
-              </form>
-            ) : null}
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+              </FormRow>
+            </form>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -859,6 +881,7 @@ function Stammdaten({
   const [name, setName] = useState(anlage.name);
   const [adresse, setAdresse] = useState<AnlageAdresse>(anlage.adresse);
   const [kontakt, setKontakt] = useState<AnlageKontakt>(anlage.kontakt);
+  const [deaktivierenOffen, setDeaktivierenOffen] = useState(false);
 
   return (
     <div className="space-y-0">
@@ -1028,16 +1051,16 @@ function Stammdaten({
 
       {gesperrt ? null : (
         <>
-          <HatchBand className="my-2" />
+          <HatchBand height="sm" className="my-4" />
           <Card>
             <CardHeader>
               <CardTitle>Anlage deaktivieren</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-secondary">
-                Eine deaktivierte Anlage bleibt lesbar, nimmt aber keine
-                Änderung mehr an, und ihre Parcours starten keine neuen Runden.
-                Die Deaktivierung ist endgültig.
+                Eine deaktivierte Anlage ist nur noch für Systemadministratoren
+                einsehbar, nimmt keine Änderung mehr an, und ihre Parcours
+                starten keine neuen Runden. Die Deaktivierung ist endgültig.
               </p>
               {fehler ? (
                 <Alert variant="error">
@@ -1048,13 +1071,50 @@ function Stammdaten({
               ) : null}
               <Button
                 variant="destructive"
-                onClick={onDeaktivieren}
+                onClick={() => setDeaktivierenOffen(true)}
                 disabled={laeuft}
               >
-                {laeuft ? "Wird deaktiviert…" : "Endgültig deaktivieren"}
+                Endgültig deaktivieren
               </Button>
             </CardContent>
           </Card>
+
+          <Dialog open={deaktivierenOffen} onOpenChange={setDeaktivierenOffen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Anlage endgültig deaktivieren?</DialogTitle>
+                <DialogDescription>
+                  Die Anlage ist danach nur noch für Systemadministratoren
+                  einsehbar, nimmt keine Änderung mehr an und startet keine
+                  neuen Runden. Dieser Schritt kann nicht rückgängig gemacht
+                  werden.
+                </DialogDescription>
+              </DialogHeader>
+              {fehler ? (
+                <Alert variant="error">
+                  {apiErrorMessage(fehler, {
+                    fallback: "Die Anlage konnte nicht deaktiviert werden.",
+                  })}
+                </Alert>
+              ) : null}
+              <DialogFooter>
+                <Button
+                  variant="secondary"
+                  onClick={() => setDeaktivierenOffen(false)}
+                  disabled={laeuft}
+                >
+                  Abbrechen
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={onDeaktivieren}
+                  disabled={laeuft}
+                >
+                  {laeuft ? "Wird deaktiviert…" : "Endgültig deaktivieren"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       )}
     </div>

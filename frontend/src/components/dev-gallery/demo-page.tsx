@@ -122,7 +122,7 @@ const MESSREIHE = [
 type Row = {
   id: string;
   nr: number;
-  bezeichnung: string;
+  titel: string;
   status: "Aktiv" | "Entwurf" | "Prüfung";
   zone: Zone;
   fortschritt: number;
@@ -133,7 +133,7 @@ const START_ROWS: Row[] = [
   {
     id: "r1",
     nr: 1,
-    bezeichnung: "Eintrag Alpha",
+    titel: "Eintrag Alpha",
     status: "Aktiv",
     zone: "Beta",
     fortschritt: 82,
@@ -142,7 +142,7 @@ const START_ROWS: Row[] = [
   {
     id: "r2",
     nr: 2,
-    bezeichnung: "Eintrag Beta",
+    titel: "Eintrag Beta",
     status: "Prüfung",
     zone: "Delta",
     fortschritt: 54,
@@ -151,7 +151,7 @@ const START_ROWS: Row[] = [
   {
     id: "r3",
     nr: 3,
-    bezeichnung: "Eintrag Gamma",
+    titel: "Eintrag Gamma",
     status: "Entwurf",
     zone: "Alpha",
     fortschritt: 12,
@@ -474,7 +474,7 @@ export function DemoPage() {
                   <TableHead>
                     <TableRow>
                       <TableHeader className="w-8 pl-6">#</TableHeader>
-                      <TableHeader>Bezeichnung</TableHeader>
+                      <TableHeader>Titel</TableHeader>
                       <TableHeader>Status</TableHeader>
                       <TableHeader className="hidden @lg:table-cell">
                         Zone
@@ -495,7 +495,7 @@ export function DemoPage() {
                           {row.nr}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {row.bezeichnung}
+                          {row.titel}
                         </TableCell>
                         <TableCell>
                           <Badge variant={statusVariant[row.status]}>
@@ -511,7 +511,7 @@ export function DemoPage() {
                                 setZone(row.id, next as Zone);
                               }
                             }}
-                            aria-label={`Zone für ${row.bezeichnung}`}
+                            aria-label={`Zone für ${row.titel}`}
                           >
                             {ZONEN.map((zone) => (
                               <ToggleGroupItem
@@ -527,7 +527,7 @@ export function DemoPage() {
                         <TableCell className="hidden w-28 @xl:table-cell">
                           <Progress
                             value={row.fortschritt}
-                            aria-label={`Fortschritt ${row.bezeichnung}`}
+                            aria-label={`Fortschritt ${row.titel}`}
                           />
                         </TableCell>
                         <TableCell className="text-right font-medium tabular-nums">
@@ -537,7 +537,7 @@ export function DemoPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            aria-label={`Öffnen: ${row.bezeichnung}`}
+                            aria-label={`Öffnen: ${row.titel}`}
                             className="text-secondary"
                           >
                             <ArrowRight />
@@ -575,10 +575,7 @@ export function DemoPage() {
                 </CardHeader>
                 <CardContent className="space-y-4 pt-0">
                   <div className="grid gap-4 @md:grid-cols-2">
-                    <Field
-                      label="Bezeichnung"
-                      hint="Kurze Kennung des Eintrags"
-                    >
+                    <Field label="Titel" hint="Kurze Kennung des Eintrags">
                       <Input defaultValue="Eintrag Delta" />
                     </Field>
                     <Field label="Menge" hint="Ganze Zahl, 1 bis 99">

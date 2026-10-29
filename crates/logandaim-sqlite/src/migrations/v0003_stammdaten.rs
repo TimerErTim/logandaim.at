@@ -84,15 +84,14 @@ impl UpMigration<libsql::Transaction, libsql::Error> for Migration {
 
             CREATE INDEX IF NOT EXISTS "idx_parcours_anlage_id" ON "parcours" (anlage_id);
 
-            -- Pflöcke are per Parcours, ordered far to near by `ordnung`; the label is the
-            -- staff-chosen name and the colour is caller data, never a design token.
+            -- Pflöcke are per Parcours, ordered far to near by `ordnung`. A Pflock is its
+            -- colour: no label exists, the colour identifies the stake and is unique here.
             CREATE TABLE IF NOT EXISTS "pflock_setups" (
                 id TEXT PRIMARY KEY,
                 parcours_id TEXT NOT NULL REFERENCES "parcours" (id) ON DELETE CASCADE,
-                bezeichnung TEXT NOT NULL,
                 farbe TEXT NOT NULL,
                 ordnung INTEGER NOT NULL,
-                UNIQUE (parcours_id, bezeichnung),
+                UNIQUE (parcours_id, farbe),
                 UNIQUE (parcours_id, ordnung)
             );
 

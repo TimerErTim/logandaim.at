@@ -46,7 +46,6 @@ struct SnapshotDto {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PflockDto {
-    bezeichnung: String,
     farbe: String,
     position: usize,
 }
@@ -67,7 +66,6 @@ fn snapshot_to_json(snapshot: &ParcoursSnapshot) -> RepositoryResult<String> {
             .pflöcke()
             .iter()
             .map(|pflock| PflockDto {
-                bezeichnung: pflock.bezeichnung().to_owned(),
                 farbe: pflock.farbe().to_owned(),
                 position: pflock.position(),
             })
@@ -93,7 +91,7 @@ fn snapshot_from_json(json: &str) -> RepositoryResult<ParcoursSnapshot> {
         dto.parcours_name,
         dto.pflöcke
             .into_iter()
-            .map(|pflock| (pflock.bezeichnung, pflock.farbe, pflock.position))
+            .map(|pflock| (pflock.farbe, pflock.position))
             .collect(),
         dto.ziele
             .into_iter()

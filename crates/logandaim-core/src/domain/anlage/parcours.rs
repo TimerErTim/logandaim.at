@@ -1,6 +1,6 @@
 //! A named route at one `Anlage`: its Pflock setup and its ordered Ziel arrangement.
 //!
-//! A `Parcours` is an entity inside the `Anlage` aggregate. Its Pflock labels and
+//! A `Parcours` is an entity inside the `Anlage` aggregate. Its Pflock colours and
 //! far-to-near order are its own, and there is no product-wide palette (SPEC-stammdaten
 //! rule 6, AC-6).
 
@@ -12,7 +12,7 @@ use super::ziel::{ZielId, Zustand};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ParcoursId(pub Uuid);
 
-/// Identity of one Pflock setup (a shooting-position label at one Parcours).
+/// Identity of one Pflock setup (a shooting position at one Parcours).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct PflockId(pub Uuid);
 
@@ -20,12 +20,10 @@ pub struct PflockId(pub Uuid);
 pub enum ParcoursFehler {
     #[error("der Parcoursname darf nicht leer sein")]
     NameLeer,
-    #[error("die Pflock-Bezeichnung darf nicht leer sein")]
-    PflockBezeichnungLeer,
-    #[error("die Pflock-Bezeichnung „{0}“ ist in diesem Parcours doppelt")]
-    PflockBezeichnungDoppelt(String),
-    #[error("die Pflock-Farbe darf nicht leer sein")]
-    PflockFarbeLeer,
+    #[error("die Pflock-Farbe „{0}“ ist keine Hex-Farbe der Form #rrggbb")]
+    PflockFarbeUngültig(String),
+    #[error("die Pflock-Farbe „{0}“ ist in diesem Parcours doppelt")]
+    PflockFarbeDoppelt(String),
     #[error("ein Parcours braucht mindestens einen Pflock")]
     KeinePflöcke,
     #[error("die Reihenfolge der Pflöcke ist widersprüchlich")]
@@ -72,44 +70,22 @@ impl AsRef<str> for ParcoursName {
     }
 }
 
-/// Label of one shooting position inside one Parcours.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PflockBezeichnung(String);
-
-impl PflockBezeichnung {
-    pub fn neu<S: AsRef<str>>(wert: S) -> Result<Self, ParcoursFehler> {
-        let wert = wert.as_ref().trim();
-        if wert.is_empty() {
-            return Err(ParcoursFehler::PflockBezeichnungLeer);
-        }
-        Ok(Self(wert.to_owned()))
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl AsRef<str> for PflockBezeichnung {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
 /// Colour of one Pflock, chosen by Anlage staff.
 ///
-/// Caller data, not a design token: the product has no fixed palette (rule 6). Stored
-/// verbatim; the admin UI renders it as a swatch.
+/// Caller data, not a design token: the product has no fixed palette (rule 6). Normalised to
+/// lowercase `#rrggbb`, so two spellings of one colour compare equal and the uniqueness rule
+/// below cannot be bypassed by casing.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PflockFarbe(String);
 
 impl PflockFarbe {
     pub fn neu<S: AsRef<str>>(wert: S) -> Result<Self, ParcoursFehler> {
-        let wert = wert.as_ref().trim();
-        if wert.is_empty() {
-            return Err(ParcoursFehler::PflockFarbeLeer);
+        let wert = wert.as_ref().trim().to_lowercase();
+        let hex = wert.strip_prefix('#').unwrap_or("");
+        if hex.len() != 6 || !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err(ParcoursFehler::PflockFarbeUngültig(wert));
         }
-        Ok(Self(wert.to_owned()))
+        Ok(Self(wert))
     }
 
     pub fn as_str(&self) -> &str {
@@ -127,25 +103,16 @@ impl AsRef<str> for PflockFarbe {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pflock {
     id: PflockId,
-    bezeichnung: PflockBezeichnung,
     farbe: PflockFarbe,
 }
 
 impl Pflock {
-    pub fn neu(id: PflockId, bezeichnung: PflockBezeichnung, farbe: PflockFarbe) -> Self {
-        Self {
-            id,
-            bezeichnung,
-            farbe,
-        }
+    pub fn neu(id: PflockId, farbe: PflockFarbe) -> Self {
+        Self { id, farbe }
     }
 
     pub fn id(&self) -> PflockId {
         self.id
-    }
-
-    pub fn bezeichnung(&self) -> &PflockBezeichnung {
-        &self.bezeichnung
     }
 
     pub fn farbe(&self) -> &PflockFarbe {
@@ -255,7 +222,7 @@ pub struct NeuerParcours {
 }
 
 impl NeuerParcours {
-    /// Validate the invariants: unique Pflock labels, at least one Pflock, no duplicate
+    /// Validate the invariants: unique Pflock colours, at least one Pflock, no duplicate
     /// Ziel placement, and distances that decrease far to near (AC-4, AC-6).
     pub fn neu(
         name: ParcoursName,
@@ -268,11 +235,9 @@ impl NeuerParcours {
         for (index, pflock) in pflöcke.iter().enumerate() {
             if pflöcke[..index]
                 .iter()
-                .any(|früher| früher.bezeichnung == pflock.bezeichnung)
+                .any(|früher| früher.farbe == pflock.farbe)
             {
-                return Err(ParcoursFehler::PflockBezeichnungDoppelt(
-                    pflock.bezeichnung.0.clone(),
-                ));
+                return Err(ParcoursFehler::PflockFarbeDoppelt(pflock.farbe.0.clone()));
             }
         }
         Self::pruefe_platzierungen(&pflöcke, &platzierungen)?;
@@ -519,16 +484,19 @@ mod tests {
     use super::*;
     use crate::domain::anlage::ziel::Zustand;
 
-    fn pflock(id: u128, name: &str) -> Pflock {
+    fn pflock(id: u128, farbe: &str) -> Pflock {
         Pflock::neu(
             PflockId(Uuid::from_u128(id)),
-            PflockBezeichnung::neu(name).unwrap(),
-            PflockFarbe::neu("Rot").unwrap(),
+            PflockFarbe::neu(farbe).unwrap(),
         )
     }
 
     fn drei_pflöcke() -> Vec<Pflock> {
-        vec![pflock(1, "Weit"), pflock(2, "Mittel"), pflock(3, "Nah")]
+        vec![
+            pflock(1, "#c0392b"),
+            pflock(2, "#1b4f9c"),
+            pflock(3, "#e8b81c"),
+        ]
     }
 
     fn ziel(id: u128) -> ZielId {
@@ -567,14 +535,29 @@ mod tests {
     }
 
     #[test_log::test]
-    fn ac6_pflock_bezeichnungen_sind_eindeutig() {
-        let doppelt = vec![pflock(1, "Weit"), pflock(2, "Weit")];
+    fn ac6_pflock_farben_sind_eindeutig() {
+        let doppelt = vec![pflock(1, "#c0392b"), pflock(2, "#C0392B")];
         let ergebnis =
             NeuerParcours::neu(ParcoursName::neu("Waldrunde").unwrap(), doppelt, Vec::new());
         assert!(matches!(
             ergebnis,
-            Err(ParcoursFehler::PflockBezeichnungDoppelt(_))
+            Err(ParcoursFehler::PflockFarbeDoppelt(_))
         ));
+    }
+
+    #[test_log::test]
+    fn pflock_farbe_wird_validiert_und_normalisiert() {
+        assert_eq!(PflockFarbe::neu("#C0392B").unwrap().as_str(), "#c0392b");
+        assert_eq!(PflockFarbe::neu(" #c0392B ").unwrap().as_str(), "#c0392b");
+        for wert in ["", "Rot", "#c0392", "#c0392bb", "c0392b", "#c0392g"] {
+            assert!(
+                matches!(
+                    PflockFarbe::neu(wert),
+                    Err(ParcoursFehler::PflockFarbeUngültig(_))
+                ),
+                "{wert:?} ist keine Hex-Farbe"
+            );
+        }
     }
 
     #[test_log::test]
@@ -643,28 +626,19 @@ mod tests {
 
     #[test_log::test]
     fn ac6_reihenfolge_ist_unabhaengig_von_der_farbe() {
-        // Same colour on every Pflock: order still comes from the list.
-        let pflöcke: Vec<_> = drei_pflöcke()
-            .into_iter()
-            .map(|pflock| {
-                Pflock::neu(
-                    pflock.id(),
-                    pflock.bezeichnung().clone(),
-                    PflockFarbe::neu("Rot").unwrap(),
-                )
-            })
-            .collect();
+        // Distinct colours, but the order still comes only from the list.
+        let pflöcke = drei_pflöcke();
         let parcours = Parcours::neu(
             ParcoursId(Uuid::nil()),
             NeuerParcours::neu(ParcoursName::neu("Waldrunde").unwrap(), pflöcke, Vec::new())
                 .unwrap(),
         );
-        let namen: Vec<_> = parcours
+        let farben: Vec<_> = parcours
             .pflöcke()
             .iter()
-            .map(|pflock| pflock.bezeichnung().as_str())
+            .map(|pflock| pflock.farbe().as_str())
             .collect();
-        assert_eq!(namen, ["Weit", "Mittel", "Nah"]);
+        assert_eq!(farben, ["#c0392b", "#1b4f9c", "#e8b81c"]);
     }
 
     #[test_log::test]

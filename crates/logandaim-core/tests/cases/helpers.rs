@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
+use error_stack::{Report, ResultExt};
 use logandaim_core::{
     App,
     adapters::{InMemorySigning, InMemoryThrottle},
-    application::{AppBuilder, IdentityProviderConfiguration, SetUowProvider},
-    domain::konto::AccessTokenClaims,
+    application::{AppBuilder, AuthContext, IdentityProviderConfiguration, SetUowProvider},
+    domain::{AnlageId, RundeId, konto::AccessTokenClaims},
     ports::{Clock, Signing},
-    service::SessionPrüfen,
+    service::{AnlageAnsicht, RundeAnsicht, RundeAnzeigenFehler, SessionPrüfen, StammdatenFehler},
 };
 use logandaim_fakes::{FakeMailSender, FixedClock};
 
@@ -117,4 +118,68 @@ pub fn build(builder: AppBuilder<SetUowProvider>) -> Harness {
 /// Fixed instant shared by every case, so lifetimes are compared against one clock.
 pub fn jetzt() -> DateTime<Utc> {
     DateTime::from_timestamp(1_700_000_000, 0).expect("static timestamp is valid")
+}
+
+/// Read one Anlage as its admin view, straight from the repositories.
+///
+/// The read itself is the API facade's job now; a core case that only needs the aggregate
+/// reads it here instead of going through a use case that no longer exists.
+pub async fn anlage_ansicht(harness: &Harness, anlage_id: AnlageId) -> AnlageAnsicht {
+    harness
+        .app()
+        .execute_fn(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx
+                .enter()
+                .await
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            let anlage = uow
+                .anlagen()
+                .find_by_id(anlage_id)
+                .await
+                .map_err(error_stack::IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?
+                .into_data();
+            uow.finish(
+                Ok::<_, Report<StammdatenFehler>>(AnlageAnsicht::neu(anlage)),
+                StammdatenFehler::AnlageLaden,
+            )
+            .await
+        })
+        .await
+        .expect("die Anlage ist lesbar")
+}
+
+/// Read one Runde with its folded Wertung, straight from the repositories.
+pub async fn runde_ansicht(harness: &Harness, runde_id: RundeId) -> RundeAnsicht {
+    harness
+        .app()
+        .execute_fn(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx
+                .enter()
+                .await
+                .change_context(RundeAnzeigenFehler::RundeLaden)?;
+            let runde = uow
+                .runden()
+                .find_by_id(runde_id)
+                .await
+                .map_err(error_stack::IntoReport::into_report)
+                .change_context(RundeAnzeigenFehler::RundeLaden)?
+                .into_data();
+            let schüsse = uow
+                .schüsse()
+                .find_by_runde(runde_id)
+                .await
+                .map_err(error_stack::IntoReport::into_report)
+                .change_context(RundeAnzeigenFehler::SchüsseLaden)?
+                .into_iter()
+                .map(|schuss| schuss.into_data())
+                .collect();
+            uow.finish(
+                Ok::<_, Report<RundeAnzeigenFehler>>(RundeAnsicht::neu(runde, schüsse)),
+                RundeAnzeigenFehler::RundeLaden,
+            )
+            .await
+        })
+        .await
+        .expect("die Runde ist lesbar")
 }

@@ -1,10 +1,11 @@
-//! Starting, reading, and closing a Runde.
+//! Starting and closing a Runde.
 //!
 //! `RundeStarten` captures the Parcours setup as a value copy inside the same transaction that
 //! creates the Runde, so no later master-data edit can reach it (SPEC-stammdaten AC-7/AC-9).
-//! `RundeAnzeigen` is owner-or-Systemadministrator and returns the snapshot together with both
-//! Wertungen, because the Wertung is a read of a Runde and has no endpoint of its own
-//! (SPEC-wertung rule 6).
+//! Reading a Runde lives in the API facade: its read model (`RundeAnsicht`, `Zielansicht`)
+//! and the fold over `Schussmenge` stay here, but the transaction is opened by the caller,
+//! because a read authorises from the owner-or-Systemadministrator rule and aggregates
+//! nothing a use case would own.
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
@@ -16,18 +17,8 @@ use crate::{
         Anlage, NeueRunde, ParcoursId, Runde, RundeId, Schuss, Schussmenge, ZielId, Zielergebnis,
         Zuordnung,
     },
-    ports::RepositoryError,
-    service::UseCase,
+    service::{UseCase, ist_nicht_gefunden},
 };
-
-fn ist_nicht_gefunden<C>(fehler: &Report<C>) -> bool
-where
-    C: std::error::Error + Send + Sync + 'static,
-{
-    fehler
-        .downcast_ref::<RepositoryError>()
-        .is_some_and(|error| matches!(error, RepositoryError::NotFound))
-}
 
 // ---------------------------------------------------------------------------------------
 // RundeStarten
@@ -145,7 +136,7 @@ pub struct Zielansicht {
     pub ziel_id: ZielId,
     pub tiername: String,
     pub zielgruppe: u8,
-    /// Pflock label to metres, for the distances captured for this Ziel.
+    /// Pflock colour to metres, for the distances captured for this Ziel.
     pub abstände: Vec<(String, u32)>,
     /// `None` for a Ziel with no Schuss yet.
     pub ergebnis: Option<Zielergebnis>,
@@ -163,6 +154,55 @@ pub struct RundeAnsicht {
     pub schüsse: Vec<Schuss>,
 }
 
+impl RundeAnsicht {
+    /// Fold the loaded Schüsse over the captured route.
+    ///
+    /// The aggregation is domain code (`Schussmenge`, `Runde::ergebnis`), so a caller that
+    /// loaded a Runde and its Schüsse never re-derives a Wertung at the API edge.
+    pub fn neu(runde: Runde, schüsse: Vec<Schuss>) -> Self {
+        let mengen: Vec<Schussmenge> = runde
+            .snapshot()
+            .ziele()
+            .iter()
+            .map(|ziel| {
+                Schussmenge::für_ziel(
+                    ziel.ziel_id(),
+                    schüsse
+                        .iter()
+                        .filter(|schuss| schuss.ziel_id() == ziel.ziel_id())
+                        .cloned(),
+                )
+            })
+            .collect();
+
+        let ziele = runde
+            .snapshot()
+            .ziele()
+            .iter()
+            .map(|ziel| Zielansicht {
+                ziel_id: ziel.ziel_id(),
+                tiername: ziel.tiername().to_owned(),
+                zielgruppe: ziel.zielgruppe(),
+                abstände: ziel.abstände().to_vec(),
+                ergebnis: mengen
+                    .iter()
+                    .find(|menge| menge.ziel_id() == ziel.ziel_id())
+                    .and_then(Schussmenge::ergebnis),
+            })
+            .collect();
+
+        let gesamt = runde.ergebnis(&mengen);
+        Self {
+            runde,
+            ziele,
+            gesamt_erster_treffer: gesamt.erster_treffer().value(),
+            gesamt_mehrschuss: gesamt.mehrschuss().value(),
+            ziele_mit_ergebnis: gesamt.ziele_mit_ergebnis(),
+            schüsse,
+        }
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum RundeAnzeigenFehler {
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
@@ -177,111 +217,6 @@ pub enum RundeAnzeigenFehler {
     SchüsseLaden,
     #[error("der Benutzer konnte nicht geladen werden")]
     BenutzerLaden,
-}
-
-/// Read one Runde: its owner, or a `Systemadministrator` (AC-13).
-#[derive(Debug, Clone)]
-pub struct RundeAnzeigen {
-    pub runde_id: RundeId,
-}
-
-#[async_trait]
-impl UseCase<RundeAnsicht> for RundeAnzeigen {
-    type Error = Report<RundeAnzeigenFehler>;
-
-    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<RundeAnsicht, Self::Error> {
-        let benutzer_id = ctx
-            .auth()
-            .require_benutzer_id()
-            .change_context(RundeAnzeigenFehler::NichtAngemeldet)?;
-
-        let uow = ctx
-            .enter()
-            .await
-            .change_context(RundeAnzeigenFehler::RundeLaden)?;
-
-        let ergebnis = async {
-            let runde = match uow.runden().find_by_id(self.runde_id).await {
-                Ok(runde) => runde,
-                Err(fehler) if ist_nicht_gefunden(&fehler) => {
-                    return Err(Report::new(RundeAnzeigenFehler::NichtGefunden));
-                }
-                Err(fehler) => {
-                    return Err(fehler).change_context(RundeAnzeigenFehler::RundeLaden);
-                }
-            };
-
-            // Owner or Systemadministrator. An Anlage's staff never reads another Benutzer's
-            // Runde (AC-13), which is why the AnlageVerwaltung grants nothing here.
-            if !runde.gehört_zu(benutzer_id) {
-                let benutzer = uow
-                    .benutzer()
-                    .find_by_id(benutzer_id)
-                    .await
-                    .map_err(IntoReport::into_report)
-                    .change_context(RundeAnzeigenFehler::BenutzerLaden)?;
-                if !benutzer.ist_systemadministrator() {
-                    return Err(Report::new(RundeAnzeigenFehler::NichtErlaubt));
-                }
-            }
-
-            let schüsse: Vec<Schuss> = uow
-                .schüsse()
-                .find_by_runde(self.runde_id)
-                .await
-                .map_err(IntoReport::into_report)
-                .change_context(RundeAnzeigenFehler::SchüsseLaden)?
-                .into_iter()
-                .map(|schuss| schuss.into_data())
-                .collect();
-
-            // One Schussmenge per captured Ziel; the fold over the route is the Runde's.
-            let mengen: Vec<Schussmenge> = runde
-                .snapshot()
-                .ziele()
-                .iter()
-                .map(|ziel| {
-                    Schussmenge::für_ziel(
-                        ziel.ziel_id(),
-                        schüsse
-                            .iter()
-                            .filter(|schuss| schuss.ziel_id() == ziel.ziel_id())
-                            .cloned(),
-                    )
-                })
-                .collect();
-
-            let ziele = runde
-                .snapshot()
-                .ziele()
-                .iter()
-                .map(|ziel| Zielansicht {
-                    ziel_id: ziel.ziel_id(),
-                    tiername: ziel.tiername().to_owned(),
-                    zielgruppe: ziel.zielgruppe(),
-                    abstände: ziel.abstände().to_vec(),
-                    ergebnis: mengen
-                        .iter()
-                        .find(|menge| menge.ziel_id() == ziel.ziel_id())
-                        .and_then(Schussmenge::ergebnis),
-                })
-                .collect();
-
-            let gesamt = runde.ergebnis(&mengen);
-
-            Ok(RundeAnsicht {
-                runde: runde.cloned_data(),
-                ziele,
-                gesamt_erster_treffer: gesamt.erster_treffer().value(),
-                gesamt_mehrschuss: gesamt.mehrschuss().value(),
-                ziele_mit_ergebnis: gesamt.ziele_mit_ergebnis(),
-                schüsse,
-            })
-        }
-        .await;
-
-        uow.finish(ergebnis, RundeAnzeigenFehler::RundeLaden).await
-    }
 }
 
 // ---------------------------------------------------------------------------------------
@@ -363,7 +298,7 @@ impl UseCase<Runde> for RundeAbschliessen {
 }
 
 // ---------------------------------------------------------------------------------------
-// RundenAnzeigen (own list)
+// RundenAnzeigen read model
 // ---------------------------------------------------------------------------------------
 
 #[derive(Debug, thiserror::Error)]
@@ -374,40 +309,11 @@ pub enum RundenAnzeigenFehler {
     Laden,
 }
 
-/// The caller's own Runden, newest first.
-#[derive(Debug, Clone)]
-pub struct RundenAnzeigen;
-
-#[async_trait]
-impl UseCase<Vec<Runde>> for RundenAnzeigen {
-    type Error = Report<RundenAnzeigenFehler>;
-
-    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Vec<Runde>, Self::Error> {
-        let benutzer_id = ctx
-            .auth()
-            .require_benutzer_id()
-            .change_context(RundenAnzeigenFehler::NichtAngemeldet)?;
-
-        let uow = ctx
-            .enter()
-            .await
-            .change_context(RundenAnzeigenFehler::Laden)?;
-
-        let ergebnis = async {
-            let mut runden: Vec<Runde> = uow
-                .runden()
-                .find_by_benutzer(benutzer_id)
-                .await
-                .map_err(IntoReport::into_report)
-                .change_context(RundenAnzeigenFehler::Laden)?
-                .into_iter()
-                .map(|runde| runde.into_data())
-                .collect();
-            runden.sort_by_key(|a| std::cmp::Reverse(a.begonnen_am()));
-            Ok(runden)
-        }
-        .await;
-
-        uow.finish(ergebnis, RundenAnzeigenFehler::Laden).await
-    }
+/// Sort the caller's own Runden newest first.
+///
+/// The order is part of the read's contract, so it is spelled here rather than left to a
+/// repository's `ORDER BY` that only one adapter happens to have.
+pub fn runden_neueste_zuerst(mut runden: Vec<Runde>) -> Vec<Runde> {
+    runden.sort_by_key(|runde| std::cmp::Reverse(runde.begonnen_am()));
+    runden
 }

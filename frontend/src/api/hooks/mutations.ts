@@ -24,6 +24,10 @@ function useAnlageMutation<TVariables>(
       void queryClient.invalidateQueries({
         queryKey: logandaimKeys.parcours.all(),
       });
+      // …and the public Anlagen directory, which prints the Parcours counts.
+      void queryClient.invalidateQueries({
+        queryKey: logandaimKeys.anlagenVerzeichnis.all(),
+      });
     },
   });
 }

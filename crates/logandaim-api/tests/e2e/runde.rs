@@ -55,7 +55,7 @@ async fn anlage_mit_parcours(harness: &E2eHarness) -> (String, String, String, S
             &format!("/api/anlagen/{anlage_id}/parcours"),
             json!({
                 "name": "Waldrunde",
-                "pflöcke": [{ "id": weit, "bezeichnung": "Weit", "farbe": "Rot" }],
+                "pflöcke": [{ "id": weit, "farbe": "#c0392b" }],
                 "platzierungen": [{
                     "zielId": ziel_id,
                     "abstände": [{ "pflockId": weit, "meter": 40 }],
@@ -269,8 +269,7 @@ async fn ac9_eine_runde_zeigt_beide_wertungen_und_den_snapshot() {
 
     // The snapshot, not current master data.
     assert_eq!(body["parcoursName"], "Waldrunde");
-    assert_eq!(body["pflöcke"][0]["bezeichnung"], "Weit");
-    assert_eq!(body["pflöcke"][0]["farbe"], "Rot");
+    assert_eq!(body["pflöcke"][0]["farbe"], "#c0392b");
 
     // Both Wertungen folded at the one Ziel and over the whole Runde.
     let ziel = &body["ziele"][0];
@@ -331,4 +330,40 @@ async fn ac9_die_rundenliste_zeigt_nur_eigene_runden() {
     assert_eq!(runden.len(), 1, "AC-13: nur die eigene Runde");
     assert_eq!(runden[0]["id"], annas);
     assert_eq!(runden[0]["parcoursName"], "Waldrunde");
+}
+
+// ------------------------------------------------------------------------- 404, Liste
+
+#[test_log::test(pollster::test)]
+async fn eine_unbekannte_runde_antwortet_404() {
+    let harness = E2eHarness::new().await;
+    let (admin, _, _, _) = anlage_mit_parcours(&harness).await;
+
+    let (status, _) = harness
+        .client
+        .get_json_auth(&format!("/api/runden/{}", Uuid::new_v4()), &admin)
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "eine unbekannte Runde ist 404"
+    );
+}
+
+#[test_log::test(pollster::test)]
+async fn die_rundenliste_zeigt_die_eigenen_runden_neueste_zuerst() {
+    let harness = E2eHarness::new().await;
+    let (_, _, _, parcours_id) = anlage_mit_parcours(&harness).await;
+    let (anna, _) = neuer_benutzer(&harness, "anna@muster.at").await;
+
+    let erste = runde_starten(&harness, &anna, &parcours_id).await;
+    harness.vorspulen(chrono::Duration::minutes(5));
+    let zweite = runde_starten(&harness, &anna, &parcours_id).await;
+
+    let (status, body) = harness.client.get_json_auth("/api/runden", &anna).await;
+    assert_eq!(status, StatusCode::OK);
+    let runden = body.as_array().expect("die Antwort ist eine Liste");
+    assert_eq!(runden.len(), 2);
+    assert_eq!(runden[0]["id"], zweite, "die jüngste Runde steht vorn");
+    assert_eq!(runden[1]["id"], erste);
 }

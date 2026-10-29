@@ -1,36 +1,40 @@
 //! Typed facade between HTTP and use cases.
 //!
-//! Everything here is a thin translation: request → use case → schema. No business rules.
+//! Everything here is a thin translation: request → use case → schema. Reads are composed
+//! inline from the repositories they need, writes run as use cases. No business rules.
 //! Use-case errors pass through unchanged; `errors/http_status.rs` maps them to status codes.
 //! Nothing here touches `poem`: the HTTP edge lives in `http/mod.rs` behind the `openapi`
 //! feature, so the library compiles without it. Requests are grouped in `api/requests/`; the
 //! HTTP edge owns JWT encoding and bearer verification (`http/jwt.rs`, `http/auth.rs`).
 //!
-//! Authorisation is never decided here. Every master-data and Runde method hands the
-//! caller's [`AuthContext`] straight to the use case, which loads the aggregates and answers
-//! 401/403 itself (SPEC-konto rule 17).
+//! Authorisation is never decided here either. A read that runs inline calls the same
+//! helpers in `logandaim_core::service` that the use cases do; a write hands the caller's
+//! [`AuthContext`] straight to the use case, which loads the aggregates and answers 401/403
+//! itself (SPEC-konto rule 17).
 
 use std::sync::Arc;
 
-use error_stack::{Report, ResultExt};
+use error_stack::{IntoReport, Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
     domain::{AnlageId, EmailAdresse, ParcoursId, RundeId, ZielId, konto::BenutzerId},
     ports::{ClientKey, ThrottleAction},
     service::{
-        Abmeldung, AbmeldungFehler, AnlageAnzeigen, AnlageBeschreibendeDatenÄndern,
+        Abmeldung, AbmeldungFehler, AnlageAnsicht, AnlageBeschreibendeDatenÄndern,
         AnlageDeaktivieren, AnlageVerwaltungEntziehen, AnlageVerwaltungGewähren,
-        AnlageVerwaltungÄndern, AnlagenAnzeigen, Anmeldung, AnmeldungFehler, BenutzerLöschen,
-        BenutzerLöschenFehler, Erneuerung, ErneuerungFehler, ParcoursAnzeigen, ParcoursEntfernen,
-        ParcoursHinzufügen, ParcoursSetupÄndern, ParcoursUmbenennen, PasswortVergessen,
+        AnlageVerwaltungÄndern, AnlagenZeile as AnlagenZeileAnsicht, AnlageÖffentlich, Anmeldung,
+        AnmeldungFehler, BenutzerLöschen, BenutzerLöschenFehler, Erneuerung, ErneuerungFehler,
+        ParcoursEntfernen, ParcoursHinzufügen, ParcoursKurz, ParcoursSetupÄndern,
+        ParcoursUmbenennen, ParcoursÖffentlich as ParcoursÖffentlichAnsicht, PasswortVergessen,
         PasswortVergessenFehler, PasswortWiederherstellen, PasswortWiederherstellenFehler,
         RegistrierungAbschliessenFehler, RegistrierungAbschließen, RegistrierungStarten,
-        RegistrierungStartenFehler, RundeAbschliessen, RundeAbschliessenFehler, RundeAnzeigen,
-        RundeAnzeigenFehler, RundeStarten, RundeStartenFehler, RundenAnzeigen,
-        RundenAnzeigenFehler, SchussRegistrieren, SchussRegistrierenFehler, SessionAusgestellt,
-        StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern,
-        darf_anlage_verwalten,
+        RegistrierungStartenFehler, RundeAbschliessen, RundeAbschliessenFehler, RundeAnsicht,
+        RundeAnzeigenFehler, RundeStarten, RundeStartenFehler, RundenAnzeigenFehler,
+        SchussRegistrieren, SchussRegistrierenFehler, SessionAusgestellt, StammdatenFehler,
+        ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern, anlage_laden, anmeldung,
+        benutzer_laden, darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
+        ist_nicht_gefunden, runden_neueste_zuerst,
     },
 };
 use tracing::warn;
@@ -73,22 +77,91 @@ impl LogandaimAppApi {
     }
 
     /// The Anlagen the caller may administer.
+    ///
+    /// A `Systemadministrator` sees every active Anlage; everybody else sees the Anlagen their
+    /// `AnlageVerwaltung` names. Archived Anlagen are not listed: only a
+    /// `Systemadministrator` may still read one, through its detail route.
     pub async fn anlagen_anzeigen(
         &self,
         auth: AuthContext,
     ) -> ResultReport<Vec<AnlagenZeile>, StammdatenFehler> {
-        let zeilen = self.app.execute(auth, AnlagenAnzeigen).await?;
-        Ok(zeilen.into_iter().map(Into::into).collect())
+        self.app
+            .execute_fn(auth, async |ctx| {
+                let uow = ctx
+                    .enter()
+                    .await
+                    .change_context(StammdatenFehler::AnlageLaden)?;
+
+                let ergebnis = async {
+                    let benutzer_id = anmeldung(&ctx)?;
+                    let benutzer = benutzer_laden(&uow, benutzer_id).await?;
+                    let ist_systemadministrator = benutzer.ist_systemadministrator();
+
+                    let anlagen = if ist_systemadministrator {
+                        uow.anlagen()
+                            .find_aktiv()
+                            .await
+                            .map_err(IntoReport::into_report)
+                            .change_context(StammdatenFehler::AnlageLaden)?
+                    } else {
+                        uow.anlagen()
+                            .find_by_verwaltung(benutzer_id)
+                            .await
+                            .map_err(IntoReport::into_report)
+                            .change_context(StammdatenFehler::AnlageLaden)?
+                            .into_iter()
+                            .filter(|anlage| darf_anlage_lesen(&benutzer, anlage))
+                            .collect()
+                    };
+
+                    Ok(anlagen
+                        .into_iter()
+                        .map(|anlage| AnlagenZeileAnsicht {
+                            rolle: anlage.rolle_von(benutzer_id),
+                            ist_systemadministrator,
+                            anlage: anlage.into_data(),
+                        })
+                        .map(Into::into)
+                        .collect())
+                }
+                .await;
+
+                uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await
+            })
+            .await
     }
 
-    /// One Anlage with its master data; archived Anlagen stay readable (AC-11).
+    /// One Anlage with its master data. An archived Anlage answers only to a
+    /// `Systemadministrator`; everyone else gets 403 (AC-11).
     pub async fn anlage_anzeigen(
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
     ) -> ResultReport<Anlage, StammdatenFehler> {
-        let ansicht = self.app.execute(auth, AnlageAnzeigen { anlage_id }).await?;
-        Ok(ansicht.into())
+        self.app
+            .execute_fn(auth, async |ctx| {
+                let uow = ctx
+                    .enter()
+                    .await
+                    .change_context(StammdatenFehler::AnlageLaden)?;
+
+                let ergebnis = async {
+                    let benutzer_id = anmeldung(&ctx)?;
+                    let benutzer = benutzer_laden(&uow, benutzer_id).await?;
+                    let anlage = anlage_laden(&uow, anlage_id).await?;
+                    if !darf_masterdaten_pflegen(&benutzer, &anlage, benutzer_id)
+                        || !darf_anlage_lesen(&benutzer, &anlage)
+                    {
+                        return Err(Report::new(StammdatenFehler::NichtErlaubt));
+                    }
+                    Ok(AnlageAnsicht::neu(anlage.into_data()))
+                }
+                .await;
+
+                let ansicht = uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await?;
+                Ok(ansicht.into())
+            })
+            .await
     }
 
     pub async fn anlage_ändern(
@@ -262,8 +335,96 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
     ) -> ResultReport<Vec<ParcoursÖffentlich>, StammdatenFehler> {
-        let parcours = self.app.execute(auth, ParcoursAnzeigen).await?;
-        Ok(parcours.into_iter().map(Into::into).collect())
+        self.app
+            .execute_fn(auth, async |ctx| {
+                let uow = ctx
+                    .enter()
+                    .await
+                    .change_context(StammdatenFehler::AnlageLaden)?;
+
+                let ergebnis = async {
+                    let anlagen = uow
+                        .anlagen()
+                        .find_aktiv()
+                        .await
+                        .map_err(IntoReport::into_report)
+                        .change_context(StammdatenFehler::AnlageLaden)?;
+
+                    let mut offen = Vec::new();
+                    for anlage in anlagen {
+                        for parcours in anlage.parcours() {
+                            if parcours.ist_archiviert() {
+                                continue;
+                            }
+                            offen.push(ParcoursÖffentlichAnsicht {
+                                anlage_id: anlage.id(),
+                                anlage_name: anlage.name().clone(),
+                                parcours: parcours.clone(),
+                            });
+                        }
+                    }
+                    Ok(offen)
+                }
+                .await;
+
+                let offen = uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await?;
+                Ok(offen.into_iter().map(Into::into).collect())
+            })
+            .await
+    }
+
+    /// The public Anlagen directory: active Anlagen with a short Parcours list.
+    ///
+    /// Needs no identity, and carries no contact data (see [`AnlageÖffentlich`]).
+    pub async fn anlagen_verzeichnis(
+        &self,
+        auth: AuthContext,
+    ) -> ResultReport<Vec<crate::schema::AnlageÖffentlich>, StammdatenFehler> {
+        self.app
+            .execute_fn(auth, async |ctx| {
+                let uow = ctx
+                    .enter()
+                    .await
+                    .change_context(StammdatenFehler::AnlageLaden)?;
+
+                let ergebnis = async {
+                    let anlagen = uow
+                        .anlagen()
+                        .find_aktiv()
+                        .await
+                        .map_err(IntoReport::into_report)
+                        .change_context(StammdatenFehler::AnlageLaden)?;
+
+                    Ok(anlagen
+                        .into_iter()
+                        .map(|anlage| {
+                            let parcours = anlage
+                                .parcours()
+                                .iter()
+                                .filter(|parcours| !parcours.ist_archiviert())
+                                .map(|parcours| ParcoursKurz {
+                                    id: parcours.id(),
+                                    name: parcours.name().clone(),
+                                    anzahl_pflöcke: parcours.pflöcke().len(),
+                                    anzahl_ziele: parcours.platzierungen().len(),
+                                })
+                                .collect();
+                            AnlageÖffentlich {
+                                anlage_id: anlage.id(),
+                                name: anlage.name().clone(),
+                                ort: anlage.adresse().ort().to_owned(),
+                                ländercode: anlage.adresse().ländercode(),
+                                parcours,
+                            }
+                            .into()
+                        })
+                        .collect())
+                }
+                .await;
+
+                uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await
+            })
+            .await
     }
 
     // ---------------------------------------------------------------- Runde
@@ -284,8 +445,64 @@ impl LogandaimAppApi {
         auth: AuthContext,
         runde_id: RundeId,
     ) -> ResultReport<Runde, RundeAnzeigenFehler> {
-        let ansicht = self.app.execute(auth, RundeAnzeigen { runde_id }).await?;
-        Ok(ansicht.into())
+        self.app
+            .execute_fn(auth, async |ctx| {
+                let benutzer_id = ctx
+                    .auth()
+                    .require_benutzer_id()
+                    .change_context(RundeAnzeigenFehler::NichtAngemeldet)?;
+
+                let uow = ctx
+                    .enter()
+                    .await
+                    .change_context(RundeAnzeigenFehler::RundeLaden)?;
+
+                let ergebnis = async {
+                    let runde = match uow.runden().find_by_id(runde_id).await {
+                        Ok(runde) => runde,
+                        Err(fehler) if ist_nicht_gefunden(&fehler) => {
+                            return Err(Report::new(RundeAnzeigenFehler::NichtGefunden));
+                        }
+                        Err(fehler) => {
+                            return Err(fehler).change_context(RundeAnzeigenFehler::RundeLaden);
+                        }
+                    };
+
+                    // Owner or Systemadministrator. An Anlage's staff never reads another
+                    // Benutzer's Runde (AC-13), which is why the AnlageVerwaltung grants
+                    // nothing here.
+                    if !runde.gehört_zu(benutzer_id) {
+                        let benutzer = uow
+                            .benutzer()
+                            .find_by_id(benutzer_id)
+                            .await
+                            .map_err(IntoReport::into_report)
+                            .change_context(RundeAnzeigenFehler::BenutzerLaden)?;
+                        if !benutzer.ist_systemadministrator() {
+                            return Err(Report::new(RundeAnzeigenFehler::NichtErlaubt));
+                        }
+                    }
+
+                    let schüsse: Vec<logandaim_core::domain::Schuss> = uow
+                        .schüsse()
+                        .find_by_runde(runde_id)
+                        .await
+                        .map_err(IntoReport::into_report)
+                        .change_context(RundeAnzeigenFehler::SchüsseLaden)?
+                        .into_iter()
+                        .map(|schuss| schuss.into_data())
+                        .collect();
+
+                    Ok(RundeAnsicht::neu(runde.into_data(), schüsse))
+                }
+                .await;
+
+                let ansicht = uow
+                    .finish(ergebnis, RundeAnzeigenFehler::RundeLaden)
+                    .await?;
+                Ok(ansicht.into())
+            })
+            .await
     }
 
     /// The caller's own Runden, newest first.
@@ -293,8 +510,36 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
     ) -> ResultReport<Vec<RundenZeile>, RundenAnzeigenFehler> {
-        let runden = self.app.execute(auth, RundenAnzeigen).await?;
-        Ok(runden.into_iter().map(Into::into).collect())
+        self.app
+            .execute_fn(auth, async |ctx| {
+                let benutzer_id = ctx
+                    .auth()
+                    .require_benutzer_id()
+                    .change_context(RundenAnzeigenFehler::NichtAngemeldet)?;
+
+                let uow = ctx
+                    .enter()
+                    .await
+                    .change_context(RundenAnzeigenFehler::Laden)?;
+
+                let ergebnis = async {
+                    let runden = uow
+                        .runden()
+                        .find_by_benutzer(benutzer_id)
+                        .await
+                        .map_err(IntoReport::into_report)
+                        .change_context(RundenAnzeigenFehler::Laden)?
+                        .into_iter()
+                        .map(|runde| runde.into_data())
+                        .collect();
+                    Ok(runden_neueste_zuerst(runden))
+                }
+                .await;
+
+                let runden = uow.finish(ergebnis, RundenAnzeigenFehler::Laden).await?;
+                Ok(runden.into_iter().map(Into::into).collect())
+            })
+            .await
     }
 
     pub async fn runde_abschliessen(

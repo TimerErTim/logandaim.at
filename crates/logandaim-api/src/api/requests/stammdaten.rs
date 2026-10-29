@@ -2,8 +2,8 @@
 //!
 //! Every conversion performs the domain validation exactly once, at the edge, and folds a
 //! failure into the use case's own `UngültigeAnfrage` variant — so no route invents a second
-//! error vocabulary. `AnlageAdresse`, `Tiername`, `Zielgruppe`, `PflockBezeichnung`,
-//! `PflockFarbe`, and `Abstand` are validated newtypes: the DTOs never re-check them.
+//! error vocabulary. `AnlageAdresse`, `Tiername`, `Zielgruppe`, `PflockFarbe`, and
+//! `Abstand` are validated newtypes: the DTOs never re-check them.
 
 use error_stack::Report;
 use uuid::Uuid;
@@ -11,8 +11,8 @@ use uuid::Uuid;
 use logandaim_core::{
     domain::{
         Abstand, AnlageAdresse, AnlageId, AnlageKontakt, AnlageName, AnlageVerwaltungRolle,
-        Ländercode, ParcoursId, ParcoursName, Pflock, PflockBezeichnung, PflockFarbe, PflockId,
-        Tiername, ZielId, Zielgruppe, Zielplatzierung, anlage::Website, konto::BenutzerId,
+        Ländercode, ParcoursId, ParcoursName, Pflock, PflockFarbe, PflockId, Tiername, ZielId,
+        Zielgruppe, Zielplatzierung, anlage::Website, konto::BenutzerId,
     },
     service::{
         AnlageBeschreibendeDatenÄndern, AnlageErstellen, AnlageVerwaltungGewähren,
@@ -77,7 +77,6 @@ fn parcours_name(wert: String) -> Result<ParcoursName, Report<StammdatenFehler>>
 fn pflock(wert: PflockSchema) -> Result<Pflock, Report<StammdatenFehler>> {
     Ok(Pflock::neu(
         PflockId(wert.id),
-        PflockBezeichnung::neu(wert.bezeichnung).map_err(|_| ungültig())?,
         PflockFarbe::neu(wert.farbe).map_err(|_| ungültig())?,
     ))
 }

@@ -9,45 +9,29 @@ use uuid::Uuid;
 use super::parcours::{ParcoursId, PflockId};
 use super::ziel::{Tiername, ZielId, Zielgruppe};
 
-/// A persisted Pflock row: label, colour, position.
-type PflockRoh = (String, String, usize);
-/// A persisted Ziel row: identity, animal name, group, label-to-metre distances.
+/// A persisted Pflock row: colour and position.
+type PflockRoh = (String, usize);
+/// A persisted Ziel row: identity, animal name, group, Pflock-to-metre distances.
 type ZielRoh = (Uuid, String, u8, Vec<(String, u32)>);
-/// A child Pflock before capture: identity, label, colour.
-type QuellePflock = (PflockId, String, String);
+/// A child Pflock before capture: identity and colour.
+type QuellePflock = (PflockId, String);
 /// A child Ziel before capture: identity, animal name, group, per-Pflock distances.
 type QuelleZiel = (ZielId, Tiername, Zielgruppe, Vec<(PflockId, u32)>);
 
-/// One Pflock as captured: label, colour, and its position in the far-to-near order.
+/// One Pflock as captured: its colour and its position in the far-to-near order.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SnapshotPflock {
-    bezeichnung: String,
     farbe: String,
     /// 0-based position in the captured far-to-near order.
     position: usize,
 }
 
 impl SnapshotPflock {
-    pub fn neu(
-        bezeichnung: String,
-        farbe: String,
-        position: usize,
-    ) -> Result<Self, SnapshotFehler> {
-        if bezeichnung.trim().is_empty() {
-            return Err(SnapshotFehler::PflockBezeichnungLeer);
-        }
+    pub fn neu(farbe: String, position: usize) -> Result<Self, SnapshotFehler> {
         if farbe.trim().is_empty() {
             return Err(SnapshotFehler::PflockFarbeLeer);
         }
-        Ok(Self {
-            bezeichnung,
-            farbe,
-            position,
-        })
-    }
-
-    pub fn bezeichnung(&self) -> &str {
-        &self.bezeichnung
+        Ok(Self { farbe, position })
     }
 
     pub fn farbe(&self) -> &str {
@@ -65,7 +49,7 @@ pub struct SnapshotZiel {
     ziel_id: ZielId,
     tiername: String,
     zielgruppe: u8,
-    /// Label to metres, for the distances that were configured.
+    /// Pflock colour to metres, for the distances that were configured.
     abstände: Vec<(String, u32)>,
 }
 
@@ -106,11 +90,11 @@ impl SnapshotZiel {
         &self.abstände
     }
 
-    /// The captured distance for one Pflock label, if one was configured.
-    pub fn abstand_für(&self, bezeichnung: &str) -> Option<u32> {
+    /// The captured distance for one Pflock colour, if one was configured.
+    pub fn abstand_für(&self, pflock_farbe: &str) -> Option<u32> {
         self.abstände
             .iter()
-            .find(|(label, _)| label == bezeichnung)
+            .find(|(farbe, _)| farbe == pflock_farbe)
             .map(|(_, meter)| *meter)
     }
 }
@@ -119,8 +103,6 @@ impl SnapshotZiel {
 pub enum SnapshotFehler {
     #[error("der Parcoursname darf nicht leer sein")]
     ParcoursNameLeer,
-    #[error("die Pflock-Bezeichnung darf nicht leer sein")]
-    PflockBezeichnungLeer,
     #[error("die Pflock-Farbe darf nicht leer sein")]
     PflockFarbeLeer,
     #[error("der Tiername darf nicht leer sein")]
@@ -171,7 +153,7 @@ impl ParcoursSnapshot {
     ) -> Result<Self, SnapshotFehler> {
         let pflöcke = pflöcke
             .into_iter()
-            .map(|(bezeichnung, farbe, position)| SnapshotPflock::neu(bezeichnung, farbe, position))
+            .map(|(farbe, position)| SnapshotPflock::neu(farbe, position))
             .collect::<Result<Vec<_>, _>>()?;
         let ziele = ziele
             .into_iter()
@@ -233,16 +215,14 @@ impl SnapshotQuelle {
         }
     }
 
-    /// Turn the source into a snapshot, resolving Pflock ids to labels so the snapshot
+    /// Turn the source into a snapshot, resolving Pflock ids to colours so the snapshot
     /// does not depend on any row still existing.
     pub fn in_snapshot(&self) -> Result<ParcoursSnapshot, SnapshotFehler> {
         let pflöcke = self
             .pflöcke
             .iter()
             .enumerate()
-            .map(|(position, (_, bezeichnung, farbe))| {
-                SnapshotPflock::neu(bezeichnung.clone(), farbe.clone(), position)
-            })
+            .map(|(position, (_, farbe))| SnapshotPflock::neu(farbe.clone(), position))
             .collect::<Result<Vec<_>, _>>()?;
 
         let ziele = self
@@ -252,13 +232,13 @@ impl SnapshotQuelle {
                 let abstände = abstände
                     .iter()
                     .map(|(pflock_id, meter)| {
-                        let label = self
+                        let farbe = self
                             .pflöcke
                             .iter()
-                            .find(|(id, _, _)| id == pflock_id)
-                            .map(|(_, bezeichnung, _)| bezeichnung.clone())
-                            .ok_or(SnapshotFehler::PflockBezeichnungLeer)?;
-                        Ok((label, *meter))
+                            .find(|(id, _)| id == pflock_id)
+                            .map(|(_, farbe)| farbe.clone())
+                            .ok_or(SnapshotFehler::PflockFarbeLeer)?;
+                        Ok((farbe, *meter))
                     })
                     .collect::<Result<Vec<_>, SnapshotFehler>>()?;
                 SnapshotZiel::neu(
@@ -278,19 +258,15 @@ impl SnapshotQuelle {
 mod tests {
     use super::*;
 
-    fn pflock(id: u128, label: &str, farbe: &str) -> (PflockId, String, String) {
-        (
-            PflockId(Uuid::from_u128(id)),
-            label.to_owned(),
-            farbe.to_owned(),
-        )
+    fn pflock(id: u128, farbe: &str) -> (PflockId, String) {
+        (PflockId(Uuid::from_u128(id)), farbe.to_owned())
     }
 
     fn quelle() -> SnapshotQuelle {
         SnapshotQuelle::neu(
             ParcoursId(Uuid::from_u128(7)),
             "Waldrunde",
-            vec![pflock(1, "Weit", "Rot"), pflock(2, "Nah", "Blau")],
+            vec![pflock(1, "#c0392b"), pflock(2, "#1b4f9c")],
             vec![(
                 ZielId(Uuid::from_u128(10)),
                 Tiername::neu("Keiler").unwrap(),
@@ -310,8 +286,8 @@ mod tests {
         let ziel = snapshot.ziele()[0].clone();
         assert_eq!(ziel.tiername(), "Keiler");
         assert_eq!(ziel.zielgruppe(), 2);
-        assert_eq!(ziel.abstand_für("Weit"), Some(40));
-        assert_eq!(ziel.abstand_für("Nah"), None);
+        assert_eq!(ziel.abstand_für("#c0392b"), Some(40));
+        assert_eq!(ziel.abstand_für("#1b4f9c"), None);
     }
 
     #[test_log::test]
@@ -336,13 +312,7 @@ mod tests {
             original
                 .pflöcke()
                 .iter()
-                .map(|pflock| {
-                    (
-                        pflock.bezeichnung().to_owned(),
-                        pflock.farbe().to_owned(),
-                        pflock.position(),
-                    )
-                })
+                .map(|pflock| (pflock.farbe().to_owned(), pflock.position()))
                 .collect(),
             original
                 .ziele()

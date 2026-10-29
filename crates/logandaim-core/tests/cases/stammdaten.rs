@@ -10,29 +10,32 @@ use logandaim_core::{
     application::AuthContext,
     domain::{
         Abstand, Anlage, AnlageAdresse, AnlageKontakt, AnlageName, AnlageVerwaltungRolle,
-        EmailAdresse, Ländercode, NeuerParcours, ParcoursId, ParcoursName, Pflock,
-        PflockBezeichnung, PflockFarbe, PflockId, Tiername, Wertungszone, ZielId, Zielgruppe,
-        Zielplatzierung,
+        EmailAdresse, Ländercode, NeuerParcours, ParcoursId, ParcoursName, Pflock, PflockFarbe,
+        PflockId, Tiername, Wertungszone, ZielId, Zielgruppe, Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
     ports::ClientKey,
     service::{
-        AnlageAnzeigen, AnlageBeschreibendeDatenÄndern, AnlageDeaktivieren, AnlageErstellen,
-        AnlageVerwaltungEntziehen, AnlageVerwaltungGewähren, AnlagenAnzeigen, ParcoursAnzeigen,
-        ParcoursEntfernen, ParcoursHinzufügen, ParcoursSetupÄndern, RegistrierungAbschließen,
-        RegistrierungStarten, RundeAbschliessen, RundeAnzeigen, RundeAnzeigenFehler, RundeStarten,
-        RundeStartenFehler, SchussRegistrieren, SessionAusgestellt, StammdatenFehler,
+        AnlageBeschreibendeDatenÄndern, AnlageDeaktivieren, AnlageErstellen,
+        AnlageVerwaltungEntziehen, AnlageVerwaltungGewähren, ParcoursEntfernen, ParcoursHinzufügen,
+        ParcoursSetupÄndern, RegistrierungAbschließen, RegistrierungStarten, RundeAbschliessen,
+        RundeStarten, RundeStartenFehler, SchussRegistrieren, SessionAusgestellt, StammdatenFehler,
         SystemadministratorBefördern, ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern,
     },
 };
 
 use super::{
     super::base_app_builder,
-    helpers::{Harness, jetzt},
+    helpers::{Harness, anlage_ansicht, jetzt, runde_ansicht},
 };
 
 const PASSWORT: &str = "korrekt-pferd-batterie";
+
+// The list read and the Anlage detail read are composed at the HTTP edge now, so their
+// assertions live in `e2e/stammdaten.rs` (`die_anlagenliste_zeigt_je_nach_rolle_die_eigenen_anlagen`,
+// `die_anlage_zeigt_wo_ihre_ziele_verwendet_werden`). A core case that only needs the
+// aggregate reads it through `anlage_ansicht`.
 
 fn client_key(ip: u8) -> ClientKey {
     ClientKey::new(IpAddr::V4(Ipv4Addr::new(10, 0, 0, ip)), "stammdaten-case")
@@ -150,16 +153,8 @@ fn parcours_setup(
             PflockId(uuid::Uuid::new_v4()),
         )
     });
-    let weit = Pflock::neu(
-        weit_id,
-        PflockBezeichnung::neu("Weit").expect("gültig"),
-        PflockFarbe::neu("Rot").expect("gültig"),
-    );
-    let nah = Pflock::neu(
-        nah_id,
-        PflockBezeichnung::neu("Nah").expect("gültig"),
-        PflockFarbe::neu("Blau").expect("gültig"),
-    );
+    let weit = Pflock::neu(weit_id, PflockFarbe::neu("#c0392b").expect("gültig"));
+    let nah = Pflock::neu(nah_id, PflockFarbe::neu("#1b4f9c").expect("gültig"));
     let platzierung =
         Zielplatzierung::neu(ziel, vec![(weit_id, abstand(40)), (nah_id, abstand(20))])
             .expect("die Platzierung ist gültig");
@@ -385,16 +380,7 @@ async fn ac2_der_letzte_administrator_kann_nicht_entzogen_werden() {
         StammdatenFehler::UngültigeAnfrage
     ));
 
-    let danach = harness
-        .app()
-        .execute(
-            admin,
-            AnlageAnzeigen {
-                anlage_id: anlage.id(),
-            },
-        )
-        .await
-        .expect("die Anlage bleibt lesbar");
+    let danach = anlage_ansicht(&harness, anlage.id()).await;
     assert_eq!(
         danach.anlage.rolle_von(id_von(mitarbeiter)),
         Some(AnlageVerwaltungRolle::Administrator),
@@ -712,17 +698,15 @@ async fn ac5_ersetzen_erzeugt_eine_neue_identitaet() {
 // --------------------------------------------------------------------------- AC-6
 
 #[test_log::test(pollster::test)]
-async fn ac6_pflock_bezeichnungen_sind_je_parcours_eindeutig() {
+async fn ac6_pflock_farben_sind_je_parcours_eindeutig() {
     let doppelt = vec![
         Pflock::neu(
             PflockId(uuid::Uuid::new_v4()),
-            PflockBezeichnung::neu("Weit").expect("gültig"),
-            PflockFarbe::neu("Rot").expect("gültig"),
+            PflockFarbe::neu("#c0392b").expect("gültig"),
         ),
         Pflock::neu(
             PflockId(uuid::Uuid::new_v4()),
-            PflockBezeichnung::neu("Weit").expect("gültig"),
-            PflockFarbe::neu("Blau").expect("gültig"),
+            PflockFarbe::neu("#C0392B").expect("gültig"),
         ),
     ];
     let ergebnis = NeuerParcours::neu(
@@ -730,7 +714,7 @@ async fn ac6_pflock_bezeichnungen_sind_je_parcours_eindeutig() {
         doppelt,
         Vec::new(),
     );
-    assert!(ergebnis.is_err(), "AC-6: die Bezeichnungen sind eindeutig");
+    assert!(ergebnis.is_err(), "AC-6: die Farben sind eindeutig");
 }
 
 #[test_log::test(pollster::test)]
@@ -739,16 +723,8 @@ async fn ac6_konfigurierte_abstaende_nehmen_streng_von_fern_nach_nah_ab() {
     let nah = PflockId(uuid::Uuid::new_v4());
     let ziel = ZielId(uuid::Uuid::new_v4());
     let pflöcke = vec![
-        Pflock::neu(
-            weit,
-            PflockBezeichnung::neu("Weit").expect("gültig"),
-            PflockFarbe::neu("Rot").expect("gültig"),
-        ),
-        Pflock::neu(
-            nah,
-            PflockBezeichnung::neu("Nah").expect("gültig"),
-            PflockFarbe::neu("Blau").expect("gültig"),
-        ),
+        Pflock::neu(weit, PflockFarbe::neu("#c0392b").expect("gültig")),
+        Pflock::neu(nah, PflockFarbe::neu("#1b4f9c").expect("gültig")),
     ];
 
     let gleich = Zielplatzierung::neu(ziel, vec![(weit, abstand(30)), (nah, abstand(30))])
@@ -819,22 +795,13 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
         .expect("Parcours-Setup ändern");
 
     // AC-9: the existing Runde still displays L1 exactly.
-    let gelesen = harness
-        .app()
-        .execute(
-            admin,
-            RundeAnzeigen {
-                runde_id: runde.id(),
-            },
-        )
-        .await
-        .expect("AC-9: die Runde bleibt lesbar");
+    let gelesen = runde_ansicht(&harness, runde.id()).await;
     assert_eq!(gelesen.runde.snapshot(), &vorher);
     assert_eq!(gelesen.ziele[0].tiername, "Keiler");
     assert_eq!(gelesen.ziele[0].zielgruppe, 2);
     assert_eq!(
         gelesen.ziele[0].abstände,
-        vec![("Weit".to_owned(), 40), ("Nah".to_owned(), 20)]
+        vec![("#c0392b".to_owned(), 40), ("#1b4f9c".to_owned(), 20)]
     );
     assert_eq!(
         gelesen.runde.snapshot().parcours_name(),
@@ -935,26 +902,8 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parcours_hinweg_kontinuier
         .await
         .expect("AC-8: derselbe Ziel-Datensatz nimmt einen zweiten Schuss an");
 
-    let eine = harness
-        .app()
-        .execute(
-            admin,
-            RundeAnzeigen {
-                runde_id: erste.id(),
-            },
-        )
-        .await
-        .expect("die erste Runde ist lesbar");
-    let andere = harness
-        .app()
-        .execute(
-            admin,
-            RundeAnzeigen {
-                runde_id: zweite.id(),
-            },
-        )
-        .await
-        .expect("die zweite Runde ist lesbar");
+    let eine = runde_ansicht(&harness, erste.id()).await;
+    let andere = runde_ansicht(&harness, zweite.id()).await;
 
     assert_eq!(eine.ziele[0].ziel_id, ziel_id);
     assert_eq!(andere.ziele[0].ziel_id, ziel_id);
@@ -962,7 +911,7 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parcours_hinweg_kontinuier
     assert_eq!(andere.gesamt_erster_treffer, 20);
     assert_eq!(
         andere.ziele[0].abstände,
-        vec![("Weit".to_owned(), 40), ("Nah".to_owned(), 20)],
+        vec![("#c0392b".to_owned(), 40), ("#1b4f9c".to_owned(), 20)],
         "AC-8: der zweite Parcours bringt seine eigenen Abstände mit"
     );
 }
@@ -1003,16 +952,7 @@ async fn ac10_deaktivieren_verhindert_neue_runden_und_haelt_alte_lesbar() {
         RundeStartenFehler::NichtGefunden | RundeStartenFehler::NichtAktiv
     ));
 
-    harness
-        .app()
-        .execute(
-            admin,
-            RundeAnzeigen {
-                runde_id: runde.id(),
-            },
-        )
-        .await
-        .expect("AC-10: alte Runden bleiben mit ihrem Schnappschuss lesbar");
+    runde_ansicht(&harness, runde.id()).await;
 }
 
 #[test_log::test(pollster::test)]
@@ -1225,21 +1165,9 @@ async fn ac12_ein_unreferenzierter_parcours_wird_geloescht() {
 
 // --------------------------------------------------------------------------- AC-13
 
-#[test_log::test(pollster::test)]
-async fn ac13_aktive_parcours_sind_ohne_anmeldung_lesbar() {
-    let harness = harness().await;
-    let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let (_, _, parcours_id) = anlage_mit_parcours(&harness, admin, "Breitenstein").await;
-
-    let offen = harness
-        .app()
-        .execute(AuthContext::Anonymous, ParcoursAnzeigen)
-        .await
-        .expect("AC-13: öffentlich lesbar");
-    assert_eq!(offen.len(), 1);
-    assert_eq!(offen[0].parcours.id(), parcours_id);
-    assert_eq!(offen[0].anlage_name.as_str(), "Breitenstein");
-}
+// The public Parcours list is composed at the HTTP edge and pinned there
+// (`e2e/stammdaten.rs::ac13_die_parcoursliste_ist_oeffentlich_und_zeigt_nur_aktive_parcours`);
+// `ParcoursAnzeigen` is no longer a use case, so no core case drives it.
 
 #[test_log::test(pollster::test)]
 async fn ac13_ein_mitarbeiter_liest_keine_fremde_runde() {
@@ -1262,19 +1190,12 @@ async fn ac13_ein_mitarbeiter_liest_keine_fremde_runde() {
         .await
         .expect("die Runde gehört dem Systemadministrator");
 
-    let fehler = harness
-        .app()
-        .execute(
-            mitarbeiter,
-            RundeAnzeigen {
-                runde_id: fremde_runde.id(),
-            },
-        )
-        .await
-        .expect_err("AC-13: ein Mitarbeiter liest keine fremde Runde");
+    // AC-13: the owner-or-Systemadministrator rule is a person rule, not an Anlage role, so
+    // the Mitarbeiter's Verwaltung grants nothing. The HTTP suite pins the 403.
     assert!(matches!(
-        fehler.current_context(),
-        RundeAnzeigenFehler::NichtErlaubt
+        fremde_runde.zuordnung(),
+        logandaim_core::domain::Zuordnung::Benutzer(eigner)
+            if eigner != id_von(mitarbeiter)
     ));
 }
 
@@ -1291,53 +1212,14 @@ async fn ac13_der_systemadministrator_handelt_anlagenuebergreifend() {
         .await
         .expect("Anna startet eine Runde");
 
-    harness
-        .app()
-        .execute(
-            admin,
-            RundeAnzeigen {
-                runde_id: runde.id(),
-            },
-        )
-        .await
-        .expect("AC-13: der Systemadministrator liest jede Runde");
+    runde_ansicht(&harness, runde.id()).await;
 }
 
 // --------------------------------------------------------------------------- Listen
 
-#[test_log::test(pollster::test)]
-async fn die_adminliste_zeigt_je_nach_rolle_die_eigenen_anlagen() {
-    let harness = harness().await;
-    let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let mitarbeiter = benutzer_mit_ip(&harness, "mitarbeiter@muster.at", 2).await;
-    let eine = anlage_erstellen(&harness, admin, "Breitenstein").await;
-    anlage_erstellen(&harness, admin, "Pregarten").await;
-    verwaltung_gewähren(
-        &harness,
-        admin,
-        eine.id(),
-        id_von(mitarbeiter),
-        AnlageVerwaltungRolle::Mitarbeiter,
-    )
-    .await;
-
-    let eigene = harness
-        .app()
-        .execute(mitarbeiter, AnlagenAnzeigen)
-        .await
-        .expect("die Liste ist lesbar");
-    assert_eq!(eigene.len(), 1);
-    assert_eq!(eigene[0].anlage.id(), eine.id());
-    assert_eq!(eigene[0].rolle, Some(AnlageVerwaltungRolle::Mitarbeiter));
-    assert!(!eigene[0].ist_systemadministrator);
-
-    let alle = harness
-        .app()
-        .execute(admin, AnlagenAnzeigen)
-        .await
-        .expect("der Systemadministrator sieht alle");
-    assert_eq!(alle.len(), 2);
-}
+// The admin list and the Anlage detail are HTTP reads now; both are pinned in
+// `e2e/stammdaten.rs`. What stays here is the Anlage's own placement aggregation, which is
+// domain data the admin view renders.
 
 #[test_log::test(pollster::test)]
 async fn die_anlage_zeigt_wo_ihre_ziele_verwendet_werden() {
@@ -1345,16 +1227,7 @@ async fn die_anlage_zeigt_wo_ihre_ziele_verwendet_werden() {
     let admin = systemadministrator(&harness, "admin@muster.at").await;
     let (anlage, _, _) = anlage_mit_parcours(&harness, admin, "Breitenstein").await;
 
-    let ansicht = harness
-        .app()
-        .execute(
-            admin,
-            AnlageAnzeigen {
-                anlage_id: anlage.id(),
-            },
-        )
-        .await
-        .expect("die Ansicht ist lesbar");
+    let ansicht = anlage_ansicht(&harness, anlage.id()).await;
     assert_eq!(ansicht.anlage.id(), anlage.id());
     assert_eq!(ansicht.zielverwendungen.len(), 1);
     let verwendungen = &ansicht.zielverwendungen[0].1;
@@ -1362,7 +1235,7 @@ async fn die_anlage_zeigt_wo_ihre_ziele_verwendet_werden() {
     assert_eq!(verwendungen[0].parcours_name, "Waldrunde");
     assert_eq!(
         verwendungen[0].abstände,
-        vec![("Weit".to_owned(), 40), ("Nah".to_owned(), 20)]
+        vec![("#c0392b".to_owned(), 40), ("#1b4f9c".to_owned(), 20)]
     );
 }
 
@@ -1395,10 +1268,7 @@ async fn deaktivieren_stempelt_den_zeitpunkt() {
 /// NFR-3: a Benutzer deletion anonymises the rows instead of destroying the record.
 #[test_log::test(pollster::test)]
 async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
-    use logandaim_core::{
-        domain::Zuordnung,
-        service::{BenutzerLöschen, RundeAnzeigen},
-    };
+    use logandaim_core::{domain::Zuordnung, service::BenutzerLöschen};
 
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
@@ -1436,16 +1306,7 @@ async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
         .await
         .expect("das Konto wird gelöscht");
 
-    let ansicht = harness
-        .app()
-        .execute(
-            admin,
-            RundeAnzeigen {
-                runde_id: runde.id(),
-            },
-        )
-        .await
-        .expect("der Systemadministrator liest die anonymisierte Runde");
+    let ansicht = runde_ansicht(&harness, runde.id()).await;
     assert!(matches!(
         ansicht.runde.zuordnung(),
         Zuordnung::Anonymisiert { .. }

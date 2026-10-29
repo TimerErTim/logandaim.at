@@ -74,8 +74,8 @@ async fn parcours_hinzufügen(
             json!({
                 "name": "Waldrunde",
                 "pflöcke": [
-                    { "id": weit, "bezeichnung": "Weit", "farbe": "Rot" },
-                    { "id": nah, "bezeichnung": "Nah", "farbe": "Blau" },
+                    { "id": weit, "farbe": "#c0392b" },
+                    { "id": nah, "farbe": "#1b4f9c" },
                 ],
                 "platzierungen": [{
                     "zielId": ziel_id,
@@ -297,12 +297,24 @@ async fn ac2_der_letzte_administrator_kann_nicht_entzogen_werden() {
 // ------------------------------------------------------------------------- AC-11
 
 #[test_log::test(pollster::test)]
-async fn ac11_eine_deaktivierte_anlage_ist_lesbar_aber_nicht_schreibbar() {
+async fn ac11_eine_deaktivierte_anlage_schreibt_nicht_und_liest_nur_der_systemadministrator() {
     let harness = E2eHarness::new().await;
     let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
     befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
     let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
     let ziel_id = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
+
+    // An Administrator of the Anlage, to prove the rule is about the account role.
+    let (verwalter, verwalter_id) = neuer_benutzer(&harness, "verwalter@muster.at").await;
+    let (status, body) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/verwaltungen"),
+            json!({ "benutzerId": verwalter_id, "rolle": "Administrator" }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "AC-2: die Verwaltung: {body}");
 
     let (status, body) = harness
         .client
@@ -319,7 +331,7 @@ async fn ac11_eine_deaktivierte_anlage_ist_lesbar_aber_nicht_schreibbar() {
     );
     assert_eq!(body["zustand"], "Archiviert");
 
-    // AC-11: a read still answers 200, with the state in words.
+    // AC-11: a Systemadministrator still reads it, with the state in words.
     let (status, body) = harness
         .client
         .get_json_auth(&format!("/api/anlagen/{anlage_id}"), &admin)
@@ -327,11 +339,26 @@ async fn ac11_eine_deaktivierte_anlage_ist_lesbar_aber_nicht_schreibbar() {
     assert_eq!(
         status,
         StatusCode::OK,
-        "AC-11: lesen bleibt erlaubt: {body}"
+        "AC-11: der Systemadministrator liest weiter: {body}"
     );
     assert_eq!(body["zustand"], "Archiviert");
+    assert_eq!(
+        body["ziele"][0]["id"], ziel_id,
+        "die Historie bleibt lesbar"
+    );
 
-    // ... but every write answers 409.
+    // ... while the Anlage's own Administrator is refused: archived is closed to staff.
+    let (status, _) = harness
+        .client
+        .get_json_auth(&format!("/api/anlagen/{anlage_id}"), &verwalter)
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "AC-11: eine archivierte Anlage liest kein Anlagen-Administrator"
+    );
+
+    // ... but every write answers 409, even for the Systemadministrator.
     let (status, _) = harness
         .client
         .put_json_auth(
@@ -356,7 +383,7 @@ async fn ac11_eine_deaktivierte_anlage_ist_lesbar_aber_nicht_schreibbar() {
         "AC-11: kind-schreiben ist 409"
     );
 
-    // A deactivated Anlage disappears from the admin list, still naming its Ziel on read.
+    // A deactivated Anlage disappears from the admin list.
     let (status, body) = harness.client.get_json_auth("/api/anlagen", &admin).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
@@ -364,19 +391,96 @@ async fn ac11_eine_deaktivierte_anlage_ist_lesbar_aber_nicht_schreibbar() {
         0,
         "AC-11: nicht gelistet"
     );
+}
 
-    let (status, body) = harness
+#[test_log::test(pollster::test)]
+async fn ac11_eine_archivierte_anlage_liest_auch_ein_mitarbeiter_nicht() {
+    let harness = E2eHarness::new().await;
+    let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
+    let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+    let (mitarbeiter, mitarbeiter_id) = neuer_benutzer(&harness, "mitarbeiter@muster.at").await;
+    let (status, _) = harness
         .client
-        .get_json_auth(&format!("/api/anlagen/{anlage_id}"), &admin)
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/verwaltungen"),
+            json!({ "benutzerId": mitarbeiter_id, "rolle": "Mitarbeiter" }),
+            &admin,
+        )
         .await;
     assert_eq!(status, StatusCode::OK);
+
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/deaktivierung"),
+            json!({}),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, _) = harness
+        .client
+        .get_json_auth(&format!("/api/anlagen/{anlage_id}"), &mitarbeiter)
+        .await;
     assert_eq!(
-        body["ziele"][0]["id"], ziel_id,
-        "die Historie bleibt lesbar"
+        status,
+        StatusCode::FORBIDDEN,
+        "AC-11: eine archivierte Anlage liest kein Mitarbeiter"
     );
 }
 
 // ------------------------------------------------------------------------- AC-11, AC-12
+
+#[test_log::test(pollster::test)]
+async fn ac11_eine_archivierte_anlage_fehlt_auch_in_der_liste_ihres_mitarbeiters() {
+    let harness = E2eHarness::new().await;
+    let (admin, _, mitarbeiter, mitarbeiter_id) = admin_und_benutzer(&harness).await;
+    let eine = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{eine}/verwaltungen"),
+            json!({ "benutzerId": mitarbeiter_id, "rolle": "Mitarbeiter" }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, body) = harness
+        .client
+        .get_json_auth("/api/anlagen", &mitarbeiter)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        body.as_array().expect("liste").len(),
+        1,
+        "vor der Deaktivierung ist die eigene Anlage gelistet"
+    );
+
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{eine}/deaktivierung"),
+            json!({}),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+
+    // The same shared rule that refuses the detail read also filters the list.
+    let (status, body) = harness
+        .client
+        .get_json_auth("/api/anlagen", &mitarbeiter)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        body,
+        json!([]),
+        "AC-11: eine archivierte Anlage ist für ihren Mitarbeiter nicht gelistet"
+    );
+}
 
 #[test_log::test(pollster::test)]
 async fn ac11_und_ac12_ein_ziel_ohne_historie_wird_geloescht_mit_historie_archiviert() {
@@ -464,7 +568,7 @@ async fn ac13_die_parcoursliste_ist_oeffentlich_und_zeigt_nur_aktive_parcours() 
     assert_eq!(parcours[0]["parcours"]["id"], bleibt);
     assert_eq!(parcours[0]["anlageName"], "Breitenstein");
     assert_eq!(
-        parcours[0]["parcours"]["pflöcke"][0]["farbe"], "Rot",
+        parcours[0]["parcours"]["pflöcke"][0]["farbe"], "#c0392b",
         "die Pflockfarbe ist Nutzerdaten, keine Gestaltungsfarbe"
     );
 }
@@ -486,7 +590,7 @@ async fn ac6_und_ac7_ein_parcours_setup_ersetzt_die_ganze_aufstellung() {
         .put_json_auth(
             &format!("/api/anlagen/{anlage_id}/parcours/{parcours_id}/setup"),
             json!({
-                "pflöcke": [{ "id": nah, "bezeichnung": "Nah", "farbe": "Gelb" }],
+                "pflöcke": [{ "id": nah, "farbe": "#e8b81c" }],
                 "platzierungen": [{
                     "zielId": ziel_id,
                     "abstände": [{ "pflockId": nah, "meter": 15 }],
@@ -507,7 +611,12 @@ async fn ac6_und_ac7_ein_parcours_setup_ersetzt_die_ganze_aufstellung() {
         1,
         "AC-6: der alte Pflock ist fort"
     );
-    assert_eq!(parcours["pflöcke"][0]["bezeichnung"], "Nah");
+    assert_eq!(parcours["pflöcke"][0]["farbe"], "#e8b81c");
+    assert_eq!(
+        parcours["pflöcke"][0].get("bezeichnung"),
+        None,
+        "ein Pflock trägt keine Bezeichnung mehr"
+    );
 }
 
 // ------------------------------------------------------------------------- AC-5
@@ -546,5 +655,221 @@ async fn ac5_ein_ersatz_ziel_erbt_den_platz_nicht_die_historie() {
     assert_eq!(
         body["parcours"][0]["platzierungen"][0]["zielId"], neu,
         "AC-5: der Platz wandert zum Ersatz"
+    );
+}
+
+// ------------------------------------------------------------------------- Verzeichnis (2.2)
+
+#[test_log::test(pollster::test)]
+async fn das_anlagenverzeichnis_ist_oeffentlich_und_ohne_kontaktdaten() {
+    let harness = E2eHarness::new().await;
+    let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
+
+    let (status, body) = harness
+        .client
+        .post_json_auth(
+            "/api/anlagen",
+            json!({
+                "name": "Breitenstein",
+                "adresse": {
+                    "straße": "Waldweg 1",
+                    "postleitzahl": "3100",
+                    "ort": "St. Pölten",
+                    "ländercode": "AT",
+                },
+                "kontakt": {
+                    "name": "Verein Breitenstein",
+                    "email": "verein@muster.at",
+                },
+            }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "die Anlage entsteht: {body}");
+    let anlage_id = body["id"].as_str().expect("id").to_owned();
+    let ziel_id = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
+    let bleibt = parcours_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
+    let entfernt = parcours_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
+    let (status, _) = harness
+        .client
+        .delete_auth(
+            &format!("/api/anlagen/{anlage_id}/parcours/{entfernt}"),
+            &admin,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "der zweite Parcours wird archiviert"
+    );
+
+    // No header at all: the directory is public.
+    let (status, body) = harness.client.get_json("/api/anlagen/oeffentlich").await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "das Verzeichnis ist öffentlich: {body}"
+    );
+    let anlagen = body.as_array().expect("die Antwort ist eine Liste");
+    assert_eq!(anlagen.len(), 1, "nur die aktive Anlage");
+    let anlage = &anlagen[0];
+    assert_eq!(anlage["anlageId"], anlage_id);
+    assert_eq!(anlage["name"], "Breitenstein");
+    assert_eq!(anlage["ort"], "St. Pölten");
+    assert_eq!(anlage["ländercode"], "AT");
+
+    let parcours = anlage["parcours"].as_array().expect("parcours");
+    assert_eq!(parcours.len(), 1, "nur der aktive Parcours");
+    assert_eq!(parcours[0]["id"], bleibt);
+    assert_eq!(parcours[0]["name"], "Waldrunde");
+    assert_eq!(parcours[0]["anzahlPflöcke"], 2);
+    assert_eq!(parcours[0]["anzahlZiele"], 1);
+
+    // No contact data in the public payload.
+    let serialisiert = anlage.to_string();
+    assert!(
+        !serialisiert.contains("verein@muster.at") && !serialisiert.contains("kontakt"),
+        "das Verzeichnis darf keine Kontaktdaten tragen: {serialisiert}"
+    );
+}
+
+#[test_log::test(pollster::test)]
+async fn das_anlagenverzeichnis_antwortet_mit_kaputtem_token_wie_anonym() {
+    let harness = E2eHarness::new().await;
+    let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
+    let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+
+    let (ohne, erwartet) = harness.client.get_json("/api/anlagen/oeffentlich").await;
+    assert_eq!(ohne, StatusCode::OK, "{erwartet}");
+
+    // A stale token must not hide a public route from its own reader.
+    let (mit, body) = harness
+        .client
+        .get_json_auth("/api/anlagen/oeffentlich", "kein-gültiges-token")
+        .await;
+    assert_eq!(
+        mit,
+        StatusCode::OK,
+        "ein kaputtes Token zählt als anonym: {body}"
+    );
+    assert_eq!(body, erwartet, "derselbe Inhalt wie ohne Header");
+    assert_eq!(body.as_array().expect("liste")[0]["anlageId"], anlage_id);
+}
+
+#[test_log::test(pollster::test)]
+async fn das_anlagenverzeichnis_listet_keine_archivierte_anlage() {
+    let harness = E2eHarness::new().await;
+    let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
+    let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/deaktivierung"),
+            json!({}),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "die Anlage wird deaktiviert");
+
+    let (status, body) = harness.client.get_json("/api/anlagen/oeffentlich").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body,
+        json!([]),
+        "eine archivierte Anlage ist nicht öffentlich"
+    );
+}
+
+// ------------------------------------------------------------------------- Lesen (2.1)
+
+#[test_log::test(pollster::test)]
+async fn die_anlagenliste_zeigt_je_nach_rolle_die_eigenen_anlagen() {
+    let harness = E2eHarness::new().await;
+    let (admin, _, mitarbeiter, mitarbeiter_id) = admin_und_benutzer(&harness).await;
+    let eine = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+    let _zweite = anlage_erstellen(&harness, &admin, "Pregarten").await;
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{eine}/verwaltungen"),
+            json!({ "benutzerId": mitarbeiter_id, "rolle": "Mitarbeiter" }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, body) = harness
+        .client
+        .get_json_auth("/api/anlagen", &mitarbeiter)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let zeilen = body.as_array().expect("liste");
+    assert_eq!(zeilen.len(), 1, "nur die eigene Anlage");
+    assert_eq!(zeilen[0]["anlage"]["id"], eine);
+    assert_eq!(zeilen[0]["rolle"], "Mitarbeiter");
+    assert_eq!(zeilen[0]["istSystemadministrator"], false);
+
+    let (status, body) = harness.client.get_json_auth("/api/anlagen", &admin).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body.as_array().expect("liste").len(),
+        2,
+        "der Systemadministrator sieht alle"
+    );
+}
+
+#[test_log::test(pollster::test)]
+async fn die_anlage_zeigt_wo_ihre_ziele_verwendet_werden() {
+    let harness = E2eHarness::new().await;
+    let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
+    let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+    let ziel_id = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
+    parcours_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
+
+    let (status, body) = harness
+        .client
+        .get_json_auth(&format!("/api/anlagen/{anlage_id}"), &admin)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let verwendungen = body["ziele"][0]["verwendungen"]
+        .as_array()
+        .expect("verwendungen");
+    assert_eq!(verwendungen.len(), 1);
+    assert_eq!(verwendungen[0]["parcoursName"], "Waldrunde");
+    assert_eq!(
+        verwendungen[0]["abstände"],
+        json!([
+            { "pflock": "#c0392b", "meter": 40 },
+            { "pflock": "#1b4f9c", "meter": 20 },
+        ])
+    );
+}
+
+#[test_log::test(pollster::test)]
+async fn ein_pflock_verlangt_eine_hex_farbe() {
+    let harness = E2eHarness::new().await;
+    let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
+    let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/parcours"),
+            json!({
+                "name": "Waldrunde",
+                "pflöcke": [{ "id": Uuid::new_v4(), "farbe": "Rot" }],
+            }),
+            &admin,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "eine Wort-Farbe ist keine gültige Hex-Farbe"
     );
 }

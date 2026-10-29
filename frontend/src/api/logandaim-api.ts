@@ -78,6 +78,9 @@ export interface LogandaimApi {
   /** AC-13: no credentials needed; a stale token is answered as anonymous. */
   parcoursAnzeigen(): Promise<ParcoursÖffentlich[]>;
 
+  /** The public Anlagen directory: no credentials, no contact data, no session. */
+  anlagenVerzeichnis(): Promise<AnlageÖffentlich[]>;
+
   // ---------------------------------------------------------------- Runden
   rundenAnzeigen(): Promise<RundenZeile[]>;
   rundeStarten(parcoursId: string): Promise<Runde>;
@@ -132,6 +135,8 @@ export type Zielplatzierung = Schemas["Zielplatzierung"];
 export type ZielplatzierungAbstand = Schemas["ZielplatzierungAbstand"];
 export type Parcours = Schemas["Parcours"];
 export type ParcoursÖffentlich = Schemas["ParcoursÖffentlich"];
+export type AnlageÖffentlich = Schemas["AnlageÖffentlich"];
+export type ParcoursKurz = Schemas["ParcoursKurz"];
 export type Runde = Schemas["Runde"];
 export type RundenZeile = Schemas["RundenZeile"];
 export type SnapshotPflock = Schemas["SnapshotPflock"];

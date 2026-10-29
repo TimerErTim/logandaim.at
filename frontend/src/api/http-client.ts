@@ -6,6 +6,7 @@ import type {
   AnlageErstellungInput,
   AnlagenZeile,
   AnlageVerwaltungRolle,
+  AnlageÖffentlich,
   AuthPhase,
   AuthSession,
   Benutzer,
@@ -373,6 +374,12 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   async parcoursAnzeigen(): Promise<ParcoursÖffentlich[]> {
     // Public by design (AC-13): never renew a session for it, and send no header at all.
     return unwrap(await this.client.GET("/parcours"));
+  }
+
+  async anlagenVerzeichnis(): Promise<AnlageÖffentlich[]> {
+    // Public by design (Anlagen-Verzeichnis): a stale token is answered as anonymous, so
+    // this read neither sends a header nor renews a session.
+    return unwrap(await this.client.GET("/anlagen/oeffentlich"));
   }
 
   // ---------------------------------------------------------------- Runden

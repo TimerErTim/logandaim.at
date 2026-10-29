@@ -73,6 +73,19 @@ export function useParcoursQuery() {
   });
 }
 
+/**
+ * The public Anlagen directory. Public like the Parcours list, so it deliberately has
+ * no `enabled` gate on `useAuth`: a guest reads it, and a signed-in visitor does not
+ * refetch it when the session changes.
+ */
+export function useAnlagenVerzeichnisQuery() {
+  const { api } = useLogandaimApi();
+  return useQuery({
+    queryKey: logandaimKeys.anlagenVerzeichnis.all(),
+    queryFn: () => api.anlagenVerzeichnis(),
+  });
+}
+
 export function useRundenQuery() {
   const { api } = useLogandaimApi();
   const phase = useAuth();

@@ -1,8 +1,10 @@
 //! Master data: the `Anlage` and everything it owns, plus the authority to maintain it.
 //!
 //! Every use case decides authorisation itself, from the `Benutzer` and the `Anlage` it
-//! loads (NFR-2, SPEC-konto rule 17). The two predicates below are the whole permission model:
-//! no table, no middleware, no role string handed in by an endpoint.
+//! loads (NFR-2, SPEC-konto rule 17). The predicates in [`crate::service::access`] are the
+//! whole permission model: no table, no middleware, no role string handed in by an endpoint.
+//! They live there, not here, because a read the API facade runs inline must answer the same
+//! question the same way a write does.
 //!
 //! Removal follows AC-11/AC-12: master data still referenced by a logged or in-progress Runde
 //! is archived, never destroyed; master data with no reference is deleted outright. Archiving
@@ -20,41 +22,13 @@ use crate::{
         Anlage, AnlageAdresse, AnlageAktiv, AnlageFehler, AnlageId, AnlageKontakt, AnlageName,
         AnlageVerwaltungRolle, NeueAnlage, NeuerParcours, NeuesZiel, Parcours, ParcoursFehler,
         ParcoursId, ParcoursName, Pflock, Tiername, ZielFehler, ZielId, Zielgruppe,
-        Zielplatzierung, Zielverwendung,
-        konto::{Benutzer, BenutzerId},
+        Zielplatzierung, Zielverwendung, konto::BenutzerId,
     },
-    ports::RepositoryError,
-    service::UseCase,
+    service::{
+        UseCase, anlage_laden, anmeldung, benutzer_laden, darf_anlage_verwalten,
+        darf_masterdaten_pflegen,
+    },
 };
-
-// ---------------------------------------------------------------------------------------
-// Authorisation
-// ---------------------------------------------------------------------------------------
-
-/// Whether a Benutzer may maintain this Anlage's Parcours, Ziele, and Pflöcke (rule 10).
-pub fn darf_masterdaten_pflegen(
-    benutzer: &Benutzer,
-    anlage: &Anlage,
-    benutzer_id: BenutzerId,
-) -> bool {
-    benutzer.ist_systemadministrator()
-        || anlage
-            .rolle_von(benutzer_id)
-            .is_some_and(AnlageVerwaltungRolle::darf_masterdaten_pflegen)
-}
-
-/// Whether a Benutzer may edit the Anlage's own fields, deactivate it, or manage its
-/// `AnlageVerwaltungen` (rule 2, rule 10).
-pub fn darf_anlage_verwalten(
-    benutzer: &Benutzer,
-    anlage: &Anlage,
-    benutzer_id: BenutzerId,
-) -> bool {
-    benutzer.ist_systemadministrator()
-        || anlage
-            .rolle_von(benutzer_id)
-            .is_some_and(AnlageVerwaltungRolle::darf_anlage_verwalten)
-}
 
 // ---------------------------------------------------------------------------------------
 // Shared errors and plumbing
@@ -103,49 +77,6 @@ impl From<ParcoursFehler> for StammdatenFehler {
 impl From<ZielFehler> for StammdatenFehler {
     fn from(_: ZielFehler) -> Self {
         Self::UngültigeAnfrage
-    }
-}
-
-fn ist_nicht_gefunden<C>(fehler: &Report<C>) -> bool
-where
-    C: std::error::Error + Send + Sync + 'static,
-{
-    fehler
-        .downcast_ref::<RepositoryError>()
-        .is_some_and(|error| matches!(error, RepositoryError::NotFound))
-}
-
-/// The signed-in identity, or 401.
-fn anmeldung(ctx: &ExecutionContext<'_>) -> Result<BenutzerId, Report<StammdatenFehler>> {
-    ctx.auth()
-        .require_benutzer_id()
-        .change_context(StammdatenFehler::NichtAngemeldet)
-}
-
-async fn benutzer_laden(
-    uow: &crate::application::uow::UnitOfWork<'_>,
-    benutzer_id: BenutzerId,
-) -> Result<Versioned<Benutzer>, Report<StammdatenFehler>> {
-    match uow.benutzer().find_by_id(benutzer_id).await {
-        Ok(benutzer) => Ok(benutzer),
-        Err(fehler) if ist_nicht_gefunden(&fehler) => {
-            Err(Report::new(StammdatenFehler::BenutzerNichtGefunden))
-        }
-        Err(fehler) => Err(fehler).change_context(StammdatenFehler::BenutzerLaden),
-    }
-}
-
-/// Load one Anlage, or report 404. Archived Anlagen load fine: reads must stay possible.
-async fn anlage_laden(
-    uow: &crate::application::uow::UnitOfWork<'_>,
-    anlage_id: AnlageId,
-) -> Result<Versioned<Anlage>, Report<StammdatenFehler>> {
-    match uow.anlagen().find_by_id(anlage_id).await {
-        Ok(anlage) => Ok(anlage),
-        Err(fehler) if ist_nicht_gefunden(&fehler) => {
-            Err(Report::new(StammdatenFehler::NichtGefunden))
-        }
-        Err(fehler) => Err(fehler).change_context(StammdatenFehler::AnlageLaden),
     }
 }
 
@@ -229,7 +160,8 @@ pub struct AnlageAnsicht {
 }
 
 impl AnlageAnsicht {
-    fn neu(anlage: Anlage) -> Self {
+    /// Build the admin view: the Anlage plus its per-Ziel placement aggregation.
+    pub fn neu(anlage: Anlage) -> Self {
         let zielverwendungen = anlage
             .ziele()
             .iter()
@@ -293,93 +225,6 @@ impl UseCase<Anlage> for AnlageErstellen {
             .await?;
         info!(id = ?anlage.id(), "anlage angelegt");
         Ok(anlage)
-    }
-}
-
-/// List the Anlagen the caller may administer.
-///
-/// A `Systemadministrator` sees every active Anlage; everybody else sees the Anlagen their
-/// `AnlageVerwaltung` names. Archived Anlagen are not listed; they have no admin surface, and
-/// their history is reachable through the Runden.
-#[derive(Debug, Clone)]
-pub struct AnlagenAnzeigen;
-
-#[async_trait]
-impl UseCase<Vec<AnlagenZeile>> for AnlagenAnzeigen {
-    type Error = Report<StammdatenFehler>;
-
-    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Vec<AnlagenZeile>, Self::Error> {
-        let uow = ctx
-            .enter()
-            .await
-            .change_context(StammdatenFehler::AnlageLaden)?;
-
-        let ergebnis = async {
-            let benutzer_id = anmeldung(&ctx)?;
-            let benutzer = benutzer_laden(&uow, benutzer_id).await?;
-            let ist_systemadministrator = benutzer.ist_systemadministrator();
-
-            let anlagen = if ist_systemadministrator {
-                uow.anlagen()
-                    .find_aktiv()
-                    .await
-                    .map_err(IntoReport::into_report)
-                    .change_context(StammdatenFehler::AnlageLaden)?
-            } else {
-                uow.anlagen()
-                    .find_by_verwaltung(benutzer_id)
-                    .await
-                    .map_err(IntoReport::into_report)
-                    .change_context(StammdatenFehler::AnlageLaden)?
-                    .into_iter()
-                    .filter(|anlage| !anlage.ist_archiviert())
-                    .collect()
-            };
-
-            Ok(anlagen
-                .into_iter()
-                .map(|anlage| AnlagenZeile {
-                    rolle: anlage.rolle_von(benutzer_id),
-                    ist_systemadministrator,
-                    anlage: anlage.into_data(),
-                })
-                .collect())
-        }
-        .await;
-
-        uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await
-    }
-}
-
-/// Read one Anlage for its admin page: any of its staff, or a `Systemadministrator`.
-#[derive(Debug, Clone)]
-pub struct AnlageAnzeigen {
-    pub anlage_id: AnlageId,
-}
-
-#[async_trait]
-impl UseCase<AnlageAnsicht> for AnlageAnzeigen {
-    type Error = Report<StammdatenFehler>;
-
-    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<AnlageAnsicht, Self::Error> {
-        let uow = ctx
-            .enter()
-            .await
-            .change_context(StammdatenFehler::AnlageLaden)?;
-
-        let ergebnis = async {
-            let benutzer_id = anmeldung(&ctx)?;
-            let benutzer = benutzer_laden(&uow, benutzer_id).await?;
-            // An archived Anlage stays readable: its history is still there.
-            let anlage = anlage_laden(&uow, self.anlage_id).await?;
-            if !darf_masterdaten_pflegen(&benutzer, &anlage, benutzer_id) {
-                return Err(Report::new(StammdatenFehler::NichtErlaubt));
-            }
-            Ok(AnlageAnsicht::neu(anlage.into_data()))
-        }
-        .await;
-
-        uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await
     }
 }
 
@@ -897,48 +742,24 @@ pub struct ParcoursÖffentlich {
     pub parcours: Parcours,
 }
 
-/// Every active Parcours of every active Anlage. Needs no identity (AC-12, rule 12).
+/// One active Parcours as the public Anlagen directory names it.
 #[derive(Debug, Clone)]
-pub struct ParcoursAnzeigen;
+pub struct ParcoursKurz {
+    pub id: ParcoursId,
+    pub name: ParcoursName,
+    pub anzahl_pflöcke: usize,
+    pub anzahl_ziele: usize,
+}
 
-#[async_trait]
-impl UseCase<Vec<ParcoursÖffentlich>> for ParcoursAnzeigen {
-    type Error = Report<StammdatenFehler>;
-
-    async fn perform(
-        self,
-        ctx: ExecutionContext<'_>,
-    ) -> Result<Vec<ParcoursÖffentlich>, Self::Error> {
-        let uow = ctx
-            .enter()
-            .await
-            .change_context(StammdatenFehler::AnlageLaden)?;
-
-        let ergebnis = async {
-            let anlagen = uow
-                .anlagen()
-                .find_aktiv()
-                .await
-                .map_err(IntoReport::into_report)
-                .change_context(StammdatenFehler::AnlageLaden)?;
-
-            let mut offen = Vec::new();
-            for anlage in anlagen {
-                for parcours in anlage.parcours() {
-                    if parcours.ist_archiviert() {
-                        continue;
-                    }
-                    offen.push(ParcoursÖffentlich {
-                        anlage_id: anlage.id(),
-                        anlage_name: anlage.name().clone(),
-                        parcours: parcours.clone(),
-                    });
-                }
-            }
-            Ok(offen)
-        }
-        .await;
-
-        uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await
-    }
+/// One active Anlage in the public directory: where it is, and which Parcours it offers.
+///
+/// Deliberately no contact data: email and phone are personal data, and no spec approved
+/// publishing them.
+#[derive(Debug, Clone)]
+pub struct AnlageÖffentlich {
+    pub anlage_id: AnlageId,
+    pub name: AnlageName,
+    pub ort: String,
+    pub ländercode: crate::domain::Ländercode,
+    pub parcours: Vec<ParcoursKurz>,
 }

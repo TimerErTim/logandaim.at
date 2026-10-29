@@ -32,14 +32,29 @@ import type {
   Zielplatzierung,
 } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
-import { PflockMarker } from "@/components/stammdaten/pflock-swatch";
+import { PageHeader } from "@/components/layout/page-header";
+import { PflockFarbeFeld } from "@/components/stammdaten/pflock-farbe-feld";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field } from "@/components/ui/field";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Field, FormRow } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import {
+  HatchBand,
+  MarginNote,
+  SheetNumber,
+  StampMark,
+} from "@/components/ui/paper-rule";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -68,11 +83,7 @@ export default function ParcoursVerwaltungPage() {
   }, [phase.status, router]);
 
   if (parcoursId === null || anlageId === null) {
-    return (
-      <div className="p-6">
-        <p className="text-sm text-secondary">Parcours wird geladen …</p>
-      </div>
-    );
+    return <ParcoursSkeleton />;
   }
 
   if (!parcoursId || !anlageId) {
@@ -87,11 +98,7 @@ export default function ParcoursVerwaltungPage() {
   }
 
   if (anlage.isLoading) {
-    return (
-      <div className="p-6">
-        <p className="text-sm text-secondary">Parcours wird geladen …</p>
-      </div>
-    );
+    return <ParcoursSkeleton />;
   }
 
   const parcours = anlage.data?.parcours.find(
@@ -113,6 +120,26 @@ export default function ParcoursVerwaltungPage() {
   return <ParcoursInhalt anlage={anlage.data} parcours={parcours} />;
 }
 
+/** A printed placeholder: the head and the ledgers, before the Parcours arrives. */
+function ParcoursSkeleton() {
+  return (
+    <div aria-busy="true" className="space-y-6 p-6">
+      <div className="space-y-3">
+        <Skeleton className="h-3 w-32" />
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-72" />
+        <Skeleton className="h-px w-full" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-40" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </div>
+      <Skeleton className="h-24 w-full" />
+    </div>
+  );
+}
+
 function ParcoursInhalt({
   anlage,
   parcours,
@@ -123,6 +150,7 @@ function ParcoursInhalt({
   const { parcoursSetupAendern, parcoursUmbenennen, parcoursEntfernen } =
     useStammdatenMutations();
   const [name, setName] = useState(parcours.name);
+  const [entfernenOffen, setEntfernenOffen] = useState(false);
   const [setup, setSetup] = useState<ParcoursSetupInput>(() => ({
     pflöcke: parcours.pflöcke.map((pflock) => ({ ...pflock })),
     platzierungen: parcours.platzierungen.map((platzierung) => ({
@@ -143,12 +171,20 @@ function ParcoursInhalt({
     parcoursUmbenennen.error ??
     parcoursEntfernen.error;
 
-  function pflockAendern(id: string, feld: keyof Pflock, wert: string) {
+  function pflockFarbeAendern(id: string, farbe: string) {
     setSetup((bisher) => ({
       ...bisher,
       pflöcke: bisher.pflöcke.map((pflock) =>
-        pflock.id === id ? { ...pflock, [feld]: wert } : pflock,
+        pflock.id === id ? { ...pflock, farbe } : pflock,
       ),
+    }));
+  }
+
+  /** The Pflock array order *is* the far-to-near order, so a drag rewrites it. */
+  function pflockVerschieben(von: number, nach: number) {
+    setSetup((bisher) => ({
+      ...bisher,
+      pflöcke: arrayMove(bisher.pflöcke, von, nach),
     }));
   }
 
@@ -189,21 +225,25 @@ function ParcoursInhalt({
     <div className="space-y-6 p-6">
       <SetBreadcrumbLabel label={parcours.name} />
 
-      <header className="space-y-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-serif text-2xl font-semibold tracking-tight text-ink">
-            {parcours.name}
-          </h1>
-          <Badge
-            variant={parcours.zustand === "Archiviert" ? "warning" : "success"}
-          >
-            {parcours.zustand === "Archiviert" ? "Archiviert" : "Aktiv"}
-          </Badge>
-        </div>
-        <p className="text-sm text-secondary">
-          {anlage.name} · Aufstellung, Pflöcke und Abstände
-        </p>
-      </header>
+      <PageHeader
+        register={["Verwaltung", "Parcours"]}
+        title={parcours.name}
+        description={`${anlage.name} · Aufstellung, Pflöcke und Abstände`}
+        actions={
+          <>
+            <Badge
+              variant={
+                parcours.zustand === "Archiviert" ? "warning" : "success"
+              }
+            >
+              {parcours.zustand === "Archiviert" ? "Archiviert" : "Aktiv"}
+            </Badge>
+            {parcours.zustand === "Archiviert" ? (
+              <StampMark>Archiviert</StampMark>
+            ) : null}
+          </>
+        }
+      />
 
       {fehler ? (
         <Alert variant="error">
@@ -220,145 +260,147 @@ function ParcoursInhalt({
         </CardHeader>
         <CardContent>
           <form
-            className="grid items-end gap-4 sm:grid-cols-3"
             onSubmit={(event) => {
               event.preventDefault();
               parcoursUmbenennen.mutate([anlage.id, parcours.id, name]);
             }}
           >
-            <Field label="Parcoursname">
-              <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                disabled={gesperrt}
-                required
-              />
-            </Field>
-            <Button
-              type="submit"
-              disabled={gesperrt || parcoursUmbenennen.isPending}
+            <FormRow
+              className="sm:grid-cols-3"
+              actions={
+                <Button
+                  type="submit"
+                  size="field"
+                  disabled={gesperrt || parcoursUmbenennen.isPending}
+                >
+                  Umbenennen
+                </Button>
+              }
             >
-              Umbenennen
-            </Button>
+              <Field label="Parcoursname">
+                <Input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  disabled={gesperrt}
+                  required
+                />
+              </Field>
+            </FormRow>
           </form>
-          <p className="mt-2 text-xs text-secondary">
-            Bereits gestartete Runden behalten den damaligen Namen.
-          </p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pflöcke</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHeader className="w-16">Reihe</TableHeader>
-                <TableHeader>Bezeichnung</TableHeader>
-                <TableHeader>Farbe</TableHeader>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {setup.pflöcke.map((pflock, index) => (
-                <TableRow key={pflock.id}>
-                  <TableCell className="font-mono text-xs tabular-nums text-secondary">
-                    {index + 1}
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      value={pflock.bezeichnung}
-                      onChange={(event) =>
-                        pflockAendern(
-                          pflock.id,
-                          "bezeichnung",
-                          event.target.value,
-                        )
-                      }
-                      disabled={gesperrt}
-                      aria-label={`Bezeichnung Pflock ${index + 1}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Input
-                        value={pflock.farbe}
-                        onChange={(event) =>
-                          pflockAendern(pflock.id, "farbe", event.target.value)
-                        }
-                        disabled={gesperrt}
-                        aria-label={`Farbe Pflock ${index + 1}`}
-                      />
-                      <PflockMarker farbe={pflock.farbe} />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <p className="text-xs text-secondary">
-            Die Reihe ist die Entfernung: oben steht der weiteste Pflock, unten
-            der nächste.
-          </p>
-        </CardContent>
-      </Card>
+      <MarginNote label="Name">
+        Bereits gestartete Runden behalten den damaligen Namen.
+      </MarginNote>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Platzierungen und Abstände</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {setup.platzierungen.length === 0 ? (
-            <p className="text-sm text-secondary">Noch kein Ziel platziert.</p>
-          ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={({ active, over }) => {
-                if (!over || active.id === over.id) {
-                  return;
-                }
-                const von = setup.platzierungen.findIndex(
-                  (eintrag) => eintrag.zielId === active.id,
-                );
-                const nach = setup.platzierungen.findIndex(
-                  (eintrag) => eintrag.zielId === over.id,
-                );
-                if (von >= 0 && nach >= 0) {
-                  platzierungVerschieben(von, nach);
-                }
-              }}
+      <section aria-label="Pflöcke" className="space-y-2">
+        <div className="flex items-baseline gap-3">
+          <h2 className="text-sm font-semibold text-ink">Pflöcke</h2>
+          <SheetNumber>{setup.pflöcke.length}</SheetNumber>
+        </div>
+        {setup.pflöcke.length === 0 ? (
+          <p className="text-sm text-secondary">Noch kein Pflock erfasst.</p>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={({ active, over }) => {
+              if (!over || active.id === over.id) {
+                return;
+              }
+              const von = setup.pflöcke.findIndex(
+                (pflock) => pflock.id === active.id,
+              );
+              const nach = setup.pflöcke.findIndex(
+                (pflock) => pflock.id === over.id,
+              );
+              if (von >= 0 && nach >= 0) {
+                pflockVerschieben(von, nach);
+              }
+            }}
+          >
+            <SortableContext
+              items={setup.pflöcke.map((pflock) => pflock.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <SortableContext
-                items={setup.platzierungen.map((eintrag) => eintrag.zielId)}
-                strategy={verticalListSortingStrategy}
-              >
-                {setup.platzierungen.map((platzierung, index) => {
-                  const ziel = ziele.find(
-                    (eintrag) => eintrag.id === platzierung.zielId,
-                  );
-                  return (
-                    <SortablePlatzierung
-                      key={platzierung.zielId}
-                      platzierung={platzierung}
-                      index={index}
-                      tiername={ziel?.tiername ?? "Ziel"}
-                      gesperrt={gesperrt}
-                      pflöcke={setup.pflöcke}
-                      onAbstandAendern={abstandAendern}
-                    />
-                  );
-                })}
-              </SortableContext>
-            </DndContext>
-          )}
-          <p className="text-xs text-secondary">
-            Die Reihe ist die Schussfolge: oben steht das erste Ziel, unten das
-            letzte.
-          </p>
-        </CardContent>
-      </Card>
+              {setup.pflöcke.map((pflock, index) => (
+                <SortablePflock
+                  key={pflock.id}
+                  pflock={pflock}
+                  index={index}
+                  gesperrt={gesperrt}
+                  onFarbeAendern={pflockFarbeAendern}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        )}
+        <MarginNote label="Reihenfolge">
+          Die Reihe ist die Entfernung: oben steht der weiteste Pflock, unten
+          der nächste. Ziehen am Griff ändert die Reihenfolge.
+        </MarginNote>
+      </section>
+
+      <HatchBand />
+
+      <section aria-label="Platzierungen und Abstände" className="space-y-3">
+        <div className="flex items-baseline gap-3">
+          <h2 className="text-sm font-semibold text-ink">
+            Platzierungen und Abstände
+          </h2>
+          <SheetNumber>{setup.platzierungen.length}</SheetNumber>
+        </div>
+        {setup.platzierungen.length === 0 ? (
+          <p className="text-sm text-secondary">Noch kein Ziel platziert.</p>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={({ active, over }) => {
+              if (!over || active.id === over.id) {
+                return;
+              }
+              const von = setup.platzierungen.findIndex(
+                (eintrag) => eintrag.zielId === active.id,
+              );
+              const nach = setup.platzierungen.findIndex(
+                (eintrag) => eintrag.zielId === over.id,
+              );
+              if (von >= 0 && nach >= 0) {
+                platzierungVerschieben(von, nach);
+              }
+            }}
+          >
+            <SortableContext
+              items={setup.platzierungen.map((eintrag) => eintrag.zielId)}
+              strategy={verticalListSortingStrategy}
+            >
+              {setup.platzierungen.map((platzierung, index) => {
+                const ziel = ziele.find(
+                  (eintrag) => eintrag.id === platzierung.zielId,
+                );
+                return (
+                  <SortablePlatzierung
+                    key={platzierung.zielId}
+                    platzierung={platzierung}
+                    index={index}
+                    tiername={ziel?.tiername ?? "Ziel"}
+                    gesperrt={gesperrt}
+                    pflöcke={setup.pflöcke}
+                    onAbstandAendern={abstandAendern}
+                  />
+                );
+              })}
+            </SortableContext>
+          </DndContext>
+        )}
+      </section>
+
+      <MarginNote label="Schussfolge">
+        Die Reihe ist die Schussfolge: oben steht das erste Ziel, unten das
+        letzte.
+      </MarginNote>
 
       <div className="flex flex-wrap gap-3">
         <Button
@@ -380,7 +422,7 @@ function ParcoursInhalt({
 
       {gesperrt ? null : (
         <>
-          <Separator />
+          <HatchBand height="lg" />
           <Card>
             <CardHeader>
               <CardTitle>Parcours entfernen</CardTitle>
@@ -393,14 +435,55 @@ function ParcoursInhalt({
               <Button
                 variant="destructive"
                 disabled={parcoursEntfernen.isPending}
-                onClick={() =>
-                  parcoursEntfernen.mutate([anlage.id, parcours.id])
-                }
+                onClick={() => {
+                  parcoursEntfernen.reset();
+                  setEntfernenOffen(true);
+                }}
               >
                 Entfernen
               </Button>
             </CardContent>
           </Card>
+
+          <Dialog open={entfernenOffen} onOpenChange={setEntfernenOffen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Parcours entfernen?</DialogTitle>
+                <DialogDescription>
+                  Wurde der Parcours schon einmal gestartet, wird er archiviert
+                  und bleibt in alten Runden sichtbar. Sonst wird er endgültig
+                  gelöscht.
+                </DialogDescription>
+              </DialogHeader>
+              {parcoursEntfernen.isError ? (
+                <Alert variant="error">
+                  {apiErrorMessage(parcoursEntfernen.error, {
+                    fallback: "Der Parcours konnte nicht entfernt werden.",
+                  })}
+                </Alert>
+              ) : null}
+              <DialogFooter>
+                <Button
+                  variant="secondary"
+                  onClick={() => setEntfernenOffen(false)}
+                  disabled={parcoursEntfernen.isPending}
+                >
+                  Abbrechen
+                </Button>
+                <Button
+                  variant="destructive"
+                  disabled={parcoursEntfernen.isPending}
+                  onClick={() =>
+                    parcoursEntfernen.mutate([anlage.id, parcours.id], {
+                      onSuccess: () => setEntfernenOffen(false),
+                    })
+                  }
+                >
+                  {parcoursEntfernen.isPending ? "Wird entfernt…" : "Entfernen"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </>
       )}
 
@@ -437,6 +520,13 @@ function SortablePlatzierung({
     isDragging,
   } = useSortable({ id: platzierung.zielId });
 
+  // Distances follow the Pflock list, so a reordered setup reads far to near here too.
+  const abständeInReihenfolge = [...platzierung.abstände].sort(
+    (a, b) =>
+      pflöcke.findIndex((pflock) => pflock.id === a.pflockId) -
+      pflöcke.findIndex((pflock) => pflock.id === b.pflockId),
+  );
+
   return (
     <div
       ref={setNodeRef}
@@ -468,14 +558,17 @@ function SortablePlatzierung({
         </span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {platzierung.abstände.map((abstand) => {
+        {abständeInReihenfolge.map((abstand) => {
           const pflock = pflöcke.find(
+            (eintrag) => eintrag.id === abstand.pflockId,
+          );
+          const nummer = pflöcke.findIndex(
             (eintrag) => eintrag.id === abstand.pflockId,
           );
           return (
             <Field
               key={abstand.pflockId}
-              label={`Abstand ${pflock?.bezeichnung ?? ""}`}
+              label={`Abstand Pflock ${nummer + 1} · ${pflock?.farbe ?? ""}`}
               hint="Meter"
             >
               <Input
@@ -499,6 +592,66 @@ function SortablePlatzierung({
   );
 }
 
+/**
+ * One Pflock of the setup, draggable by its handle only. The row position *is* the
+ * far-to-near order, so the number is the record and the drag is the edit; the
+ * colour itself is chosen on the picker, which names every option in words.
+ */
+function SortablePflock({
+  pflock,
+  index,
+  gesperrt,
+  onFarbeAendern,
+}: {
+  pflock: Pflock;
+  index: number;
+  gesperrt: boolean;
+  onFarbeAendern: (id: string, farbe: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: pflock.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Translate.toString(transform), transition }}
+      className={
+        isDragging
+          ? "relative z-10 flex flex-wrap items-start gap-3 rounded-sm border border-subtle bg-surface p-3 ring-1 ring-primary"
+          : "relative flex flex-wrap items-start gap-3 rounded-sm border border-subtle bg-surface p-3"
+      }
+    >
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={`Pflock ${index + 1} verschieben`}
+        className="cursor-grab touch-none text-secondary active:cursor-grabbing"
+        disabled={gesperrt}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical />
+      </Button>
+      <span className="flex h-11 w-6 shrink-0 items-center justify-center">
+        <SheetNumber className="text-xs">{index + 1}</SheetNumber>
+      </span>
+      <PflockFarbeFeld
+        label={`Farbe Pflock ${index + 1}`}
+        value={pflock.farbe}
+        onValueChange={(farbe) => onFarbeAendern(pflock.id, farbe)}
+        disabled={gesperrt}
+        className="min-w-0 flex-1"
+      />
+    </div>
+  );
+}
+
 /** Which active Ziele of the Anlage are already in this route, and which are not. */
 function ParcoursZiele({
   ziele,
@@ -509,41 +662,40 @@ function ParcoursZiele({
 }) {
   if (ziele.length === 0) return null;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Ziele der Anlage</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableHeader>Tiername</TableHeader>
-              <TableHeader>Zielgruppe</TableHeader>
-              <TableHeader>In diesem Parcours</TableHeader>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {ziele.map((ziel) => {
-              const platziert = platzierungen.some(
-                (platzierung) => platzierung.zielId === ziel.id,
-              );
-              return (
-                <TableRow key={ziel.id}>
-                  <TableCell className="font-medium">{ziel.tiername}</TableCell>
-                  <TableCell className="tabular-nums">
-                    {ziel.zielgruppe}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={platziert ? "success" : "default"}>
-                      {platziert ? "Platziert" : "Nicht platziert"}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <section aria-label="Ziele der Anlage" className="space-y-2">
+      <div className="flex items-baseline gap-3">
+        <h2 className="text-sm font-semibold text-ink">Ziele der Anlage</h2>
+        <SheetNumber>{ziele.length}</SheetNumber>
+      </div>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableHeader>Tiername</TableHeader>
+            <TableHeader>Zielgruppe</TableHeader>
+            <TableHeader>In diesem Parcours</TableHeader>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {ziele.map((ziel) => {
+            const platziert = platzierungen.some(
+              (platzierung) => platzierung.zielId === ziel.id,
+            );
+            return (
+              <TableRow key={ziel.id}>
+                <TableCell className="font-medium">{ziel.tiername}</TableCell>
+                <TableCell className="tabular-nums">
+                  {ziel.zielgruppe}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={platziert ? "success" : "default"}>
+                    {platziert ? "Platziert" : "Nicht platziert"}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </section>
   );
 }

@@ -1,10 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Home, ListMusic, Route, Target } from "lucide-react";
-
-export type NavAction = {
-  label: string;
-  href: string;
-};
+import { Compass, History, Home, Route } from "lucide-react";
 
 export type NavItem = {
   id: string;
@@ -17,6 +12,11 @@ export type NavItem = {
 export type NavCategory = {
   label: string;
   items: NavItem[];
+  /**
+   * A category only staff may see. A plain `Benutzer` never administers an Anlage,
+   * so the whole group is hidden instead of shown as a dead end.
+   */
+  verwaltungOnly?: boolean;
 };
 
 /** Strip trailing slash so `/foo/` matches `/foo` (Next `trailingSlash: true`). */
@@ -33,6 +33,9 @@ export function isExactPath(pathname: string, href: string): boolean {
 
 export const paths = {
   home: "/",
+  anlagen: "/anlagen",
+  anlagenDetail: "/anlagen/detail",
+  /** Redirect source only; the archer journey starts at `anlagen`. */
   parcours: "/parcours",
   runden: "/runden",
   verwaltung: "/verwaltung",
@@ -43,33 +46,38 @@ export const paths = {
   optionen: "/optionen",
 } as const;
 
-/** Add one item per product area. */
+/**
+ * Add one item per product area. The archer's logbook is the directory of Anlagen and
+ * the history of their own Runden; the staff's Verwaltung is a separate group, marked
+ * so it can be filtered out for a caller who administers nothing.
+ */
 export const sidebarCategories: NavCategory[] = [
   {
     label: "Logbuch",
     items: [
       {
-        id: "runden",
-        label: "Runden",
-        href: paths.runden,
-        icon: ListMusic,
+        id: "anlagen",
+        label: "Anlagen",
+        href: paths.anlagen,
+        icon: Compass,
         recursive: true,
       },
       {
-        id: "parcours",
-        label: "Parcours",
-        href: paths.parcours,
-        icon: Target,
-        recursive: false,
+        id: "historie",
+        label: "Historie",
+        href: paths.runden,
+        icon: History,
+        recursive: true,
       },
     ],
   },
   {
     label: "Verwaltung",
+    verwaltungOnly: true,
     items: [
       {
         id: "verwaltung",
-        label: "Anlagen",
+        label: "Verwaltung",
         href: paths.verwaltung,
         icon: Route,
         recursive: true,
@@ -86,14 +94,34 @@ export const homeNavItem: NavItem = {
   recursive: false,
 };
 
+/**
+ * The categories a caller may see. A `verwaltungOnly` group is hidden for anyone who
+ * neither is a Systemadministrator nor holds a Verwaltung on at least one Anlage, so a
+ * plain Benutzer never reads a navigation entry that leads to a 403.
+ */
+export function visibleSidebarCategories(
+  categories: NavCategory[],
+  {
+    istSystemadministrator,
+    anzahlAnlagen,
+  }: { istSystemadministrator: boolean; anzahlAnlagen: number },
+): NavCategory[] {
+  return categories.filter(
+    (category) =>
+      !category.verwaltungOnly || istSystemadministrator || anzahlAnlagen > 0,
+  );
+}
+
 type BreadcrumbSegment = {
   label: string;
   href?: string;
 };
 
 const routeLabels: Record<string, string> = {
+  anlagen: "Anlagen",
   parcours: "Parcours",
-  runden: "Runden",
+  historie: "Historie",
+  runden: "Historie",
   verwaltung: "Verwaltung",
   anlage: "Anlage",
   detail: "Runde",
@@ -139,10 +167,6 @@ export function breadcrumbsForPathname(
   }
 
   return crumbs;
-}
-
-export function navActionsForPathname(_pathname: string): NavAction[] {
-  return [];
 }
 
 export function isNavItemActive(
