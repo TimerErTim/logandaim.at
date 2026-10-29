@@ -1,8 +1,7 @@
 name: Main
 
 # Push to `main` means a release pull request was merged: deploy the static
-# frontend, then cut a source-only GitHub release tagged `vX.Y.Z`.
-#
+# frontend, deploy the backend to the VPS, then cut a source-only GitHub release.
 # The tag is created by this workflow, never pushed by a human, so a failing
 # gate cannot leave a tag behind.
 
@@ -16,21 +15,16 @@ permissions:
 
 concurrency:
   group: main-${{ github.ref }}
-  # A half-deployed site and a missing tag are worse than a queued run.
   cancel-in-progress: false
 
 jobs:
   ci:
     name: pr/base
-    # A called workflow cannot outrank its caller, so `checks: write` repeats here
-    # or the release gate's test report silently no-ops.
     permissions:
       contents: read
       checks: write
     uses: ./.github/workflows/ci.yml
 
-  # The same check a release pull request must pass, repeated here so a push that
-  # bypassed its pull request still fails before Pages deploys and before the tag.
   release-check:
     name: release-check
     permissions:
@@ -54,7 +48,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      # Must precede `setup`, which runs `mise deps install`.
       - name: Cache the npm downloads
         uses: actions/cache@v4
         with:
@@ -65,14 +58,10 @@ jobs:
       - name: Set up tooling
         uses: ./.github/actions/setup
 
-      # `configure-pages` reports the real base path: `/logandaim.at` for a project
-      # site, `""` once a custom domain serves at the root. Never hardcode it.
       - name: Configure Pages
         id: pages
         uses: actions/configure-pages@v6
 
-      # `next build` bakes `NEXT_PUBLIC_*` into the chunks, so both values are in
-      # the key and the restore prefix: the cache never crosses a deployment config.
       - name: Cache the Next.js build
         uses: actions/cache@v4
         with:
@@ -85,7 +74,6 @@ jobs:
         env:
           NEXT_PUBLIC_LOGANDAIM_API_URL: ${{ vars.LOGANDAIM_API_URL }}
           NEXT_PUBLIC_LOGANDAIM_BASE_PATH: ${{ steps.pages.outputs.base_path }}
-        # `--force`: the task cache keys on files, not environment.
         run: |
           set -eu
           if [ -z "${NEXT_PUBLIC_LOGANDAIM_API_URL:-}" ]; then
@@ -103,19 +91,59 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v5
 
+  deploy-backend:
+    name: deploy/backend
+    needs: [ci, release-check, pages]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Prepare SSH credentials
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          set -eu
+          test -n "$VPS_SSH_PRIVATE_KEY" || { echo "::error::Set production secret VPS_SSH_PRIVATE_KEY"; exit 1; }
+          test -n "$VPS_SSH_KNOWN_HOSTS" || { echo "::error::Set production secret VPS_SSH_KNOWN_HOSTS"; exit 1; }
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$VPS_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      - name: Deploy requested revision on VPS
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          API_DOMAIN: ${{ vars.API_DOMAIN }}
+          DEPLOY_REVISION: ${{ github.sha }}
+        run: |
+          set -eu
+          test -n "$VPS_HOST" || { echo "::error::Set production variable VPS_HOST"; exit 1; }
+          test -n "$VPS_USER" || { echo "::error::Set production variable VPS_USER"; exit 1; }
+          test -n "$API_DOMAIN" || { echo "::error::Set production variable API_DOMAIN"; exit 1; }
+          [[ "$VPS_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "::error::VPS_HOST must be a DNS name or IPv4 address"; exit 1; }
+          [[ "$VPS_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo "::error::VPS_USER must be a valid Unix account name"; exit 1; }
+          [[ "$API_DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "::error::API_DOMAIN must be a DNS hostname"; exit 1; }
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes "$VPS_USER@$VPS_HOST" \
+            "cd ~/logandaim.at && bash deploy/deploy-vps.sh '$DEPLOY_REVISION' '$API_DOMAIN'"
+
   release:
     name: deploy/release
-    # When `deploy/backend` is implemented, add it here so a failed deployment
-    # blocks the tag.
-    needs: [ci, release-check, pages]
+    needs: [ci, release-check, pages, deploy-backend]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: write
       pull-requests: read
     env:
-      # `release:publish` owns the tag and the body: the release check already
-      # verified that both can be produced.
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REPOSITORY: ${{ github.repository }}
@@ -130,14 +158,3 @@ jobs:
 
       - name: Create the release
         run: mise run release:publish
-
-  # Reserved for #15 and #24:
-  #
-  # deploy/backend:
-  #   name: deploy/backend
-  #   needs: [pages]
-  #   ...
-  #
-  # `deploy/release` must then add it to its `needs`, so a failed backend
-  # deployment blocks the tag. Deployment jobs run on push only, so they are not
-  # required pull request checks and do not belong in the branch rulesets.
