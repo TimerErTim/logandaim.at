@@ -250,4 +250,4 @@ an import path and pilot entry are checked in the admin UI.
 | Date | Change | By |
 |------|--------|----|
 | 2026-10-23 | Initial draft from issue #10 and PO decisions on seeding and Parcours version snapshots. | Agent (MiMo) |
-| 2026-10-29 | Synced with the current charter/konto role model and interactively respecified the data model, full Runde snapshot, Ziel identity, Pflock configuration, authorization, Anlage lifecycle, and history retention. | Agent (Cursor) |
+| 2026-10-29 | Synced with the current charter/konto role model and interactively respecified the data model, full Runde snapshot, Ziel identity, Pflock configuration, authorization, Anlage lifecycle, and history retention; clarified deactivation authority and post-MVP Anlage requests. | Agent (Cursor) |
