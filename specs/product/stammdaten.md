@@ -1,7 +1,7 @@
 ---
 id: SPEC-stammdaten
 title: Master data (Anlage, Parcours, Ziel, Pflock) and Anlage administration
-status: Draft
+status: PO-approved
 owner: TimerErTim
 issues: [10]
 superseded_by: null
