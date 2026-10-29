@@ -65,6 +65,10 @@ mise daemons start mailpit   # SMTP 127.0.0.1:1025, web UI http://127.0.0.1:8025
 The e2e suite does the same through the mise `mailpit` daemon. Confirmation and recovery mails open
 in the web UI, and the link in them is `frontendBasisUrl` plus `/registrierung` or `/passwort`.
 
+## Docker Compose deployment
+
+The VPS Compose deployment, environment template, Caddy configuration, and operator runbook are in [`docs/deployment.md`](../docs/deployment.md). Docker and Compose run on the VPS outside `mise`; the backend image installs and runs `mise` only during its build.
+
 ## Spec Export
 
 To export the OpenAPI spec:

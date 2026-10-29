@@ -1,0 +1,79 @@
+name: logandaim
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/server/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: ./secrets/mail.env
+        required: false
+    environment:
+      LOGANDAIM_BIND_ADDRESS: 0.0.0.0
+      LOGANDAIM_BIND_PORT: "3000"
+      LOGANDAIM_DATABASE_URL: /data/sqlite/logandaim.db
+      LOGANDAIM_OBJECT_STORE_DIR: /data/objects
+      LOGANDAIM_SIGNING_KEY_PATH: /run/secrets/signing-key.pem
+      LOGANDAIM_TOKEN_ISSUER: ${API_DOMAIN:?Set API_DOMAIN in .env}
+      LOGANDAIM_TOKEN_AUDIENCE: logandaim-api
+      LOGANDAIM_FRONTEND_BASIS_URL: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
+      LOGANDAIM_CORS_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
+      LOGANDAIM_SUPERUSER_EMAIL: ${SUPERUSER_EMAIL:-}
+    volumes:
+      - ./data/sqlite:/data/sqlite
+      - ./data/objects:/data/objects
+      - ./secrets/signing-key.pem:/run/secrets/signing-key.pem:ro
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app
+
+  # Mail remains opt-in until the ACME metadata and persistent DNS record gate is passed.
+  stalwart:
+    image: stalwartlabs/stalwart:v1
+    profiles: [mail]
+    init: true
+    restart: unless-stopped
+    volumes:
+      - stalwart_etc:/etc/stalwart
+      - stalwart_data:/var/lib/stalwart
+    ports:
+      - "127.0.0.1:8080:8080"
+    expose:
+      - "587"
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
