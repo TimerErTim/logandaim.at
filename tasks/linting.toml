@@ -1,15 +1,10 @@
 ["lint:crates"]
 description = "Check all rust crates"
 usage = """
-flag "--fix" env="YAMS_LINT_FIX" help="Apply all lint suggestions"
-flag "--allow-dirty" env="YAMS_LINT_FIX_DIRTY" help="Allow dirty working directory"
+flag "--fix" env="LOGANDAIM_LINT_FIX" help="Apply all lint suggestions"
+flag "--allow-dirty" env="LOGANDAIM_LINT_FIX_DIRTY" help="Allow dirty working directory"
 """
-run = '''
-#!/usr/bin/env bash
-cargo clippy --workspace \
-  $([ "${usage_fix:-}" = "true" ] && echo "--fix") \
-  $([ "${usage_fix:-}" = "true" ] && [ "${usage_allow_dirty:-}" = "true" ] && echo "--allow-dirty")
-'''
+run = 'cargo clippy --workspace{% if usage.fix %} --fix{% endif %}{% if usage.fix and usage.allow_dirty %} --allow-dirty{% endif %}'
 
 ["lint:check:ts"]
 description = "Check the frontend types"
@@ -23,14 +18,7 @@ run = "npm run check:ts"
 description = "Lint frontend"
 dir = "{{ vars.REPO_ROOT }}/frontend"
 usage = """
-flag "--fix" env="YAMS_LINT_FIX" help="Apply all lint suggestions"
-flag "--allow-unsafe" env="YAMS_LINT_FIX_UNSAFE" help="Allow unsafe lint suggestions"
+flag "--fix" env="LOGANDAIM_LINT_FIX" help="Apply all lint suggestions"
+flag "--allow-unsafe" env="LOGANDAIM_LINT_FIX_UNSAFE" help="Allow unsafe lint suggestions"
 """
-run = """
-#!/usr/bin/env bash
-if [ "${usage_fix:-}" = "true" ]; then
-  npm run fix:lint $([ "${usage_allow_unsafe:-}" = "true" ] && echo "-- --unsafe")
-else
-  npm run check:lint
-fi
-"""
+run = 'npm run {% if usage.fix %}fix:lint{% if usage.allow_unsafe %} -- --unsafe{% endif %}{% else %}check:lint{% endif %}'

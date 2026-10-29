@@ -2,12 +2,51 @@
 
 ["check:format"]
 description = "Check the formatting of the code"
-depends = ["YAMS_FMT_CHECK=true fmt:?*"]
+depends = ["LOGANDAIM_FMT_CHECK=true fmt:?*"]
 
 ["check:lint"]
 description = "Check the linting of the code"
-depends = ["lint:?*"]
+# Explicit list: the `lint:?*` glob does not cross the extra colon in
+# `lint:check:ts`, which would silently drop `tsc --noEmit` from the gate.
+depends = ["lint:crates", "lint:frontend", "lint:check:ts"]
+
+["check:docs"]
+description = "Check the crates documentation"
+run = "cargo doc --workspace --no-deps --all-features"
+
+["check:openapi"]
+description = "Fail when the generated OpenAPI client differs from the exported spec"
+depends = ["sync:openapi"]
+run = "git diff --exit-code -- frontend/src/api/schema.ts"
+
+["check:design"]
+description = "Fail when a design token is undocumented or a raw palette class leaks into a component"
+# Three halves of one rule — tokens documented, no palette classes, no retired
+# names — live in `tasks/scripts/check-design.mjs` like every other long task.
+run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-design.mjs"
+
+["check:version"]
+description = "Fail when the workspace, frontend, and changelog versions disagree"
+run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-version.mjs"
+
+["check:release"]
+description = "Verify that this branch is a valid release for the current version"
+# Version agreement is part of being a valid release; declare it so the release
+# check does not depend on `ci` having run first in the same job.
+depends = ["check:version"]
+tools.gh = "latest"
+usage = """
+flag "--pr <pr>" help="Release pull request number; derived from HEAD when omitted"
+"""
+run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-release.mjs"
 
 ["check"]
 description = "Check the code"
-depends = ["check:format", "check:lint"]
+depends = [
+    "check:format",
+    "check:docs",
+    "check:lint",
+    "check:openapi",
+    "check:design",
+    "check:version",
+]

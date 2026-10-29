@@ -1,0 +1,15 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+
+# The only command CI runs for quality assurance. Local runs use the same task,
+# so the pipelines cannot drift from a developer machine.
+
+["ci"]
+description = "Full gate: check, build, test, smoke-test"
+# `build` before `test`, so a compile error fails as a build, not as a test.
+depends = ["check", "build", "test", "verify"]
+
+["ci:release"]
+description = "Full gate plus release validation, for verifying a release pull request locally"
+# No workflow caller: `check:release` needs read-only permissions the shared gate
+# must not inherit. This reproduces both checks in one command.
+depends = ["ci", "check:release"]

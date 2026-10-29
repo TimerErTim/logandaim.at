@@ -1,2 +1,16 @@
+# Two profiles, so a test run says which kind of test it is:
+# `unit` needs nothing but the workspace, `e2e` brings up the services in `[daemons]`.
 [profile.default]
 fail-fast = false
+
+# Written on failure too: a red gate must still produce a report. CI publishes it.
+[profile.default.junit]
+path = "junit.xml"
+
+[profile.unit]
+inherits = "default"
+default-filter = 'not binary(e2e)'
+
+[profile.e2e]
+inherits = "default"
+default-filter = 'binary(e2e)'

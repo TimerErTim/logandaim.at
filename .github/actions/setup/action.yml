@@ -1,0 +1,29 @@
+name: Setup
+description: Install every tool and dependency through mise and cache Rust artefacts.
+
+# The caller must run `actions/checkout` first: GitHub cannot resolve a local
+# composite action before the repository exists on the runner. Keeping the
+# checkout out of this action is what makes it usable at all.
+
+runs:
+  using: composite
+  steps:
+    # Installs the tools declared in mise.toml, including the Rust toolchain from
+    # rust-toolchain.toml. mise-action caches the tool downloads, so the manual
+    # actions/cache blocks the old workflows carried are no longer needed.
+    - name: Install mise
+      uses: jdx/mise-action@v5
+      with:
+        install: true
+        cache: true
+
+    - name: Install project dependencies
+      shell: bash
+      run: mise deps install
+
+    # Rust compilation artefacts. This is the only cache besides mise's own tool cache.
+    - name: Cache Rust build artefacts
+      uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: ci
+        cache-on-failure: true

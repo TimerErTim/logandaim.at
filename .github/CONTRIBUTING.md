@@ -12,9 +12,55 @@ how work flows. GitHub is the hub: issues, project board, milestones, pull reque
 | Roadmap and status | GitHub Project "logandaim.at" | Priority order and workflow state. |
 | Milestone gates | [Milestones](https://github.com/TimerErTim/logandaim.at/milestones) | `M0 Rebrand`, `M1 MVP`, `M2 Offline`. No dates unless committed. |
 | Delivery | Pull requests | Code, tests, evidence. |
-| User-visible changes | [`CHANGELOG.md`](../CHANGELOG.md) | Keep a Changelog format. |
+| User-visible changes | [`CHANGELOG.md`](../CHANGELOG.md) | Keep a Changelog format. End-user facing only. |
 
 No backlog lives in local files. `tasks/` holds `mise` task definitions only.
+
+## CHANGELOG scope
+
+`CHANGELOG.md` is written **for end users**, not for the team. It answers one question: *what is
+different for someone using the product?* Only record changes a user can observe:
+
+- new or changed user-facing behavior, fixes to broken behavior, removed features
+- user-visible performance, reliability, or compatibility changes
+- breaking changes users must react to
+
+Do **not** record work that has no observable effect for users. This includes spec refinements,
+spec and ADR drafting or approval, issue triage, label and milestone changes, refactors that keep
+behavior identical, internal architecture or documentation changes, CI, tooling, dependency
+updates, and test-only changes. The changelog is not a project-management or PO record; that is
+what issues, PRs, specs, and the project board are for.
+
+When unsure, ask: *if this shipped alone, would a user notice?* If not, leave it out.
+
+Entries are phrased from the user's perspective — describe the effect, not the implementation.
+
+`Unreleased` is branch-dependent, not phase-dependent:
+
+- Pull requests into `dev`: `Unreleased` collects the entries for the next release. It may be empty
+  when there is nothing new to record yet.
+- Release pull requests (`dev` -> `main`): every entry moves into the dated `## [X.Y.Z]` section, so
+  `Unreleased` must be **empty** and that dated section must have entries. `mise run check:release`
+  enforces both.
+
+### Before the first release
+
+logandaim.at is a new project being built on top of the architecture of a previous one (see the
+rebrand and domain-removal work in `M0 Rebrand`). Until the first release ships, there is no
+released product and therefore no user who could notice a difference: everything in the tree is
+either inherited base architecture, a placeholder, or work in progress. `Unreleased` may be empty
+during that phase, and an empty `Unreleased` is not a missing entry.
+
+Consequences:
+
+- A change that only removes or reshapes inherited base material is **not** an end-user change.
+  Example: dropping the Tauri desktop shell. No user ever ran logandaim.at as a desktop app, so it
+  is not a removal they can notice — it is a fact about how the project was seeded, and it belongs
+  in the issue/PR/spec history instead.
+- The same holds for anything a user cannot run yet: scaffolding, ports adapted from the base
+  project, placeholder screens, and behavior that exists only in specs.
+- Write the first real entries when users can actually use the feature or the release. "First
+  release" means the first build a person outside the team can run and compare against nothing.
 
 ## Labels and priority
 
@@ -49,10 +95,102 @@ UI-only settings (no API exists), set once by a maintainer:
 
 Add more views only when a real coordination question needs one.
 
+## Branches
+
+`dev` is the integration branch and the default branch. `main` is the release branch.
+
+| Branch | Purpose | Pull requests into it |
+|--------|---------|------------------------|
+| `dev` | Integration. Everything merges here first. | Feature, fix, chore, and spec branches. Uses the default pull request template. |
+| `main` | Releases. A merge here deploys. | Only `dev` and `hotfix/*`. Uses the release template. |
+
+A release pull request (`dev` -> `main`) bumps the version, writes the dated changelog section, and
+its description becomes the release body. Merging it deploys the static frontend to GitHub Pages
+and creates a source-only GitHub release tagged `v<version>`. See the
+[release template](PULL_REQUEST_TEMPLATE/release.md).
+
+Tags are created by the workflow, never pushed by hand, so a failing gate cannot leave a tag
+behind.
+
+### Merge method
+
+Pull requests **merge**; they are never squashed or rebased. Release pull requests carry `dev`'s
+merge commits into `main`, which is inherently non-linear, and rewriting history would contradict
+`.cursor/AGENTS.md` ("merge, don't rebase, to integrate upstream"). The branch rulesets allow only
+merge commits, and `main` keeps no linear-history rule. Conflict resolutions stay visible in
+history.
+
+## Checks
+
+| Check | Runs on | Meaning |
+|-------|---------|---------|
+| `pr/base` | Every pull request, every push to `dev`, and the release gate on `main` | The full gate: `mise run ci`. |
+| `pr/dev` | Pull requests into `dev` | Conventional title and a `Closes #N` link. |
+| `pr/main` | Pull requests into `main` | Conventional title, `dev` or `hotfix/*` source, and a `## Release description` section. |
+| `release-check` | Pull requests into `main`, called by the push to `main` | Versions agree, version bumped past the last release tag, dated changelog section with entries, the release does not exist yet, and the release body can be assembled. |
+| `Test results` | A completed `CI` run on a pull request | Publishes the JUnit report `pr/base` uploads as a check run with per-suite counts and failure details. Informational: it never blocks a merge and is not a required check. |
+| `deploy/pages` | Push to `main` | Deploys `frontend/out` to GitHub Pages. |
+| `deploy/release` | Push to `main` | Creates the source-only GitHub release. |
+| `deploy/backend` | Push to `main` | Reserved for #15 and #24. |
+
+`pr/dev` and `pr/main` both always run and pass when they do not apply, so their names exist on
+every pull request and can be required on either branch.
+
+`release-check` lives in its own workflow because `pr.yml` only triggers on pull requests. Being a
+reusable workflow, `main.yml` also calls it as a job before `deploy/pages`, so a release that
+bypassed its pull request still fails before any deployment or tag. It is the single release gate:
+the version, the changelog, the absence of an earlier release, and the ability to assemble the
+release body are all validated there, so `deploy/release` only publishes what the gate already
+proved.
+
+Required checks: `pr/base` and `pr/dev` on `dev`; `pr/base`, `pr/main`, and `release-check` on
+`main`. Deployment jobs are deliberately not required checks: they only run on push to `main`, so
+they would never report on a pull request.
+
+## Local gate
+
+`mise run ci` is the whole delivery gate: `check` (formatting, clippy, biome, `tsc`, OpenAPI drift,
+version agreement), `build`, `test`, and `verify` (daemon-based smoke tests of the built frontend
+and backend). `build` precedes `test` so a compile error is reported by the build rather than as a
+failed test. CI runs the same task, so a green local run means a green pipeline unless the
+environment differs.
+
+`test` is a wrapper over two nextest profiles (`.config/nextest.toml`): `test:unit` runs everything
+that needs no external service, `test:e2e` runs the end-to-end binaries with the Mailpit daemon.
+Both write `target/nextest/<profile>/junit.xml`, on failure too, and CI publishes them as the
+`Test results` check run (`checks: write`). Fork pull requests get a read-only
+token, so that step is `continue-on-error`: the gate alone decides the run.
+
+Tasks are defined in `tasks/*.toml`; the release and version checks delegate their logic to
+`tasks/scripts/`. The services are split so each piece works on its own: `run:*` starts a service
+(`tasks/run.toml`), `smoke:*` only health-checks one that already runs (point it at a deployment
+with `LOGANDAIM_SERVER_ORIGIN` / `LOGANDAIM_FRONTEND_URL`), and `verify:*` connects the two under a
+daemon.
+
+The Pages deployment builds with `NEXT_PUBLIC_LOGANDAIM_API_URL` (repo variable
+`LOGANDAIM_API_URL`) and a base path taken from `actions/configure-pages`. The export is deployed
+as built; `pr/base` already smoke-tested the same code before the merge.
+
+Useful tasks:
+
+| Task | Purpose |
+|------|---------|
+| `mise run ci` | Full gate. |
+| `mise run verify:frontend`, `mise run verify:server` | Start one service as a daemon and smoke-test it. |
+| `mise run run:frontend`, `mise run run:server` | Start one service in the foreground, without the gate. |
+| `LOGANDAIM_SERVER_ORIGIN=… mise run smoke:server` | Health-check any deployment (origin without `/api`). |
+| `mise run check:release` | Validate a release pull request. |
+| `mise run release:version <kind>` | Bump the workspace and frontend versions. |
+| `mise run release:notes <version> --pr <n>` | Preview the release body. |
+| `mise run release:publish` | Create the release for the current commit (the workflow runs it). |
+| `mise daemons stop` | Stop the verify daemons after a local run. |
+
 ## Workflow
 
 ```
-Draft spec ──PO approves──▶ issues (Inbox) ──Ready gate──▶ Ready ──▶ In progress ──▶ PR ──▶ In review ──merge──▶ Done
+Draft spec ──PO approves──▶ issues (Inbox) ──Ready gate──▶ Ready ──▶ In progress ──▶ PR to dev ──▶ In review ──merge──▶ dev
+                                                                                                          │
+                                                                                          release PR dev -> main ──merge──▶ main (deploy + release)
 ```
 
 ### Ready gate
@@ -74,9 +212,14 @@ A PR may merge only when:
 
 1. It links the issue (`Closes #N`) and the spec section.
 2. Every covered AC is checked off with evidence.
-3. `mise run check` and `mise run test` pass in CI; affected builds pass.
+3. `pr/base` passes in CI, on the same runner image. Release pull requests also pass
+   `release-check`.
 4. `CHANGELOG.md` has an `Unreleased` entry for user-visible changes.
 5. A human reviewed product behavior and architecture.
+
+Release pull requests additionally pass `release-check` and `pr/main`: the version differs from the
+last release, the changelog has a dated section for it, and the pull request carries a
+`## Release description`.
 
 ## Agents
 
@@ -97,12 +240,33 @@ Agent session loop:
 
 1. Pick the highest-priority open issue labeled `ready` and `agent-ok` in the current milestone.
 2. Read the linked spec section and [`.cursor/AGENTS.md`](../.cursor/AGENTS.md).
-3. Implement the vertical slice in the order `.cursor/AGENTS.md` prescribes. Add tests at each affected layer.
-4. Run `mise run check` and `mise run test`. Run `mise run sync:openapi` if the API changed.
-5. Update `CHANGELOG.md` and the spec's `issues:` list.
-6. Open a PR from the template. Report commands and results.
+3. Branch from `dev` and implement one issue per branch and pull request.
+4. Implement the vertical slice in the order `.cursor/AGENTS.md` prescribes. Add tests at each affected layer.
+5. Run `mise run ci`. Run `mise run sync:openapi` if the API changed (the gate also detects drift).
+6. Update `CHANGELOG.md` and the spec's `issues:` list.
+7. Open a pull request from the template, targeting `dev`. Report commands and results.
+
+## Code comments
+
+Comments are an **information source, not a log of decisions**. They exist to explain the technical
+*why* a reader cannot derive from the code: a non-obvious constraint, a platform or browser quirk, a
+workaround for a defect elsewhere, an invariant that must hold. They are not a place to record that a
+decision was made, that a review asked for something, or what an earlier version did.
+
+- **Keep** the reason something surprising is the way it is, especially when the obvious alternative
+  is wrong.
+- **Omit** restatements of the code, "as discussed", review provenance, change history, and
+  explanations of a choice that is already evident. History belongs in the commit message, PR, spec
+  decision log, or ADR.
+- **Prefer deleting** an obsolete comment over rewriting it; a stale comment is worse than none.
+- The same bar applies to `mise` task files, `.mdc` rules, and READMEs: state the constraint, not the
+  decision trail.
 
 ## Commits
 
 Conventional commits (`feat(backend): …`, `fix(frontend): …`, `docs(specs): …`, `chore(ci): …`).
-Agents commit under their own author identity.
+
+Agents commit under their own author identity. Agent sessions (`CURSOR_AGENT` set) use a separate
+agent account, `TimerErTim - Agent <agent.timerertim@gmail.com>`, with its own SSH signing key, selected
+by `~/.config/jj/conf.d/agent.toml`. Do not pass an author, email, or signing key on the command line,
+and do not reuse the maintainer identity for agent work.

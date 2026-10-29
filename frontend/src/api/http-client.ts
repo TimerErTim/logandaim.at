@@ -1,290 +1,242 @@
 import createClient from "openapi-fetch";
 
 import { ApiError } from "./errors";
-import type { paths } from "./schema";
 import type {
-  BehandlungErstellung,
-  HaustierErstellung,
-  KlientErstellung,
-  LeistungAusBehandlungErstellung,
-  LeistungAusProduktErstellung,
-  LeistungManuelleErstellung,
-  ProduktErstellung,
-  RechnungBezahltMarkieren,
-  SeminarBuchungErstellung,
-  SeminarErstellung,
-  SeminarTerminAbsage,
-  SeminarTerminAktualisierung,
-  SeminarTerminErstellung,
-  TagesabschlussErstellung,
-} from "./types";
-import type { YamsApi } from "./yams-api";
+  AuthPhase,
+  AuthSession,
+  Benutzer,
+  LogandaimApi,
+  Schuss,
+  SchussErstellungInput,
+  Wertung,
+} from "./logandaim-api";
+import type { paths } from "./schema";
 
 type JsonClient = ReturnType<typeof createClient<paths>>;
 
-async function unwrap<T>(result: { data?: T; error?: unknown }): Promise<T> {
+async function unwrap<T>(result: {
+  data?: T;
+  error?: unknown;
+  response: Response;
+}): Promise<T> {
   if (result.error !== undefined) {
-    throw ApiError.fromUnknown(result.error);
+    throw ApiError.fromUnknown(result.error, result.response.status);
   }
   return result.data as T;
 }
 
-export class HttpYamsApi implements YamsApi {
+/** HTTP implementation of the transport-neutral API. */
+export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   private readonly client: JsonClient;
+  private renewal: Promise<void> | null = null;
   private readonly baseUrl: string;
+  private accessToken: string | null = null;
+  private authRevision = 0;
+  private phase: AuthPhase = Object.freeze({ status: "checking" });
+  private readonly listeners = new Set<() => void>();
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
-    this.client = createClient<paths>({ baseUrl: this.baseUrl });
+    this.client = createClient<paths>({
+      baseUrl: this.baseUrl,
+      fetch: (request) =>
+        fetch(new Request(request, { credentials: "include" })),
+    });
+  }
+
+  private setAccessToken(token: string | null): void {
+    this.authRevision += 1;
+    this.accessToken = token;
+    this.setPhase(
+      token ? { status: "authenticated" } : { status: "anonymous" },
+    );
+  }
+
+  private setPhase(phase: AuthPhase): void {
+    if (this.phase.status === phase.status) return;
+    this.phase = Object.freeze(phase);
+    for (const listener of this.listeners) listener();
+  }
+
+  getSnapshot = (): AuthPhase => this.phase;
+
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  };
+
+  async restore(): Promise<void> {
+    this.setPhase({ status: "checking" });
+    try {
+      await this.renewSession();
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        this.setAccessToken(null);
+        return;
+      }
+      this.setPhase({ status: "unavailable", error });
+      throw error;
+    }
+  }
+
+  async logout(): Promise<void> {
+    const headers = this.authorizationHeaders();
+    this.setAccessToken(null);
+    try {
+      await unwrap(await this.client.POST("/session/abmelden", { headers }));
+    } finally {
+      this.setAccessToken(null);
+    }
+  }
+
+  private async authenticated<T>(
+    request: () => Promise<{
+      data?: T;
+      error?: unknown;
+      response: Response;
+    }>,
+  ): Promise<T> {
+    const token = this.accessToken;
+    const result = await request();
+    if (result.response.status !== 401 || !token) {
+      return unwrap(result);
+    }
+    if (this.accessToken !== token) return unwrap(await request());
+
+    try {
+      await this.renewSession();
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        this.setAccessToken(null);
+        return unwrap(result);
+      }
+      throw error;
+    }
+    if (this.accessToken === token) return unwrap(result);
+    return unwrap(await request());
+  }
+
+  private async renewSession(): Promise<void> {
+    if (!this.renewal) {
+      this.renewal = this.performRenewal().finally(() => {
+        this.renewal = null;
+      });
+    }
+    return this.renewal;
+  }
+
+  private async performRenewal(): Promise<void> {
+    const revision = this.authRevision;
+    const renewed = await fetch(`${this.baseUrl}/session/erneuern`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!renewed.ok) {
+      let error: unknown = `Session renewal failed (${renewed.status})`;
+      try {
+        error = await renewed.json();
+      } catch {
+        // Keep a useful status-bearing message for non-JSON responses.
+      }
+      throw ApiError.fromUnknown(error, renewed.status);
+    }
+    const content = (await renewed.json()) as { accessToken: string };
+    if (revision !== this.authRevision) return;
+    this.setAccessToken(content.accessToken);
   }
 
   async health(): Promise<string> {
     return unwrap(await this.client.GET("/health"));
   }
 
-  async klientErstellen(body: KlientErstellung) {
-    return unwrap(
-      await this.client.POST("/klient", {
-        body,
+  private authorizationHeaders() {
+    return {
+      Authorization: this.accessToken
+        ? `Bearer ${this.accessToken}`
+        : undefined,
+    };
+  }
+
+  async schussRegistrieren(erstellung: SchussErstellungInput): Promise<Schuss> {
+    return this.authenticated(() =>
+      this.client.POST("/schuss", {
+        body: erstellung,
+        headers: this.authorizationHeaders(),
       }),
     );
   }
 
-  async haustierErstellen(body: HaustierErstellung) {
-    return unwrap(
-      await this.client.POST("/haustier", {
-        body,
+  async wertungBerechnen(schussIds: string[]): Promise<Wertung> {
+    return this.authenticated(() =>
+      this.client.POST("/wertung", {
+        body: { schussIds },
+        headers: this.authorizationHeaders(),
       }),
     );
   }
 
-  async alleHaustiere() {
-    return unwrap(await this.client.GET("/haustier"));
-  }
-
-  async alleKlienten() {
-    return unwrap(await this.client.GET("/klient", {}));
-  }
-
-  async alleProdukte() {
-    return unwrap(await this.client.GET("/produkt", {}));
-  }
-
-  async alleBehandlungen() {
-    return unwrap(await this.client.GET("/behandlung", {}));
-  }
-
-  async alleLeistungen() {
-    return unwrap(await this.client.GET("/leistung", {}));
-  }
-
-  async alleRechnungen() {
-    return unwrap(await this.client.GET("/rechnungen", {}));
-  }
-
-  async alleSeminare() {
-    return unwrap(await this.client.GET("/seminar", {}));
-  }
-
-  async alleSeminarTermine() {
-    return unwrap(await this.client.GET("/seminar-termin", {}));
-  }
-
-  async haustierById(id: string) {
-    return unwrap(
-      await this.client.GET("/haustier/{id}", {
-        params: { path: { id } },
+  async registrierungStarten(eMailAdresse: string): Promise<void> {
+    await unwrap(
+      await this.client.POST("/registrierung/start", {
+        body: { eMailAdresse },
       }),
     );
   }
 
-  async produktErstellen(body: ProduktErstellung) {
-    return unwrap(
-      await this.client.POST("/produkt", {
-        body,
+  async registrierungAbschliessen(
+    token: string,
+    passwort: string,
+  ): Promise<void> {
+    const result = await unwrap(
+      await this.client.POST("/registrierung/abschluss", {
+        body: { token, passwort },
+      }),
+    );
+    this.setAccessToken(result.accessToken);
+  }
+
+  async anmelden(eMailAdresse: string, passwort: string): Promise<void> {
+    const result = await unwrap(
+      await this.client.POST("/anmeldung", {
+        body: { eMailAdresse, passwort },
+      }),
+    );
+    this.setAccessToken(result.accessToken);
+  }
+
+  async passwortVergessen(eMailAdresse: string): Promise<void> {
+    await unwrap(
+      await this.client.POST("/passwort/vergessen", { body: { eMailAdresse } }),
+    );
+  }
+
+  async passwortWiederherstellen(
+    token: string,
+    neuesPasswort: string,
+  ): Promise<void> {
+    await unwrap(
+      await this.client.POST("/passwort/wiederherstellen", {
+        body: { token, neuesPasswort },
+      }),
+    );
+    this.setAccessToken(null);
+  }
+
+  async benutzerAbrufen(): Promise<Benutzer> {
+    return this.authenticated(() =>
+      this.client.GET("/benutzer", {
+        headers: this.authorizationHeaders(),
       }),
     );
   }
 
-  async behandlungErstellen(body: BehandlungErstellung) {
-    return unwrap(
-      await this.client.POST("/behandlung", {
-        body,
+  async benutzerLoeschen(passwort: string, bestätigt: boolean): Promise<void> {
+    await this.authenticated(() =>
+      this.client.POST("/benutzer/löschung", {
+        body: { passwort, bestätigt },
+        headers: this.authorizationHeaders(),
       }),
     );
-  }
-
-  async leistungAusProduktBuchen(body: LeistungAusProduktErstellung) {
-    return unwrap(
-      await this.client.POST("/leistung/produkt", {
-        body,
-      }),
-    );
-  }
-
-  async leistungAusBehandlungBuchen(body: LeistungAusBehandlungErstellung) {
-    return unwrap(
-      await this.client.POST("/leistung/behandlung", {
-        body,
-      }),
-    );
-  }
-
-  async leistungManuellErfassen(body: LeistungManuelleErstellung) {
-    return unwrap(
-      await this.client.POST("/leistung/manuell", {
-        body,
-      }),
-    );
-  }
-
-  async tagesabschlussDurchführen(body: TagesabschlussErstellung) {
-    return unwrap(
-      await this.client.POST("/tagesabschluss", {
-        body,
-      }),
-    );
-  }
-
-  async rechnungenFürKlient(klientId: string) {
-    return unwrap(
-      await this.client.GET("/klient/{klient_id}/rechnungen", {
-        params: { path: { klient_id: klientId } },
-      }),
-    );
-  }
-
-  async rechnungAlsBezahltMarkieren(
-    id: string,
-    body: RechnungBezahltMarkieren,
-  ) {
-    return unwrap(
-      await this.client.POST("/rechnungen/{id}/bezahlt", {
-        params: { path: { id } },
-        body,
-      }),
-    );
-  }
-
-  async rechnungPdf(id: string) {
-    return this.fetchPdf(`/rechnungen/${encodeURIComponent(id)}/pdf`);
-  }
-
-  async teilnahmebestätigungPdf(terminId: string, buchungId: string) {
-    return this.fetchPdf(
-      `/seminar-termin/${encodeURIComponent(terminId)}/buchung/${encodeURIComponent(buchungId)}/teilnahmebestaetigung`,
-    );
-  }
-
-  private async fetchPdf(path: string): Promise<Blob> {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      headers: { Accept: "application/pdf" },
-    });
-
-    if (!response.ok) {
-      throw ApiError.fromUnknown(await response.text());
-    }
-
-    return response.blob();
-  }
-
-  async seminarErstellen(body: SeminarErstellung) {
-    return unwrap(
-      await this.client.POST("/seminar", {
-        body,
-      }),
-    );
-  }
-
-  async seminarById(id: string) {
-    return unwrap(
-      await this.client.GET("/seminar/{id}", {
-        params: { path: { id } },
-      }),
-    );
-  }
-
-  async seminarTerminPlanen(body: SeminarTerminErstellung) {
-    return unwrap(
-      await this.client.POST("/seminar-termin", {
-        body,
-      }),
-    );
-  }
-
-  async seminarTerminById(id: string) {
-    return unwrap(
-      await this.client.GET("/seminar-termin/{id}", {
-        params: { path: { id } },
-      }),
-    );
-  }
-
-  async seminarTerminAktualisieren(
-    id: string,
-    body: SeminarTerminAktualisierung,
-  ) {
-    return unwrap(
-      await this.client.PUT("/seminar-termin/{id}", {
-        params: { path: { id } },
-        body,
-      }),
-    );
-  }
-
-  async seminarBuchungAnlegen(
-    terminId: string,
-    body: SeminarBuchungErstellung,
-  ) {
-    return unwrap(
-      await this.client.POST("/seminar-termin/{id}/buchung", {
-        params: { path: { id: terminId } },
-        body,
-      }),
-    );
-  }
-
-  async seminarBuchungStornieren(terminId: string, buchungId: string) {
-    return unwrap(
-      await this.client.POST(
-        "/seminar-termin/{id}/buchung/{buchung_id}/storno",
-        {
-          params: { path: { id: terminId, buchung_id: buchungId } },
-        },
-      ),
-    );
-  }
-
-  async seminarTerminAbsagen(terminId: string, body: SeminarTerminAbsage) {
-    return unwrap(
-      await this.client.POST("/seminar-termin/{id}/absagen", {
-        params: { path: { id: terminId } },
-        body,
-      }),
-    );
-  }
-
-  async seminarTerminAbgehalten(terminId: string) {
-    return unwrap(
-      await this.client.POST("/seminar-termin/{id}/abgehalten", {
-        params: { path: { id: terminId } },
-      }),
-    );
-  }
-
-  async seminarUmsatzVorschau(terminId: string) {
-    return unwrap(
-      await this.client.GET("/seminar-termin/{id}/umsatz", {
-        params: { path: { id: terminId } },
-      }),
-    );
-  }
-
-  async seminarUmsatzPrognose(stichtag: string) {
-    return unwrap(
-      await this.client.GET("/seminar-prognose", {
-        params: { query: { stichtag } },
-      }),
-    );
+    this.setAccessToken(null);
   }
 }

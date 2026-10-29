@@ -1,9 +1,9 @@
 ---
 id: SPEC-wertung
 title: Classic 3-arrow scoring (first-hit and multi-shot)
-status: PO-approved
+status: In delivery
 owner: TimerErTim
-issues: []
+issues: [8]
 superseded_by: null
 ---
 
@@ -23,7 +23,7 @@ arrow counts). The UI can show either or both.
 
 ## Roles
 
-- Schütze: enters Schüsse per Ziel, sees points in both Wertungen.
+- `Benutzer`: enters Schüsse per Ziel, sees points in both Wertungen.
 
 ## Scope
 

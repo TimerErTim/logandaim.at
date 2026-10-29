@@ -1,0 +1,58 @@
+name: CI
+
+# The shared gate: pull requests, pushes to `dev`, and `main.yml`'s release gate.
+# Every step delegates to a mise task, so CI cannot drift from a developer machine.
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+  workflow_call:
+
+permissions:
+  contents: read
+  # Publishes the test report as a check run.
+  checks: write
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # Never cancel a `main` run: it gates a release.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  base:
+    name: pr/base
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up tooling
+        uses: ./.github/actions/setup
+
+      - name: Run the full gate
+        run: mise run ci
+
+      # A missing file means `check` failed before the tests ran.
+      # `continue-on-error`: fork PRs have a read-only token, and the gate already
+      # decides the run.
+      - name: Publish the test report
+        if: always() && hashFiles('target/nextest/*/junit.xml') != ''
+        continue-on-error: true
+        uses: mikepenz/action-junit-report@v6
+        with:
+          report_paths: target/nextest/*/junit.xml
+          # The PR head, not the merge commit, so results attach to the PR.
+          commit: ${{ github.event.pull_request.head.sha || github.sha }}
+          check_name: Test results
+          # The gate already reports these failures.
+          fail_on_failure: false
+          # nextest's JUnit has no file or line attributes to annotate inline.
+          check_annotations: false
+          include_skipped: true
+
+      - name: Stop verify daemons
+        if: always()
+        run: mise daemons stop || true

@@ -57,4 +57,4 @@
   description: "Product specs and ADRs"
 - name: "area: branding"
   color: "f9d0c4"
-  description: "logandaim.at identity, YAMS removal"
+  description: "logandaim.at identity, legacy branding removal"

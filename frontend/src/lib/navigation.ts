@@ -1,14 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import {
-  BookOpen,
-  CalendarDays,
-  ClipboardList,
-  Database,
-  FileText,
-  Home,
-  Receipt,
-  User,
-} from "lucide-react";
+import { Home, Target } from "lucide-react";
 
 export type NavAction = {
   label: string;
@@ -28,7 +19,7 @@ export type NavCategory = {
   items: NavItem[];
 };
 
-/** Strip trailing slash so `/klient/` matches `/klient` (Next `trailingSlash: true`). */
+/** Strip trailing slash so `/foo/` matches `/foo` (Next `trailingSlash: true`). */
 export function normalizePath(path: string): string {
   if (path.length > 1 && path.endsWith("/")) {
     return path.slice(0, -1);
@@ -42,77 +33,22 @@ export function isExactPath(pathname: string, href: string): boolean {
 
 export const paths = {
   home: "/",
-  klienten: "/klient",
-  klientNeu: "/klient/neu",
-  klientDetail: "/klient/detail",
-  klient: (id: string) => `/klient/detail?id=${encodeURIComponent(id)}`,
-  katalog: "/katalog",
-  leistung: "/leistung",
-  leistungForKlient: (id: string) =>
-    `/leistung?klientId=${encodeURIComponent(id)}`,
-  seminar: "/seminar",
-  abrechnung: "/abrechnung",
-  rechnungen: "/rechnungen",
-  objekte: "/objekte",
+  schuss: "/schuss",
+  profil: "/profil",
+  optionen: "/optionen",
 } as const;
 
+/** Add one item per product area. */
 export const sidebarCategories: NavCategory[] = [
   {
-    label: "Verwaltung",
+    label: "Logbuch",
     items: [
       {
-        id: "klient",
-        label: "Klient",
-        href: paths.klienten,
-        icon: User,
-        recursive: true,
-      },
-      {
-        id: "katalog",
-        label: "Katalog",
-        href: paths.katalog,
-        icon: BookOpen,
-        recursive: true,
-      },
-      {
-        id: "leistung",
-        label: "Leistung",
-        href: paths.leistung,
-        icon: ClipboardList,
-        recursive: true,
-      },
-      {
-        id: "seminar",
-        label: "Seminar",
-        href: paths.seminar,
-        icon: CalendarDays,
-        recursive: true,
-      },
-    ],
-  },
-  {
-    label: "Workflows",
-    items: [
-      {
-        id: "abrechnung",
-        label: "Abrechnung",
-        href: paths.abrechnung,
-        icon: Receipt,
-        recursive: true,
-      },
-      {
-        id: "rechnungen",
-        label: "Rechnungen",
-        href: paths.rechnungen,
-        icon: FileText,
-        recursive: true,
-      },
-      {
-        id: "objekte",
-        label: "Objekte",
-        href: paths.objekte,
-        icon: Database,
-        recursive: true,
+        id: "schuss",
+        label: "Schuss",
+        href: paths.schuss,
+        icon: Target,
+        recursive: false,
       },
     ],
   },
@@ -121,7 +57,7 @@ export const sidebarCategories: NavCategory[] = [
 export const homeNavItem: NavItem = {
   id: "home",
   label: "Home",
-  href: paths.klienten,
+  href: paths.home,
   icon: Home,
   recursive: false,
 };
@@ -132,15 +68,12 @@ type BreadcrumbSegment = {
 };
 
 const routeLabels: Record<string, string> = {
-  klient: "Klient",
-  neu: "Neu",
-  detail: "Detail",
-  katalog: "Katalog",
-  leistung: "Leistung",
-  seminar: "Seminar",
-  abrechnung: "Abrechnung",
-  rechnungen: "Rechnungen",
-  objekte: "Objekte",
+  schuss: "Schuss",
+  anmeldung: "Anmelden",
+  registrierung: "Registrieren",
+  passwort: "Passwort wiederherstellen",
+  profil: "Profil",
+  optionen: "Optionen",
 };
 
 export function breadcrumbsForPathname(
@@ -149,7 +82,7 @@ export function breadcrumbsForPathname(
 ): BreadcrumbSegment[] {
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length === 0) {
-    return [{ label: "Klient", href: paths.klienten }];
+    return [{ label: "Home", href: paths.home }];
   }
 
   const crumbs: BreadcrumbSegment[] = [];
@@ -180,11 +113,7 @@ export function breadcrumbsForPathname(
   return crumbs;
 }
 
-export function navActionsForPathname(pathname: string): NavAction[] {
-  if (isExactPath(pathname, paths.klienten)) {
-    return [{ label: "Neu", href: paths.klientNeu }];
-  }
-
+export function navActionsForPathname(_pathname: string): NavAction[] {
   return [];
 }
 

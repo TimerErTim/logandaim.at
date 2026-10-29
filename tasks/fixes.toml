@@ -4,7 +4,7 @@ depends = ["fmt:*"]
 
 ["fix:lint"]
 description = "Apply all lint suggestions"
-depends = ["YAMS_LINT_FIX=true lint:?*"]
+depends = ["LOGANDAIM_LINT_FIX=true lint:?*"]
 
 ["fix"]
 description = "Fix all the code, ensure all guidelines"

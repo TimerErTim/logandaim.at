@@ -1,259 +1,250 @@
 ---
 id: SPEC-stammdaten
-title: Master data (Anlage, Parcours, Ziel, Pflock) and admin seeding
+title: Master data (Anlage, Parcours, Ziel, Pflock) and Anlage administration
 status: Draft
 owner: TimerErTim
 issues: [10]
 superseded_by: null
 ---
 
-# Stammdaten — Master data and admin seeding
+# Stammdaten — Master data and `Anlage` administration
 
 ## Problem
 
-Before an archer can log a `Runde`, the course must exist as data: the `Anlage` with its
-`Parcours`, the `Ziele` in visiting order, and the `Pflöcke` with colors and distances. Today that
-knowledge lives with the parcours operators and in the archers' heads. Logged `Runden` then have
-nothing stable to reference — and real courses change: targets move, distances are re-measured,
-and layouts are rearranged between seasons. Without a master-data model that survives those
-changes, history becomes untrustworthy exactly where the product's value lies (accuracy per
-parcours and per target over time).
+Archers need an `Anlage` and its `Parcours` before they can log a `Runde`. Course layouts and
+shooting positions change, but old results must remain meaningful and attributable to the same
+physical `Ziel`. The product needs master data, scoped authority to maintain it, and a history
+contract that survives edits and closure of a site.
 
 ## Outcome
 
-A `System-Administrator` seeds and maintains the master data of the pilot `Anlagen` in an admin
-UI: `Anlage`, `Parcours`, `Ziele`, `Pflöcke`. A `Schütze` picks a `Parcours` and sees its `Ziele`
-with `Pflöcke` and distances. Every logged `Runde` keeps the layout exactly as it was shot, and a
-`Ziel`'s shot history stays complete and continuous across `Runden` and across layout changes.
+A `Systemadministrator` can create an `Anlage`; its `Administratoren` and `Mitarbeiter` maintain
+course data within their granted scope. Archers can select active `Parcours` and log `Runden`.
+Each `Runde` preserves the complete shooting setup as it was when logging began. A physical
+`Ziel` keeps its identity and history across course arrangements at the same `Anlage`; archived
+master data never breaks recorded history.
 
 ## Roles
 
-- [`System-Administrator`](charter.md#roles): seeds and maintains master data in the admin UI.
-  For M1 the PO seeds the pilot data personally.
-- [`Schütze`](charter.md#roles): consumes master data read-only — selects a `Parcours`, sees
-  `Ziele`, `Pflöcke`, and distances when logging `Runden` and reviewing history.
+- [`Systemadministrator`](charter.md#roles): creates and manages every `Anlage`, can act in any
+  `Anlage`, and may grant or revoke any `AnlageVerwaltung`.
+- [`Administrator`](charter.md#roles): manages one `Anlage`'s `AnlageVerwaltungen` and master data.
+- [`Mitarbeiter`](charter.md#roles): maintains Parcours, Ziele, and Pflöcke at their `Anlage` and
+  reads its aggregate statistics; cannot manage `AnlageVerwaltungen` or the Anlage's descriptive
+  fields.
+- [`Benutzer`](charter.md#roles): reads active master data and logs own Runden; has no master-data
+  write authority without an `AnlageVerwaltung`.
+
+`Administrator` and `Mitarbeiter` are roles inside an `Anlage`, represented by its
+`AnlageVerwaltung`; they are not account roles. Authorization follows [`konto.md`](konto.md) rules
+16–17.
 
 ## Scope
 
 **In scope**
 
-- Master data `Anlage`, `Parcours`, `Ziel`, `Pflock` with the fields below.
-- Seeding and maintenance exclusively through the admin UI (create, edit, reorder, delete,
-  restore).
-- `Pflock` order per `Ziel` (far to near) and optional `Distanz` per `Pflock`
-  (charter MVP scope item 5).
-- The `Parcours-Snapshot` recorded with every `Runde`, `Ziel` identity continuity, and deletion
-  semantics for master data referenced by logged history.
+- `Anlage` identity, structured address, contact details, lifecycle, and `AnlageVerwaltung`.
+- `Parcours`, physical `Ziel`, Parcours-specific Ziel placement, and Parcours-level Pflock setup.
+- Admin-UI entry and maintenance; no file import or pilot-data seed task.
+- Immutable full shooting-setup snapshots on `Runden` and per-physical-Ziel history continuity.
+- Archiving history-referenced master data and removing it from future use.
 
 **Out of scope**
 
-- File import of master data (PO decision 2026-10-23: admin UI only).
-- Maintenance by `Anlagenbetreiber` (later milestone) and by `Schützen` (never in MVP).
-- The logging flow itself and its distance slider (separate spec); this spec defines only the
-  data that flow consumes and the snapshot it must record.
-- Editing or deleting logged `Runden` and `Schüsse` — history is never rewritten.
-- A `Ziel` shared across `Anlagen`; GPS coordinates, photos, terrain data.
-- Tournament-specific setup (later specs).
+- The post-MVP request workflow for a new `Anlage` (issue #68). A `Benutzer` may request one,
+  but only a `Systemadministrator` creates it. On acceptance, the requester receives the first
+  `Administrator` `AnlageVerwaltung`; the request flow itself is outside this slice.
+- The Runde logging flow and distance slider (separate spec, issue #11).
+- Import of master data from files, bulk migration, or a pilot seed task.
+- Statistics beyond access to an Anlage's aggregate statistics; individual users' Runden and
+  Schüsse are never exposed to Anlage staff.
+- Deleting or rewriting logged Runden or Schüsse.
 
 ## User journeys
 
-1. **Seed an `Anlage`.** The `System-Administrator` logs in, opens the master-data admin area,
-   and creates the `Anlage` with `Name`, `Standort`, and `Kontakt`. (For M1 the PO seeds the pilot
-   `Anlagen` personally; known candidates are Breitenstein and Wallhalla Pregarten — informational
-   only, the final list is charter Q-1.)
-2. **Seed a `Parcours`.** At the `Anlage` the admin creates a `Parcours` (for example
-   "Große Runde"), creates its `Ziele` (`Tier`, `Zielgruppe` 1–4) with their `Pflöcke` (`Farbe`,
-   far-to-near order, optional `Distanz` in meters), and arranges the `Ziele` in visiting order.
-   Everything is entered in the admin UI; no file is imported.
-3. **Maintain between seasons.** The admin reorders `Ziele`, changes a `Ziel`'s `Tier` or
-   `Zielgruppe`, re-measures `Distanz` values. `Runden` already logged keep their layout; the
-   changes apply to `Runden` logged from now on.
-4. **Review history after a change.** A `Schütze` opens an old `Runde` and sees it exactly as
-   shot — the `Ziele` in the order of that day with the `Pflöcke` and distances valid then. The
-   `Ziel` history aggregates `Schüsse` across all `Runden`, regardless of how the layout changed
-   in between.
-5. **Remove a target.** The admin deletes a `Ziel`. It disappears from the current arrangements
-   and from logging, while its logged `Schüsse` and the past `Runden` containing it stay complete
-   and unchanged.
+1. **Create an Anlage.** A `Systemadministrator` enters the Anlage's name, structured address,
+   and optional contact details in the admin UI. The Anlage may temporarily have no
+   `Administrator`; one can be assigned later.
+2. **Set up a Parcours.** An authorized staff member creates a Parcours, chooses its Pflock labels
+   and far-to-near order, adds Ziele belonging to the same Anlage, sets any per-Ziel distances for
+   those Pflock labels, and arranges the Ziele in route order.
+3. **Maintain a course.** Staff edit the route, Ziel details, Pflock setup, or distances. The edits
+   apply to Runden started afterwards. A Runde already in progress and every completed Runde keep
+   the setup captured when that Runde started.
+4. **Review history.** An archer opens an old Runde and sees its Parcours name, ordered Ziele,
+   target details, Pflock labels/order, and configured distances as captured at start. The physical
+   Ziel's history remains continuous across Parcours and edits at the same Anlage.
+5. **Close or remove data.** Staff deactivate an Anlage or remove a master-data item. History-
+   referenced records are archived and excluded from new use; records without history may be
+   deleted. Archived data cannot be restored.
 
 ## Domain terms and business rules
 
 | Term | Meaning |
 |------|---------|
-| `Anlage` | Physical site of a club or commercial operator: `Name`, `Standort`, `Kontakt`. |
-| `Parcours` | Named ordered sequence of `Ziele` at an `Anlage` (for example "Große Runde, 32 Ziele"). |
-| `Ziel` | One physical 3D animal target at an `Anlage`: `Tier`, `Zielgruppe` 1–4, `Pflöcke`. |
-| `Pflock` | Colored stake marking a shooting position of a `Ziel` (for example Weiß, Blau, Rot, Gelb): `Farbe`, far-to-near order, optional `Distanz`. |
-| `Zielgruppe` | Target-group classification of a `Ziel`: exactly 1, 2, 3, or 4. |
-| `Distanz` | Optional shooting distance in meters from a `Pflock` to its `Ziel` — the `Abschussdistanz` the stake marks. |
-| `Parcours-Version` | The layout of a `Parcours` (visiting order and `Ziele` arrangement with configuration) as it applies to the `Runden` logged at a point in time. Master-data edits start a new version for future `Runden`; versions are not managed as separate objects. |
-| `Parcours-Snapshot` | The frozen `Parcours-Version` a `Runde` records at log time. Never rewritten. |
-| `Archivierung` | What happens to deleted master data referenced by logged history: it leaves master data and new logging but stays in history. Reversible. |
+| `Anlage` | Physical site of a club or commercial operator. Has a name, structured address, optional contact details, Parcours, and `AnlageVerwaltungen`. |
+| `AnlageVerwaltung` | One Benutzer's role (`Administrator` or `Mitarbeiter`) inside one Anlage. |
+| `Parcours` | Named route at one Anlage, containing an ordered arrangement of that Anlage's physical Ziele and one Pflock setup. |
+| `Ziel` | One physical 3D target belonging to one Anlage, with an animal name and target group 1–4. |
+| `Zielplatzierung` | One physical Ziel's use in one Parcours. It carries optional distances for that Parcours' Pflock labels. |
+| `Pflock` | A shooting-position label in one Parcours' setup, ordered far to near; its color/label is chosen by Anlage staff. |
+| `Parcours-Snapshot` | Immutable copy of the Parcours shooting setup captured when a Runde starts. |
+| `Archivierung` | Removal of history-referenced master data from current use while retaining its identity and historical references. It is not reversible. |
 
 Rules:
 
-1. Master data is maintained only by a `System-Administrator`, through the admin UI. There is no
-   file import (PO decision 2026-10-23). `Schützen` read master data and never change it.
-2. An `Anlage` records `Name`, `Standort`, and `Kontakt`. `Name` is unique across all `Anlagen`.
-3. A `Parcours` belongs to exactly one `Anlage`, has a `Name`, and arranges one or more `Ziele` of
-   that `Anlage` in visiting order (positions 1..n). A `Ziel` appears at most once per `Parcours`.
-4. A `Ziel` belongs to exactly one `Anlage` as its physical target and records `Tier`, a
-   `Zielgruppe` of exactly 1, 2, 3, or 4, and one or more `Pflöcke`. A `Ziel` may appear in
-   several `Parcours` of its `Anlage` (Q-1).
-5. A `Pflock` belongs to exactly one `Ziel` and records `Farbe`, a unique order position within
-   its `Ziel`, and an optional `Distanz` in meters.
-6. `Pflock` order per `Ziel` is strictly far to near: position 1 is the farthest shooting
-   position and every step comes nearer. Among the `Pflöcke` that carry a `Distanz`, the values
-   strictly decrease along that order. `Distanz` is optional per `Pflock`; a `Pflock` without it
-   shows no meter value. Distances are master data set by the admin now and by the
-   `Anlagenbetreiber` later (charter MVP scope item 5).
-7. History contract. Logged `Runden` and `Schüsse` are immutable history: master-data changes
-   never rewrite them. Snapshot contract: kept in a `Parcours-Snapshot` are the `Parcours`
-   identity and name at log time and, in visiting order, for every position the `Ziel` identity
-   and its configuration at log time (`Tier`, `Zielgruppe`, `Pflöcke` with `Farbe`, order,
-   optional `Distanz`); a snapshot is never updated afterwards, so a `Runde` always displays the
-   layout as it was shot.
-8. The snapshot is taken when the `Runde` is created (logging starts). Master-data changes after
-   that affect only `Runden` logged later.
-9. `Ziel` identity. A `Ziel` keeps one identity from creation until deletion. Editing `Tier`,
-   `Zielgruppe`, `Pflöcke`, the position in a `Parcours`, or which `Parcours` use it never
-   changes the identity. Its `Schüsse` stay attached, so its shot history and progress remain
-   continuous across `Runden` and across `Parcours-Versionen` — old snapshots show the old
-   configuration, new `Runden` the new one, all under the one `Ziel`.
-10. Replacing the physical target is expressed either as an edit of the existing `Ziel` (history
-    continues; old snapshots show the old `Tier`) or as adding a new `Ziel` and archiving the old
-    one (the new `Ziel`'s history starts fresh).
-11. Deletion never deletes or rewrites logged history. A `Ziel` with logged `Schüsse` is archived
-    instead of destroyed: it leaves the current `Parcours` arrangements and logging, while its
-    identity, its `Schüsse`, its history view, and the snapshots containing it stay complete. A
-    `Ziel` without `Schüsse` is deleted outright. The same applies one level up: a `Parcours`
-    with logged `Runden` and an `Anlage` with logged history are archived, and entities without
-    history are deleted outright. Archived master data can be restored by the admin; identity and
-    history continue.
+1. Master data is created and maintained through the admin UI. There is no file import or pilot seed
+   task. The M1 pilot sites are Breitenstein and Wallhalla Pregarten; their data is entered manually.
+   The October 23 PO decision on issue #10 is retained.
+2. A `Systemadministrator` creates an `Anlage`. An Anlage may initially have no Administrator.
+   Only a `Systemadministrator` or that Anlage's `Administrator` may create or edit the Anlage's
+   name, address, and contact details. A `Systemadministrator` or `Administrator` may grant or
+   revoke `AnlageVerwaltungen`; an Anlage must retain at least one Administrator once one has been
+   assigned. The last Administrator cannot revoke their own `AnlageVerwaltung`.
+3. Anlage names need not be unique. An Anlage's address has required street, postal code,
+   locality, and country fields. Contact name, email, phone, and website are each optional,
+   structured fields; all may be omitted.
+4. An Anlage may have zero or more Parcours. A Parcours belongs to exactly one Anlage and contains
+   one or more Zielplatzierungen, each for a physical Ziel at that same Anlage. A physical Ziel may
+   be used in multiple Parcours at its Anlage, but may appear no more than once in one Parcours.
+5. A physical Ziel has one stable identity, a required non-empty animal name, and target group
+   (exactly 1, 2, 3, or 4).
+   Editing its details or moving it within or between Parcours at the same Anlage does not change
+   identity or break per-Ziel shot-history continuity. Replacing the physical target creates a new
+   Ziel identity; it does not inherit the old target's history.
+6. Each Parcours defines its own unique Pflock labels/colors and explicit far-to-near order. There
+   is no product-wide fixed palette, and order is never inferred from color. Every Zielplatzierung
+   may optionally define a distance in meters for each Pflock label in that Parcours. A missing
+   distance is allowed and has no meter estimate. Configured distances are positive and strictly
+   decrease from farther to nearer Pflocks.
+7. Parcours edits after logged Runden are allowed. They affect only Runden started after the edit;
+   the edit does not rewrite any existing or in-progress Runde snapshot. A Parcours version is the
+   effective setup at a point in time; versions are not separately managed objects.
+8. When a Runde starts, its immutable snapshot contains the Parcours identity and name and, in
+   route order, each Ziel identity, animal name, target group, and its Parcours-specific Pflock
+   labels/colors/order and optional distances. The snapshot is the source for displaying that
+   Runde's setup even if current master data later changes or is archived.
+9. A Ziel's Schüsse refer to its physical Ziel identity, not its position in a route. Per-Ziel
+   history and progress therefore continue across Runden, route edits, and Parcours at the same
+   Anlage. A Ziel in multiple Parcours has a separate Zielplatzierung and distance configuration
+   in each Parcours.
+10. Only a `Systemadministrator`, an `Administrator`, or a `Mitarbeiter` of that Anlage may create,
+    edit, reorder, or remove its Parcours, Ziel, Zielplatzierung, and Pflock setup. Only a
+    `Systemadministrator` or that Anlage's `Administrator` may edit Anlage descriptive fields or
+    manage its `AnlageVerwaltungen`. Staff authority never crosses Anlagen.
+11. Deactivation removes an Anlage and all its Parcours from active listings and prevents new
+    Runden there. Existing Runden remain readable with their snapshots. Any Anlage, Parcours, Ziel,
+    or Pflock setup referenced by a logged or in-progress Runde snapshot or its Schüsse is archived,
+    not destroyed; archived data cannot be restored. Master data without any such history reference
+    may be deleted outright. Removing a referenced Ziel removes it from current Parcours
+    arrangements while preserving its identity, Schüsse, and past snapshots.
+12. Active Parcours and their setup are publicly readable for selecting and logging a Runde.
+    Anlage staff may read aggregate statistics for their Anlage, but cannot read another Benutzer's
+    Runden or Schüsse. A Systemadministrator may act across Anlagen.
 
 ## Requirements
 
 **Functional**
 
-- FR-1: Create, edit, and delete `Anlagen` (`Name`, `Standort`, `Kontakt`) in the admin UI
-  (rules 1–2).
-- FR-2: Create and maintain `Parcours` per `Anlage`: `Name` and an ordered `Ziele` arrangement
-  (rule 3).
-- FR-3: Create and maintain `Ziele` per `Anlage`: `Tier`, `Zielgruppe` 1–4, `Pflöcke`
-  (rules 4–5).
-- FR-4: Create and maintain `Pflöcke` per `Ziel`: `Farbe`, far-to-near order, optional `Distanz`
-  in meters, with the invariants of rule 6.
-- FR-5: Seed and maintain all master data exclusively through the admin UI; accept no import file
-  (rule 1).
-- FR-6: Record a `Parcours-Snapshot` with every `Runde` at log time and never rewrite it
-  (rules 7–8).
-- FR-7: Keep `Schüsse` attached to `Ziel` identity and expose per-`Ziel` history and progress
-  across `Runden` and `Parcours-Versionen` (rule 9).
-- FR-8: On deletion, archive master data referenced by logged history and delete the rest,
-  without ever touching logged history; support restoring archived master data (rule 11).
-- FR-9: Show master data read-only to `Schützen`: `Parcours` selection, visiting order, `Pflöcke`
-  with colors and distances.
+- FR-1: Create an Anlage as a `Systemadministrator`; allow its name, structured address, and
+  optional contact details to be edited only by a `Systemadministrator` or its `Administrator`
+  (rules 2–3).
+- FR-2: Grant, change, and revoke per-Anlage `AnlageVerwaltungen`, preserving at least one
+  Administrator after the first is assigned (rule 2).
+- FR-3: Create and maintain Parcours, ordered Zielplatzierungen, physical Ziele, and Parcours-level
+  Pflock labels/order and per-placement distances (rules 4–6, 10).
+- FR-4: Record an immutable full Parcours-Snapshot when each Runde starts (rules 7–8).
+- FR-5: Preserve per-physical-Ziel shot history across Parcours and edits at the same Anlage
+  (rules 5 and 9).
+- FR-6: Deactivate Anlagen and archive history-referenced master data without changing logged
+  history; prevent new Runden on inactive or archived data (rule 11).
+- FR-7: Allow public read access to active Parcours setup; restrict writes and aggregate statistics
+  to the roles defined in rules 2, 10, and 12.
+- FR-8: Enter the Breitenstein and Wallhalla Pregarten pilot master data and maintain all master
+  data through the admin UI; accept no import file and run no idempotent pilot seed task (rule 1).
 
 **Non-functional**
 
-- NFR-1: The rules and snapshot integrity live in the backend domain. The admin UI is a
-  maintenance surface only and cannot rewrite history.
-- NFR-2: Master-data writes require the `System-Administrator` role at the API level, not merely
-  hidden in the UI.
-
-## Implementation sketches
-
-Non-normative implementation sketches (data model, snapshot storage, admin API surface) are
-technical design and live in
-[Appendix A](#appendix-a-implementation-sketch-non-normative) at the end of this spec. They guide
-implementation and are not part of the contract; the contract lives in the rules and acceptance
-criteria above.
+- NFR-1: Snapshot integrity and master-data invariants are enforced by the backend, not only by the
+  UI.
+- NFR-2: Authorization is decided by use cases from the loaded `Benutzer` and `Anlage` aggregates,
+  following [`konto.md`](konto.md) rule 17. No permission table or role middleware is introduced.
+- NFR-3: No master-data operation can rewrite a Runde's captured snapshot, Schüsse, or sporting
+  results.
 
 ## Acceptance criteria
 
-- AC-1: Given a `System-Administrator` in the admin UI, when creating an `Anlage` with `Name`,
-  `Standort`, and `Kontakt`, then the `Anlage` exists with exactly these fields and is visible
-  read-only to `Schützen`; a duplicate `Name` is rejected.
-- AC-2: Given an `Anlage`, when the admin creates a `Parcours` with `Ziele` arranged in visiting
-  order, then the `Ziele` appear in exactly that order, and a `Ziel` appearing twice in one
-  `Parcours` is rejected.
-- AC-3: When the admin creates a `Ziel`, then a `Zielgruppe` outside 1–4 or a `Ziel` without at
-  least one `Pflock` is rejected; a valid `Ziel` stores `Tier`, `Zielgruppe`, and its `Pflöcke`.
-- AC-4: Given a `Ziel` with `Pflöcke` Weiß (position 1), Blau (2), Rot (3) far to near, when it is
-  displayed anywhere, then they appear in exactly this order; duplicate or missing order
-  positions within a `Ziel` are rejected.
-- AC-5: Given `Pflöcke` with configured `Distanz`, when displayed, then each shows its meter value
-  and the values strictly decrease far to near; a `Pflock` without `Distanz` shows no meter
-  value; a `Distanz` sequence that does not strictly decrease along the order is rejected.
-- AC-6: When seeding or changing master data, then every entity is created and edited through the
-  admin UI (no import file is accepted anywhere), a `Schütze`'s write request fails with 403 (401
-  when unauthenticated), and the same request with a `System-Administrator` succeeds.
-- AC-7: Given a `Runde` logged under layout L1, when the admin afterwards reorders the
-  `Parcours`'s `Ziele` or edits a `Ziel`'s `Tier`, `Zielgruppe`, `Pflöcke`, or `Distanz`, then the
-  logged `Runde` still shows L1 exactly (order and configuration as shot) and `Runden` logged
-  afterwards show the changed layout.
-- AC-8: Given `Schüsse` at one `Ziel` across `Runden` logged under different `Parcours-Versionen`,
-  when viewing the `Ziel`'s history, then all its `Schüsse` appear under that one `Ziel`, and its
-  progress stays computable across the `Runden` and versions.
-- AC-9: Given a `Runde`, when viewing it, then it shows the `Parcours` and, in visiting order,
-  each `Ziel` with `Tier`, `Zielgruppe`, and its `Pflöcke` (`Farbe`, order, optional `Distanz`) as
-  they were at log time.
-- AC-10: Given a `Ziel` with logged `Schüsse`, when the admin deletes it, then it disappears from
-  the current `Parcours` arrangements and from new logging, while its `Schüsse`, its history view,
-  and the snapshots of past `Runden` remain complete and unchanged.
-- AC-11: Given a `Ziel` without `Schüsse`, when the admin deletes it, then it leaves no trace in
-  master data or history.
-- AC-12: Given a `Parcours` with logged `Runden` (likewise an `Anlage` with logged history), when
-  the admin deletes it, then it cannot be chosen for new `Runden`, while logged `Runden` remain
-  visible with their snapshots; the same entities without history disappear outright.
-- AC-13: Given an archived `Ziel` or `Parcours`, when the admin restores it, then it returns to
-  master data and to new logging, and its history continues under the same identity.
-
-## Risks and open questions
-
-- [ ] Q-1: `Ziel` ↔ `Parcours` cardinality. This draft models a `Ziel` as a physical target of one
-  `Anlage`, usable in several `Parcours` of that `Anlage` (sub-courses share targets). Confirm, or
-  restrict each `Ziel` to exactly one `Parcours`.
-- [ ] Q-2: `Tier`: free text per `Ziel` (draft assumption) or a fixed catalog of 3D animals?
-- [ ] Q-3: `Kontakt` of an `Anlage`: one free-text line (draft assumption) or structured fields
-  (phone, email, web)?
-
-Charter Q-1 (pilot `Anlagen`) stays open there; known candidates are Breitenstein and Wallhalla
-Pregarten. The PO seeds the data personally; nothing in this spec is real master data.
+- AC-1: A `Systemadministrator` creates an Anlage with a name, all required structured address
+  fields, and any subset (including none) of optional contact fields; the Anlage is active. Duplicate
+  names are allowed. Missing required address fields are rejected. Creation may leave it without an
+  Administrator.
+- AC-2: A Systemadministrator or Anlage Administrator grants a role to an existing Benutzer.
+  A Mitarbeiter cannot grant, change, or revoke an AnlageVerwaltung. Once an Administrator exists,
+  revoking its last AnlageVerwaltung fails and leaves the Anlage with an Administrator.
+- AC-3: A Mitarbeiter may create and edit Parcours, Ziele, Zielplatzierungen, and Pflock setup at
+  their Anlage, but cannot edit Anlage descriptive fields, manage AnlageVerwaltungen, or change a
+  different Anlage. A Benutzer without an AnlageVerwaltung cannot write master data (403); an
+  unauthenticated write fails with 401.
+- AC-4: A Parcours can use physical Ziele from its own Anlage, each at most once. Using a Ziel from
+  another Anlage or adding the same Ziel twice is rejected. One physical Ziel may be placed in
+  multiple Parcours at the same Anlage.
+- AC-5: A Ziel requires a non-empty animal name and target group 1–4; a missing animal name or a
+  target group outside that range is rejected. Replacing the physical target creates a new identity;
+  editing details or route placement preserves identity and history continuity.
+- AC-6: Each Parcours stores unique Pflock labels/colors and an explicit far-to-near order
+  independent of color. Each Zielplatzierung may configure distinct distances for those labels.
+  Missing distances are accepted; configured distances must be positive and strictly decrease far to
+  near.
+- AC-7: Given a Runde started under setup L1, when staff reorder its Parcours, edit Ziel details,
+  change Pflock labels/order, or change distances, then the existing and in-progress Runde still
+  display L1 exactly; a Runde started after the edit captures the new setup L2.
+- AC-8: When one physical Ziel appears in Runden from different Parcours or setup versions, its
+  Schüsse remain linked to that Ziel and per-Ziel history remains continuous. A Ziel in a second
+  Parcours has that Parcours' own distances.
+- AC-9: When an archer views a Runde, it displays the captured Parcours identity/name, ordered
+  Ziele, animal names, target groups, Pflock labels/colors/order, and optional distances as they were
+  when the Runde started, regardless of later master-data edits.
+- AC-10: When an Anlage is deactivated, it and its Parcours disappear from active selection and new
+  Runden are refused; old Runden remain readable with their snapshots.
+- AC-11: Removing a Ziel, Parcours, Anlage, or Pflock setup referenced by a logged or in-progress
+  Runde snapshot or its Schüsse archives the referenced master data and prevents new use. Old
+  snapshots, Schüsse, and per-Ziel history remain unchanged. Archived data cannot be restored.
+- AC-12: Removing a master-data entity with no logged or in-progress Runde snapshot or Schuss
+  reference deletes it outright; it no longer appears in master data or history.
+- AC-13: Active Parcours are readable without authentication. Anlage Administrators and
+  Mitarbeiter can read only aggregate statistics for their own Anlage; neither can read another
+  Benutzer's Runden or Schüsse. A Systemadministrator can act across Anlagen.
+- AC-14: No master-data import endpoint or file-import path exists; pilot data is entered in the
+  admin UI.
 
 ## Verification
 
-Domain unit tests in the backend core cover the invariants of rules 2–6 (`Name` uniqueness,
-visiting order, `Zielgruppe` range, unique `Pflock` positions, far-to-near order, decreasing
-`Distanz`). Use-case conformance tests cover the seeding CRUD, the snapshot contract and its
-immutability (AC-7, AC-9), per-`Ziel` continuity (AC-8), and archiving and restore (AC-10 to
-AC-13). API e2e tests cover role enforcement and the admin surface (AC-1 to AC-6). The absence of
-an import path and the seeding journey are a manual check on the deployed admin UI.
+Domain unit tests cover Zielgruppe validation, Parcours membership, route uniqueness/order,
+Pflock ordering and distance invariants, and lifecycle transitions. Shared use-case conformance
+tests cover role checks, Anlage and master-data CRUD, snapshot immutability at Runde start,
+per-Ziel identity/history continuity, deactivation, archiving, and refusal of new use on archived
+data. API e2e tests cover 401/403 authorization paths and readable active Parcours. The absence of
+an import path and pilot entry are checked in the admin UI.
 
 ## Decision log
 
 | Date | Decision | By |
 |------|----------|----|
-| 2026-10-23 | Seeding: admin UI, not file import. | TimerErTim (PO) |
-| 2026-10-23 | Parcours changes after logged Runden: version snapshots. A `Runde` snapshots the layout (order, `Ziele` arrangement) at log time; shot history follows `Ziel` identity — per-`Ziel` continuity, per-`Runde` layout snapshot. | TimerErTim (PO) |
-| 2026-10-23 | `Distanz` is the shooting distance per `Pflock` to its `Ziel` (PRD: `Pflöcke` mark `Abschussdistanzen`); the slider estimate belongs to the logging spec. | Agent (MiMo) |
-| 2026-10-23 | A `Ziel` is a physical target of one `Anlage`, usable in several `Parcours` of that `Anlage` (Q-1 pending PO confirmation). | Agent (MiMo) |
-| 2026-10-23 | Deleting history-referenced master data archives it (rule 11) instead of destroying it, so identity and history survive. | Agent (MiMo) |
+| 2026-10-23 | Seed through admin UI, not file import. No idempotent pilot seed task. | TimerErTim (PO) |
+| 2026-10-23 | Parcours setup is snapshotted per Runde; the snapshot captures the complete shooting setup, while Schüsse follow physical Ziel identity. | TimerErTim (PO), clarified 2026-10-29 |
+| 2026-10-29 | Per-Anlage authority is `AnlageVerwaltung` with `Administrator` and `Mitarbeiter`; a Benutzer never creates an Anlage directly. | TimerErTim (PO), aligned with charter and konto |
+| 2026-10-29 | Ziel identity represents a physical target at one Anlage and may be used in several Parcours there. A physical replacement starts a new identity. | TimerErTim (PO) |
+| 2026-10-29 | Pflock labels/colors and far-to-near order are defined per Parcours; distances are optional per Zielplatzierung and Pflock label. Staff choose labels/colors; there is no fixed global palette. | TimerErTim (PO) |
+| 2026-10-29 | Anlage address is structured and required; contact fields are structured and optional. Anlage descriptions are editable by Systemadministrator or that Anlage's Administrator. | TimerErTim (PO) |
+| 2026-10-29 | A created Anlage may initially have no Administrator; after one is assigned, at least one must remain. | TimerErTim (PO) |
+| 2026-10-29 | Anlage names need not be unique; animal names are required; contact fields are individually optional; Pflock labels are unique per Parcours. | TimerErTim (PO) |
+| 2026-10-29 | History-referenced master data is archived and cannot be restored; data without history may be deleted. Inactive Anlagen are unavailable for new Runden. | TimerErTim (PO) |
+| 2026-10-29 | M1 pilot Anlagen are Breitenstein and Wallhalla Pregarten; enter their master data in the admin UI, with no seed task. | TimerErTim (PO) |
+| 2026-10-29 | Anlage requests are post-MVP (#68), outside this slice. Only a `Systemadministrator` creates an Anlage; acceptance of a request grants the requester its first `Administrator` `AnlageVerwaltung`. | TimerErTim (PO) |
 
 ## Revision history
 
 | Date | Change | By |
 |------|--------|----|
-| 2026-10-23 | Initial draft from issue #10 and PO decisions (admin-UI seeding, version snapshots). | Agent (MiMo) |
-
-## Appendix A: implementation sketch (non-normative)
-
-- `Anlage`, `Parcours`, `Ziel`, `Pflock` carry stable IDs. A `Parcours` stores an ordered list of
-  `Ziel` references; `Pflöcke` live under their `Ziel`.
-- A `Runde` stores an immutable copy of the arrangement and the per-`Ziel` configuration
-  (rule 7) alongside references to `Ziel` IDs for its `Schüsse`; history views read the snapshot,
-  never current master data.
-- Archiving is a state on master data, not a row delete; history queries include archived
-  entities, selection for new `Runden` excludes them.
-- The admin API surface is CRUD per entity plus reorder operations; there is no import endpoint.
-  Snapshot integrity and the invariants of rules 2–6 are enforced in the backend domain.
+| 2026-10-23 | Initial draft from issue #10 and PO decisions on seeding and Parcours version snapshots. | Agent (MiMo) |
+| 2026-10-29 | Synced with the current charter/konto role model and interactively respecified the data model, full Runde snapshot, Ziel identity, Pflock configuration, authorization, Anlage lifecycle, and history retention. | Agent (Cursor) |
