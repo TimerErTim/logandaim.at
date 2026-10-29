@@ -28,6 +28,20 @@ pub struct ServerConfig {
     pub database_url: String,
     pub object_store_dir: PathBuf,
     pub log_dir: Option<PathBuf>,
+    /// PKCS#8 PEM private key that signs access tokens; absent means "generate one per process".
+    pub signing_key_path: Option<PathBuf>,
+    pub token_issuer: String,
+    pub token_audience: String,
+    /// Frontend origin the mailed links point at.
+    pub frontend_basis_url: String,
+    /// SMTP relay host. Absent means "no relay": every send fails and is logged.
+    pub smtp_host: Option<String>,
+    pub smtp_port: u16,
+    pub smtp_verschlüsselung: SmtpVerschlüsselung,
+    pub smtp_benutzername: Option<String>,
+    pub smtp_passwort: Option<String>,
+    /// Envelope sender of every transactional mail.
+    pub smtp_absender: String,
 }
 
 impl Default for ServerConfig {
@@ -39,8 +53,31 @@ impl Default for ServerConfig {
             database_url: "logandaim.db".into(),
             object_store_dir: PathBuf::from("storage/"),
             log_dir: None,
+            signing_key_path: None,
+            token_issuer: "logandaim.at".into(),
+            token_audience: "logandaim-api".into(),
+            frontend_basis_url: "http://localhost:3001".into(),
+            smtp_host: None,
+            smtp_port: 1025,
+            smtp_verschlüsselung: SmtpVerschlüsselung::Klar,
+            smtp_benutzername: None,
+            smtp_passwort: None,
+            smtp_absender: "noreply@logandaim.at".into(),
         }
     }
+}
+
+/// How the SMTP adapter talks to its relay.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, clap::ValueEnum)]
+#[serde(rename_all = "camelCase")]
+pub enum SmtpVerschlüsselung {
+    /// Plain SMTP: Mailpit on loopback in development and tests.
+    #[default]
+    Klar,
+    /// `STARTTLS` upgrade, requiring a valid certificate.
+    StartTls,
+    /// TLS from the first byte (submission port 465).
+    Implizit,
 }
 
 #[derive(Debug, Parser, Default, PartialEq, Eq)]
@@ -73,6 +110,46 @@ pub struct Cli {
     /// Directory for rotated JSON log files (omit to disable logging)
     #[arg(long, env = "LOGANDAIM_LOG_DIR")]
     pub log_dir: Option<PathBuf>,
+
+    /// PKCS#8 PEM private key that signs access tokens; omit to generate one per process
+    #[arg(long, env = "LOGANDAIM_SIGNING_KEY_PATH")]
+    pub signing_key_path: Option<PathBuf>,
+
+    /// Issuer claim of every access token
+    #[arg(long, env = "LOGANDAIM_TOKEN_ISSUER")]
+    pub token_issuer: Option<String>,
+
+    /// Audience claim of every access token
+    #[arg(long, env = "LOGANDAIM_TOKEN_AUDIENCE")]
+    pub token_audience: Option<String>,
+
+    /// Frontend origin the mailed links point at
+    #[arg(long, env = "LOGANDAIM_FRONTEND_BASIS_URL")]
+    pub frontend_basis_url: Option<String>,
+
+    /// SMTP relay host; omit to run without mail delivery
+    #[arg(long, env = "LOGANDAIM_SMTP_HOST")]
+    pub smtp_host: Option<String>,
+
+    /// SMTP relay port
+    #[arg(long, env = "LOGANDAIM_SMTP_PORT")]
+    pub smtp_port: Option<u16>,
+
+    /// SMTP transport: klar, starttls, or implizit
+    #[arg(long, env = "LOGANDAIM_SMTP_VERSCHLUESSELUNG")]
+    pub smtp_verschlüsselung: Option<SmtpVerschlüsselung>,
+
+    /// SMTP username
+    #[arg(long, env = "LOGANDAIM_SMTP_BENUTZERNAME")]
+    pub smtp_benutzername: Option<String>,
+
+    /// SMTP password
+    #[arg(long, env = "LOGANDAIM_SMTP_PASSWORT")]
+    pub smtp_passwort: Option<String>,
+
+    /// Envelope sender of transactional mail
+    #[arg(long, env = "LOGANDAIM_SMTP_ABSENDER")]
+    pub smtp_absender: Option<String>,
 }
 
 pub fn load() -> Result<ServerConfig, ConfigError> {
@@ -147,6 +224,36 @@ fn overlay(mut config: ServerConfig, cli: &Cli) -> ServerConfig {
     }
     if let Some(log_dir) = &cli.log_dir {
         config.log_dir = Some(log_dir.clone());
+    }
+    if cli.signing_key_path.is_some() {
+        config.signing_key_path = cli.signing_key_path.clone();
+    }
+    if let Some(token_issuer) = &cli.token_issuer {
+        config.token_issuer = token_issuer.clone();
+    }
+    if let Some(token_audience) = &cli.token_audience {
+        config.token_audience = token_audience.clone();
+    }
+    if let Some(frontend_basis_url) = &cli.frontend_basis_url {
+        config.frontend_basis_url = frontend_basis_url.clone();
+    }
+    if let Some(smtp_host) = &cli.smtp_host {
+        config.smtp_host = Some(smtp_host.clone());
+    }
+    if let Some(smtp_port) = cli.smtp_port {
+        config.smtp_port = smtp_port;
+    }
+    if let Some(smtp_verschlüsselung) = cli.smtp_verschlüsselung {
+        config.smtp_verschlüsselung = smtp_verschlüsselung;
+    }
+    if let Some(smtp_benutzername) = &cli.smtp_benutzername {
+        config.smtp_benutzername = Some(smtp_benutzername.clone());
+    }
+    if let Some(smtp_passwort) = &cli.smtp_passwort {
+        config.smtp_passwort = Some(smtp_passwort.clone());
+    }
+    if let Some(smtp_absender) = &cli.smtp_absender {
+        config.smtp_absender = smtp_absender.clone();
     }
     config
 }

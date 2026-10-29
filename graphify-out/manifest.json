@@ -1,7 +1,7 @@
 {
   ".vscode/settings.json": {
-    "mtime": 1792584969.35126,
-    "seen": 1792706332.8808305,
+    "mtime": 1793176880.604063,
+    "seen": 1793182418.9434826,
     "ast_hash": "6fa4d79003e9e36056ed027ae39f12a9",
     "semantic_hash": ""
   },
@@ -12,21 +12,21 @@
     "semantic_hash": ""
   },
   "backend/server/Cargo.toml": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0030453,
-    "ast_hash": "a0bdbe379c37ce296b5e843fb713bd89",
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9434896,
+    "ast_hash": "707d7fe2601997e8108dbe5320df1b36",
     "semantic_hash": ""
   },
   "backend/server/src/main.rs": {
-    "mtime": 1792884142.9370666,
-    "seen": 1792941435.003051,
-    "ast_hash": "2ffd5f89f296ec3607b96dcb1fa5bb2c",
+    "mtime": 1793185594.842675,
+    "seen": 1793191154.7018645,
+    "ast_hash": "f2b2486b0f85ef2c0ad3741ffee3e425",
     "semantic_hash": ""
   },
   "crates/molting/Cargo.toml": {
-    "mtime": 1792584969.355073,
-    "seen": 1792706332.8808715,
-    "ast_hash": "9b5f23de4c9df495f713ee9c721d8bd4",
+    "mtime": 1793107914.3201642,
+    "seen": 1793110609.7428038,
+    "ast_hash": "e1219ffec0ac4f5878b0c47aaaab27c5",
     "semantic_hash": ""
   },
   "crates/molting/src/lib.rs": {
@@ -72,8 +72,8 @@
     "semantic_hash": ""
   },
   "frontend/next.config.ts": {
-    "mtime": 1792939492.3806467,
-    "seen": 1792941435.0050342,
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.9463453,
     "ast_hash": "78006f551e023ae9f5dacc7edc332acc",
     "semantic_hash": ""
   },
@@ -90,8 +90,8 @@
     "semantic_hash": "239f3ebf717465dc636818a1a619398d"
   },
   "frontend/src/app/layout.tsx": {
-    "mtime": 1792975699.840878,
-    "seen": 1792975749.551783,
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9467537,
     "ast_hash": "c1aa4d6fdff5b04ab07e4784dbbf2db5",
     "semantic_hash": ""
   },
@@ -120,9 +120,9 @@
     "semantic_hash": ""
   },
   ".cursor/AGENTS.md": {
-    "mtime": 1792975668.5168867,
-    "seen": 1792975749.5536835,
-    "ast_hash": "8371bf7a37481ca6fd7e17cdb4611245",
+    "mtime": 1793190604.8729794,
+    "seen": 1793191154.7094078,
+    "ast_hash": "3984fdcaebe0df964b10d8f2ad626a50",
     "semantic_hash": ""
   },
   "README.md": {
@@ -132,15 +132,15 @@
     "semantic_hash": ""
   },
   "backend/README.md": {
-    "mtime": 1792884142.8730667,
-    "seen": 1792941435.0055704,
-    "ast_hash": "82bae30f659168f9420df419d89f6260",
+    "mtime": 1793190605.000979,
+    "seen": 1793191154.7101617,
+    "ast_hash": "986170075a66de6ed17a88d5a56b71c6",
     "semantic_hash": ""
   },
   "frontend/README.md": {
-    "mtime": 1792973272.8016858,
-    "seen": 1792975749.5543802,
-    "ast_hash": "d413d30d45d443b7a318d8144069022f",
+    "mtime": 1793190605.0369787,
+    "seen": 1793191154.7102087,
+    "ast_hash": "11a1f55e3260a2606bfaab0a22a82ab0",
     "semantic_hash": ""
   },
   "frontend/public/file.svg": {
@@ -174,110 +174,110 @@
     "semantic_hash": ""
   },
   "frontend/src/api/errors.ts": {
-    "mtime": 1792584969.3741384,
-    "seen": 1792706332.8810234,
-    "ast_hash": "73721aac1dc774f487c0040dd192bc89",
+    "mtime": 1793234344.4273634,
+    "seen": 1793234570.789106,
+    "ast_hash": "c8b6f53193657495d3ffb6910401e35b",
     "semantic_hash": ""
   },
   "frontend/src/api/http-client.ts": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0051165,
-    "ast_hash": "b21974073f7cb8127ab92657b67ec450",
+    "mtime": 1793230614.3718352,
+    "seen": 1793230811.8184938,
+    "ast_hash": "201d36a731752a0574ba1d1fafd9aebf",
     "semantic_hash": ""
   },
   "frontend/src/api/index.ts": {
-    "mtime": 1792884143.3770666,
-    "seen": 1792941435.0051177,
-    "ast_hash": "047e442facba8854c419330be03740e2",
+    "mtime": 1793203710.045581,
+    "seen": 1793227402.2929695,
+    "ast_hash": "aa60e338f79e76a75af0c5074e074391",
     "semantic_hash": ""
   },
   "frontend/src/api/provider.tsx": {
-    "mtime": 1792884142.8730667,
-    "seen": 1792941435.0051203,
-    "ast_hash": "ebf4a08845def4bbdae00ec3b13bbad8",
+    "mtime": 1793203721.885573,
+    "seen": 1793227402.2929747,
+    "ast_hash": "58109fb016203a35f0d9279bcdb08648",
     "semantic_hash": ""
   },
   "frontend/src/api/types.ts": {
-    "mtime": 1792884142.6250668,
-    "seen": 1792941435.0051243,
-    "ast_hash": "676b0847f56bd9b404a3b657a876fb69",
+    "mtime": 1793190605.1369784,
+    "seen": 1793191154.7065828,
+    "ast_hash": "587dc516611f8a291b56e58b2b42fb10",
     "semantic_hash": ""
   },
   "frontend/src/app/providers.tsx": {
-    "mtime": 1792769427.5418549,
-    "seen": 1792769546.523357,
-    "ast_hash": "379f8a57c8e087c2858e003a610c9446",
+    "mtime": 1793190604.2649815,
+    "seen": 1793191154.706705,
+    "ast_hash": "865b9b22e6aa6727c0303dfd49cf43a2",
     "semantic_hash": ""
   },
   "frontend/src/api/hooks/index.ts": {
-    "mtime": 1792884142.6250668,
-    "seen": 1792941435.0051124,
-    "ast_hash": "5ab13d38fec3409a8be2adcda5edd2c7",
+    "mtime": 1793190604.336981,
+    "seen": 1793191154.7065299,
+    "ast_hash": "9d5cac5e0a24f99b6f320772fbb9039f",
     "semantic_hash": ""
   },
   "frontend/src/api/hooks/mutations.ts": {
-    "mtime": 1792884142.9370666,
-    "seen": 1792941435.0051136,
-    "ast_hash": "a8eee6d7356581efd2c8437aa48bc3cf",
+    "mtime": 1793230766.400169,
+    "seen": 1793230811.8183463,
+    "ast_hash": "f95b60699060ed159cc6564e609ce097",
     "semantic_hash": ""
   },
   "frontend/src/api/hooks/queries.ts": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.005115,
-    "ast_hash": "8b243ae4b37d6675940fd094e51829da",
+    "mtime": 1793204213.2222254,
+    "seen": 1793227402.2929645,
+    "ast_hash": "e1c912ddc0c75eccd6f619c838695a6c",
     "semantic_hash": ""
   },
   "frontend/src/api/query-keys.ts": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0051215,
-    "ast_hash": "b5cb2c1a641edcfa239d6e643f12d291",
+    "mtime": 1793190604.0369823,
+    "seen": 1793191154.7065783,
+    "ast_hash": "b802a7999a25a5b67e978db9afd9a872",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/alert.tsx": {
-    "mtime": 1792964234.7447157,
-    "seen": 1792964395.110146,
+    "mtime": 1793112309.3633418,
+    "seen": 1793182418.9477308,
     "ast_hash": "a6924c8f2244fa5d422d5d8e9c6dbc8d",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/button.tsx": {
-    "mtime": 1792970102.9347522,
-    "seen": 1792975749.5524993,
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9477339,
     "ast_hash": "cdd4e333574a60dfc6cd503c90bdc1e3",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/card.tsx": {
-    "mtime": 1792964335.248664,
-    "seen": 1792964395.1101508,
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.947735,
     "ast_hash": "da58ffafcdfc6fdb49c82fa43e730c26",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/checkbox.tsx": {
-    "mtime": 1792970062.0987613,
-    "seen": 1792975749.5525389,
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.9477363,
     "ast_hash": "bb9135a960c2873cd94fa53420b0352a",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/field.tsx": {
-    "mtime": 1792969362.4110067,
-    "seen": 1792975749.552582,
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9478524,
     "ast_hash": "eccdde7f2b6fef6cf9e77c447e6f632b",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/input.tsx": {
-    "mtime": 1792969949.9268098,
-    "seen": 1792975749.5525835,
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9478538,
     "ast_hash": "d0cb9f06f5335a7c8b05de06cad64320",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/label.tsx": {
-    "mtime": 1792969298.9230309,
-    "seen": 1792975749.552585,
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9478555,
     "ast_hash": "2b1fdc6cd324e87fc44822889f00042c",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/select.tsx": {
-    "mtime": 1792969908.6108038,
-    "seen": 1792975749.5527081,
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9479644,
     "ast_hash": "3340ed7020849813ddd6e7b2ba6df539",
     "semantic_hash": ""
   },
@@ -288,14 +288,14 @@
     "semantic_hash": ""
   },
   "frontend/src/components/workflow/workflow-steps.tsx": {
-    "mtime": 1792964335.264664,
-    "seen": 1792964395.1102586,
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9483266,
     "ast_hash": "fe02142fb16cf0ba279f53cf0a115e11",
     "semantic_hash": ""
   },
   "frontend/src/lib/cn.ts": {
-    "mtime": 1792939492.4486465,
-    "seen": 1792941435.005306,
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9483283,
     "ast_hash": "69f9818d9646b463ddd7aaf7035c3229",
     "semantic_hash": ""
   },
@@ -318,15 +318,15 @@
     "semantic_hash": ""
   },
   "backend/server/src/config.rs": {
-    "mtime": 1792884142.6250668,
-    "seen": 1792941435.0030491,
-    "ast_hash": "7d3c511648da3cb1ee7db01921767e27",
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.9434927,
+    "ast_hash": "b28738bc32092709b595da57f7cdaa79",
     "semantic_hash": ""
   },
   "frontend/src/components/layout/app-shell.tsx": {
-    "mtime": 1792964234.7487156,
-    "seen": 1792964395.110091,
-    "ast_hash": "28c400c6cc8345714a63a2cee2596b49",
+    "mtime": 1793230995.1816027,
+    "seen": 1793234570.7904086,
+    "ast_hash": "6e8c937099db9ba8f921d0164657febb",
     "semantic_hash": ""
   },
   "frontend/src/components/layout/page-chrome.tsx": {
@@ -336,26 +336,26 @@
     "semantic_hash": ""
   },
   "frontend/src/components/layout/sidebar.tsx": {
-    "mtime": 1792975946.7327964,
-    "seen": 1792976128.9341192,
+    "mtime": 1793112309.3633418,
+    "seen": 1793182418.9477289,
     "ast_hash": "01719752ec14aa1d92288d764a7e8099",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/badge.tsx": {
-    "mtime": 1792964673.580801,
-    "seen": 1792964753.6387713,
+    "mtime": 1793112309.3633418,
+    "seen": 1793182418.9477324,
     "ast_hash": "d1588011ebedfa28a5413a74a7879b0b",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/search-input.tsx": {
-    "mtime": 1792969911.4788022,
-    "seen": 1792975749.5527067,
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9479632,
     "ast_hash": "d068b434bd2cb3ebbad527b357ecccd9",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/table.tsx": {
-    "mtime": 1792964242.8967142,
-    "seen": 1792964395.1102498,
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9481158,
     "ast_hash": "e7ec591d6151be938762e8fa87d18ecd",
     "semantic_hash": ""
   },
@@ -372,20 +372,20 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/navigation.ts": {
-    "mtime": 1792884142.8730667,
-    "seen": 1792941435.0053754,
-    "ast_hash": "c5c6b0de919ff7721241cbd3b0ffcce6",
+    "mtime": 1793230627.6249464,
+    "seen": 1793230811.8289433,
+    "ast_hash": "ee975112c5e6890e29f10a590d981b76",
     "semantic_hash": ""
   },
   "frontend/src/api/schema.ts": {
-    "mtime": 1793006391.1726105,
-    "seen": 1793006451.0447972,
-    "ast_hash": "b280187c1159e8ef8c1bd9a59c55490b",
+    "mtime": 1793227419.0488403,
+    "seen": 1793230811.818797,
+    "ast_hash": "7cf35f7a6a27f17e051c9df9d0b32982",
     "semantic_hash": ""
   },
   "frontend/src/app/page.tsx": {
-    "mtime": 1792964234.7047157,
-    "seen": 1792964395.1099606,
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.9467566,
     "ast_hash": "1678054a4b600c14b6ec4668e99b4fc3",
     "semantic_hash": ""
   },
@@ -396,9 +396,9 @@
     "semantic_hash": ""
   },
   ".github/CONTRIBUTING.md": {
-    "mtime": 1792973282.309685,
-    "seen": 1792975749.5537822,
-    "ast_hash": "ed0255644488b4e274c88ce3a7253d40",
+    "mtime": 1793110140.133398,
+    "seen": 1793110609.753382,
+    "ast_hash": "3f07f298793d4ed1b3db627cfb990081",
     "semantic_hash": ""
   },
   ".github/ISSUE_TEMPLATE/bug.yml": {
@@ -444,9 +444,9 @@
     "semantic_hash": ""
   },
   "CHANGELOG.md": {
-    "mtime": 1792884142.9370666,
-    "seen": 1792941435.005568,
-    "ast_hash": "ee89e413cec3398acaada7690c1cbae2",
+    "mtime": 1793190605.0729787,
+    "seen": 1793191154.7101316,
+    "ast_hash": "98bc6afc328b5cb48b0d92117e1c9c31",
     "semantic_hash": ""
   },
   "specs/3d_archery_tracking_austria_product_requirements_document.md": {
@@ -456,8 +456,8 @@
     "semantic_hash": ""
   },
   "specs/README.md": {
-    "mtime": 1793006439.5521202,
-    "seen": 1793006451.0481915,
+    "mtime": 1793008732.2251258,
+    "seen": 1793029949.6317523,
     "ast_hash": "0f3556bfdcf3bf8e3c4d5225f9663485",
     "semantic_hash": ""
   },
@@ -468,15 +468,15 @@
     "semantic_hash": ""
   },
   "specs/decisions/0001-baseline-architecture.md": {
-    "mtime": 1792884143.3570666,
-    "seen": 1792941435.0056453,
-    "ast_hash": "dca616381552453bce8aed0ece60e432",
+    "mtime": 1793080778.530037,
+    "seen": 1793086349.9189317,
+    "ast_hash": "faa0b4e561494c2d50d7be522321fa12",
     "semantic_hash": ""
   },
   "specs/decisions/README.md": {
-    "mtime": 1792939492.5086465,
-    "seen": 1792941435.0056493,
-    "ast_hash": "7976cb49655021148fa652bedfe86738",
+    "mtime": 1793012083.2501519,
+    "seen": 1793029949.6318548,
+    "ast_hash": "32956e7bc80ff7038df753b17dbe73bb",
     "semantic_hash": ""
   },
   "specs/legacy/README.md": {
@@ -510,15 +510,15 @@
     "semantic_hash": ""
   },
   "specs/product/charter.md": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0057817,
-    "ast_hash": "fec61af4c1fb90ff2849c6435be89f63",
+    "mtime": 1793013575.7324967,
+    "seen": 1793029949.6320195,
+    "ast_hash": "3dabb8bfbeb947e270cf53ef9f272d6f",
     "semantic_hash": ""
   },
   "specs/product/wertung.md": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0057867,
-    "ast_hash": "f3ad4f6ffbdb55892ce63b5ba24d7b0f",
+    "mtime": 1793008733.0602908,
+    "seen": 1793029949.6320257,
+    "ast_hash": "407a4d6d4b67fc017edc101f7e27b2fd",
     "semantic_hash": ""
   },
   ".cursor/agents/m1-implementer.md": {
@@ -540,63 +540,63 @@
     "semantic_hash": ""
   },
   "specs/decisions/0002-session-cookie-auth.md": {
-    "mtime": 1792978385.1399512,
-    "seen": 1792978414.6239483,
-    "ast_hash": "81830fcf5d81678f6f23bfa3b7c0ba86",
+    "mtime": 1793034558.8174884,
+    "seen": 1793035566.9984646,
+    "ast_hash": "36921405a5f2a428448a504149827cac",
     "semantic_hash": ""
   },
   "specs/product/betrieb.md": {
-    "mtime": 1792884143.3770666,
-    "seen": 1792941435.0057805,
-    "ast_hash": "ff5af04cf45774865a727122b1a87136",
+    "mtime": 1793012100.838147,
+    "seen": 1793029949.632018,
+    "ast_hash": "082ce57394a01aa277840bbf56bcd420",
     "semantic_hash": ""
   },
   "specs/product/datenschutz.md": {
-    "mtime": 1792978379.2119672,
-    "seen": 1792978414.6242557,
-    "ast_hash": "8162d34be2a28798ee409b95228fe0e4",
+    "mtime": 1793013563.3245,
+    "seen": 1793029949.6320205,
+    "ast_hash": "3a81c3a51f4fb9269b19fc243e5c131e",
     "semantic_hash": ""
   },
   "specs/product/konto.md": {
-    "mtime": 1792978398.3999565,
-    "seen": 1792978414.6242573,
-    "ast_hash": "c19cfd9c8d182e942378440daea16f73",
+    "mtime": 1793112308.9792917,
+    "seen": 1793182418.950082,
+    "ast_hash": "19b0d17df3dcaf32691abfb356b18051",
     "semantic_hash": ""
   },
   "crates/logandaim-api/Cargo.toml": {
-    "mtime": 1792769427.4898548,
-    "seen": 1792769546.5227745,
-    "ast_hash": "e3d6803546e2bf071b94ec713558e27c",
+    "mtime": 1793191078.8768327,
+    "seen": 1793191154.7019029,
+    "ast_hash": "62f13c15614ba95c745ffdaa165bfd30",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/api/mod.rs": {
-    "mtime": 1792884142.9370666,
-    "seen": 1792941435.003139,
-    "ast_hash": "49edf6207af9784c107f7a3cd48723d9",
+    "mtime": 1793191671.3046257,
+    "seen": 1793192801.4682753,
+    "ast_hash": "b43ca18038ade45047167089fbc86806",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/api/requests/mod.rs": {
-    "mtime": 1792884142.9370666,
-    "seen": 1792941435.0031407,
-    "ast_hash": "c71b32cb6dfa979d3e5fb58d069f4347",
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9436386,
+    "ast_hash": "8a92b66cbeb5398262640c299823f248",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/bin/export_spec.rs": {
-    "mtime": 1792769427.4938548,
-    "seen": 1792769546.5227811,
-    "ast_hash": "4a59771cdb9143c5e045a215d2c4d353",
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9436822,
+    "ast_hash": "c1e3a60731bb19dfe9b916e31f8a1000",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/errors/http_status.rs": {
-    "mtime": 1792884142.9450667,
-    "seen": 1792941435.0032406,
-    "ast_hash": "f388a5850332d1b70b90321b3be121ae",
+    "mtime": 1793177311.171372,
+    "seen": 1793182418.9436836,
+    "ast_hash": "8715215eae28d4311b97f71c0832e2d4",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/errors/internal_error.rs": {
-    "mtime": 1792769427.4938548,
-    "seen": 1792769546.5227838,
-    "ast_hash": "7521bddeb5cbd71f0d236209122375c2",
+    "mtime": 1793110053.585706,
+    "seen": 1793110609.7348459,
+    "ast_hash": "d21fffd2f3ec07b1f82d661ed05d5a56",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/errors/mod.rs": {
@@ -606,9 +606,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/errors/structured_error.rs": {
-    "mtime": 1792769427.4938548,
-    "seen": 1792769546.5227861,
-    "ast_hash": "3cecd55e31ba9569c965b87f84d1fcc0",
+    "mtime": 1793110053.585706,
+    "seen": 1793110609.735046,
+    "ast_hash": "c5e3d5e35454ef2ff3e4c706710920d0",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/errors/validation_error.rs": {
@@ -618,33 +618,27 @@
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/lib.rs": {
-    "mtime": 1792861039.7864747,
-    "seen": 1792867749.2880816,
-    "ast_hash": "d5a0844255f3b178cf085b79c642e9be",
+    "mtime": 1793177636.062903,
+    "seen": 1793182418.9438446,
+    "ast_hash": "a75635adc65a5e19cfd0afd661915da3",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/schema/mod.rs": {
-    "mtime": 1792884142.6250668,
-    "seen": 1792941435.0034475,
-    "ast_hash": "701d3e97dd9ca7d37c6da9d6606a16f1",
-    "semantic_hash": ""
-  },
-  "crates/logandaim-api/src/spec.rs": {
-    "mtime": 1792884142.8730667,
-    "seen": 1792941435.003451,
-    "ast_hash": "66b452b443ae43d147fd000241f7a95d",
+    "mtime": 1793177311.1753736,
+    "seen": 1793182418.9438863,
+    "ast_hash": "32322c73dd6e7cc09a0d5ef7fff9bae6",
     "semantic_hash": ""
   },
   "crates/logandaim-api/tests/e2e/main.rs": {
-    "mtime": 1792884142.9450667,
-    "seen": 1792941435.003453,
-    "ast_hash": "4e428bfe278b02e637e1799cb2da0495",
+    "mtime": 1793177974.9663844,
+    "seen": 1793182418.9439662,
+    "ast_hash": "7dabf2e4da85f8ae0ec8cc5fa189afa4",
     "semantic_hash": ""
   },
   "crates/logandaim-core/Cargo.toml": {
-    "mtime": 1792769427.501855,
-    "seen": 1792769546.5227966,
-    "ast_hash": "c6de5b6e106378e84621374d49335c0e",
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9440036,
+    "ast_hash": "5adeaeeba9b613b27ea466838b0059ec",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/adapters/blank_pdf_renderer.rs": {
@@ -660,9 +654,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/adapters/mod.rs": {
-    "mtime": 1792769427.501855,
-    "seen": 1792769546.5228007,
-    "ast_hash": "5a958458677f5ce804af17ba0d4f2101",
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.9441204,
+    "ast_hash": "dcb36b5fd98c61a080c411248455dac7",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/adapters/system_clock.rs": {
@@ -672,9 +666,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/application/context.rs": {
-    "mtime": 1792769427.501855,
-    "seen": 1792769546.5228033,
-    "ast_hash": "7320d808cef8af8b81fb6e69a25671ac",
+    "mtime": 1793177311.1753736,
+    "seen": 1793182418.944196,
+    "ast_hash": "41440236e5c6a4861c561e785ee13ab4",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/application/errors.rs": {
@@ -684,21 +678,21 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/application/instrumented.rs": {
-    "mtime": 1792884142.8730667,
-    "seen": 1792941435.0037344,
-    "ast_hash": "062afe0e855a2afb3ac08cb0b655dbcb",
+    "mtime": 1793191678.3446376,
+    "seen": 1793192801.4696155,
+    "ast_hash": "872402ed63f5061558f9cf50c76de0d1",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/application/instrumented_repos.rs": {
-    "mtime": 1792884142.8730667,
-    "seen": 1792941435.003736,
-    "ast_hash": "91d60fe75c9f9f168aae953a9143920a",
+    "mtime": 1793177311.1753736,
+    "seen": 1793182418.9442346,
+    "ast_hash": "2b123ac0102fb43818c16befdc6e0d0b",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/application/mod.rs": {
-    "mtime": 1792769427.501855,
-    "seen": 1792769546.5228083,
-    "ast_hash": "d6affa5c568f71c0d2bdcd003d7aabd6",
+    "mtime": 1793177311.1753736,
+    "seen": 1793182418.9442737,
+    "ast_hash": "36e2c520df0f9181baad4bc919ec9d20",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/application/ports/clock.rs": {
@@ -708,9 +702,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/application/ports/mod.rs": {
-    "mtime": 1792769427.5058548,
-    "seen": 1792769546.5228112,
-    "ast_hash": "34dda0fc32d8dd5db482a90b6618574e",
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9443536,
+    "ast_hash": "a57ff7ba406c30b0f62cf765e77c56b3",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/application/ports/object_store.rs": {
@@ -726,15 +720,15 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/application/ports/repos.rs": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0039382,
-    "ast_hash": "c7e9bebd25db7a4ae3891538a355ba3b",
+    "mtime": 1793177311.1753736,
+    "seen": 1793182418.9444313,
+    "ast_hash": "07b3e038302d5e03d393022177b14ebe",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/application/uow.rs": {
-    "mtime": 1792884142.6250668,
-    "seen": 1792941435.0039396,
-    "ast_hash": "5422b93cf0b19194fa12c95e5ea116e3",
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9445412,
+    "ast_hash": "40240ae6c9693417cfb2a995b0228ba6",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/adresse.rs": {
@@ -744,9 +738,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/kontakt.rs": {
-    "mtime": 1792769427.5058548,
-    "seen": 1792769546.5228179,
-    "ast_hash": "fe0296d5e1ebe350f0a06c747bd75609",
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9445858,
+    "ast_hash": "5ea40bad1d66303a33686d9719c5634a",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/menge.rs": {
@@ -756,9 +750,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/mod.rs": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.004078,
-    "ast_hash": "d0addd7dbb171f60d57da0edf7020455",
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9448285,
+    "ast_hash": "1484369659cfbbd14c0ad6e219271bee",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/preis.rs": {
@@ -792,15 +786,15 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/service/mod.rs": {
-    "mtime": 1792769427.5058548,
-    "seen": 1792769546.5228298,
+    "mtime": 1793101747.6532974,
+    "seen": 1793110609.7394135,
     "ast_hash": "7f1169c880e322de712e79361222fcf5",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/service/use_cases/mod.rs": {
-    "mtime": 1792884142.9450667,
-    "seen": 1792941435.0042713,
-    "ast_hash": "e97e006dc5a1fddf5415c3fd02f1ab47",
+    "mtime": 1793177569.0395904,
+    "seen": 1793182418.9450805,
+    "ast_hash": "4ef749cf419e7d70897201baeaa4b51f",
     "semantic_hash": ""
   },
   "crates/logandaim-core/tests/business_conform.rs": {
@@ -810,15 +804,15 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/tests/cases/mod.rs": {
-    "mtime": 1792884142.9370666,
-    "seen": 1792941435.004313,
-    "ast_hash": "7c91564642711c4dc66d75443e917462",
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.9451642,
+    "ast_hash": "55872d6ba508d17ebe67ce0a92690dc6",
     "semantic_hash": ""
   },
   "crates/logandaim-fakes/Cargo.toml": {
-    "mtime": 1792769427.5098548,
-    "seen": 1792769546.5228372,
-    "ast_hash": "1dab03a42ac3daf045c8e644addacfed",
+    "mtime": 1793107893.3443332,
+    "seen": 1793110609.740217,
+    "ast_hash": "5411ce9311d5d67f98941ccb10ebb889",
     "semantic_hash": ""
   },
   "crates/logandaim-fakes/src/clock.rs": {
@@ -828,8 +822,8 @@
     "semantic_hash": ""
   },
   "crates/logandaim-fakes/src/lib.rs": {
-    "mtime": 1792884143.3770666,
-    "seen": 1792941435.004393,
+    "mtime": 1793109131.3535316,
+    "seen": 1793110609.7403426,
     "ast_hash": "dc1181ace97d05735174699cdef996bb",
     "semantic_hash": ""
   },
@@ -846,15 +840,15 @@
     "semantic_hash": ""
   },
   "crates/logandaim-fakes/src/uow.rs": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0044718,
-    "ast_hash": "b2c0ffefb897b8a8c263c78b04a3e07d",
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9453351,
+    "ast_hash": "7766f30d4f48042b5f9abd8652c67512",
     "semantic_hash": ""
   },
   "crates/logandaim-filesystemstore/Cargo.toml": {
-    "mtime": 1792769427.5138547,
-    "seen": 1792769546.5228453,
-    "ast_hash": "05f086892ef5400f5be795f851d16db2",
+    "mtime": 1793107897.34291,
+    "seen": 1793110609.740579,
+    "ast_hash": "f0de65ba3699c8d92b6fbf39d9541eb9",
     "semantic_hash": ""
   },
   "crates/logandaim-filesystemstore/src/lib.rs": {
@@ -864,9 +858,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/Cargo.toml": {
-    "mtime": 1792769427.5178547,
-    "seen": 1792769546.5228474,
-    "ast_hash": "8354272c00bbc1874b6f15bb3604fb0e",
+    "mtime": 1793107909.1845362,
+    "seen": 1793110609.7410061,
+    "ast_hash": "922711661acc1b21ab0550376ccd263c",
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/src/errors.rs": {
@@ -876,33 +870,33 @@
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/src/lib.rs": {
-    "mtime": 1792769427.5178547,
-    "seen": 1792769546.5228496,
-    "ast_hash": "46ef8f9837da749d407f9bc3068e9881",
+    "mtime": 1793110175.213393,
+    "seen": 1793110609.7411826,
+    "ast_hash": "229eea038afa641038f13c45437ca3ec",
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/src/migrations/mod.rs": {
-    "mtime": 1792884143.3770666,
-    "seen": 1792941435.0046656,
-    "ast_hash": "c9c83f22ea25f55acc8fe5adcc38c778",
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.9456592,
+    "ast_hash": "209e15f1c3cad7fc8b9ebdd0f119cff2",
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/src/repos/common.rs": {
-    "mtime": 1792769427.5218549,
-    "seen": 1792769546.5228527,
-    "ast_hash": "0f2fa8ec241307a7371dc79f9df63d7c",
+    "mtime": 1793087868.8082514,
+    "seen": 1793088728.8554654,
+    "ast_hash": "98193eb1fe13dde949a7926a106ef933",
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/src/repos/mod.rs": {
-    "mtime": 1792884142.9450667,
-    "seen": 1792941435.0047097,
-    "ast_hash": "6b088511a143192120511882c10bfd82",
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.945859,
+    "ast_hash": "cf4607b4d32085976fc95ff018fe1bdb",
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/src/uow.rs": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.004712,
-    "ast_hash": "96f5339bfd36dbe26ac76386df8bbbfa",
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9459016,
+    "ast_hash": "d2ed0355539ca315b5d27a2af4bde8bd",
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/tests/business_conform.rs": {
@@ -912,33 +906,33 @@
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/tests/wal_connection_race.rs": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0047517,
-    "ast_hash": "dc0132a527581e3534243dffd48d25dd",
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9459794,
+    "ast_hash": "7fe6b22b262d9107f313c7b3f1aebfce",
     "semantic_hash": ""
   },
   "frontend/src/api/logandaim-api.ts": {
-    "mtime": 1792884143.3770666,
-    "seen": 1792941435.005119,
-    "ast_hash": "65bd64138f246a1f4983614010f628e2",
+    "mtime": 1793230609.7740464,
+    "seen": 1793230811.8185973,
+    "ast_hash": "9ca61a7e49a2b3583372ff1d35272230",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/README.md": {
-    "mtime": 1793006353.5788877,
-    "seen": 1793006366.128173,
+    "mtime": 1793112308.7472613,
+    "seen": 1793182418.9495833,
     "ast_hash": "a5e13fcbea4a362734f501364b3fc61c",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/api/requests/schuss.rs": {
-    "mtime": 1792884142.9370666,
-    "seen": 1792941435.0031426,
-    "ast_hash": "eb7d4de3f7a1466c5ecddc11b963e3eb",
+    "mtime": 1793110053.585706,
+    "seen": 1793110609.7343237,
+    "ast_hash": "1a8391c6e793d0fd9ac5970315deea08",
     "semantic_hash": ""
   },
   "crates/logandaim-api/src/schema/schuss.rs": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0034497,
-    "ast_hash": "d7fba0a60ea74d8977f96beda52ccd6d",
+    "mtime": 1793110053.585706,
+    "seen": 1793110609.7353523,
+    "ast_hash": "fbfc237866798e65669ba4a4ab4c9613",
     "semantic_hash": ""
   },
   "crates/logandaim-api/tests/e2e/schuss.rs": {
@@ -948,27 +942,27 @@
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/domain/schuss.rs": {
-    "mtime": 1792884142.6130667,
-    "seen": 1792941435.004159,
-    "ast_hash": "ca00fba698ff0ee33473176dd45fdc4a",
+    "mtime": 1793034558.5974884,
+    "seen": 1793035566.9933238,
+    "ast_hash": "697b32b90de49f705703b56a6306faf2",
     "semantic_hash": ""
   },
   "crates/logandaim-core/src/service/use_cases/schuss.rs": {
-    "mtime": 1792884142.6130667,
-    "seen": 1792941435.004273,
-    "ast_hash": "6b1b1a7f4d37c34b2e844597f2cdbb0f",
+    "mtime": 1793088111.016272,
+    "seen": 1793088728.8547492,
+    "ast_hash": "15129d6af73fb85fe0c8642942396d49",
     "semantic_hash": ""
   },
   "crates/logandaim-core/tests/cases/schuss.rs": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.0043144,
-    "ast_hash": "d135c2aa7650f4a2aea2cf1c36a46564",
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9451654,
+    "ast_hash": "80fc89a37a9d8addecd09c17a1e7ca3d",
     "semantic_hash": ""
   },
   "crates/logandaim-fakes/src/repository.rs": {
-    "mtime": 1792884142.9370666,
-    "seen": 1792941435.0044706,
-    "ast_hash": "5376a63caf4fb2fcca757dd64342b0cf",
+    "mtime": 1793177998.0518754,
+    "seen": 1793182418.945334,
+    "ast_hash": "dca69dc6d1d8800204919692a642aa46",
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/src/migrations/v0001_schuss.rs": {
@@ -978,9 +972,9 @@
     "semantic_hash": ""
   },
   "crates/logandaim-sqlite/src/repos/schuss.rs": {
-    "mtime": 1792884143.3730664,
-    "seen": 1792941435.004711,
-    "ast_hash": "7b58395e61da22005ffd6d3036ab710c",
+    "mtime": 1793087761.6251059,
+    "seen": 1793088728.855507,
+    "ast_hash": "dacd49e9952745660d3bf1f8b8f012e5",
     "semantic_hash": ""
   },
   "frontend/src/app/schuss/page.tsx": {
@@ -990,9 +984,9 @@
     "semantic_hash": ""
   },
   "docs/vertical-slice.md": {
-    "mtime": 1792884142.6250668,
-    "seen": 1792941435.005608,
-    "ast_hash": "c6148406bb64ed51201a383528e9ad77",
+    "mtime": 1793190604.8369794,
+    "seen": 1793191154.7102067,
+    "ast_hash": "5db51d33222ca36feeae9acd2f1ee3a1",
     "semantic_hash": ""
   },
   ".github/PULL_REQUEST_TEMPLATE/release.md": {
@@ -1008,9 +1002,9 @@
     "semantic_hash": ""
   },
   ".github/workflows/ci.yml": {
-    "mtime": 1792913010.92656,
-    "seen": 1792941435.005562,
-    "ast_hash": "967d5016a76bfc4b170c5d21a3b59ae9",
+    "mtime": 1793114451.698886,
+    "seen": 1793182418.9493463,
+    "ast_hash": "b296aeb4b11c814da20fed42aa7544e2",
     "semantic_hash": ""
   },
   ".github/workflows/main.yml": {
@@ -1080,8 +1074,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/ui/dropdown-menu.tsx": {
-    "mtime": 1792970047.2347667,
-    "seen": 1792975749.5525806,
+    "mtime": 1793230820.1557345,
+    "seen": 1793234570.7907317,
     "ast_hash": "3428acc34eb55eb4150cc76622d68070",
     "semantic_hash": ""
   },
@@ -1200,15 +1194,15 @@
     "semantic_hash": ""
   },
   "specs/product/visual-identity.md": {
-    "mtime": 1792973237.0656934,
-    "seen": 1792975749.5549066,
-    "ast_hash": "0d01b1f0f69771c0cc4291ba36c9d449",
+    "mtime": 1793008733.0602908,
+    "seen": 1793029949.6320243,
+    "ast_hash": "5b538f4336836b1f66e4dc5b779cdb63",
     "semantic_hash": ""
   },
   "frontend/src/components/ui/checkpoint-slider.tsx": {
-    "mtime": 1792970130.0507448,
-    "seen": 1792975749.5525413,
-    "ast_hash": "752d32d1359384fa144302116c661ec2",
+    "mtime": 1793034558.8774884,
+    "seen": 1793035566.9961913,
+    "ast_hash": "ebb04982f77cb3f28d7c5626c9462bb3",
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/data-figures-section.tsx": {
@@ -1272,9 +1266,9 @@
     "semantic_hash": ""
   },
   "frontend/src/components/dev-gallery/demo-page.tsx": {
-    "mtime": 1792970225.85468,
-    "seen": 1792975749.552089,
-    "ast_hash": "64b8d2e316c53cf09d58b6e243a0a026",
+    "mtime": 1793034492.5095024,
+    "seen": 1793035566.99567,
+    "ast_hash": "35f6f3a237f61b503cd1b9982959e556",
     "semantic_hash": ""
   },
   "assets/favicon.png": {
@@ -1317,6 +1311,360 @@
     "mtime": 1792968054.0,
     "seen": 1792975749.5550218,
     "ast_hash": "06d00aaf5100d407d5a229373e624361",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/src/api/requests/konto.rs": {
+    "mtime": 1793110517.5852916,
+    "seen": 1793110609.7341652,
+    "ast_hash": "0b695b8334ed40ef8f9c50f59c061917",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/src/schema/konto.rs": {
+    "mtime": 1793179718.939224,
+    "seen": 1793182418.9438848,
+    "ast_hash": "7b76a408aa18c48ca3456992afe4772a",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/tests/e2e/konto.rs": {
+    "mtime": 1793192656.9722877,
+    "seen": 1793192801.4690716,
+    "ast_hash": "6b5d50dff93668969c7bc2af135be6d9",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/tests/e2e/mailpit.rs": {
+    "mtime": 1793088071.6282842,
+    "seen": 1793088728.8530588,
+    "ast_hash": "75077c687de7916a90794fc31aaf1c54",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/application/auth.rs": {
+    "mtime": 1793081597.541764,
+    "seen": 1793086349.9038346,
+    "ast_hash": "1c88862bc18d58a74d1c9228603b7ea0",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/application/konfiguration.rs": {
+    "mtime": 1793104250.9444363,
+    "seen": 1793110609.736514,
+    "ast_hash": "c5dd9f52fc15f3e86eb308a932101217",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/application/ports/mail.rs": {
+    "mtime": 1793085736.247067,
+    "seen": 1793086349.9039803,
+    "ast_hash": "4425f4b30ff76304f1f4c4d83e893a52",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/domain/konto/benutzer.rs": {
+    "mtime": 1793081380.6858306,
+    "seen": 1793086349.904111,
+    "ast_hash": "faaf721fd0f8bd827ac0776662d1ab13",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/domain/konto/bestaetigung.rs": {
+    "mtime": 1793086245.376896,
+    "seen": 1793086349.9041128,
+    "ast_hash": "c05954e4f252f33489ff0de58dc32b62",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/domain/konto/claims.rs": {
+    "mtime": 1793177781.4435222,
+    "seen": 1793182418.944669,
+    "ast_hash": "28ef218545ebd5be2aab6e578f9b7c16",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/domain/konto/konto.rs": {
+    "mtime": 1793100738.22161,
+    "seen": 1793110609.738116,
+    "ast_hash": "d1df4c89840d697b14849dcac3defabb",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/domain/konto/mod.rs": {
+    "mtime": 1793177311.179375,
+    "seen": 1793182418.9447086,
+    "ast_hash": "e3b5863902d94f922548aab0c5a20644",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/domain/konto/passwort.rs": {
+    "mtime": 1793108109.256766,
+    "seen": 1793110609.738125,
+    "ast_hash": "63c4d5965672008289415225715e07ce",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/domain/konto/session.rs": {
+    "mtime": 1793177311.179375,
+    "seen": 1793182418.9447885,
+    "ast_hash": "5847e6c160eb9dd53d0faea2b611327e",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/domain/konto/signing.rs": {
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9447901,
+    "ast_hash": "99e848d2ce6f19d44cef97b2078e30ae",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/domain/konto/token.rs": {
+    "mtime": 1793171168.9755614,
+    "seen": 1793182418.944791,
+    "ast_hash": "d01ea0f15190af317296e3ddbda5870b",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/tests/cases/helpers.rs": {
+    "mtime": 1793177974.9704144,
+    "seen": 1793182418.9451616,
+    "ast_hash": "18aa62754122d75c5607da56df1b2d1d",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/tests/cases/konto.rs": {
+    "mtime": 1793178650.653702,
+    "seen": 1793182418.945163,
+    "ast_hash": "c307fa75d06aba313edf0020b81593f0",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-smtp/Cargo.toml": {
+    "mtime": 1793107903.9556913,
+    "seen": 1793110609.7406971,
+    "ast_hash": "6ee83145ca94875689f80c31bfc8d057",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-smtp/src/lib.rs": {
+    "mtime": 1793109285.6454685,
+    "seen": 1793110609.7407012,
+    "ast_hash": "337b4a041729d30addd2c13f74169a9c",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-smtp/tests/mail.rs": {
+    "mtime": 1793085824.781312,
+    "seen": 1793086349.9049816,
+    "ast_hash": "365eea86c1092b8f1040d023a71ef812",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-sqlite/src/migrations/v0002_konto.rs": {
+    "mtime": 1793109257.4747593,
+    "seen": 1793110609.7414448,
+    "ast_hash": "47bc241b1651c5292ffc840be7696d0b",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-sqlite/src/repos/benutzer.rs": {
+    "mtime": 1793087692.2061703,
+    "seen": 1793088728.8554623,
+    "ast_hash": "66819869c5ef943a3b46d5884b33ca35",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-sqlite/src/repos/bestaetigung.rs": {
+    "mtime": 1793177311.1833766,
+    "seen": 1793182418.945781,
+    "ast_hash": "5af7a3fdf4e403e81e5cde0053b7a4ce",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-sqlite/src/repos/konto.rs": {
+    "mtime": 1793109091.8977778,
+    "seen": 1793110609.7418256,
+    "ast_hash": "fcf050e619f8f72ef7d9bd9ec96b0cc7",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-sqlite/src/repos/session.rs": {
+    "mtime": 1793177311.1833766,
+    "seen": 1793182418.9459,
+    "ast_hash": "357bf903e5093b21bbe8426e3de27217",
+    "semantic_hash": ""
+  },
+  "specs/decisions/0004-jwt-refresh-auth.md": {
+    "mtime": 1793190604.9689791,
+    "seen": 1793191154.7104065,
+    "ast_hash": "3ae3d90ffca5bc38a88061e5c7ec5326",
+    "semantic_hash": ""
+  },
+  "specs/product/anlage-anfrage.md": {
+    "mtime": 1793013563.3205001,
+    "seen": 1793029949.6320162,
+    "ast_hash": "1062d8d75a7bac2ec042288ee44b465b",
+    "semantic_hash": ""
+  },
+  "specs/product/stammdaten.md": {
+    "mtime": 1793112308.43122,
+    "seen": 1793182418.9500833,
+    "ast_hash": "ec0739094d4a5efb75f13df437d86640",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-sqlite/tests/memory_url.rs": {
+    "mtime": 1793086159.8901937,
+    "seen": 1793086349.9052422,
+    "ast_hash": "7e55a7cbd93e1010e923db89ea2975c0",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/adapters/in_memory_throttle.rs": {
+    "mtime": 1793192656.9922879,
+    "seen": 1793192801.469285,
+    "ast_hash": "6a8b797230d415484f55c79c259bf1e9",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/adapters/signing.rs": {
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.944123,
+    "ast_hash": "fcbcb652c6c3dd28d78b21910726484f",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/application/ports/signing.rs": {
+    "mtime": 1793109053.0977905,
+    "seen": 1793110609.7372885,
+    "ast_hash": "9f727f68bbb28995129782254519cc6f",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/application/ports/throttle.rs": {
+    "mtime": 1793191678.3446376,
+    "seen": 1793192801.470052,
+    "ast_hash": "61a37512e129862969578585547af2d1",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/domain/konto/passwort_wiederherstellung.rs": {
+    "mtime": 1793081405.6978273,
+    "seen": 1793086349.9041743,
+    "ast_hash": "4dab217d02f776ab6d57e001acfddb6f",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/service/use_cases/login.rs": {
+    "mtime": 1793192491.1883674,
+    "seen": 1793192801.4710019,
+    "ast_hash": "38d1e99256f15eef8b033cdbe5903835",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/service/use_cases/password.rs": {
+    "mtime": 1793191678.3446376,
+    "seen": 1793192801.4710433,
+    "ast_hash": "964c5cc4d55306848d43d50cfb6cb7db",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/service/use_cases/registration.rs": {
+    "mtime": 1793191678.3446376,
+    "seen": 1793192801.4710448,
+    "ast_hash": "16c6133e32c1c1014e440afb774f62f2",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/service/use_cases/session.rs": {
+    "mtime": 1793191671.3046257,
+    "seen": 1793192801.4710834,
+    "ast_hash": "b4cb72f9a3cf8bc472aa6f1b32f282b8",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/service/use_cases/user.rs": {
+    "mtime": 1793177311.179375,
+    "seen": 1793182418.945126,
+    "ast_hash": "5eec84d6a4e96751ea61c0d92d6292d9",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-sqlite/src/repos/passwort_wiederherstellung.rs": {
+    "mtime": 1793177311.1833766,
+    "seen": 1793182418.9458609,
+    "ast_hash": "8d7f1d1d2c3ab6362c70fea2a5cc3372",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/src/schema/kontakt.rs": {
+    "mtime": 1793110501.301307,
+    "seen": 1793110609.7353406,
+    "ast_hash": "018fa8925d80f12239cfa1ae3bef3594",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/src/adapters/null_mail_sender.rs": {
+    "mtime": 1793112308.975291,
+    "seen": 1793182418.9441218,
+    "ast_hash": "a0ac4b36004e8f705a9af9a730458297",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-core/tests/throttle.rs": {
+    "mtime": 1793192657.0482876,
+    "seen": 1793192801.4712963,
+    "ast_hash": "dc12740c7f87e030d75f82074b70b40e",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/src/http/auth.rs": {
+    "mtime": 1793179969.559787,
+    "seen": 1793182418.943835,
+    "ast_hash": "0c351d8f77013aa1a4a4408aac2ab4bd",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/src/http/cookie.rs": {
+    "mtime": 1793177311.1753736,
+    "seen": 1793182418.943837,
+    "ast_hash": "54963840810ccec8cfcdb99c2996cf17",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/src/http/extractors.rs": {
+    "mtime": 1793177568.9515903,
+    "seen": 1793182418.943838,
+    "ast_hash": "9ebd12fd665d7fc83c78a231594ab38c",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/src/http/jwt.rs": {
+    "mtime": 1793180576.3426569,
+    "seen": 1793182418.9438393,
+    "ast_hash": "5e913ce27598d1db170d33ba6a839c06",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/src/http/mod.rs": {
+    "mtime": 1793191054.0008385,
+    "seen": 1793191154.7023973,
+    "ast_hash": "684b7ab5e8095774b54f233deb886a10",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/src/http/responses/mod.rs": {
+    "mtime": 1793177568.9595904,
+    "seen": 1793182418.9438417,
+    "ast_hash": "f7c44f216c86e7278556fb0deb2e9f2b",
+    "semantic_hash": ""
+  },
+  "crates/logandaim-api/src/http/responses/session.rs": {
+    "mtime": 1793230210.5755825,
+    "seen": 1793230811.805084,
+    "ast_hash": "e17764f532ef029ef64cf838f91d5b06",
+    "semantic_hash": ""
+  },
+  "frontend/src/api/auth-provider.tsx": {
+    "mtime": 1793204261.7476976,
+    "seen": 1793227402.2928433,
+    "ast_hash": "ee268ce97a8b45fc5a87543d9da9b2d7",
+    "semantic_hash": ""
+  },
+  "frontend/src/api/session-store.ts": {
+    "mtime": 1793203725.1095717,
+    "seen": 1793227402.2931013,
+    "ast_hash": "b6801c0a93fb68b67084e0b0b8f7dfaf",
+    "semantic_hash": ""
+  },
+  "frontend/src/app/anmeldung/page.tsx": {
+    "mtime": 1793190604.4329808,
+    "seen": 1793191154.706585,
+    "ast_hash": "31e97421c12d430f3fa98ade1f5ede05",
+    "semantic_hash": ""
+  },
+  "frontend/src/app/passwort/page.tsx": {
+    "mtime": 1793190604.4969807,
+    "seen": 1793191154.7067037,
+    "ast_hash": "f51ae913771fb1111caadd74ba9bb99d",
+    "semantic_hash": ""
+  },
+  "frontend/src/app/registrierung/page.tsx": {
+    "mtime": 1793230210.5838623,
+    "seen": 1793230811.819624,
+    "ast_hash": "450363b191a1ee246c1d5e0d7ed837f3",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/auth/auth-pages.tsx": {
+    "mtime": 1793234548.9901724,
+    "seen": 1793234570.789905,
+    "ast_hash": "bc7426680577c4ca9010a09096fd6e5f",
+    "semantic_hash": ""
+  },
+  "frontend/src/app/optionen/page.tsx": {
+    "mtime": 1793234548.9742749,
+    "seen": 1793234570.7896013,
+    "ast_hash": "c6bf2b0444e1b6dbfc15d80f224fc24f",
+    "semantic_hash": ""
+  },
+  "frontend/src/app/profil/page.tsx": {
+    "mtime": 1793230766.400169,
+    "seen": 1793230811.8195229,
+    "ast_hash": "739a433c6e485ad4e23cca39a333d551",
     "semantic_hash": ""
   }
 }

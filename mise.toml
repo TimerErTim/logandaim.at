@@ -5,21 +5,18 @@ jobs = 1
 
 [vars]
 REPO_ROOT = "{{config_root}}"
-# TODO(manual investigation): `[daemons]` cannot read these, so the ports repeat
-# there as literal integers.
+# `[daemons]` cannot read vars, so the ports below repeat these as literals.
 FRONTEND_PORT = "4173"
 API_PORT = "3311"
 
 [tools]
 node = "lts"
 "cargo:cargo-nextest" = "latest"
-# Supervises the verify:* daemons.
 pitchfork = "2.32.1"
 jq = "latest"
+mailpit = "latest"
 
 [deps.npm]
-# Would love to have this auto, but it's not working on windows
-#auto = true
 dir = "frontend/"
 
 [task_config]
@@ -38,21 +35,28 @@ includes = [
     "tasks/ci.toml",
 ]
 
-# Local services used by `mise run verify:*`.
-#
-# TODO(manual investigation): `ready_http` needs the literal port below because
-# `{{ url }}` renders the pitchfork proxy URL, not the listener the task binds.
-# Consequence: the ports repeat `[vars]` above.
 [daemons.frontend]
 task = "run:frontend"
 args = ["--host", "127.0.0.1", "--port", "4173"]
 port = 4173
 ready_http = "http://127.0.0.1:4173/"
 
+# Local SMTP catcher: SMTP on 1025, the HTTP API the e2e suite reads on 8025.
+[daemons.mailpit]
+init = ["mkdir -p target/mailpit"]
+run = """
+exec mailpit \
+  --smtp 127.0.0.1:1025 \
+  --listen 127.0.0.1:$MAILPIT_PORT \
+  --smtp-auth-accept-any \
+  --smtp-auth-allow-insecure \
+  --database target/mailpit/mailpit.db
+"""
+port = 8025
+ready_http = "http://127.0.0.1:8025/api/v1/info"
+
 [daemons.server]
 task = "run:server"
-# The database stays in memory and the object store lands under `target/`, so a
-# verify run leaves nothing to clean up.
 args = [
     "--host",
     "127.0.0.1",

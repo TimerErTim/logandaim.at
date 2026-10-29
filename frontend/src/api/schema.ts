@@ -56,7 +56,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["SchussErstellung"];
+                    "application/json; charset=utf-8": components["schemas"]["SchussErstellungRequest"];
                 };
             };
             responses: {
@@ -110,7 +110,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["WertungsAnfrage"];
+                    "application/json; charset=utf-8": components["schemas"]["WertungRequest"];
                 };
             };
             responses: {
@@ -146,10 +146,633 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/registrierung/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Step 1. Answers `200` whether the address is free or taken (AC-2). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "User-Agent"?: string;
+                    "Accept-Language"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["RegistrierungStartRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registrierung/abschluss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Step 2: creates Benutzer + Konto and answers the first token pair. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "User-Agent"?: string;
+                    "Accept-Language"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["RegistrierungAbschlussRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["SessionResponseContent"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE"?: string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anmeldung": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "User-Agent"?: string;
+                    "Accept-Language"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["AnmeldungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["SessionResponseContent"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE"?: string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/session/erneuern": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rotate the refresh token from the cookie. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "User-Agent"?: string;
+                    "Accept-Language"?: string;
+                };
+                path?: never;
+                cookie?: {
+                    "__Host-logandaim_refresh"?: string;
+                };
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["SessionResponseContent"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE"?: string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/session/abmelden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/passwort/vergessen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    "User-Agent"?: string;
+                    "Accept-Language"?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["PasswortVergessenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/passwort/wiederherstellen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Single use, and ends every session: the cookie is cleared with them. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["PasswortWiederherstellenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/benutzer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's own Benutzer. `?benutzerId=` names another one and needs
+         *     `Systemadministrator`.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    benutzerId?: string;
+                };
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Benutzer"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/benutzer/l\u00F6schung": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Deletes the caller's own Benutzer. The cookie is cleared with the identity. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["BenutzerL\u00F6schungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
+                    };
+                };
+                500: {
+                    headers: {
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        "SET-COOKIE": string;
+                        "CACHE-CONTROL": string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AnmeldungRequest */
+        AnmeldungRequest: {
+            /**
+             * E-Mail-Adresse
+             * @example test@example.com
+             */
+            eMailAdresse: string;
+            passwort: string;
+        };
+        /**
+         * Benutzer
+         * @description The logged-in Benutzer as `GET /benutzer` answers it.
+         */
+        Benutzer: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * E-Mail-Adresse
+             * @example test@example.com
+             */
+            eMailAdresse: string;
+        };
+        /**
+         * BenutzerLöschungRequest
+         * @description Deleting one's own Benutzer: the Passwort is re-entered, and the intent is explicit.
+         */
+        "BenutzerL\u00F6schungRequest": {
+            passwort: string;
+            /** @description Must be `true`; a missing flag is a refusal, never a default. */
+            "best\u00E4tigt": boolean;
+        };
+        /**
+         * Ok
+         * @description Acknowledgement of a request that has nothing to return.
+         *
+         *     A bare `204` would be indistinguishable from a proxy's empty answer, so the explicit
+         *     body is worth the two bytes.
+         * @example {
+         *       "ok": true
+         *     }
+         */
+        Ok: {
+            ok: boolean;
+        };
+        /** PasswortVergessenRequest */
+        PasswortVergessenRequest: {
+            /**
+             * E-Mail-Adresse
+             * @example test@example.com
+             */
+            eMailAdresse: string;
+        };
+        /** PasswortWiederherstellenRequest */
+        PasswortWiederherstellenRequest: {
+            token: string;
+            neuesPasswort: string;
+        };
+        /**
+         * RegistrierungAbschlussRequest
+         * @description Registration step 2.
+         */
+        RegistrierungAbschlussRequest: {
+            token: string;
+            passwort: string;
+        };
+        /**
+         * RegistrierungStartRequest
+         * @description Registration step 1.
+         */
+        RegistrierungStartRequest: {
+            /**
+             * E-Mail-Adresse
+             * @example test@example.com
+             */
+            eMailAdresse: string;
+        };
         /**
          * Schuss
          * @description One logged arrow, translated from the domain.
@@ -164,18 +787,20 @@ export interface components {
             wertungszone: components["schemas"]["Wertungszone"];
         };
         /**
-         * SchussErstellung
-         * @description Inbound request for registering one Schuss at a Ziel.
-         *
-         *     Pure transport DTO. `pfeil` is validated by `domain::NeuerSchuss` when the use case
-         *     builds it, so the rule stays in one place.
+         * SchussErstellungRequest
+         * @description Inbound request for registering one Schuss at a Ziel. `pfeil` is validated by
+         *     `domain::NeuerSchuss` when the use case builds it.
          */
-        SchussErstellung: {
+        SchussErstellungRequest: {
             /** Format: uuid */
             zielId: string;
             /** Format: uint64 */
             pfeil: number;
             wertungszone: components["schemas"]["Wertungszone"];
+        };
+        /** SessionResponseContent */
+        SessionResponseContent: {
+            accessToken: string;
         };
         /** StructuredError */
         StructuredError: {
@@ -197,10 +822,10 @@ export interface components {
             "anzahlSch\u00FCsse": number;
         };
         /**
-         * WertungsAnfrage
+         * WertungRequest
          * @description Inbound request for summarizing a selection of Schüsse.
          */
-        WertungsAnfrage: {
+        WertungRequest: {
             schussIds: string[];
         };
         /**

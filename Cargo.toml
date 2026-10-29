@@ -42,6 +42,23 @@ test-log = { version = "0.2", default-features = false, features = ["trace"] }
 cloudiful-scheduler = { version = "0.4.12", default-features = false }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
+# Crypto of the `konto` supporting subdomain. Deliberately concrete dependencies of
+# `logandaim-core`: the algorithms are part of that subdomain's contract, not a wiring
+# choice, so there is no hasher/signer port to swap.
+argon2 = { version = "0.6.0", default-features = false, features = ["alloc", "password-hash"] }
+ed25519-dalek = { version = "3.0.0", default-features = false, features = ["fast", "zeroize", "pem"] }
+sha2 = "0.11.1"
+hex = "0.4.3"
+base64 = "0.22.1"
+lettre = { version = "0.11.20", default-features = false, features = ["builder", "smtp-transport", "tokio1", "tokio1-rustls-tls", "pool"] }
+zeroize = { version = "1", features = ["alloc"] }
+getrandom = "0.3.4"
+
+[workspace.lints.rustdoc]
+broken_intra_doc_links = "deny"
+invalid_rust_codeblocks = "deny"
+private_intra_doc_links = "deny"
+
 [profile.release]
 codegen-units = 1 # Allows LLVM to perform better optimization.
 lto = true # Enables link-time-optimizations.

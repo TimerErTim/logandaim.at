@@ -52,16 +52,40 @@ Dependency rule: **inward only**. Core knows nothing about HTTP or SQLite.
 ## Language & naming
 
 Docs, comments, commit messages, and all non-domain source are **English**. German is reserved for
-the ubiquitous language: Rust types and modules, SQLite tables and columns, HTTP paths, JSON keys,
-and spec prose all use the spec's German term (`Anlage`, `Parcours`, `Ziel`, `Pflock`, `Runde`,
-`Schuss`, `Wertung`, `Wertungszone`).
+the ubiquitous language: domain types and fields (`Anlage`, `Parcours`, `Ziel`, `Pflock`, `Runde`,
+`Schuss`, `Wertung`, `Wertungszone`, `Benutzer`, `Konto`, `PasswortWiederherstellung`), SQLite
+tables and columns, HTTP paths, JSON keys, and spec prose.
 
-Naming ladder: `NeuerSchuss` (domain) → `SchussRegistrieren` (use case) → request DTO. German
-feature-slice file names (`schuss.rs`, not `model.rs` or `shot.rs`).
+Naming ladder: `NeuerSchuss` (domain) → `SchussRegistrieren` (use case) → request DTO. A use-case
+type keeps its German domain noun; the module it lives in does not.
+
+**The domain concept stays German; the technical makeup around it is English.** A port keeps its
+German noun (`BenutzerRepository`, `PasswortWiederherstellung`) because that noun *is* the
+ubiquitous language. Technical port names stay English (`Throttle` in
+`application/ports/throttle.rs`). Everything that dresses a domain noun is English: methods (`find_by_id`, `find_all`,
+`create`, `update`, `delete`, `delete_by_benutzer`, `check_and_count`, `is_authenticated`), modules
+(`repos.rs`, `throttle.rs`, `login.rs`, `password.rs`, `api/requests/konto.rs`), DTO suffixes
+(`…Request`), and error plumbing. `KundenRepository::find_by_id`, never
+`KundenSpeicher::bekomme_durch_identität`.
+
+So: German nouns, English verbs and structure. A German *verb* in the application layer
+(`prüfe_und_zähle`, `speichere`, `setze_rolle`) is a mistake — it is not domain vocabulary, it is
+plumbing that happens to be spelled in German. A German noun with an English verb is correct:
+`BenutzerRepository::delete_by_benutzer`.
+
+**Auth-technical nouns are the one exception, and their English spelling is fixed.** German
+engineering usage names these in English, so the code says `Session`, `AccessToken`,
+`RefreshToken`, `SecretToken`, `SecretTokenHash`, `SigningKey`, and `PasswordHash` — see the
+vocabulary table in [`specs/product/konto.md`](../specs/product/konto.md). The product term
+`Anmelde-Sitzung` maps to the code term `Session`, one-to-one, and it applies to **every**
+identifier built on the noun, not only the aggregate: `SessionAusgestellt`, `SessionPrüfen`,
+`SessionAntwort`, `SessionLaden`. Never mix the two (`SitzungPrüfen` next to `SessionId`): one
+concept, one spelling. German stays in the error text a user reads (`"die Sitzung ist nicht mehr
+gültig"`) and in the product term in prose.
 
 Use **proper UTF-8** in identifiers and persisted names. Never transliterate umlauts to
-`ae`/`oe`/`ue` (`naechste`, `strasse`). Prefer UTF-8 field names in schema types over ASCII fields
-plus `serde(rename)`.
+`ae`/`oe`/`ue` (`BenutzerLöschenFehler`, not `BenutzerLoeschenFehler`; `Bestätigung`, not
+`Bestaetigung`); never paper over it with `serde(rename)`. This is enforced by review, not by a task.
 
 ## Patterns an agent can silently break
 
@@ -71,12 +95,34 @@ plus `serde(rename)`.
   the outer TX; nested `commit`/`rollback` are no-ops). Collect work without `?` across the UoW,
   then `uow.finish(result, ctx)`. Dropping a UoW that neither committed nor rolled back panics.
 - **Repositories are dumb** — they persist and load domain types; state transitions belong in the
-  domain or the use case.
+  domain or the use case. Every repository has the same five shapes: `find_by_id`, `find_all` (or a
+  scoped `find_by_*`), `create(Neues*)`, `update(&mut Versioned<T>) -> RepositoryResult<()>`,
+  `delete(Versioned<T>) -> RepositoryResult<()>`. `update` writes the whole row back and bumps the
+  version **in place**; `delete` takes the aggregate as it was loaded, so a stale version is a
+  `VersionMismatch` in both directions. The load → domain mutation → write-back loop is the
+  caller's, and a purpose-built mutator (`revoke_all`, `set_role`) is a sign the logic belongs in a
+  use-case loop instead.
 - **Errors** — `Report<E>` at every boundary; use `.change_context()` directly. Value-object
   validation is the one exception: plain `Result` with a dedicated `thiserror` enum.
 - **Concurrency** — `Versioned<T>` bundles an entity with its optimistic-lock version.
 - **All mutations go through `App::execute` / `App::execute_fn`.** No adapter calls a repository
   directly. `App` only builds an `ExecutionContext`; it does not wrap the use-case result.
+
+## Comments
+
+A comment earns its place by saying something the code cannot. That is a narrow bar and it is the
+reviewer's, but two cases are always wrong:
+
+1. **Narrating the obvious.** `// set the field`, `// return the result`, `// loop over the ids`, a
+   doc comment restating the signature, a paragraph where a sentence carries the same fact. Delete
+   it; the identifier already says it.
+2. **More comment than code.** Within any function, item, or module doc, comment lines must not
+   outnumber code lines. A long "why" belongs in the module doc or the spec, not stapled above the
+   function that happens to need it.
+
+Write the reason, not the mechanics: why a shape is this way, what a wrong alternative would break,
+which acceptance criterion or rule pins it. One line beats three, and a module doc that explains the
+file beats a comment on every block. If removing a comment loses nothing, it was never a comment.
 
 ## Tracing
 
@@ -103,13 +149,17 @@ adapters emit `debug!`/`trace!` events only, never duplicate spans.
 ## API layer
 
 `LogandaimAppApi` is a thin translation: request → use case → schema DTO. No business rules, no
-serde or OpenAPI types leaking into core. Schema DTOs are separate from domain types; request DTOs
+`poem` or OpenAPI types leaking into core, and none in the facade either: the library compiles with
+`--no-default-features`. Schema DTOs are separate from domain types; request DTOs are `…Request` and
 convert with `From`/`TryFrom`.
 
-`LogandaimApiSpec` resolves the HTTP status: a `StatusCode` attached to the report first, then
-`HttpStatusMapping` on the current context, then the first nested mapped context, else 500. An
-orchestration error variant returns `None` so the domain error beneath it can speak. Statuses are
-attached at the API boundary, never in the domain.
+`LogandaimApiSpec` in `crates/logandaim-api/src/http/mod.rs` is the HTTP edge: `#[OpenApi]` handlers
+and native `poem_openapi` extractors. Its supporting HTTP code is split into `http/auth.rs`,
+`http/jwt.rs`, `http/cookie.rs`, `http/extractors.rs`, and `http/responses/`. The typed facade is
+`api/mod.rs`; request DTOs are grouped by domain under `api/requests/`. HTTP status mapping lives in
+`errors/http_status.rs`: an attached `StatusCode` wins, then the current context, then the first
+nested mapped context, else 500. An orchestration error variant returns `None` so the domain error
+beneath it can speak. Statuses are attached at the API boundary, never in the domain.
 
 After any schema or route change, run `mise run sync:openapi`; `mise run check` fails on drift.
 
@@ -126,6 +176,13 @@ Cases live once in `logandaim-core/tests/cases/` and are shared into the SQLite 
 `#[path]`; each harness supplies its own `base_app_builder()`. Tests that need a fixed date use
 `logandaim_fakes::FixedClock`. Never copy a case to run it twice.
 
+`cases/` proves UoW parity across adapters. A test that validates one adapter, or one use case
+against one adapter, is a normal integration test beside it (`crates/logandaim-core/tests/*.rs`),
+not a shared case.
+
+`mise run test` wraps two nextest profiles (`.config/nextest.toml`): `test:unit` runs everything that
+needs no external service, `test:e2e` runs the `e2e` binary with the Mailpit daemon.
+
 ## Frontend
 
 `LogandaimApi` (`frontend/src/api/logandaim-api.ts`) is a transport-agnostic interface;
@@ -136,8 +193,9 @@ state goes through the TanStack Query hooks in `frontend/src/api/hooks/`, with k
 optimistic updates.
 
 Configuration is static and baked in at build time (`NEXT_PUBLIC_LOGANDAIM_*`); there is no runtime
-config file and no async bootstrap. See [`docs/vertical-slice.md`](../docs/vertical-slice.md) for
-the seam and the state rules.
+config file and no async bootstrap. Keep the access token in frontend memory only; never persist it
+to `localStorage` or a cookie. The refresh token is held in the API's `HttpOnly` cookie. See
+[`docs/vertical-slice.md`](../docs/vertical-slice.md) for the seam and the state rules.
 
 **UI work starts by reading [`.cursor/rules/design-system.mdc`](rules/design-system.mdc).** It owns
 tokens, components, contrast, touch targets, and the `/dev` gallery; this file does not. Values live

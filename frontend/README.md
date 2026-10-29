@@ -4,11 +4,14 @@ The user interface is a TypeScript React app built with [Next.js](https://nextjs
 
 ## Development
 
-Run the frontend and backend together:
+Start the backend and frontend in separate terminals:
 
 ```bash
-mise run dev:frontend+server
+mise run dev:server
+mise run dev:frontend
 ```
+
+The server task starts Mailpit. Open its web UI at `http://127.0.0.1:8025` to read registration and password-recovery mail. For local authentication, keep the browser app and API on the same hostname (`localhost`): the refresh token is an API-host-only cookie, while the access token stays in frontend memory. The defaults use `http://localhost:3001` for the app and `http://localhost:3000/api` for the API.
 
 ## Building
 

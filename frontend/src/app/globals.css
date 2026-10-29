@@ -235,7 +235,7 @@ body {
 .rule-ticks {
   background-image: repeating-linear-gradient(
     to right,
-    var(--border-subtle) 0 1px,
+    var(--border-strong) 0 1px,
     transparent 1px 8px
   );
 }
@@ -244,7 +244,7 @@ body {
 .rule-ticks-quiet {
   background-image: repeating-linear-gradient(
     to right,
-    var(--border-subtle) 0 1px,
+    var(--border-strong) 0 1px,
     transparent 1px 8px
   );
   opacity: 0.9;
@@ -334,7 +334,7 @@ body {
     var(--border-strong) 0 2px,
     transparent 2px 7px
   );
-  opacity: 0.65;
+  opacity: 0.75;
 }
 
 /*

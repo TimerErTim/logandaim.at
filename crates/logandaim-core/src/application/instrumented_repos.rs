@@ -9,8 +9,17 @@ use async_trait::async_trait;
 use tracing::instrument;
 
 use crate::application::uow::UnitOfWorkImpl;
-use crate::domain::{NeuerSchuss, Schuss, SchussId};
-use crate::ports::{RepositoryResult, SchussRepository};
+use crate::application::uow::Versioned;
+use crate::domain::konto::{
+    Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
+    NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
+    PasswortWiederherstellung, PasswortWiederherstellungId, SecretTokenHash, Session, SessionId,
+};
+use crate::domain::{EmailAdresse, NeuerSchuss, Schuss, SchussId};
+use crate::ports::{
+    BenutzerRepository, EmailBestätigungRepository, KontoRepository,
+    PasswortWiederherstellungRepository, RepositoryResult, SchussRepository, SessionRepository,
+};
 
 macro_rules! impl_instrumented_repo {
     (
@@ -63,17 +72,128 @@ impl_instrumented_repo!(
     schüsse,
     methods: [
         #[instrument(skip(self, schuss), level = "debug", err(Debug))]
-        fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Schuss>;
+        fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Versioned<Schuss>>;
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
-        fn find_by_id(&self, id: SchussId) -> RepositoryResult<Schuss>;
+        fn find_by_id(&self, id: SchussId) -> RepositoryResult<Versioned<Schuss>>;
         #[instrument(skip(self, ids), fields(anzahl = ids.len()), level = "trace", err(Debug))]
-        fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Schuss>>;
+        fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+        #[instrument(skip(self, schuss), level = "debug", err(Debug))]
+        fn update(&self, schuss: &mut Versioned<Schuss>) -> RepositoryResult<()>;
+        #[instrument(skip(self, schuss), level = "debug", err(Debug))]
+        fn delete(&self, schuss: Versioned<Schuss>) -> RepositoryResult<()>;
+    ]
+);
+
+impl_instrumented_repo!(
+    InstrumentedBenutzerRepository,
+    BenutzerRepository,
+    benutzer,
+    methods: [
+        #[instrument(skip(self, benutzer), level = "debug", err(Debug))]
+        fn create(&self, benutzer: NeuerBenutzer) -> RepositoryResult<Versioned<Benutzer>>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn find_by_id(&self, id: BenutzerId) -> RepositoryResult<Versioned<Benutzer>>;
+        #[instrument(skip(self, benutzer), level = "debug", err(Debug))]
+        fn update(&self, benutzer: &mut Versioned<Benutzer>) -> RepositoryResult<()>;
+        #[instrument(skip(self, benutzer), level = "debug", err(Debug))]
+        fn delete(&self, benutzer: Versioned<Benutzer>) -> RepositoryResult<()>;
+    ]
+);
+
+impl_instrumented_repo!(
+    InstrumentedKontoRepository,
+    KontoRepository,
+    konten,
+    methods: [
+        #[instrument(skip(self, konto), level = "debug", err(Debug))]
+        fn create(&self, konto: NeuesKonto) -> RepositoryResult<Versioned<Konto>>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn find_by_id(&self, id: KontoId) -> RepositoryResult<Versioned<Konto>>;
+        #[instrument(skip(self, email), fields(email = email.as_ref()), level = "trace", err(Debug))]
+        fn find_by_email(&self, email: &EmailAdresse) -> RepositoryResult<Versioned<Konto>>;
+        #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
+        fn find_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Konto>>>;
+        #[instrument(skip(self, konto), level = "debug", err(Debug))]
+        fn update(&self, konto: &mut Versioned<Konto>) -> RepositoryResult<()>;
+        #[instrument(skip(self, konto), level = "debug", err(Debug))]
+        fn delete(&self, konto: Versioned<Konto>) -> RepositoryResult<()>;
+    ]
+);
+
+impl_instrumented_repo!(
+    InstrumentedSessionRepository,
+    SessionRepository,
+    sessions,
+    methods: [
+        #[instrument(skip(self, session), level = "debug", err(Debug))]
+        fn create(&self, session: NeueSession) -> RepositoryResult<Versioned<Session>>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn find_by_id(&self, id: SessionId) -> RepositoryResult<Versioned<Session>>;
+        #[instrument(skip(self, hash), level = "trace", err(Debug))]
+        fn find_by_refresh_hash(&self, hash: &SecretTokenHash) -> RepositoryResult<Versioned<Session>>;
+        #[instrument(skip(self, session), level = "debug", err(Debug))]
+        fn update(&self, session: &mut Versioned<Session>) -> RepositoryResult<()>;
+        #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
+        fn find_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Session>>>;
+        #[instrument(skip(self, session), level = "debug", err(Debug))]
+        fn delete(&self, session: Versioned<Session>) -> RepositoryResult<()>;
+        #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "debug", err(Debug))]
+        fn delete_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<()>;
+    ]
+);
+
+impl_instrumented_repo!(
+    InstrumentedEmailBestätigungRepository,
+    EmailBestätigungRepository,
+    bestätigungen,
+    methods: [
+        #[instrument(skip(self, bestätigung), level = "debug", err(Debug))]
+        fn create(&self, bestätigung: NeueBestätigung) -> RepositoryResult<Versioned<EmailBestätigung>>;
+        #[instrument(skip(self, hash), level = "trace", err(Debug))]
+        fn find_by_hash(&self, hash: &SecretTokenHash) -> RepositoryResult<Versioned<EmailBestätigung>>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn find_by_id(&self, id: BestätigungId) -> RepositoryResult<Versioned<EmailBestätigung>>;
+        #[instrument(skip(self, email), fields(email = email.as_ref()), level = "trace", err(Debug))]
+        fn find_by_email(&self, email: &EmailAdresse) -> RepositoryResult<Vec<Versioned<EmailBestätigung>>>;
+        #[instrument(skip(self, bestätigung), level = "debug", err(Debug))]
+        fn update(&self, bestätigung: &mut Versioned<EmailBestätigung>) -> RepositoryResult<()>;
+        #[instrument(skip(self, bestätigung), level = "debug", err(Debug))]
+        fn delete(&self, bestätigung: Versioned<EmailBestätigung>) -> RepositoryResult<()>;
+        #[instrument(skip(self, email), fields(email = email.as_ref()), level = "debug", err(Debug))]
+        fn delete_by_email(&self, email: &EmailAdresse) -> RepositoryResult<()>;
+    ]
+);
+
+impl_instrumented_repo!(
+    InstrumentedPasswortWiederherstellungRepository,
+    PasswortWiederherstellungRepository,
+    wiederherstellungen,
+    methods: [
+        #[instrument(skip(self, wiederherstellung), level = "debug", err(Debug))]
+        fn create(&self, wiederherstellung: NeuePasswortWiederherstellung) -> RepositoryResult<Versioned<PasswortWiederherstellung>>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn find_by_id(&self, id: PasswortWiederherstellungId) -> RepositoryResult<Versioned<PasswortWiederherstellung>>;
+        #[instrument(skip(self, hash), level = "trace", err(Debug))]
+        fn find_by_hash(&self, hash: &SecretTokenHash) -> RepositoryResult<Versioned<PasswortWiederherstellung>>;
+        #[instrument(skip(self, konto_id), fields(konto_id = ?konto_id), level = "trace", err(Debug))]
+        fn find_by_konto(&self, konto_id: KontoId) -> RepositoryResult<Vec<Versioned<PasswortWiederherstellung>>>;
+        #[instrument(skip(self, wiederherstellung), level = "debug", err(Debug))]
+        fn update(&self, wiederherstellung: &mut Versioned<PasswortWiederherstellung>) -> RepositoryResult<()>;
+        #[instrument(skip(self, wiederherstellung), level = "debug", err(Debug))]
+        fn delete(&self, wiederherstellung: Versioned<PasswortWiederherstellung>) -> RepositoryResult<()>;
+        #[instrument(skip(self, konto_id), fields(konto_id = ?konto_id), level = "debug", err(Debug))]
+        fn delete_by_konto(&self, konto_id: KontoId) -> RepositoryResult<()>;
     ]
 );
 
 /// Pinned bundle: instrumented repos hold pointers into `uow` (field order keeps drop safe).
 pub(crate) struct RepoStorage {
     pub(crate) schüsse: InstrumentedSchussRepository,
+    pub(crate) benutzer: InstrumentedBenutzerRepository,
+    pub(crate) konten: InstrumentedKontoRepository,
+    pub(crate) sessions: InstrumentedSessionRepository,
+    pub(crate) bestätigungen: InstrumentedEmailBestätigungRepository,
+    pub(crate) wiederherstellungen: InstrumentedPasswortWiederherstellungRepository,
     pub(crate) uow: Box<dyn UnitOfWorkImpl>,
 }
 
@@ -81,6 +201,11 @@ impl RepoStorage {
     pub(crate) fn new(uow: Box<dyn UnitOfWorkImpl>) -> Pin<Box<Self>> {
         let mut pinned = Box::pin(RepoStorage {
             schüsse: InstrumentedSchussRepository::disabled(),
+            benutzer: InstrumentedBenutzerRepository::disabled(),
+            konten: InstrumentedKontoRepository::disabled(),
+            sessions: InstrumentedSessionRepository::disabled(),
+            bestätigungen: InstrumentedEmailBestätigungRepository::disabled(),
+            wiederherstellungen: InstrumentedPasswortWiederherstellungRepository::disabled(),
             uow,
         });
 
@@ -90,6 +215,12 @@ impl RepoStorage {
             let this = pinned.as_mut().get_unchecked_mut();
             let uow_ptr = std::ptr::from_ref(this.uow.as_ref());
             this.schüsse = InstrumentedSchussRepository::new(uow_ptr);
+            this.benutzer = InstrumentedBenutzerRepository::new(uow_ptr);
+            this.konten = InstrumentedKontoRepository::new(uow_ptr);
+            this.sessions = InstrumentedSessionRepository::new(uow_ptr);
+            this.bestätigungen = InstrumentedEmailBestätigungRepository::new(uow_ptr);
+            this.wiederherstellungen =
+                InstrumentedPasswortWiederherstellungRepository::new(uow_ptr);
         }
 
         pinned

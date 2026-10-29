@@ -155,8 +155,10 @@ and backend). `build` precedes `test` so a compile error is reported by the buil
 failed test. CI runs the same task, so a green local run means a green pipeline unless the
 environment differs.
 
-`test` writes `target/nextest/default/junit.xml` (see `.config/nextest.toml`), on failure too. CI
-publishes it as the `Test results` check run (`checks: write`). Fork pull requests get a read-only
+`test` is a wrapper over two nextest profiles (`.config/nextest.toml`): `test:unit` runs everything
+that needs no external service, `test:e2e` runs the end-to-end binaries with the Mailpit daemon.
+Both write `target/nextest/<profile>/junit.xml`, on failure too, and CI publishes them as the
+`Test results` check run (`checks: write`). Fork pull requests get a read-only
 token, so that step is `continue-on-error`: the gate alone decides the run.
 
 Tasks are defined in `tasks/*.toml`; the release and version checks delegate their logic to

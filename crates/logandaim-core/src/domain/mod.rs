@@ -2,6 +2,7 @@
 
 pub mod adresse;
 pub mod kontakt;
+pub mod konto;
 pub mod menge;
 pub mod preis;
 pub mod ratio;
@@ -13,6 +14,10 @@ pub use adresse::Adresse;
 pub use adresse::Ländercode;
 pub use kontakt::EmailAdresse;
 pub use kontakt::Mobilnummer;
+pub use konto::Konto;
+pub use konto::KontoFehler;
+pub use konto::KontoId;
+pub use konto::Rolle;
 pub use menge::Menge;
 pub use preis::Preis;
 pub use ratio::Ratio;

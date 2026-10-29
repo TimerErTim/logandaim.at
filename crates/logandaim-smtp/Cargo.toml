@@ -1,0 +1,25 @@
+[package]
+name = "logandaim-smtp"
+description = "SMTP MailSender adapter for logandaim.at"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
+logandaim-core = { path = "../logandaim-core" }
+
+async-trait = { workspace = true }
+error-stack = { workspace = true }
+lettre = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+pollster = { version = "0.4.0", features = ["macro"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+test-log = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[lints]
+workspace = true

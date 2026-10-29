@@ -1,47 +1,26 @@
 use error_stack::Report;
 use futures::StreamExt;
 use http::StatusCode;
-use logandaim_core::{App, ThreadSafeError, ports::ObjectStream};
+use logandaim_core::{ThreadSafeError, ports::ObjectStream};
 use poem::{Body, IntoResponse, Response};
 use poem_openapi::{
-    OpenApi, OpenApiService, ServerObject,
+    ApiResponse,
     payload::{Json, Payload, PlainText},
     registry::{MetaSchema, MetaSchemaRef},
     types::ToJSON,
 };
 
-use crate::{
-    api::{
-        LogandaimAppApi,
-        requests::{SchussErstellung, WertungsAnfrage},
-    },
-    errors::{HttpStatusMapping, InternalServerError, StructuredError, status_from_report},
-    schema::{Schuss, Wertung},
-};
+use crate::errors::{HttpStatusMapping, InternalServerError, StructuredError, status_from_report};
 
-pub struct LogandaimApiSpec {
-    app_api: LogandaimAppApi,
-}
+mod session;
+pub use session::*;
 
-impl LogandaimApiSpec {
-    pub fn new(app_api: LogandaimAppApi) -> Self {
-        Self { app_api }
-    }
-}
+/// Never store an auth response.
+const NO_STORE: &str = "no-store";
 
-impl From<LogandaimAppApi> for LogandaimApiSpec {
-    fn from(app_api: LogandaimAppApi) -> Self {
-        Self::new(app_api)
-    }
-}
+// ------------------------------------------------------------------ responses
 
-impl From<App> for LogandaimApiSpec {
-    fn from(app: App) -> Self {
-        Self::new(LogandaimAppApi::new(app))
-    }
-}
-
-#[derive(poem_openapi::ApiResponse)]
+#[derive(ApiResponse)]
 pub enum TypicalJsonResponse<T: ToJSON> {
     #[oai(status = 200)]
     Ok(Json<T>),
@@ -92,7 +71,7 @@ impl IntoResponse for StreamBody {
     }
 }
 
-#[derive(poem_openapi::ApiResponse)]
+#[derive(ApiResponse)]
 pub enum StreamBinaryResponse {
     #[oai(status = 200, content_type = "application/pdf")]
     Ok(StreamBody),
@@ -133,40 +112,38 @@ impl<C: ThreadSafeError + HttpStatusMapping> From<Result<ObjectStream, Report<C>
     }
 }
 
-#[OpenApi]
-impl LogandaimApiSpec {
-    #[oai(path = "/health", method = "get")]
-    async fn health(&self) -> Json<String> {
-        let _ = &self.app_api;
-        Json("OK".to_string())
-    }
-
-    #[oai(path = "/schuss", method = "post")]
-    async fn schuss_registrieren(
-        &self,
-        body: Json<SchussErstellung>,
-    ) -> TypicalJsonResponse<Schuss> {
-        self.app_api.schuss_registrieren(body.0).await.into()
-    }
-
-    #[oai(path = "/wertung", method = "post")]
-    async fn wertung_berechnen(&self, body: Json<WertungsAnfrage>) -> TypicalJsonResponse<Wertung> {
-        self.app_api.wertung_berechnen(body.0).await.into()
-    }
+/// A plain answer that requires no caching
+#[derive(ApiResponse)]
+pub enum UncachedJsonResponse<T: ToJSON> {
+    #[oai(status = 200)]
+    Ok(Json<T>, #[oai(header = "Cache-Control")] String),
+    #[oai(status_range = "4XX")]
+    ClientError(
+        StatusCode,
+        Json<StructuredError>,
+        #[oai(header = "Cache-Control")] String,
+    ),
+    #[oai(status = 500)]
+    InternalError(
+        PlainText<InternalServerError>,
+        #[oai(header = "Cache-Control")] String,
+    ),
 }
 
-pub fn openapi_service(
-    app: App,
-    server_urls: impl IntoIterator<Item = impl Into<ServerObject>>,
-) -> OpenApiService<LogandaimApiSpec, ()> {
-    let mut service = OpenApiService::new(
-        LogandaimApiSpec::from(app),
-        "logandaim.at API",
-        env!("CARGO_PKG_VERSION"),
-    )
-    .description(env!("CARGO_PKG_DESCRIPTION"));
-    for server_url in server_urls {
-        service = service.server(server_url);
+impl<T, E> From<Result<T, Report<E>>> for UncachedJsonResponse<T>
+where
+    T: ToJSON,
+    E: ThreadSafeError + HttpStatusMapping,
+{
+    fn from(ergebnis: Result<T, Report<E>>) -> Self {
+        match TypicalJsonResponse::from(ergebnis) {
+            TypicalJsonResponse::Ok(value) => Self::Ok(value, NO_STORE.to_owned()),
+            TypicalJsonResponse::ClientError(status, error) => {
+                Self::ClientError(status, error, NO_STORE.to_owned())
+            }
+            TypicalJsonResponse::InternalError(error) => {
+                Self::InternalError(error, NO_STORE.to_owned())
+            }
+        }
     }
-    service
 }

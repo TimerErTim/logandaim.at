@@ -166,11 +166,11 @@ const statusVariant = {
 } as const;
 
 export function DemoPage() {
-  const [tab, setTab] = useState("uebersicht");
+  const [tab, setTab] = useState("übersicht");
   const [rows, setRows] = useState<Row[]>(START_ROWS);
   const [messwert, setMesswert] = useState(44);
   const [detail, setDetail] = useState(true);
-  const [modus, setModus] = useState("geprueft");
+  const [modus, setModus] = useState("geprüft");
 
   function setZone(id: string, zone: Zone) {
     setRows((previous) =>
@@ -286,12 +286,12 @@ export function DemoPage() {
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
-            <TabsTrigger value="uebersicht">Übersicht</TabsTrigger>
+            <TabsTrigger value="übersicht">Übersicht</TabsTrigger>
             <TabsTrigger value="verlauf">Verlauf</TabsTrigger>
             <TabsTrigger value="einstellungen">Einstellungen</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="uebersicht" className="space-y-6">
+          <TabsContent value="übersicht" className="space-y-6">
             <Alert
               variant="warning"
               icon={<AlertTriangle className="size-4" />}
@@ -349,12 +349,12 @@ export function DemoPage() {
                     <StampMark>Oktober</StampMark>
                   </div>
                   <WorkflowSteps
-                    currentStepId="pruefen"
+                    currentStepId="prüfen"
                     steps={[
                       { id: "erfassen", label: "Erfassen", done: true },
-                      { id: "pruefen", label: "Prüfen", done: false },
+                      { id: "prüfen", label: "Prüfen", done: false },
                       {
-                        id: "abschliessen",
+                        id: "abschließen",
                         label: "Abschließen",
                         done: false,
                       },
@@ -635,10 +635,10 @@ export function DemoPage() {
                     </legend>
                     <RadioGroup value={modus} onValueChange={setModus}>
                       <RadioGroupOption
-                        value="geprueft"
+                        value="geprüft"
                         label="Geprüft übernehmen"
                       />
-                      <RadioGroupOption value="spaeter" label="Später prüfen" />
+                      <RadioGroupOption value="später" label="Später prüfen" />
                     </RadioGroup>
                   </fieldset>
                 </CardContent>

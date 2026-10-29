@@ -11,6 +11,10 @@ repository.workspace = true
 logandaim-core = { path = "../logandaim-core" }
 
 async-trait = { workspace = true }
+error-stack = { workspace = true }
 chrono = { workspace = true }
 uuid = { workspace = true }
 rustc-hash = { workspace = true }
+
+[lints]
+workspace = true

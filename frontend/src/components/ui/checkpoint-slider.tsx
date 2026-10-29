@@ -87,7 +87,7 @@ export function CheckpointSlider({
           `${sorted[sorted.length - 1]?.farbe} 100%`,
         ].join(", ")})`;
 
-  const naechster = sorted.reduce<Checkpoint | null>((bisher, eintrag) => {
+  const nächster = sorted.reduce<Checkpoint | null>((bisher, eintrag) => {
     if (!bisher) {
       return eintrag;
     }
@@ -98,8 +98,8 @@ export function CheckpointSlider({
 
   const einheitText = einheit ? ` ${einheit}` : "";
   const wertText = `${value}${einheitText}`;
-  const valuetext = naechster
-    ? `${wertText}, nächster Pflock ${naechster.label}`
+  const valuetext = nächster
+    ? `${wertText}, nächster Pflock ${nächster.label}`
     : wertText;
 
   return (

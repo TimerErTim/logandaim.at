@@ -1,7 +1,5 @@
 #:schema https://mise.jdx.dev/schema/mise-task.json
 
-# Long-running services.
-
 ["run:frontend"]
 description = "Build and serve the static frontend export"
 dir = "{{ vars.REPO_ROOT }}/frontend"
@@ -11,7 +9,6 @@ usage = """
 flag "--host <host>" help="Address to listen on" default="127.0.0.1"
 flag "--port <port>" env="PORT" help="Port to listen on" default="{{ vars.FRONTEND_PORT }}"
 """
-# `exec` lets the daemon supervisor stop the service by signalling its pid.
 run = 'exec serve out --listen tcp://{{ usage.host }}:{{ usage.port }} --no-clipboard --no-port-switching'
 
 ["run:server"]
@@ -22,12 +19,14 @@ flag "--host <host>" help="Address to bind to" default="127.0.0.1"
 flag "--port <port>" env="PORT" help="Port to bind to" default="{{ vars.API_PORT }}"
 flag "--database-url <url>" env="LOGANDAIM_DATABASE_URL" help="Database URL; :memory: keeps the run throwaway" default=":memory:"
 flag "--object-store-dir <dir>" env="LOGANDAIM_OBJECT_STORE_DIR" help="Object store directory, created when missing" default="target/smoke-server/storage"
+flag "--signing-key <path>" env="LOGANDAIM_SIGNING_KEY_PATH" help="Ed25519 signing key file"
 """
-# The flag reaches the build through the dependency's environment.
 depends = ["LOGANDAIM_BUILD_RELEASE={{ usage.release }} build:server"]
-run = """exec target/{% if usage.release %}release{% else %}debug{% endif %}/logandaim-server \
+run = """
+exec target/{% if usage.release %}release{% else %}debug{% endif %}/logandaim-server \
   --bind-address '{{ usage.host }}' \
   --bind-port '{{ usage.port }}' \
   --database-url '{{ usage.database_url }}' \
-  --object-store-dir '{{ usage.object_store_dir }}'
+  --object-store-dir '{{ usage.object_store_dir }}' \
+  {% if usage.signing_key != "" %}--signing-key-path '{{ usage.signing_key }}'{% endif %}
 """

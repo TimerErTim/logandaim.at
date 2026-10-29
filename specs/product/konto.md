@@ -55,6 +55,24 @@ former `Anlagenbetreiber` role does not exist.
 The frontend and the API speak the same German terms. UI copy says `Benutzer`, `Konto`, `Anlage`,
 and `AnlageVerwaltung`; it never says "Account" and "Nutzer" for the same thing.
 
+**Auth-technical vocabulary stays English.** German engineering usage names these in English, and
+so does the code; hard-translating them ("Erneuerungs-Token") invents words no reader uses. Product
+nouns — the things a `Benutzer` sees and owns — stay German. The same concept therefore has one
+product name and one code name, and neither is a synonym for a different concept:
+
+| Product term (spec, UI) | Code term (identifiers) | Meaning |
+|-------------------------|-------------------------|---------|
+| `Anmelde-Sitzung` | `Session` | One logged-in state of a `Benutzer` on one device. |
+| `Zugriffs-Token` | `AccessToken` | Short-lived signed access credential, a JWT. |
+| `Erneuerungs-Token` | `RefreshToken` | Long-lived opaque credential, accepted exactly once. |
+| *(the mailed link value)* | `SecretToken` | Single-use random value, mailed and never stored raw. |
+| *(the stored form)* | `SecretTokenHash` | SHA-256 of a `SecretToken`; the only form persisted. |
+| `Signierschlüssel` | `SigningKey` | Ed25519 key configured at startup; its public half is copied onto each `Session` row. |
+| *(the stored form)* | `PasswordHash` | argon2id hash of a `Passwort`; the only form persisted. |
+
+The mapping is one-to-one in both directions. A `SecretTokenHash` is never a `SecretToken`, and neither is
+a `Session`: the pair of tokens belongs to a `Session`, they are not the `Session`.
+
 ## Roles
 
 - **`Benutzer`** — every registered person, including those who hold an `AnlageVerwaltung`
@@ -207,14 +225,17 @@ Rules:
     confirmed address (rule 3), so no rule here needs to define what an unconfirmed one may do. A
     `AnlageVerwaltung` may only be granted to an existing `Benutzer`, which is therefore always confirmed
     (Q-18 resolved).
-15. Every API request presenting a `Zugriffs-Token` checks the token against the server: the signing
-    key it claims must be a known, active public key, and its `Anmelde-Sitzung` must not be revoked.
-    Both are database rows, not clocks: the key table says which key signed which session and
-    whether the key is still active, and the session row says whether that session is revoked.
-    Revocation is a row state, not a token expiry, so logout, recovery, and deletion are immediate
-    (rule 6). A request whose session is revoked, or whose `kid` names a retired key, fails with 401
-    even if the JWT is otherwise valid and unexpired. Retiring a key needs no overlapping validity
-    window: it is a row update, and the only time-based part is the cleanup of retired rows.
+15. Every API request presenting a `Zugriffs-Token` checks the token against the server: the
+    signature must verify against the public key stored **on its own `Anmelde-Sitzung` row**, and that
+    session must not be revoked. Both facts are database rows, not clocks: the session row carries
+    the public key it was issued under, and the same row says whether the session is
+    revoked. There is no separate key table and no key registration step. Revocation is a row state,
+    not a token expiry, so logout, recovery, and deletion are immediate (rule 6). A request whose
+    session is unknown, whose stored key does not match the signature, or whose session is revoked
+    fails with 401 even if the JWT is otherwise valid and unexpired.
+    **Retention:** a session row is kept when it is spent, revoked, or expired — replay detection of a
+    spent `Erneuerungs-Token` depends on still finding the row. A purge may only remove rows that are
+    revoked or spent *and* comfortably past `expires_at`.
 16. `AnlageVerwaltungen` grant authority over one `Anlage`, never over the product. An
     `Administrator` manages that `Anlage`'s `AnlageVerwaltungen` and master data; a `Mitarbeiter` its
     master data and statistics. Neither may see the `Runden` or `Schüsse` of another `Benutzer`, and
@@ -327,10 +348,10 @@ the rules and acceptance criteria above.
 - AC-16: When registration step 1 exceeds 5 requests per client per hour, or step 2 exceeds 5 per
   client per hour, or recovery exceeds 5 per client per hour, or renewal exceeds 5 per client per
   hour, then the excess requests fail with 429 until the window passes.
-- AC-17: Given a valid refresh token and the signing key that issued it, when the session is not
-  revoked and the key row is active, then the request is accepted; when the session row is revoked,
-  then the same unexpired access token is rejected with 401; when the key row is retired or the
-  `kid` is unknown, then it is rejected with 401.
+- AC-17: Given a valid access token whose session row is not revoked, when the signature verifies
+  against the public key stored on that row, then the request is accepted; when the session is
+  unknown, when the stored public key does not verify the signature, or when the row is revoked,
+  then the same unexpired access token is rejected with 401.
 - AC-18: Given an access token that has passed its 24-hour validity, when sending any request with
   it, then the request fails with 401 and the frontend is expected to renew.
 - AC-19: With Mailpit running and the API pointed at it, when starting a registration or requesting a
@@ -569,9 +590,9 @@ Open questions:
   `SameSite=Lax` cookie scoped to the API origin; the access token stays in memory. JavaScript never
   reaches the long-lived credential, and a reload can still renew (rule 12, rule 12a, NFR-2). The
   cost is accepted: prefixes on `*.github.io` get no refresh capability and work access-token-only.
-- [x] Q-20: **Resolved 2026-10-26.** Signing keys are rows, not validity windows. The key table
-  records which key signed which session and whether the key is active, so retiring a key is a row
-  update and needs no overlap period; only expired rows are cleaned up (rule 15).
+- [x] Q-20: **Resolved 2026-10-26, revised 2026-10-27.** The signing key is deployment configuration,
+  not a table: its public half is stored on each `Session` row, so a token verifies against the row it
+  names and there is no key lifecycle to administer (rule 15).
 
 Resolved (PO 2026-10-23): Q-1 (`Benutzer-Löschung` keeps anonymized `Runden`), Q-2 (out-of-band
 `Systemadministrator` provisioning), Q-4 (exact throttle thresholds). Resolved 2026-10-26: Q-3 (SMTP
@@ -590,7 +611,8 @@ which stays `Draft` per its own header. The delivery issue is #69.
 
 API e2e tests in the backend API test suite (`tests/e2e/`), one case per AC (AC-1 to AC-20 at the
 API level, using the throttle thresholds of rule 5). AC-17 and AC-18 get explicit token tests: an
-unexpired token after revocation, an unknown signing key, and an expired access token. AC-19 runs
+unexpired token after revocation, a signature made by a key other than the one stored on the session
+row, an unknown session, and an expired access token. AC-19 runs
 against Mailpit started by the test harness. Domain rules (normalization, token lifecycle,
 anonymization, authorisation decisions) get domain unit tests in the backend core. Delivery: issue
 #69.
@@ -630,3 +652,5 @@ anonymization, authorisation decisions) get domain unit tests in the backend cor
 | 2026-10-26 | Restructured to `Benutzer` + `Konto`; two-step address-first registration replaces all unconfirmed-state rules (AC-1 to AC-4, AC-20); session model replaced by a JWT access token plus a single-use rotating refresh token with server-side revocation (rules 12, 15, AC-7 to AC-9, AC-17, AC-18); throttles client-scoped only (rule 5, AC-15, AC-16); `Mitgliedschaft` renamed to `AnlageVerwaltung` with roles `Administrator` and `Mitarbeiter`; ADR-0002 replaced by ADR-0004. | Agent (Cursor) |
 | 2026-10-26 | Q-19 and Q-20 resolved: refresh token in an `HttpOnly` `__Host-` cookie, access token in memory (rule 12, rule 12a, AC-7a); signing keys are rows with an active flag, retired by row update (rule 15). Status set to `PO-approved`. | TimerErTim (PO) |
 | 2026-10-26 | Per-`Anlage` relationship renamed from `Verwaltung` to `AnlageVerwaltung`, so the term itself names its scope. Role names stay `Administrator` and `Mitarbeiter`. | TimerErTim (PO) |
+| 2026-10-26 | Recorded the product/code vocabulary split in the ubiquitous language: product nouns stay German, auth-technical terms are English (`Session`, `AccessToken`, `RefreshToken`, `SecretToken`, `SecretTokenHash`, `SigningKey`, `PasswordHash`), one concept per row. No rule or AC changed. | Agent (Cursor) |
+| 2026-10-27 | Q-20 revised: no signing-key table. The configured public key is stored on each `Session` row and a token verifies against the row it names (rule 15, AC-17). Session rows are retained when spent or revoked, because replay detection needs them. | TimerErTim (PO) |

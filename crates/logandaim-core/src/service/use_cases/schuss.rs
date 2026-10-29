@@ -52,7 +52,7 @@ impl UseCase<Schuss> for SchussRegistrieren {
             pfeil = schuss.pfeil().get(),
             "schuss registriert"
         );
-        Ok(schuss)
+        Ok(schuss.into_data())
     }
 }
 
@@ -94,6 +94,11 @@ impl UseCase<Wertungsergebnis> for WertungBerechnen {
             .change_context(WertungFehler::Laden);
 
         let schüsse = uow.finish(result, WertungFehler::Laden).await?;
+
+        let schüsse: Vec<Schuss> = schüsse
+            .into_iter()
+            .map(|schuss| schuss.into_data())
+            .collect();
 
         if schüsse.len() != self.schuss_ids.len() {
             return Err(Report::new(WertungFehler::NichtGefunden));
