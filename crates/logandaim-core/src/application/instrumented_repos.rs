@@ -15,10 +15,14 @@ use crate::domain::konto::{
     NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
     PasswortWiederherstellung, PasswortWiederherstellungId, SecretTokenHash, Session, SessionId,
 };
-use crate::domain::{EmailAdresse, NeuerSchuss, Schuss, SchussId};
+use crate::domain::{
+    Anlage, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId, Runde, RundeId,
+    Schuss, SchussId, ZielId,
+};
 use crate::ports::{
-    BenutzerRepository, EmailBestätigungRepository, KontoRepository,
-    PasswortWiederherstellungRepository, RepositoryResult, SchussRepository, SessionRepository,
+    AnlageRepository, BenutzerRepository, EmailBestätigungRepository, KontoRepository,
+    PasswortWiederherstellungRepository, RepositoryResult, RundeRepository, SchussRepository,
+    SessionRepository,
 };
 
 macro_rules! impl_instrumented_repo {
@@ -67,6 +71,50 @@ macro_rules! impl_instrumented_repo {
 }
 
 impl_instrumented_repo!(
+    InstrumentedAnlageRepository,
+    AnlageRepository,
+    anlagen,
+    methods: [
+        #[instrument(skip(self, anlage), level = "debug", err(Debug))]
+        fn create(&self, anlage: NeueAnlage) -> RepositoryResult<Versioned<Anlage>>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn find_by_id(&self, id: AnlageId) -> RepositoryResult<Versioned<Anlage>>;
+        #[instrument(skip(self), level = "trace", err(Debug))]
+        fn find_aktiv(&self) -> RepositoryResult<Vec<Versioned<Anlage>>>;
+        #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
+        fn find_by_verwaltung(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Anlage>>>;
+        #[instrument(skip(self, anlage), level = "debug", err(Debug))]
+        fn update(&self, anlage: &mut Versioned<Anlage>) -> RepositoryResult<()>;
+        #[instrument(skip(self, anlage), level = "debug", err(Debug))]
+        fn delete(&self, anlage: Versioned<Anlage>) -> RepositoryResult<()>;
+    ]
+);
+
+impl_instrumented_repo!(
+    InstrumentedRundeRepository,
+    RundeRepository,
+    runden,
+    methods: [
+        #[instrument(skip(self, runde), level = "debug", err(Debug))]
+        fn create(&self, runde: NeueRunde) -> RepositoryResult<Versioned<Runde>>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn find_by_id(&self, id: RundeId) -> RepositoryResult<Versioned<Runde>>;
+        #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
+        fn find_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Runde>>>;
+        #[instrument(skip(self, runde), level = "debug", err(Debug))]
+        fn update(&self, runde: &mut Versioned<Runde>) -> RepositoryResult<()>;
+        #[instrument(skip(self, runde), level = "debug", err(Debug))]
+        fn delete(&self, runde: Versioned<Runde>) -> RepositoryResult<()>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn exists_referencing_anlage(&self, id: AnlageId) -> RepositoryResult<bool>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool>;
+    ]
+);
+
+impl_instrumented_repo!(
     InstrumentedSchussRepository,
     SchussRepository,
     schüsse,
@@ -75,8 +123,12 @@ impl_instrumented_repo!(
         fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Versioned<Schuss>>;
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
         fn find_by_id(&self, id: SchussId) -> RepositoryResult<Versioned<Schuss>>;
-        #[instrument(skip(self, ids), fields(anzahl = ids.len()), level = "trace", err(Debug))]
-        fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+        #[instrument(skip(self, runde_id), fields(runde_id = ?runde_id), level = "trace", err(Debug))]
+        fn find_by_runde(&self, runde_id: RundeId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+        #[instrument(skip(self, ziel_id), fields(ziel_id = ?ziel_id), level = "trace", err(Debug))]
+        fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+        #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
+        fn find_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
         #[instrument(skip(self, schuss), level = "debug", err(Debug))]
         fn update(&self, schuss: &mut Versioned<Schuss>) -> RepositoryResult<()>;
         #[instrument(skip(self, schuss), level = "debug", err(Debug))]
@@ -188,6 +240,8 @@ impl_instrumented_repo!(
 
 /// Pinned bundle: instrumented repos hold pointers into `uow` (field order keeps drop safe).
 pub(crate) struct RepoStorage {
+    pub(crate) anlagen: InstrumentedAnlageRepository,
+    pub(crate) runden: InstrumentedRundeRepository,
     pub(crate) schüsse: InstrumentedSchussRepository,
     pub(crate) benutzer: InstrumentedBenutzerRepository,
     pub(crate) konten: InstrumentedKontoRepository,
@@ -200,6 +254,8 @@ pub(crate) struct RepoStorage {
 impl RepoStorage {
     pub(crate) fn new(uow: Box<dyn UnitOfWorkImpl>) -> Pin<Box<Self>> {
         let mut pinned = Box::pin(RepoStorage {
+            anlagen: InstrumentedAnlageRepository::disabled(),
+            runden: InstrumentedRundeRepository::disabled(),
             schüsse: InstrumentedSchussRepository::disabled(),
             benutzer: InstrumentedBenutzerRepository::disabled(),
             konten: InstrumentedKontoRepository::disabled(),
@@ -214,6 +270,8 @@ impl RepoStorage {
         unsafe {
             let this = pinned.as_mut().get_unchecked_mut();
             let uow_ptr = std::ptr::from_ref(this.uow.as_ref());
+            this.anlagen = InstrumentedAnlageRepository::new(uow_ptr);
+            this.runden = InstrumentedRundeRepository::new(uow_ptr);
             this.schüsse = InstrumentedSchussRepository::new(uow_ptr);
             this.benutzer = InstrumentedBenutzerRepository::new(uow_ptr);
             this.konten = InstrumentedKontoRepository::new(uow_ptr);

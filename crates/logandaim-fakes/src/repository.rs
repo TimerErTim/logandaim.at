@@ -9,7 +9,8 @@ use logandaim_core::{
     ResultReport,
     application::uow::Versioned,
     domain::{
-        EmailAdresse, NeuerSchuss, Schuss, SchussId,
+        Anlage, AnlageAktiv, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId,
+        Runde, RundeId, RundeInBearbeitung, Schuss, SchussId, ZielId,
         konto::{
             Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
             NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
@@ -18,9 +19,9 @@ use logandaim_core::{
         },
     },
     ports::{
-        BenutzerRepository, EmailBestätigungRepository, KontoRepository, Mail, MailError,
-        MailSender, PasswortWiederherstellungRepository, RepositoryError, RepositoryResult,
-        SchussRepository, SessionRepository,
+        AnlageRepository, BenutzerRepository, EmailBestätigungRepository, KontoRepository, Mail,
+        MailError, MailSender, PasswortWiederherstellungRepository, RepositoryError,
+        RepositoryResult, RundeRepository, SchussRepository, SessionRepository,
     },
 };
 
@@ -31,6 +32,8 @@ use logandaim_core::{
 /// real domain crypto, so a test can never pass against an algorithm the product does not
 /// ship.
 pub struct FakeDatastore {
+    pub anlagen: Mutex<FxHashMap<AnlageId, Versioned<Anlage>>>,
+    pub runden: Mutex<FxHashMap<RundeId, Versioned<Runde>>>,
     pub schüsse: Mutex<FxHashMap<SchussId, Versioned<Schuss>>>,
     pub benutzer: Mutex<FxHashMap<BenutzerId, Versioned<Benutzer>>>,
     pub konten: Mutex<FxHashMap<KontoId, Versioned<Konto>>>,
@@ -43,6 +46,8 @@ pub struct FakeDatastore {
 impl Clone for FakeDatastore {
     fn clone(&self) -> Self {
         Self {
+            anlagen: Mutex::new(self.anlagen().clone()),
+            runden: Mutex::new(self.runden().clone()),
             schüsse: Mutex::new(self.schüsse().clone()),
             benutzer: Mutex::new(self.benutzer().clone()),
             konten: Mutex::new(self.konten().clone()),
@@ -62,6 +67,8 @@ impl Default for FakeDatastore {
 impl FakeDatastore {
     pub fn new() -> Self {
         Self {
+            anlagen: Mutex::new(FxHashMap::default()),
+            runden: Mutex::new(FxHashMap::default()),
             schüsse: Mutex::new(FxHashMap::default()),
             benutzer: Mutex::new(FxHashMap::default()),
             konten: Mutex::new(FxHashMap::default()),
@@ -69,6 +76,14 @@ impl FakeDatastore {
             bestätigungen: Mutex::new(FxHashMap::default()),
             wiederherstellungen: Mutex::new(FxHashMap::default()),
         }
+    }
+
+    pub fn anlagen(&self) -> MutexGuard<'_, FxHashMap<AnlageId, Versioned<Anlage>>> {
+        self.anlagen.lock().unwrap()
+    }
+
+    pub fn runden(&self) -> MutexGuard<'_, FxHashMap<RundeId, Versioned<Runde>>> {
+        self.runden.lock().unwrap()
     }
 
     pub fn schüsse(&self) -> MutexGuard<'_, FxHashMap<SchussId, Versioned<Schuss>>> {
@@ -102,6 +117,8 @@ impl FakeDatastore {
 
     /// Replace this datastore's contents with `other` (commit of a snapshot).
     pub fn replace_with(&self, other: &FakeDatastore) {
+        *self.anlagen() = other.anlagen().clone();
+        *self.runden() = other.runden().clone();
         *self.schüsse() = other.schüsse().clone();
         *self.benutzer() = other.benutzer().clone();
         *self.konten() = other.konten().clone();
@@ -159,6 +176,142 @@ where
     Ok(())
 }
 
+pub struct FakeAnlageRepository {
+    datastore: Arc<FakeDatastore>,
+}
+
+impl FakeAnlageRepository {
+    pub fn new(datastore: Arc<FakeDatastore>) -> Self {
+        Self { datastore }
+    }
+}
+
+#[async_trait]
+impl AnlageRepository for FakeAnlageRepository {
+    async fn create(&self, anlage: NeueAnlage) -> RepositoryResult<Versioned<Anlage>> {
+        let id = AnlageId(Uuid::new_v4());
+        let erstellt = Versioned::init(Anlage::Aktiv(AnlageAktiv::neu(id, anlage)));
+        self.datastore.anlagen().insert(id, erstellt.clone());
+        Ok(erstellt)
+    }
+
+    async fn find_by_id(&self, id: AnlageId) -> RepositoryResult<Versioned<Anlage>> {
+        self.datastore
+            .anlagen()
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| Report::new(RepositoryError::NotFound))
+    }
+
+    async fn find_aktiv(&self) -> RepositoryResult<Vec<Versioned<Anlage>>> {
+        Ok(self
+            .datastore
+            .anlagen()
+            .values()
+            .filter(|anlage| !anlage.ist_archiviert())
+            .cloned()
+            .collect())
+    }
+
+    async fn find_by_verwaltung(
+        &self,
+        benutzer_id: BenutzerId,
+    ) -> RepositoryResult<Vec<Versioned<Anlage>>> {
+        Ok(self
+            .datastore
+            .anlagen()
+            .values()
+            .filter(|anlage| anlage.rolle_von(benutzer_id).is_some())
+            .cloned()
+            .collect())
+    }
+
+    async fn update(&self, anlage: &mut Versioned<Anlage>) -> RepositoryResult<()> {
+        let mut map = self.datastore.anlagen();
+        store_update(&mut map, anlage.id(), anlage)
+    }
+
+    async fn delete(&self, anlage: Versioned<Anlage>) -> RepositoryResult<()> {
+        let mut map = self.datastore.anlagen();
+        store_delete(&mut map, anlage.id(), &anlage)
+    }
+}
+
+pub struct FakeRundeRepository {
+    datastore: Arc<FakeDatastore>,
+}
+
+impl FakeRundeRepository {
+    pub fn new(datastore: Arc<FakeDatastore>) -> Self {
+        Self { datastore }
+    }
+}
+
+#[async_trait]
+impl RundeRepository for FakeRundeRepository {
+    async fn create(&self, runde: NeueRunde) -> RepositoryResult<Versioned<Runde>> {
+        let id = RundeId(Uuid::new_v4());
+        let erstellt = Versioned::init(Runde::InBearbeitung(RundeInBearbeitung::neu(id, runde)));
+        self.datastore.runden().insert(id, erstellt.clone());
+        Ok(erstellt)
+    }
+
+    async fn find_by_id(&self, id: RundeId) -> RepositoryResult<Versioned<Runde>> {
+        self.datastore
+            .runden()
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| Report::new(RepositoryError::NotFound))
+    }
+
+    async fn find_by_benutzer(
+        &self,
+        benutzer_id: BenutzerId,
+    ) -> RepositoryResult<Vec<Versioned<Runde>>> {
+        Ok(self
+            .datastore
+            .runden()
+            .values()
+            .filter(|runde| runde.gehört_zu(benutzer_id))
+            .cloned()
+            .collect())
+    }
+
+    async fn update(&self, runde: &mut Versioned<Runde>) -> RepositoryResult<()> {
+        let mut map = self.datastore.runden();
+        store_update(&mut map, runde.id(), runde)
+    }
+
+    async fn delete(&self, runde: Versioned<Runde>) -> RepositoryResult<()> {
+        let mut map = self.datastore.runden();
+        store_delete(&mut map, runde.id(), &runde)
+    }
+
+    async fn exists_referencing_anlage(&self, id: AnlageId) -> RepositoryResult<bool> {
+        Ok(self
+            .datastore
+            .runden()
+            .values()
+            .any(|runde| runde.anlage_id() == id))
+    }
+
+    async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool> {
+        Ok(self
+            .datastore
+            .runden()
+            .values()
+            .any(|runde| runde.parkour_id() == id))
+    }
+
+    async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool> {
+        Ok(self
+            .datastore
+            .runden()
+            .values()
+            .any(|runde| runde.enthält(id)))
+    }
+}
+
 pub struct FakeSchussRepository {
     datastore: Arc<FakeDatastore>,
 }
@@ -186,9 +339,37 @@ impl SchussRepository for FakeSchussRepository {
             .ok_or_else(|| Report::new(RepositoryError::NotFound))
     }
 
-    async fn find_by_ids(&self, ids: &[SchussId]) -> RepositoryResult<Vec<Versioned<Schuss>>> {
-        let data = self.datastore.schüsse();
-        Ok(ids.iter().filter_map(|id| data.get(id).cloned()).collect())
+    async fn find_by_runde(&self, runde_id: RundeId) -> RepositoryResult<Vec<Versioned<Schuss>>> {
+        Ok(self
+            .datastore
+            .schüsse()
+            .values()
+            .filter(|schuss| schuss.runde_id() == runde_id)
+            .cloned()
+            .collect())
+    }
+
+    async fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>> {
+        Ok(self
+            .datastore
+            .schüsse()
+            .values()
+            .filter(|schuss| schuss.ziel_id() == ziel_id)
+            .cloned()
+            .collect())
+    }
+
+    async fn find_by_benutzer(
+        &self,
+        benutzer_id: BenutzerId,
+    ) -> RepositoryResult<Vec<Versioned<Schuss>>> {
+        Ok(self
+            .datastore
+            .schüsse()
+            .values()
+            .filter(|schuss| schuss.erfasser().benutzer() == Some(benutzer_id))
+            .cloned()
+            .collect())
     }
 
     async fn update(&self, schuss: &mut Versioned<Schuss>) -> RepositoryResult<()> {

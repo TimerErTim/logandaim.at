@@ -1,5 +1,9 @@
 use thiserror::Error;
 
+/// The constant body of a `500`.
+///
+/// A server failure answers this and nothing more, so an internal cause never reaches a
+/// caller.
 #[derive(Debug, Error)]
 #[error("Internal server error")]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]

@@ -3,10 +3,26 @@ export const logandaimKeys = {
   root: ["logandaim.at"] as const,
   health: () => [...logandaimKeys.root, "health"] as const,
   benutzer: () => [...logandaimKeys.root, "benutzer"] as const,
-  schüsse: {
-    all: () => [...logandaimKeys.root, "schüsse"] as const,
+  anlagen: {
+    all: () => [...logandaimKeys.root, "anlagen"] as const,
+    detail: (id: string) => [...logandaimKeys.anlagen.all(), id] as const,
+    benutzerSuche: (anlageId: string, email: string) =>
+      [
+        ...logandaimKeys.anlagen.detail(anlageId),
+        "benutzer-suche",
+        email,
+      ] as const,
   },
-  wertung: {
-    all: () => [...logandaimKeys.root, "wertung"] as const,
+  parkour: {
+    /** The public list (AC-13). */
+    all: () => [...logandaimKeys.root, "parkour"] as const,
+  },
+  anlagenVerzeichnis: {
+    /** The public Anlagen directory: readable without a session. */
+    all: () => [...logandaimKeys.root, "anlagen-verzeichnis"] as const,
+  },
+  runden: {
+    all: () => [...logandaimKeys.root, "runden"] as const,
+    detail: (id: string) => [...logandaimKeys.runden.all(), id] as const,
   },
 };

@@ -4,14 +4,14 @@
 
 logandaim.at is an Austria-wide online logbook for 3D archery. You log a round target by target,
 keep the exact shooting distance between the stakes of every target, and see how your accuracy
-develops over time. Parcours operators get one shared way to describe their courses.
+develops over time. Parkour operators get one shared way to describe their courses.
 
 ## What it does
 
 - Log a round as you shoot it, one entry per arrow and target.
 - Record the real distance between the stakes of each target.
 - Review your own history and watch your scores and accuracy build up across rounds.
-- Give parcours operators a standard way to describe a site, its course, and its targets.
+- Give parkour operators a standard way to describe a site, its course, and its targets.
 
 ## How you use it
 
@@ -21,7 +21,7 @@ comes later.
 
 ## Status
 
-Early development. Nobody can log a real round yet, because the pilot parcours are still being
+Early development. Nobody can log a real round yet, because the pilot parkours are still being
 prepared. What is planned, and for which milestone, is in the
 [product charter](specs/product/charter.md). Downloads and release notes will appear on the
 [releases page](https://github.com/TimerErTim/logandaim.at/releases) once the first version ships.

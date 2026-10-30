@@ -11,6 +11,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Report that the service is up.
+         * @description Answers the literal `OK`. It touches no dependency, so a green answer means the
+         *     process is listening, not that its database is reachable.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -38,7 +43,272 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/schuss": {
+    "/anlagen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the Anlagen the caller may administer.
+         * @description Archived Anlagen are not listed. Each row carries the caller's role in that Anlage
+         *     so a client can gate its controls.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["AnlageZugriff"][];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create an Anlage. Systemadministrator only.
+         * @description The caller becomes its first Administrator. The address is required, the contact
+         *     details are optional.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["AnlageErstellungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/oeffentlich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the active Anlagen with the Parkour each offers. No sign-in needed.
+         * @description This is the public directory. It carries no contact data, and a broken token is
+         *     answered as anonymous rather than as an error.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage\u00D6ffentlich"][];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one Anlage with its whole master data.
+         * @description An archived Anlage answers only to a Systemadministrator; every write to one is
+         *     refused with `409`.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        /**
+         * Rewrite the Anlage's own fields: name, address, and contact. Administrator only.
+         * @description The whole set is replaced; omitted contact fields become empty. Ziele, Parkour, and
+         *     role assignments are untouched.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["Anlage\u00C4nderungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/deaktivierung": {
         parameters: {
             query?: never;
             header?: never;
@@ -47,11 +317,1043 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Deactivate an Anlage once and for all.
+         * @description Irreversible: no route reactivates one. Reads keep working, writes answer `409`.
+         */
         post: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/verwaltungen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Grant a role in the Anlage to an existing Benutzer. Administrator only.
+         * @description The Benutzer is named by identity; find it with `benutzer-suche` first.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["AnlageVerwaltungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/benutzer-suche": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Find a Benutzer by exact e-mail address, for granting a role.
+         * @description Usable only by a caller who may manage this active Anlage. Answers a single match or
+         *     an empty list.
+         */
+        get: {
+            parameters: {
+                query: {
+                    e_mail_adresse: string;
+                };
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Benutzer"][];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/verwaltungen/{benutzer_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change an existing role. Administrator only.
+         * @description The target is in the path, so the body only names the role.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    benutzer_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["AnlageVerwaltungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Revoke a role. Administrator only.
+         * @description The last Administrator of an Anlage cannot be revoked.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    benutzer_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/ziele": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a physical Ziel to the Anlage.
+         * @description A Mitarbeiter may do this; the Anlage's own fields are not touched.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/ziele/{ziel_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Edit a Ziel's details.
+         * @description The identity stays, and so does everything already recorded against it.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Remove a Ziel: archive it when recorded Runden reference it, delete it otherwise.
+         * @description Answers the Anlage as it stands afterwards, so the Ziel is absent from `ziele` either
+         *     way and an archived one no longer appears among the active ones.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/ziele/{ziel_id}/ersatz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace the physical Ziel with a new one in the same slot.
+         * @description The replacement has a new identity; the history of the old Ziel stays as recorded.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/parkour": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a Parkour with its Pflock setup and its route.
+         * @description The Pflöcke and their order are given explicitly; a colour never implies an order.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ParkourErstellungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/parkour/{parkour_id}/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace the whole shooting setup: Pflöcke and the route that places Ziele among them.
+         * @description Existing Runden keep the snapshot they captured; only future Runden see the change.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    parkour_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ParkourSetupRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/anlagen/{anlage_id}/parkour/{parkour_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Rename a Parkour.
+         * @description The identity stays, and every captured snapshot keeps the name it recorded.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    parkour_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ParkourUmbenennenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Remove a Parkour: archive it when a Runde captured it, delete it otherwise.
+         * @description Answers the Anlage as it stands afterwards.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    anlage_id: string;
+                    parkour_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Anlage"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/parkour": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List every active Parkour of every active Anlage. No sign-in needed.
+         * @description This is the list a client starts a Runde from.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
                 path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Parkour\u00D6ffentlich"][];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the caller's own Runden, newest first.
+         * @description No one but the caller and a Systemadministrator ever sees a Runde here.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["RundeBasic"][];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Start a Runde on one active Parkour.
+         * @description The setup is captured as a snapshot in the same transaction, so a later change to the
+         *     Parkour cannot alter this Runde.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["RundeStartenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one Runde with its whole snapshot and both Wertungen.
+         * @description The owner and a Systemadministrator may read it; staff may not read another
+         *     Benutzer's Runde.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}/abschluss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close the caller's own Runde.
+         * @description Afterwards it refuses further Schüsse and its Wertungen are final.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}/sch\u00FCsse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Log one arrow at a Ziel of the caller's own open Runde.
+         * @description The owner comes from the token, and the Ziel must be part of the Runde's snapshot.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                };
                 cookie?: never;
             };
             requestBody: {
@@ -92,60 +1394,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/wertung": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json; charset=utf-8": components["schemas"]["WertungRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json; charset=utf-8": components["schemas"]["Wertung"];
-                    };
-                };
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain; charset=utf-8": string;
-                    };
-                };
-                "4XX": {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/registrierung/start": {
         parameters: {
             query?: never;
@@ -155,7 +1403,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Step 1. Answers `200` whether the address is free or taken (AC-2). */
+        /**
+         * Registration step 1: request a confirmation mail for an e-mail address.
+         * @description Answers `200` whether the address is free or already taken, so the route cannot be
+         *     used to probe for accounts.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -216,7 +1468,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Step 2: creates Benutzer + Konto and answers the first token pair. */
+        /**
+         * Registration step 2: create the Benutzer and its Konto from the mailed token.
+         * @description Answers the first token pair; the refresh token leaves as the `__Host-` cookie.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -279,6 +1534,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Sign in with e-mail address and password.
+         * @description Answers an access token in the body and a refresh token in the `__Host-` cookie.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -341,7 +1600,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rotate the refresh token from the cookie. */
+        /**
+         * Rotate the refresh token from the `__Host-` cookie.
+         * @description Answers a fresh token pair. A `401` clears the unusable cookie.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -402,6 +1664,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * End the current session.
+         * @description The refresh token is revoked and the cookie is cleared with it.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -459,6 +1725,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Request a password reset mail for an e-mail address.
+         * @description Answers `200` whether the address exists or not, so the route cannot be used to probe
+         *     for accounts.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -519,7 +1790,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Single use, and ends every session: the cookie is cleared with them. */
+        /**
+         * Set a new password from a mailed reset token.
+         * @description The token is single use and ends every session; the cookie is cleared with them.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -578,14 +1852,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The caller's own Benutzer. `?benutzerId=` names another one and needs
-         *     `Systemadministrator`.
+         * Read the authenticated caller, including its account-level role.
+         * @description Answers `401` when the token is missing or unusable; there is no anonymous answer.
          */
         get: {
             parameters: {
-                query?: {
-                    benutzerId?: string;
-                };
+                query?: never;
                 header?: {
                     Authorization?: string;
                 };
@@ -600,7 +1872,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["Benutzer"];
+                        "application/json; charset=utf-8": components["schemas"]["AuthenticatedBenutzer"];
                     };
                 };
                 500: {
@@ -640,7 +1912,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Deletes the caller's own Benutzer. The cookie is cleared with the identity. */
+        /**
+         * Delete the caller's own Benutzer.
+         * @description The password is re-entered and the intent must be confirmed explicitly. The cookie
+         *     is cleared with the identity.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -697,143 +1973,796 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** AnmeldungRequest */
+        /**
+         * Abstand
+         * @description One captured distance, named by the Pflock' colour.
+         */
+        Abstand: {
+            /**
+             * A Pflock colour as validated `#rrggbb`.
+             * @description The captured Pflock's colour.
+             */
+            pflock: string;
+            /**
+             * Format: uint32
+             * @description Distance from that Pflock to the Ziel, in metres.
+             */
+            meter: number;
+        };
+        /**
+         * Anlage
+         * @description The Anlage with its whole master data, as `GET /anlagen/{id}` answers it.
+         */
+        Anlage: {
+            /**
+             * Format: uuid
+             * @description Identity of the Anlage.
+             */
+            id: string;
+            /** @description Shown name of the Anlage. */
+            name: string;
+            /** @description Its structured address. */
+            adresse: components["schemas"]["AnlageAdresse"] & unknown;
+            /** @description Its optional contact details. */
+            kontakt: components["schemas"]["AnlageKontakt"] & unknown;
+            /** @description Whether it is in use or archived. */
+            zustand: components["schemas"]["AnlageZustand"] & unknown;
+            /** @description The role assignments in this Anlage. */
+            verwaltungen: components["schemas"]["AnlageVerwaltung"][];
+            /** @description Its physical Ziele. */
+            ziele: components["schemas"]["Ziel"][];
+            /** @description Its Parkour, each with its setup and route. */
+            parkour: components["schemas"]["Parkour"][];
+        };
+        /**
+         * AnlageAdresse
+         * @description One structured address. Every field is required.
+         */
+        AnlageAdresse: {
+            /** @description Street and house number. */
+            "stra\u00DFe": string;
+            /** @description Postal code of the place. */
+            postleitzahl: string;
+            /** @description The place itself. */
+            ort: string;
+            /** @description Two-letter country code; only `AT`, `DE`, and `CH` are accepted. */
+            "l\u00E4ndercode": components["schemas"]["L\u00E4ndercode"] & unknown;
+        };
+        /**
+         * AnlageErstellungRequest
+         * @description Create an Anlage. Systemadministrator only.
+         */
+        AnlageErstellungRequest: {
+            /** @description Shown name of the new Anlage. */
+            name: string;
+            /** @description Its structured address; every address field is required. */
+            adresse: components["schemas"]["AnlageAdresse"] & unknown;
+            /** @description Optional contact details. */
+            kontakt: components["schemas"]["AnlageKontakt"] & unknown;
+        };
+        /**
+         * AnlageKontakt
+         * @description Optional contact details of an Anlage; each may be absent on its own.
+         */
+        AnlageKontakt: {
+            /** @description Name of the person to reach. */
+            name?: string;
+            /**
+             * E-Mail-Adresse
+             * @description E-mail address of the person to reach.
+             * @example test@example.com
+             */
+            email?: string;
+            /** @description Phone number of the person to reach. */
+            telefon?: string;
+            /** @description Website of the Anlage. */
+            website?: string;
+        };
+        /**
+         * AnlageVerwaltung
+         * @description One role assignment: which Benutzer holds which role in this Anlage.
+         */
+        AnlageVerwaltung: {
+            /**
+             * Format: uuid
+             * @description The Benutzer that holds the role.
+             */
+            benutzerId: string;
+            /** @description The role it holds. */
+            rolle: components["schemas"]["AnlageVerwaltungRolle"] & unknown;
+        };
+        /**
+         * AnlageVerwaltungRequest
+         * @description Grant or change one role in an Anlage.
+         */
+        AnlageVerwaltungRequest: {
+            /**
+             * Format: uuid
+             * @description The Benutzer that should hold the role.
+             */
+            benutzerId: string;
+            /** @description The role to assert. */
+            rolle: components["schemas"]["AnlageVerwaltungRolle"] & unknown;
+        };
+        /**
+         * @description `Administrator` or `Mitarbeiter`: the Anlage's role inside one Anlage.
+         *
+         *     An Administrator may change the Anlage, its roles, and its master data; a Mitarbeiter
+         *     may maintain Ziele and Parkour but not the Anlage's own fields.
+         * @enum {string}
+         */
+        AnlageVerwaltungRolle: AnlageVerwaltungRolle;
+        /**
+         * AnlageZugriff
+         * @description One Anlage together with the caller's access to it.
+         */
+        AnlageZugriff: {
+            /** @description The Anlage itself, with its whole master data. */
+            anlage: components["schemas"]["Anlage"] & unknown;
+            /** @description The caller's role in this Anlage, absent when it holds none. */
+            rolle?: components["schemas"]["AnlageVerwaltungRolle"] & unknown;
+            /** @description Whether the caller is a Systemadministrator and may act regardless of `rolle`. */
+            istSystemadministrator: boolean;
+        };
+        /**
+         * @description `Aktiv` or `Archiviert`.
+         *
+         *     An archived Anlage stays readable; every write to one answers `409`.
+         * @enum {string}
+         */
+        AnlageZustand: AnlageZustand;
+        /**
+         * AnlageÄnderungRequest
+         * @description Rewrite the Anlage's descriptive fields.
+         */
+        "Anlage\u00C4nderungRequest": {
+            /** @description Shown name of the Anlage. */
+            name: string;
+            /** @description Its structured address; every address field is required. */
+            adresse: components["schemas"]["AnlageAdresse"] & unknown;
+            /** @description Optional contact details. */
+            kontakt: components["schemas"]["AnlageKontakt"] & unknown;
+        };
+        /**
+         * AnlageÖffentlich
+         * @description One active Anlage in the public directory.
+         *
+         *     Public, so it carries no contact data: an email address or phone number is personal data
+         *     and is not published.
+         */
+        "Anlage\u00D6ffentlich": {
+            /**
+             * Format: uuid
+             * @description Identity of the Anlage.
+             */
+            anlageId: string;
+            /** @description Shown name of the Anlage. */
+            name: string;
+            /** @description The place the Anlage is in. */
+            ort: string;
+            /** @description Two-letter country code of that place. */
+            "l\u00E4ndercode": components["schemas"]["L\u00E4ndercode"] & unknown;
+            /** @description The Parkour it currently offers, without their setup. */
+            parkour: components["schemas"]["ParkourKurz"][];
+        };
+        /**
+         * AnmeldungRequest
+         * @description Sign-in with the account's e-mail address and password.
+         */
         AnmeldungRequest: {
             /**
              * E-Mail-Adresse
+             * @description The account's e-mail address.
              * @example test@example.com
              */
             eMailAdresse: string;
+            /** @description The account's password. */
             passwort: string;
         };
         /**
-         * Benutzer
-         * @description The logged-in Benutzer as `GET /benutzer` answers it.
+         * AnonymisierterErfasser
+         * @description A row whose owner was deleted.
          */
-        Benutzer: {
-            /** Format: uuid */
+        AnonymisierterErfasser: {
+            /**
+             * Format: date-time
+             * @description When the row was anonymised.
+             */
+            am: string;
+        };
+        /**
+         * AuthenticatedBenutzer
+         * @description The authenticated caller, as `GET /benutzer` answers it.
+         */
+        AuthenticatedBenutzer: {
+            /**
+             * Format: uuid
+             * @description Identity of the Benutzer.
+             */
             id: string;
             /**
              * E-Mail-Adresse
+             * @description Its e-mail address, which is also the sign-in name.
+             * @example test@example.com
+             */
+            eMailAdresse: string;
+            /** @description Its role on the whole instance. */
+            rolle: components["schemas"]["BenutzerRolle"] & unknown;
+        };
+        /**
+         * Benutzer
+         * @description A known Benutzer: the account an exact e-mail lookup found.
+         */
+        Benutzer: {
+            /**
+             * Format: uuid
+             * @description Identity of the matching Benutzer.
+             */
+            id: string;
+            /**
+             * E-Mail-Adresse
+             * @description The address that matched.
              * @example test@example.com
              */
             eMailAdresse: string;
         };
         /**
+         * BenutzerErfasser
+         * @description A row still owned by a Benutzer.
+         */
+        BenutzerErfasser: {
+            /**
+             * Format: uuid
+             * @description Identity of the owning Benutzer.
+             */
+            benutzerId: string;
+        };
+        /**
          * BenutzerLöschungRequest
-         * @description Deleting one's own Benutzer: the Passwort is re-entered, and the intent is explicit.
+         * @description Delete one's own Benutzer: the password is re-entered, and the intent is explicit.
          */
         "BenutzerL\u00F6schungRequest": {
+            /** @description The account's password, re-entered to prove the caller's identity. */
             passwort: string;
             /** @description Must be `true`; a missing flag is a refusal, never a default. */
             "best\u00E4tigt": boolean;
         };
         /**
+         * @description `Benutzer` or `Systemadministrator`: the role a Benutzer holds on the whole instance.
+         *
+         *     A Systemadministrator may create and administer any Anlage, independently of its
+         *     per-Anlage roles.
+         * @enum {string}
+         */
+        BenutzerRolle: BenutzerRolle;
+        /**
+         * @description Who a row belongs to.
+         *
+         *     A Benutzer deletion anonymises its rows: the identity is gone and only the anonymisation
+         *     time remains, so history survives without naming anyone.
+         */
+        Erfasser: components["schemas"]["Erfasser_BenutzerErfasser"] | components["schemas"]["Erfasser_AnonymisierterErfasser"];
+        /**
+         * @description Who a row belongs to.
+         *
+         *     A Benutzer deletion anonymises its rows: the identity is gone and only the anonymisation
+         *     time remains, so history survives without naming anyone.
+         */
+        Erfasser_AnonymisierterErfasser: {
+            Anonymisiert: components["schemas"]["AnonymisierterErfasser"];
+        };
+        /**
+         * @description Who a row belongs to.
+         *
+         *     A Benutzer deletion anonymises its rows: the identity is gone and only the anonymisation
+         *     time remains, so history survives without naming anyone.
+         */
+        Erfasser_BenutzerErfasser: {
+            Benutzer: components["schemas"]["BenutzerErfasser"];
+        };
+        /**
+         * @description Country codes currently accepted for Anlage addresses.
+         * @enum {string}
+         */
+        "L\u00E4ndercode": LNdercode;
+        /**
          * Ok
          * @description Acknowledgement of a request that has nothing to return.
          *
-         *     A bare `204` would be indistinguishable from a proxy's empty answer, so the explicit
-         *     body is worth the two bytes.
+         *     A bare `204` would be indistinguishable from a proxy's empty answer, so the explicit body
+         *     is worth the two bytes.
          * @example {
          *       "ok": true
          *     }
          */
         Ok: {
+            /** @description Always `true`; the presence of the body is the acknowledgement. */
             ok: boolean;
         };
-        /** PasswortVergessenRequest */
+        /**
+         * Parkour
+         * @description One Parkour of the Anlage: its name, its Pflöcke, and the route they form.
+         */
+        Parkour: {
+            /**
+             * Format: uuid
+             * @description Identity of the Parkour.
+             */
+            id: string;
+            /** @description Shown name. Renaming keeps the identity and every captured snapshot. */
+            name: string;
+            /** @description Whether the Parkour is in use or retired. */
+            zustand: components["schemas"]["AnlageZustand"] & unknown;
+            /** @description Far to near, in the order the shooter walks them. Never inferred from a colour. */
+            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            /** @description In route order. */
+            platzierungen: components["schemas"]["Zielplatzierung"][];
+        };
+        /**
+         * ParkourErstellungRequest
+         * @description Create a Parkour with its Pflock setup and its route.
+         */
+        ParkourErstellungRequest: {
+            /** @description Shown name of the new Parkour. */
+            name: string;
+            /** @description The Pflöcke, far to near. */
+            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            /** @description The Ziele on the route, in walking order. May be empty. */
+            platzierungen: components["schemas"]["Zielplatzierung"][];
+        };
+        /**
+         * ParkourKurz
+         * @description One active Parkour as the public directory names it: counts only, no setup.
+         */
+        ParkourKurz: {
+            /**
+             * Format: uuid
+             * @description Identity of the Parkour.
+             */
+            id: string;
+            /** @description Shown name of the Parkour. */
+            name: string;
+            /**
+             * Format: uint64
+             * @description How many Pflöcke the route uses.
+             */
+            "anzahlPfl\u00F6cke": number;
+            /**
+             * Format: uint64
+             * @description How many Ziele the route places.
+             */
+            anzahlZiele: number;
+        };
+        /**
+         * ParkourSetupRequest
+         * @description Replace a Parkour' whole shooting setup.
+         */
+        ParkourSetupRequest: {
+            /** @description The Pflöcke, far to near. */
+            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            /** @description The Ziele on the route, in walking order. May be empty. */
+            platzierungen: components["schemas"]["Zielplatzierung"][];
+        };
+        /**
+         * ParkourUmbenennenRequest
+         * @description Rename a Parkour. Existing snapshots keep the name they captured.
+         */
+        ParkourUmbenennenRequest: {
+            /** @description The new shown name. */
+            name: string;
+        };
+        /**
+         * ParkourÖffentlich
+         * @description One active Parkour with the Anlage that holds it, for starting a Runde.
+         */
+        "Parkour\u00D6ffentlich": {
+            /**
+             * Format: uuid
+             * @description The Anlage that offers this Parkour.
+             */
+            anlageId: string;
+            /** @description That Anlage's name. */
+            anlageName: string;
+            /** @description The Parkour with its whole setup. */
+            parkour: components["schemas"]["Parkour"] & unknown;
+        };
+        /**
+         * PasswortVergessenRequest
+         * @description Request a password reset mail.
+         */
         PasswortVergessenRequest: {
             /**
              * E-Mail-Adresse
+             * @description The address to send the reset mail to.
              * @example test@example.com
              */
             eMailAdresse: string;
         };
-        /** PasswortWiederherstellenRequest */
+        /**
+         * PasswortWiederherstellenRequest
+         * @description Set a new password from a mailed reset token.
+         */
         PasswortWiederherstellenRequest: {
+            /** @description The single-use token from the reset mail. */
             token: string;
+            /** @description The new password. It is checked against the password policy. */
             neuesPasswort: string;
         };
         /**
+         * Pflock
+         * @description One shooting position. Its colour identifies it; no label exists.
+         */
+        Pflock: {
+            /**
+             * Format: uuid
+             * @description Identity of the Pflock inside its Parkour.
+             */
+            id: string;
+            /**
+             * A Pflock colour as validated `#rrggbb`.
+             * @description The Pflock's colour. It is what distinguishes one Pflock from another.
+             */
+            farbe: string;
+        };
+        /**
+         * PflockAbstand
+         * @description One distance from a Pflock to a Ziel.
+         *
+         *     `meter` is absent when no distance is configured for that Pflock.
+         */
+        PflockAbstand: {
+            /**
+             * Format: uuid
+             * @description The Pflock the distance is measured from.
+             */
+            pflockId: string;
+            /**
+             * Format: uint32
+             * @description Distance from that Pflock to the Ziel, in metres; absent when unconfigured.
+             */
+            meter?: number;
+        };
+        /**
          * RegistrierungAbschlussRequest
-         * @description Registration step 2.
+         * @description Registration step 2: the mailed token and the chosen password.
          */
         RegistrierungAbschlussRequest: {
+            /** @description The single-use token from the confirmation mail. */
             token: string;
+            /** @description The password to set. It is checked against the password policy. */
             passwort: string;
         };
         /**
          * RegistrierungStartRequest
-         * @description Registration step 1.
+         * @description Registration step 1: the address to confirm.
          */
         RegistrierungStartRequest: {
             /**
              * E-Mail-Adresse
+             * @description The address to send the confirmation mail to. Its format is validated.
              * @example test@example.com
              */
             eMailAdresse: string;
         };
         /**
+         * Runde
+         * @description The whole read model of one Runde, as `GET /runden/{id}` answers it.
+         */
+        Runde: {
+            /**
+             * Format: uuid
+             * @description Identity of the Runde.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The Anlage the Parkour belongs to.
+             */
+            anlageId: string;
+            /**
+             * Format: uuid
+             * @description The Parkour this Runde was started on.
+             */
+            parkourId: string;
+            /** @description The Parkour' name as captured at the start, not its current name. */
+            parkourName: string;
+            /** @description Who the Runde belongs to. */
+            erfasser: components["schemas"]["Erfasser"] & unknown;
+            /** @description Whether it is still open or already closed. */
+            zustand: components["schemas"]["RundeZustand"] & unknown;
+            /**
+             * Format: date-time
+             * @description Start of the Runde.
+             */
+            begonnenAm: string;
+            /**
+             * Format: date-time
+             * @description End of the Runde; absent while it is open.
+             */
+            abgeschlossenAm?: string;
+            /** @description The captured Pflöcke' colours, near to far. */
+            "pfl\u00F6cke": components["schemas"]["RundePflock"][];
+            /** @description The Ziele as captured, with their results. */
+            ziele: components["schemas"]["RundeZiel"][];
+            /**
+             * Format: uint32
+             * @description First-arrow hits over the whole Runde.
+             */
+            gesamtErsterTreffer: number;
+            /**
+             * Format: uint32
+             * @description Follow-up hits over the whole Runde.
+             */
+            gesamtMehrschuss: number;
+            /**
+             * Format: uint64
+             * @description How many Ziele already carry a Wertung.
+             */
+            zieleMitWertung: number;
+        };
+        /**
+         * RundeBasic
+         * @description A Runde without its captured route, for a list of many.
+         *
+         *     Named for what it is, not for the endpoint that serves it: the same shape answers any
+         *     collection of Runden.
+         */
+        RundeBasic: {
+            /**
+             * Format: uuid
+             * @description Identity of the Runde.
+             */
+            id: string;
+            /**
+             * Format: uuid
+             * @description The Anlage the Parkour belongs to.
+             */
+            anlageId: string;
+            /**
+             * Format: uuid
+             * @description The Parkour this Runde was started on.
+             */
+            parkourId: string;
+            /** @description The Parkour' name as captured at the start. */
+            parkourName: string;
+            /** @description Whether it is still open or already closed. */
+            zustand: components["schemas"]["RundeZustand"] & unknown;
+            /**
+             * Format: date-time
+             * @description Start of the Runde.
+             */
+            begonnenAm: string;
+            /**
+             * Format: date-time
+             * @description End of the Runde; absent while it is open.
+             */
+            abgeschlossenAm?: string;
+        };
+        /**
+         * RundePflock
+         * @description One Pflock of this Runde' captured route, in near-to-far order.
+         *
+         *     A captured route keeps no master-data identity, so the colour is what tells the Pflöcke
+         *     apart.
+         */
+        RundePflock: {
+            /**
+             * A Pflock colour as validated `#rrggbb`.
+             * @description The captured Pflock's colour.
+             */
+            farbe: string;
+            /**
+             * Format: uint64
+             * @description 0-based position, near to far.
+             */
+            position: number;
+        };
+        /**
+         * RundeStartenRequest
+         * @description Start a Runde on one active Parkour.
+         */
+        RundeStartenRequest: {
+            /**
+             * Format: uuid
+             * @description The Parkour to shoot. It must be active.
+             */
+            parkourId: string;
+        };
+        /**
+         * RundeZiel
+         * @description One Ziel as this Runde captured it: identity, animal name, ordinal, distances, Wertung.
+         */
+        RundeZiel: {
+            /**
+             * Format: uuid
+             * @description Identity of the Ziel as captured.
+             */
+            zielId: string;
+            /** @description Animal name as captured. */
+            tiername: string;
+            /**
+             * Format: uint32
+             * @description 1-based ordinal as captured, distinguishing duplicate animal names.
+             */
+            zielnummer: number;
+            /** @description The distances as captured. */
+            "abst\u00E4nde": components["schemas"]["Abstand"][];
+            /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
+            wertung?: components["schemas"]["Zielwertung"] & unknown;
+        };
+        /**
+         * @description `InBearbeitung` or `Abgeschlossen`.
+         *
+         *     A completed Runde refuses further Schüsse and its Wertungen are final.
+         * @enum {string}
+         */
+        RundeZustand: RundeZustand;
+        /**
          * Schuss
-         * @description One logged arrow, translated from the domain.
+         * @description One logged arrow.
          */
         Schuss: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Schuss.
+             */
             id: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Runde it belongs to.
+             */
+            rundeId: string;
+            /**
+             * Format: uuid
+             * @description The Ziel it hit or missed.
+             */
             zielId: string;
-            /** Format: uint64 */
+            /** @description Who logged it. */
+            erfasser: components["schemas"]["Erfasser"] & unknown;
+            /**
+             * Format: uint64
+             * @description 1-based position of the arrow at its Ziel.
+             */
             pfeil: number;
-            wertungszone: components["schemas"]["Wertungszone"];
+            /** @description Where on the Ziel it landed. */
+            wertungszone: components["schemas"]["Wertungszone"] & unknown;
         };
         /**
          * SchussErstellungRequest
-         * @description Inbound request for registering one Schuss at a Ziel. `pfeil` is validated by
-         *     `domain::NeuerSchuss` when the use case builds it.
+         * @description Register one Schuss inside the caller's own open Runde.
          */
         SchussErstellungRequest: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Ziel that was aimed at; it must be part of the Runde's snapshot.
+             */
             zielId: string;
-            /** Format: uint64 */
+            /**
+             * Format: uint64
+             * @description 1-based position of the arrow at its Ziel; `0` is rejected.
+             */
             pfeil: number;
-            wertungszone: components["schemas"]["Wertungszone"];
+            /** @description Where on the Ziel the arrow landed. */
+            wertungszone: components["schemas"]["Wertungszone"] & unknown;
         };
-        /** SessionResponseContent */
+        /**
+         * SessionResponseContent
+         * @description The access token of a session.
+         *
+         *     The matching refresh token is never in a body: it leaves as the `__Host-` cookie, and
+         *     every session response is `Cache-Control: no-store`.
+         */
         SessionResponseContent: {
+            /** @description The token to send as `Authorization: Bearer <token>`. */
             accessToken: string;
         };
-        /** StructuredError */
+        /**
+         * StructuredError
+         * @description The one error envelope every failed request answers with.
+         *
+         *     It is the error chain flattened, not a code enum: read `message` for what failed and
+         *     `attachments` for the free-text detail attached to that failure. A `500` deliberately
+         *     answers a constant body, so an internal failure never leaks its cause.
+         */
         StructuredError: {
+            /** @description What failed, as the error's own display text. */
             message: string;
+            /** @description Free-text detail attached to that failure. */
             attachments: string[];
+            /** @description The nested causes beneath it. */
             sources: components["schemas"]["StructuredError"][];
         };
         /**
-         * Wertung
-         * @description Result of a Wertung calculation: the two Wertungen plus first-arrow hit info.
-         */
-        Wertung: {
-            /** Format: uint32 */
-            ersterTreffer: number;
-            /** Format: uint32 */
-            mehrschuss: number;
-            ersterPfeilGetroffen: boolean;
-            /** Format: uint64 */
-            "anzahlSch\u00FCsse": number;
-        };
-        /**
-         * WertungRequest
-         * @description Inbound request for summarizing a selection of Schüsse.
-         */
-        WertungRequest: {
-            schussIds: string[];
-        };
-        /**
-         * @description API mirror of [`domain::Wertungszone`]. Kept separate so the domain never learns
-         *     about OpenAPI, serde, or HTTP.
+         * @description API mirror of the domain's scoring zone.
+         *
+         *     `Spot` and `Kill` are hits, `Body` a non-lethal hit, `Miss` a miss.
          * @enum {string}
          */
         Wertungszone: Wertungszone;
+        /**
+         * Ziel
+         * @description One physical Ziel of the Anlage.
+         */
+        Ziel: {
+            /**
+             * Format: uuid
+             * @description Stable identity of this physical target.
+             */
+            id: string;
+            /** @description Animal name shown to the shooter. */
+            tiername: string;
+            /**
+             * Format: uint32
+             * @description 1-based ordinal that tells duplicate animal names apart ("Reh 1", "Reh 2").
+             */
+            zielnummer: number;
+            /** @description Whether the Ziel is in use or retired. */
+            zustand: components["schemas"]["AnlageZustand"] & unknown;
+            /** @description Where this physical Ziel currently lies, across this Anlage's active Parkour. */
+            verwendungen: components["schemas"]["Zielverwendung"][];
+        };
+        /**
+         * ZielRequest
+         * @description Add or edit a Ziel.
+         */
+        ZielRequest: {
+            /** @description Animal name shown to the shooter. */
+            tiername: string;
+        };
+        /**
+         * Zielplatzierung
+         * @description One Ziel's place in a Parkour, with its distances keyed by Pflock identity.
+         */
+        Zielplatzierung: {
+            /**
+             * Format: uuid
+             * @description The Ziel that stands here.
+             */
+            zielId: string;
+            /** @description Distances by Pflock identity; a missing entry means no distance is configured. */
+            "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
+        };
+        /**
+         * Zielverwendung
+         * @description One Parkour' use of one Ziel, with that Parkour' own distances.
+         */
+        Zielverwendung: {
+            /**
+             * Format: uuid
+             * @description The Parkour that places this Ziel.
+             */
+            parkourId: string;
+            /**
+             * Format: uint64
+             * @description 0-based position in that Parkour' route.
+             */
+            position: number;
+            /** @description Pflock identity to metres, near to far. */
+            "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
+        };
+        /**
+         * Zielwertung
+         * @description The fold of every Schuss at one Ziel: both Wertungen plus the first-arrow hit.
+         */
+        Zielwertung: {
+            /**
+             * Format: uint32
+             * @description First-arrow hits at this Ziel.
+             */
+            ersterTreffer: number;
+            /**
+             * Format: uint32
+             * @description Follow-up hits at this Ziel.
+             */
+            mehrschuss: number;
+            /** @description Whether the very first arrow hit. */
+            ersterPfeilGetroffen: boolean;
+            /**
+             * Format: uint64
+             * @description How many Schüsse were logged at this Ziel.
+             */
+            "anzahlSch\u00FCsse": number;
+        };
     };
     responses: never;
     parameters: never;
@@ -842,6 +2771,27 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
+export enum AnlageVerwaltungRolle {
+    Administrator = "Administrator",
+    Mitarbeiter = "Mitarbeiter"
+}
+export enum AnlageZustand {
+    Aktiv = "Aktiv",
+    Archiviert = "Archiviert"
+}
+export enum BenutzerRolle {
+    Benutzer = "Benutzer",
+    Systemadministrator = "Systemadministrator"
+}
+export enum LNdercode {
+    AT = "AT",
+    DE = "DE",
+    CH = "CH"
+}
+export enum RundeZustand {
+    InBearbeitung = "InBearbeitung",
+    Abgeschlossen = "Abgeschlossen"
+}
 export enum Wertungszone {
     Spot = "Spot",
     Kill = "Kill",

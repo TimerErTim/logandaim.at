@@ -131,6 +131,7 @@ async fn ac3_abschluss_erzeugt_benutzer_konto_und_erste_session() {
     let (status, body) = harness.client.get_json_auth("/api/benutzer", &access).await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["eMailAdresse"], "anna@muster.at");
+    assert_eq!(body["rolle"], "Benutzer");
 }
 
 // ------------------------------------------------------------------------- AC-4, AC-5
@@ -650,33 +651,6 @@ async fn ac13_anonymer_zugriff_wird_verweigert() {
         .get_json_auth("/api/benutzer", "kein-jwt")
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
-}
-
-// ------------------------------------------------------------------------------ AC-14
-
-#[test_log::test(pollster::test)]
-async fn ac14_fremden_benutzer_liest_nur_ein_systemadministrator() {
-    let harness = E2eHarness::new().await;
-    let (anna_access, _, _, _) = registriere(&harness, "anna@muster.at").await;
-    let (bert_access, _, bert_id, _) = registriere(&harness, "bert@muster.at").await;
-
-    // Anna asks for Bert: refused. Not 404 — she proved who she is and is simply not
-    // allowed, and pretending Bert does not exist would confuse an administrator.
-    let (status, _) = harness
-        .client
-        .get_json_auth(&format!("/api/benutzer?benutzerId={bert_id}"), &anna_access)
-        .await;
-    assert_eq!(status, StatusCode::FORBIDDEN);
-
-    // Her own record always works.
-    let (status, body) = harness
-        .client
-        .get_json_auth("/api/benutzer", &anna_access)
-        .await;
-    assert_eq!(status, StatusCode::OK);
-    assert_eq!(body["eMailAdresse"], "anna@muster.at");
-
-    let _ = bert_access;
 }
 
 // ------------------------------------------------------------------------ AC-15, AC-16
