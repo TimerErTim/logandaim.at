@@ -1,10 +1,11 @@
-//! The `Anlage` aggregate with its `Ziel`, `Parcours`, Pflock, and placement children.
+//! The `Anlage` aggregate with its `Ziel`, `Parkour`, Pflock, and placement children.
 //!
-//! One aggregate, one repository: `Ziel` and `Parcours` are children, so a child write is a
+//! One aggregate, one repository: `Ziel` and `Parkour` are children, so a child write is a
 //! replace inside the root's transaction, guarded by the root `_version`. That is deliberate —
 //! two concurrent master-data edits to the same Anlage conflict rather than silently overwrite
 //! each other's children.
 
+use std::num::NonZeroU32;
 use std::sync::Arc;
 
 use async_lock::Mutex;
@@ -18,9 +19,8 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Anlage, AnlageAdresse, AnlageAktiv, AnlageArchiviert, AnlageId, AnlageKontakt, AnlageName,
-        AnlageVerwaltung, AnlageVerwaltungRolle, Ländercode, NeueAnlage, Parcours, ParcoursId,
-        ParcoursName, Pflock, PflockFarbe, PflockId, Tiername, Ziel, ZielId, Zielgruppe,
-        Zielplatzierung, Zustand,
+        AnlageVerwaltung, AnlageVerwaltungRolle, Farbe, Ländercode, NeueAnlage, NonEmptyString,
+        Parkour, ParkourId, Pflock, PflockId, Ziel, ZielId, Zielplatzierung, Zustand,
     },
     ports::{AnlageRepository, RepositoryError, RepositoryResult},
 };
@@ -83,7 +83,7 @@ async fn lade_verwaltungen(
 async fn lade_ziele(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult<Vec<Ziel>> {
     let mut rows = tx
         .query(
-            r#"SELECT id, tiername, zielgruppe, zustand FROM "ziele"
+            r#"SELECT id, tiername, zielnummer, zustand FROM "ziele"
                WHERE anlage_id = ?1 ORDER BY ordnung"#,
             [anlage_id.0.to_string()],
         )
@@ -98,29 +98,29 @@ async fn lade_ziele(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult<V
     {
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
         let tiername: String = row.get(1).contextualize(RepositoryError::Data)?;
-        let zielgruppe: i64 = row.get(2).contextualize(RepositoryError::Data)?;
+        let zielnummer: i64 = row.get(2).contextualize(RepositoryError::Data)?;
         let zustand: String = row.get(3).contextualize(RepositoryError::Data)?;
-        let zielgruppe = u8::try_from(zielgruppe).contextualize(RepositoryError::Data)?;
+        let zielnummer = u32::try_from(zielnummer).contextualize(RepositoryError::Data)?;
         ziele.push(Ziel::from_parts(
             ZielId(parse_uuid(&id).contextualize(RepositoryError::Data)?),
-            Tiername::neu(&tiername).change_context(RepositoryError::Data)?,
-            Zielgruppe::neu(zielgruppe).change_context(RepositoryError::Data)?,
+            NonEmptyString::neu(&tiername).change_context(RepositoryError::Data)?,
+            NonZeroU32::new(zielnummer).ok_or(RepositoryError::Data)?,
             zustand_from_str(&zustand)?,
         ));
     }
     Ok(ziele)
 }
 
-async fn lade_parcours(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult<Vec<Parcours>> {
+async fn lade_parkour(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult<Vec<Parkour>> {
     let mut rows = tx
         .query(
-            r#"SELECT id, name, zustand FROM "parcours" WHERE anlage_id = ?1 ORDER BY ordnung"#,
+            r#"SELECT id, name, zustand FROM "parkour" WHERE anlage_id = ?1 ORDER BY ordnung"#,
             [anlage_id.0.to_string()],
         )
         .await
         .contextualize_with(libsql_error_to_persistence_error)?;
 
-    let mut parcours = Vec::new();
+    let mut parkour = Vec::new();
     while let Some(row) = rows
         .next()
         .await
@@ -129,13 +129,13 @@ async fn lade_parcours(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResul
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
         let name: String = row.get(1).contextualize(RepositoryError::Data)?;
         let zustand: String = row.get(2).contextualize(RepositoryError::Data)?;
-        let parcours_id = ParcoursId(parse_uuid(&id).contextualize(RepositoryError::Data)?);
-        let pflöcke = lade_pflöcke(tx, parcours_id).await?;
-        let platzierungen = lade_platzierungen(tx, parcours_id).await?;
-        parcours.push(
-            Parcours::from_parts(
-                parcours_id,
-                ParcoursName::neu(&name).change_context(RepositoryError::Data)?,
+        let parkour_id = ParkourId(parse_uuid(&id).contextualize(RepositoryError::Data)?);
+        let pflöcke = lade_pflöcke(tx, parkour_id).await?;
+        let platzierungen = lade_platzierungen(tx, parkour_id).await?;
+        parkour.push(
+            Parkour::from_parts(
+                parkour_id,
+                NonEmptyString::neu(&name).change_context(RepositoryError::Data)?,
                 pflöcke,
                 platzierungen,
                 zustand_from_str(&zustand)?,
@@ -143,15 +143,15 @@ async fn lade_parcours(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResul
             .change_context(RepositoryError::Data)?,
         );
     }
-    Ok(parcours)
+    Ok(parkour)
 }
 
-async fn lade_pflöcke(tx: &Transaction, parcours_id: ParcoursId) -> RepositoryResult<Vec<Pflock>> {
+async fn lade_pflöcke(tx: &Transaction, parkour_id: ParkourId) -> RepositoryResult<Vec<Pflock>> {
     let mut rows = tx
         .query(
             r#"SELECT id, farbe FROM "pflock_setups"
-               WHERE parcours_id = ?1 ORDER BY ordnung"#,
-            [parcours_id.0.to_string()],
+               WHERE parkour_id = ?1 ORDER BY ordnung"#,
+            [parkour_id.0.to_string()],
         )
         .await
         .contextualize_with(libsql_error_to_persistence_error)?;
@@ -166,7 +166,7 @@ async fn lade_pflöcke(tx: &Transaction, parcours_id: ParcoursId) -> RepositoryR
         let farbe: String = row.get(1).contextualize(RepositoryError::Data)?;
         pflöcke.push(Pflock::neu(
             PflockId(parse_uuid(&id).contextualize(RepositoryError::Data)?),
-            PflockFarbe::neu(&farbe).change_context(RepositoryError::Data)?,
+            Farbe::neu(&farbe).change_context(RepositoryError::Data)?,
         ));
     }
     Ok(pflöcke)
@@ -174,12 +174,12 @@ async fn lade_pflöcke(tx: &Transaction, parcours_id: ParcoursId) -> RepositoryR
 
 async fn lade_platzierungen(
     tx: &Transaction,
-    parcours_id: ParcoursId,
+    parkour_id: ParkourId,
 ) -> RepositoryResult<Vec<Zielplatzierung>> {
     let mut rows = tx
         .query(
-            r#"SELECT ziel_id FROM "zielplatzierungen" WHERE parcours_id = ?1 ORDER BY ordnung"#,
-            [parcours_id.0.to_string()],
+            r#"SELECT ziel_id FROM "zielplatzierungen" WHERE parkour_id = ?1 ORDER BY ordnung"#,
+            [parkour_id.0.to_string()],
         )
         .await
         .contextualize_with(libsql_error_to_persistence_error)?;
@@ -201,8 +201,8 @@ async fn lade_platzierungen(
         let mut abstand_rows = tx
             .query(
                 r#"SELECT pflock_id, meter FROM "zielplatzierung_abstaende"
-                   WHERE parcours_id = ?1 AND ziel_id = ?2"#,
-                (parcours_id.0.to_string(), ziel_id.0.to_string()),
+                   WHERE parkour_id = ?1 AND ziel_id = ?2"#,
+                (parkour_id.0.to_string(), ziel_id.0.to_string()),
             )
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;
@@ -266,7 +266,7 @@ async fn anlage_aus_zeile(tx: &Transaction, row: &Row) -> RepositoryResult<Versi
             .transpose()?,
         kontakt_website
             .map(|website| {
-                logandaim_core::domain::anlage::Website::neu(&website)
+                logandaim_core::domain::anlage::WebsiteUrl::neu(&website)
                     .change_context(RepositoryError::Data)
             })
             .transpose()?,
@@ -274,7 +274,7 @@ async fn anlage_aus_zeile(tx: &Transaction, row: &Row) -> RepositoryResult<Versi
 
     let verwaltungen = lade_verwaltungen(tx, id).await?;
     let ziele = lade_ziele(tx, id).await?;
-    let parcours = lade_parcours(tx, id).await?;
+    let parkour = lade_parkour(tx, id).await?;
     let version = parse_version(row, 12)?;
 
     let anlage = match zustand_from_str(&zustand_raw)? {
@@ -285,7 +285,7 @@ async fn anlage_aus_zeile(tx: &Transaction, row: &Row) -> RepositoryResult<Versi
             kontakt,
             verwaltungen,
             ziele,
-            parcours,
+            parkour,
         )),
         Zustand::Archiviert => {
             let am = deaktiviert_am
@@ -298,7 +298,7 @@ async fn anlage_aus_zeile(tx: &Transaction, row: &Row) -> RepositoryResult<Versi
                 kontakt,
                 verwaltungen,
                 ziele,
-                parcours,
+                parkour,
                 am,
             ))
         }
@@ -333,15 +333,15 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
 
     // Children are removed and reinserted wholesale. The foreign keys cascade the grandchildren
     // (`pflock_setups`, `zielplatzierungen`, and their distances).
-    for table in ["pflock_setups", "parcours", "ziele"] {
+    for table in ["pflock_setups", "parkour", "ziele"] {
         let sql = match table {
             "pflock_setups" => {
-                r#"DELETE FROM "pflock_setups" WHERE parcours_id IN
-                     (SELECT id FROM "parcours" WHERE anlage_id = ?1)"#
+                r#"DELETE FROM "pflock_setups" WHERE parkour_id IN
+                     (SELECT id FROM "parkour" WHERE anlage_id = ?1)"#
             }
             _ => {
-                if table == "parcours" {
-                    r#"DELETE FROM "parcours" WHERE anlage_id = ?1"#
+                if table == "parkour" {
+                    r#"DELETE FROM "parkour" WHERE anlage_id = ?1"#
                 } else {
                     r#"DELETE FROM "ziele" WHERE anlage_id = ?1"#
                 }
@@ -354,13 +354,13 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
 
     for (ordnung, ziel) in anlage.ziele().iter().enumerate() {
         tx.execute(
-            r#"INSERT INTO "ziele" (id, anlage_id, tiername, zielgruppe, zustand, ordnung)
+            r#"INSERT INTO "ziele" (id, anlage_id, tiername, zielnummer, zustand, ordnung)
                VALUES (?1, ?2, ?3, ?4, ?5, ?6)"#,
             (
                 ziel.id().0.to_string(),
                 anlage_id.clone(),
                 ziel.tiername().as_str(),
-                i64::from(ziel.zielgruppe().value()),
+                i64::from(ziel.zielnummer().get()),
                 zustand_to_str(ziel.zustand()),
                 ordnung as i64,
             ),
@@ -369,30 +369,30 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
         .map_err(|_| RepositoryError::OperationFailed)?;
     }
 
-    for (ordnung, parcours) in anlage.parcours().iter().enumerate() {
-        let parcours_id = parcours.id().0.to_string();
+    for (ordnung, parkour) in anlage.parkour().iter().enumerate() {
+        let parkour_id = parkour.id().0.to_string();
         tx.execute(
-            r#"INSERT INTO "parcours" (id, anlage_id, name, zustand, ordnung)
+            r#"INSERT INTO "parkour" (id, anlage_id, name, zustand, ordnung)
                VALUES (?1, ?2, ?3, ?4, ?5)"#,
             (
-                parcours_id.clone(),
+                parkour_id.clone(),
                 anlage_id.clone(),
-                parcours.name().as_str(),
-                zustand_to_str(parcours.zustand()),
+                parkour.name().as_str(),
+                zustand_to_str(parkour.zustand()),
                 ordnung as i64,
             ),
         )
         .await
         .map_err(|_| RepositoryError::OperationFailed)?;
 
-        for (pflock_ordnung, pflock) in parcours.pflöcke().iter().enumerate() {
+        for (pflock_ordnung, pflock) in parkour.pflöcke().iter().enumerate() {
             tx.execute(
-                r#"INSERT INTO "pflock_setups" (id, parcours_id, farbe, ordnung)
+                r#"INSERT INTO "pflock_setups" (id, parkour_id, farbe, ordnung)
                    VALUES (?1, ?2, ?3, ?4)"#,
                 (
                     pflock.id().0.to_string(),
-                    parcours_id.clone(),
-                    pflock.farbe().as_str(),
+                    parkour_id.clone(),
+                    pflock.farbe().to_hex(),
                     pflock_ordnung as i64,
                 ),
             )
@@ -400,13 +400,13 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
             .map_err(|_| RepositoryError::OperationFailed)?;
         }
 
-        for (platzierung_ordnung, platzierung) in parcours.platzierungen().iter().enumerate() {
+        for (platzierung_ordnung, platzierung) in parkour.platzierungen().iter().enumerate() {
             let ziel_id = platzierung.ziel_id().0.to_string();
             tx.execute(
-                r#"INSERT INTO "zielplatzierungen" (parcours_id, ziel_id, ordnung)
+                r#"INSERT INTO "zielplatzierungen" (parkour_id, ziel_id, ordnung)
                    VALUES (?1, ?2, ?3)"#,
                 (
-                    parcours_id.clone(),
+                    parkour_id.clone(),
                     ziel_id.clone(),
                     platzierung_ordnung as i64,
                 ),
@@ -416,10 +416,10 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
 
             for (pflock_id, abstand) in platzierung.abstände() {
                 tx.execute(
-                    r#"INSERT INTO "zielplatzierung_abstaende" (parcours_id, ziel_id, pflock_id, meter)
+                    r#"INSERT INTO "zielplatzierung_abstaende" (parkour_id, ziel_id, pflock_id, meter)
                        VALUES (?1, ?2, ?3, ?4)"#,
                     (
-                        parcours_id.clone(),
+                        parkour_id.clone(),
                         ziel_id.clone(),
                         pflock_id.0.to_string(),
                         i64::from(abstand.meter()),
@@ -440,7 +440,7 @@ fn kinder_loeschen_sql(anlage_id: &str) -> Vec<(&'static str, String)> {
             anlage_id.to_owned(),
         ),
         (
-            r#"DELETE FROM "parcours" WHERE anlage_id = ?1"#,
+            r#"DELETE FROM "parkour" WHERE anlage_id = ?1"#,
             anlage_id.to_owned(),
         ),
         (

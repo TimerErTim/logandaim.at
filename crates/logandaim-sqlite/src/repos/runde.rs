@@ -1,4 +1,4 @@
-//! `Runde` rows, with the captured `ParcoursSnapshot` stored as an adapter-local JSON document.
+//! `Runde` rows, with the captured `ParkourSnapshot` stored as an adapter-local JSON document.
 //!
 //! The snapshot is serialised here and nowhere else: the domain has no serde dependency, and a
 //! snapshot's shape is a storage detail. The history index (`runden_referenzen`) is written in
@@ -18,8 +18,9 @@ use logandaim_core::{
     ErrorReportExt,
     application::uow::Versioned,
     domain::{
-        AnlageId, NeueRunde, ParcoursId, ParcoursSnapshot, Runde, RundeId, RundeZustand, ZielId,
-        Zuordnung, konto::BenutzerId,
+        Abstand, AnlageId, Erfasser, Farbe, NeueRunde, NonEmptyString, ParkourId, ParkourSnapshot,
+        PflockSnapshot, Runde, RundeId, RundeInBearbeitung, RundeZustand, ZielId, ZielSnapshot,
+        konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
 };
@@ -38,8 +39,8 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SnapshotDto {
-    parcours_id: Uuid,
-    parcours_name: String,
+    parkour_id: Uuid,
+    parkour_name: String,
     pflöcke: Vec<PflockDto>,
     ziele: Vec<ZielDto>,
 }
@@ -54,19 +55,19 @@ struct PflockDto {
 struct ZielDto {
     ziel_id: Uuid,
     tiername: String,
-    zielgruppe: u8,
+    zielnummer: u32,
     abstände: Vec<(String, u32)>,
 }
 
-fn snapshot_to_json(snapshot: &ParcoursSnapshot) -> RepositoryResult<String> {
+fn snapshot_to_json(snapshot: &ParkourSnapshot) -> RepositoryResult<String> {
     let dto = SnapshotDto {
-        parcours_id: snapshot.parcours_id().0,
-        parcours_name: snapshot.parcours_name().to_owned(),
+        parkour_id: snapshot.parkour_id().0,
+        parkour_name: snapshot.parkour_name().to_string(),
         pflöcke: snapshot
             .pflöcke()
             .iter()
             .map(|pflock| PflockDto {
-                farbe: pflock.farbe().to_owned(),
+                farbe: pflock.farbe().to_hex(),
                 position: pflock.position(),
             })
             .collect(),
@@ -75,47 +76,77 @@ fn snapshot_to_json(snapshot: &ParcoursSnapshot) -> RepositoryResult<String> {
             .iter()
             .map(|ziel| ZielDto {
                 ziel_id: ziel.ziel_id().0,
-                tiername: ziel.tiername().to_owned(),
-                zielgruppe: ziel.zielgruppe(),
-                abstände: ziel.abstände().to_vec(),
+                tiername: ziel.tiername().to_string(),
+                zielnummer: ziel.zielnummer().get(),
+                abstände: ziel
+                    .abstände()
+                    .iter()
+                    .map(|(farbe, abstand)| (farbe.to_hex(), abstand.meter()))
+                    .collect(),
             })
             .collect(),
     };
     serde_json::to_string(&dto).map_err(|_| RepositoryError::Data.into())
 }
 
-fn snapshot_from_json(json: &str) -> RepositoryResult<ParcoursSnapshot> {
+fn snapshot_from_json(json: &str) -> RepositoryResult<ParkourSnapshot> {
     let dto: SnapshotDto = serde_json::from_str(json).map_err(|_| RepositoryError::Data)?;
-    ParcoursSnapshot::from_parts(
-        dto.parcours_id,
-        dto.parcours_name,
-        dto.pflöcke
-            .into_iter()
-            .map(|pflock| (pflock.farbe, pflock.position))
-            .collect(),
-        dto.ziele
-            .into_iter()
-            .map(|ziel| (ziel.ziel_id, ziel.tiername, ziel.zielgruppe, ziel.abstände))
-            .collect(),
-    )
-    .map_err(|_| RepositoryError::Data.into())
+    let pflöcke = dto
+        .pflöcke
+        .into_iter()
+        .map(|pflock| {
+            Ok(PflockSnapshot::neu(
+                Farbe::neu(&pflock.farbe).map_err(|_| RepositoryError::Data)?,
+                pflock.position,
+            ))
+        })
+        .collect::<RepositoryResult<Vec<_>>>()?;
+    let ziele = dto
+        .ziele
+        .into_iter()
+        .map(|ziel| {
+            let abstände = ziel
+                .abstände
+                .into_iter()
+                .map(|(farbe, meter)| {
+                    Ok((
+                        Farbe::neu(&farbe).map_err(|_| RepositoryError::Data)?,
+                        Abstand::neu(meter).map_err(|_| RepositoryError::Data)?,
+                    ))
+                })
+                .collect::<RepositoryResult<Vec<_>>>()?;
+            Ok(ZielSnapshot::neu(
+                ZielId(ziel.ziel_id),
+                std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?,
+                NonEmptyString::neu(&ziel.tiername).map_err(|_| RepositoryError::Data)?,
+                abstände,
+            ))
+        })
+        .collect::<RepositoryResult<Vec<_>>>()?;
+
+    Ok(ParkourSnapshot::from_parts(
+        ParkourId(dto.parkour_id),
+        NonEmptyString::neu(&dto.parkour_name).map_err(|_| RepositoryError::Data)?,
+        pflöcke,
+        ziele,
+    ))
 }
 
 // ---------------------------------------------------------------------------------------
 // Row mapping
 // ---------------------------------------------------------------------------------------
 
-const SELECT: &str = r#"SELECT id, anlage_id, parcours_id, snapshot, benutzer_id, anonymisiert_am,
+const SELECT: &str = r#"SELECT id, anlage_id, parkour_id, snapshot, benutzer_id, anonymisiert_am,
             zustand, begonnen_am, abgeschlossen_am, _version
        FROM "runden""#;
 
 fn zuordnung_aus_zeile(
     benutzer_id: Option<String>,
     anonymisiert_am: Option<String>,
-) -> RepositoryResult<Zuordnung> {
+) -> RepositoryResult<Erfasser> {
     match (benutzer_id, anonymisiert_am) {
-        (Some(benutzer_id), None) => Ok(Zuordnung::Benutzer(BenutzerId(parse_uuid(&benutzer_id)?))),
-        (None, Some(am)) => Ok(Zuordnung::Anonymisiert {
+        (Some(benutzer_id), None) => Ok(Erfasser::Benutzer(BenutzerId(parse_uuid(&benutzer_id)?))),
+        (None, Some(am)) => Ok(Erfasser::Anonymisiert {
             am: parse_datetime(&am)?,
         }),
         // Neither a live owner nor an anonymisation stamp: the retention rule cannot be read
@@ -148,7 +179,10 @@ fn runde_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Runde>> {
             .transpose()?,
     );
 
-    Ok(Versioned::new(parse_version(row, 9)?, runde))
+    Ok(Versioned::new(
+        parse_version(row, 9)?,
+        runde.map_err(|_| RepositoryError::Data)?,
+    ))
 }
 
 // ---------------------------------------------------------------------------------------
@@ -170,7 +204,7 @@ async fn ersetze_referenzen(tx: &Transaction, runde: &Runde) -> Result<(), Repos
 
     let mut referenzen: Vec<(&'static str, String)> = vec![
         ("anlage", runde.anlage_id().0.to_string()),
-        ("parcours", runde.parcours_id().0.to_string()),
+        ("parkour", runde.parkour_id().0.to_string()),
     ];
     for ziel in runde.snapshot().ziele() {
         referenzen.push(("ziel", ziel.ziel_id().0.to_string()));
@@ -204,9 +238,9 @@ impl SQLiteRundeRepository {
         runde: &Runde,
         erwartete_version: i64,
     ) -> RepositoryResult<()> {
-        let (benutzer_id, anonymisiert_am) = match runde.zuordnung() {
-            Zuordnung::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
-            Zuordnung::Anonymisiert { am } => (None, Some(format_datetime(am))),
+        let (benutzer_id, anonymisiert_am) = match runde.erfasser() {
+            Erfasser::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
+            Erfasser::Anonymisiert { am } => (None, Some(format_datetime(am))),
         };
         let snapshot = snapshot_to_json(runde.snapshot())?;
         update_versioned(
@@ -234,25 +268,25 @@ impl SQLiteRundeRepository {
 impl RundeRepository for SQLiteRundeRepository {
     async fn create(&self, runde: NeueRunde) -> RepositoryResult<Versioned<Runde>> {
         let id = RundeId(Uuid::new_v4());
-        let domain = Runde::neu(id, runde);
+        let domain = Runde::InBearbeitung(RundeInBearbeitung::neu(id, runde));
 
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let (benutzer_id, anonymisiert_am) = match domain.zuordnung() {
-            Zuordnung::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
-            Zuordnung::Anonymisiert { am } => (None, Some(format_datetime(am))),
+        let (benutzer_id, anonymisiert_am) = match domain.erfasser() {
+            Erfasser::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
+            Erfasser::Anonymisiert { am } => (None, Some(format_datetime(am))),
         };
 
         tx.execute(
-            r#"INSERT INTO "runden" (id, anlage_id, parcours_id, snapshot, benutzer_id,
+            r#"INSERT INTO "runden" (id, anlage_id, parkour_id, snapshot, benutzer_id,
                                      anonymisiert_am, zustand, begonnen_am, abgeschlossen_am,
                                      _version)
                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, 0)"#,
             (
                 id.0.to_string(),
                 domain.anlage_id().0.to_string(),
-                domain.parcours_id().0.to_string(),
+                domain.parkour_id().0.to_string(),
                 snapshot_to_json(domain.snapshot())?,
                 benutzer_id,
                 anonymisiert_am,
@@ -349,8 +383,8 @@ impl RundeRepository for SQLiteRundeRepository {
         self.hat_referenz("anlage", &id.0.to_string()).await
     }
 
-    async fn exists_referencing_parcours(&self, id: ParcoursId) -> RepositoryResult<bool> {
-        self.hat_referenz("parcours", &id.0.to_string()).await
+    async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool> {
+        self.hat_referenz("parkour", &id.0.to_string()).await
     }
 
     async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool> {

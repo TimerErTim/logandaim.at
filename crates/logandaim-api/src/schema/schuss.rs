@@ -1,7 +1,7 @@
 //! Outbound schemas of one logged Schuss and the per-Ziel Wertung folded from a set of
 //! them.
 //!
-//! Scoring lives in the domain (`Schussmenge`, `Zielergebnis`); this file only mirrors it.
+//! Scoring lives in the domain (`ZielSchüsse`, `Zielwertung`); this file only mirrors it.
 //! There is no endpoint that computes a Wertung on demand: a Runde read serves both
 //! Wertungen (SPEC-wertung rule 6).
 
@@ -49,22 +49,47 @@ impl From<Wertungszone> for domain::Wertungszone {
 /// A Benutzer deletion anonymises its rows: the identity is gone and only the anonymisation
 /// time remains, so history survives without naming anyone.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Union))]
+#[cfg_attr(feature = "openapi", oai(externally_tagged))]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub enum Erfasser {
+    /// The Benutzer that owns the row.
+    Benutzer(BenutzerErfasser),
+    /// The row was anonymised; only the time remains.
+    Anonymisiert(AnonymisierterErfasser),
+}
+
+/// A row still owned by a Benutzer.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Zuordnung {
-    /// The owning Benutzer; absent once the row is anonymised.
-    pub benutzer_id: Option<Uuid>,
-    /// When the row was anonymised, as an RFC 3339 timestamp; absent while it is owned.
-    pub anonymisiert_am: Option<String>,
+pub struct BenutzerErfasser {
+    /// Identity of the owning Benutzer.
+    pub benutzer_id: Uuid,
 }
 
-impl From<domain::Zuordnung> for Zuordnung {
-    fn from(zuordnung: domain::Zuordnung) -> Self {
-        Self {
-            benutzer_id: zuordnung.benutzer().map(|id| id.0),
-            anonymisiert_am: zuordnung.anonymisiert_am().map(|am| am.to_rfc3339()),
+/// A row whose owner was deleted.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnonymisierterErfasser {
+    /// When the row was anonymised.
+    pub am: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<domain::Erfasser> for Erfasser {
+    fn from(erfasser: domain::Erfasser) -> Self {
+        match erfasser {
+            domain::Erfasser::Benutzer(id) => {
+                Self::Benutzer(BenutzerErfasser { benutzer_id: id.0 })
+            }
+            domain::Erfasser::Anonymisiert { am } => {
+                Self::Anonymisiert(AnonymisierterErfasser { am })
+            }
         }
     }
 }
@@ -83,7 +108,7 @@ pub struct Schuss {
     /// The Ziel it hit or missed.
     pub ziel_id: Uuid,
     /// Who logged it.
-    pub zuordnung: Zuordnung,
+    pub erfasser: Erfasser,
     /// 1-based position of the arrow at its Ziel.
     pub pfeil: usize,
     /// Where on the Ziel it landed.
@@ -96,7 +121,7 @@ pub struct Schuss {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Zielergebnis {
+pub struct Zielwertung {
     /// First-arrow hits at this Ziel.
     pub erster_treffer: u32,
     /// Follow-up hits at this Ziel.
@@ -113,20 +138,20 @@ impl From<domain::Schuss> for Schuss {
             id: schuss.id().0,
             runde_id: schuss.runde_id().0,
             ziel_id: schuss.ziel_id().0,
-            zuordnung: schuss.zuordnung().into(),
+            erfasser: schuss.erfasser().into(),
             pfeil: schuss.pfeil().get(),
             wertungszone: schuss.wertungszone().into(),
         }
     }
 }
 
-impl From<domain::Zielergebnis> for Zielergebnis {
-    fn from(ergebnis: domain::Zielergebnis) -> Self {
+impl From<domain::Zielwertung> for Zielwertung {
+    fn from(wertung: domain::Zielwertung) -> Self {
         Self {
-            erster_treffer: ergebnis.erster_treffer().value(),
-            mehrschuss: ergebnis.mehrschuss().value(),
-            erster_pfeil_getroffen: ergebnis.erster_pfeil_getroffen(),
-            anzahl_schüsse: ergebnis.anzahl_schüsse(),
+            erster_treffer: wertung.erster_treffer(),
+            mehrschuss: wertung.mehrschuss(),
+            erster_pfeil_getroffen: wertung.erster_pfeil_getroffen(),
+            anzahl_schüsse: wertung.anzahl_schüsse(),
         }
     }
 }

@@ -20,11 +20,11 @@ function useAnlageMutation<TVariables>(
       void queryClient.invalidateQueries({
         queryKey: logandaimKeys.anlagen.detail(anlage.id),
       });
-      // Archiving a Parcours or Ziel changes the public list too (AC-13).
+      // Archiving a Parkour or Ziel changes the public list too (AC-13).
       void queryClient.invalidateQueries({
-        queryKey: logandaimKeys.parcours.all(),
+        queryKey: logandaimKeys.parkour.all(),
       });
-      // …and the public Anlagen directory, which prints the Parcours counts.
+      // …and the public Anlagen directory, which prints the Parkour counts.
       void queryClient.invalidateQueries({
         queryKey: logandaimKeys.anlagenVerzeichnis.all(),
       });
@@ -75,25 +75,25 @@ export function useStammdatenMutations() {
       (vars: Parameters<typeof api.zielEntfernen>) =>
         api.zielEntfernen(vars[0], vars[1]),
     ),
-    parcoursHinzufuegen: useAnlageMutation(
-      (vars: Parameters<typeof api.parcoursHinzufuegen>) =>
-        api.parcoursHinzufuegen(vars[0], vars[1]),
+    parkourHinzufuegen: useAnlageMutation(
+      (vars: Parameters<typeof api.parkourHinzufuegen>) =>
+        api.parkourHinzufuegen(vars[0], vars[1]),
     ),
-    parcoursSetupAendern: useAnlageMutation(
-      (vars: Parameters<typeof api.parcoursSetupAendern>) =>
-        api.parcoursSetupAendern(vars[0], vars[1], vars[2]),
+    parkourSetupAendern: useAnlageMutation(
+      (vars: Parameters<typeof api.parkourSetupAendern>) =>
+        api.parkourSetupAendern(vars[0], vars[1], vars[2]),
     ),
-    parcoursUmbenennen: useAnlageMutation(
-      (vars: Parameters<typeof api.parcoursUmbenennen>) =>
-        api.parcoursUmbenennen(vars[0], vars[1], vars[2]),
+    parkourUmbenennen: useAnlageMutation(
+      (vars: Parameters<typeof api.parkourUmbenennen>) =>
+        api.parkourUmbenennen(vars[0], vars[1], vars[2]),
     ),
-    parcoursEntfernen: useAnlageMutation(
-      (vars: Parameters<typeof api.parcoursEntfernen>) =>
-        api.parcoursEntfernen(vars[0], vars[1]),
+    parkourEntfernen: useAnlageMutation(
+      (vars: Parameters<typeof api.parkourEntfernen>) =>
+        api.parkourEntfernen(vars[0], vars[1]),
     ),
     /** Starting a Runde changes the caller's own list and consumes the public one. */
     rundeStarten: useMutation({
-      mutationFn: (parcoursId: string) => api.rundeStarten(parcoursId),
+      mutationFn: (parkourId: string) => api.rundeStarten(parkourId),
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: logandaimKeys.runden.all(),

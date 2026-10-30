@@ -28,7 +28,7 @@ type PageHeaderProps = {
  *
  * Every route assembles its head the same way, so a page cannot drift into a
  * different running head than its navigation entry — the mismatch between "Logbuch"
- * in the sidebar and "Öffentlich · Parcours · Anlagen" on the page was a hand-built
+ * in the sidebar and "Öffentlich · Parkour · Anlagen" on the page was a hand-built
  * header, not a decision.
  *
  * The hairline is `rule-ticks`: the printed form's ruling, hairline plus ticks, and it

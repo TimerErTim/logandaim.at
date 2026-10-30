@@ -4,19 +4,19 @@ import { ApiError } from "./errors";
 import type {
   Anlage,
   AnlageErstellungInput,
-  AnlagenZeile,
   AnlageVerwaltungRolle,
+  AnlageZugriff,
   AnlageÖffentlich,
+  AuthenticatedBenutzer,
   AuthPhase,
   AuthSession,
   Benutzer,
-  BenutzerSuchtreffer,
   LogandaimApi,
-  ParcoursInput,
-  ParcoursSetupInput,
-  ParcoursÖffentlich,
+  ParkourInput,
+  ParkourSetupInput,
+  ParkourÖffentlich,
   Runde,
-  RundenZeile,
+  RundeBasic,
   Schuss,
   SchussErstellungInput,
   ZielInput,
@@ -170,7 +170,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
 
   // ---------------------------------------------------------------- master data
 
-  async anlagenAnzeigen(): Promise<AnlagenZeile[]> {
+  async anlagenAnzeigen(): Promise<AnlageZugriff[]> {
     return this.authenticated(() =>
       this.client.GET("/anlagen", { headers: this.authorizationHeaders() }),
     );
@@ -219,7 +219,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   async benutzerNachEmailSuchen(
     anlageId: string,
     eMailAdresse: string,
-  ): Promise<BenutzerSuchtreffer[]> {
+  ): Promise<Benutzer[]> {
     return this.authenticated(() =>
       this.client.GET("/anlagen/{anlage_id}/benutzer-suche", {
         params: {
@@ -318,62 +318,59 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     );
   }
 
-  async parcoursHinzufuegen(
+  async parkourHinzufuegen(
     anlageId: string,
-    parcours: ParcoursInput,
+    parkour: ParkourInput,
   ): Promise<Anlage> {
     return this.authenticated(() =>
-      this.client.POST("/anlagen/{anlage_id}/parcours", {
+      this.client.POST("/anlagen/{anlage_id}/parkour", {
         params: { path: { anlage_id: anlageId } },
-        body: parcours,
+        body: parkour,
         headers: this.authorizationHeaders(),
       }),
     );
   }
 
-  async parcoursSetupAendern(
+  async parkourSetupAendern(
     anlageId: string,
-    parcoursId: string,
-    setup: ParcoursSetupInput,
+    parkourId: string,
+    setup: ParkourSetupInput,
   ): Promise<Anlage> {
     return this.authenticated(() =>
-      this.client.PUT("/anlagen/{anlage_id}/parcours/{parcours_id}/setup", {
-        params: { path: { anlage_id: anlageId, parcours_id: parcoursId } },
+      this.client.PUT("/anlagen/{anlage_id}/parkour/{parkour_id}/setup", {
+        params: { path: { anlage_id: anlageId, parkour_id: parkourId } },
         body: setup,
         headers: this.authorizationHeaders(),
       }),
     );
   }
 
-  async parcoursUmbenennen(
+  async parkourUmbenennen(
     anlageId: string,
-    parcoursId: string,
+    parkourId: string,
     name: string,
   ): Promise<Anlage> {
     return this.authenticated(() =>
-      this.client.PUT("/anlagen/{anlage_id}/parcours/{parcours_id}", {
-        params: { path: { anlage_id: anlageId, parcours_id: parcoursId } },
+      this.client.PUT("/anlagen/{anlage_id}/parkour/{parkour_id}", {
+        params: { path: { anlage_id: anlageId, parkour_id: parkourId } },
         body: { name },
         headers: this.authorizationHeaders(),
       }),
     );
   }
 
-  async parcoursEntfernen(
-    anlageId: string,
-    parcoursId: string,
-  ): Promise<Anlage> {
+  async parkourEntfernen(anlageId: string, parkourId: string): Promise<Anlage> {
     return this.authenticated(() =>
-      this.client.DELETE("/anlagen/{anlage_id}/parcours/{parcours_id}", {
-        params: { path: { anlage_id: anlageId, parcours_id: parcoursId } },
+      this.client.DELETE("/anlagen/{anlage_id}/parkour/{parkour_id}", {
+        params: { path: { anlage_id: anlageId, parkour_id: parkourId } },
         headers: this.authorizationHeaders(),
       }),
     );
   }
 
-  async parcoursAnzeigen(): Promise<ParcoursÖffentlich[]> {
+  async parkourAnzeigen(): Promise<ParkourÖffentlich[]> {
     // Public by design (AC-13): never renew a session for it, and send no header at all.
-    return unwrap(await this.client.GET("/parcours"));
+    return unwrap(await this.client.GET("/parkour"));
   }
 
   async anlagenVerzeichnis(): Promise<AnlageÖffentlich[]> {
@@ -384,16 +381,16 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
 
   // ---------------------------------------------------------------- Runden
 
-  async rundenAnzeigen(): Promise<RundenZeile[]> {
+  async rundenAnzeigen(): Promise<RundeBasic[]> {
     return this.authenticated(() =>
       this.client.GET("/runden", { headers: this.authorizationHeaders() }),
     );
   }
 
-  async rundeStarten(parcoursId: string): Promise<Runde> {
+  async rundeStarten(parkourId: string): Promise<Runde> {
     return this.authenticated(() =>
       this.client.POST("/runden", {
-        body: { parcoursId },
+        body: { parkourId },
         headers: this.authorizationHeaders(),
       }),
     );
@@ -477,7 +474,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     this.setAccessToken(null);
   }
 
-  async benutzerAbrufen(): Promise<Benutzer> {
+  async benutzerAbrufen(): Promise<AuthenticatedBenutzer> {
     return this.authenticated(() =>
       this.client.GET("/benutzer", {
         headers: this.authorizationHeaders(),

@@ -30,8 +30,8 @@ import {
 } from "@/api/hooks";
 import type {
   Anlage,
-  Parcours,
-  ParcoursSetupInput,
+  Parkour,
+  ParkourSetupInput,
   Pflock,
   Zielplatzierung,
 } from "@/api/logandaim-api";
@@ -76,14 +76,14 @@ import { paths } from "@/lib/navigation";
 import { useQueryParam } from "@/lib/use-query-param";
 
 /**
- * One Parcours' shooting setup. A setup is one value: replacing it replaces every Pflock
+ * One Parkour' shooting setup. A setup is one value: replacing it replaces every Pflock
  * and every placement at once (AC-6), which is why the editor works on a local copy and
- * sends the whole `ParcoursSetupRequest`.
+ * sends the whole `ParkourSetupRequest`.
  */
-export default function ParcoursVerwaltungPage() {
+export default function ParkourVerwaltungPage() {
   const phase = useAuth();
   const router = useRouter();
-  const parcoursId = useQueryParam("id");
+  const parkourId = useQueryParam("id");
   const anlageId = useQueryParam("anlage");
   const anlage = useAnlageQuery(anlageId);
 
@@ -91,46 +91,45 @@ export default function ParcoursVerwaltungPage() {
     if (phase.status === "anonymous") router.replace("/anmeldung");
   }, [phase.status, router]);
 
-  if (parcoursId === null || anlageId === null) {
-    return <ParcoursSkeleton />;
+  if (parkourId === null || anlageId === null) {
+    return <ParkourSkeleton />;
   }
 
-  if (!parcoursId || !anlageId) {
+  if (!parkourId || !anlageId) {
     return (
       <div className="p-6">
         <Alert variant="warning">
-          Es wurde kein Parcours ausgewählt. Bitte öffnen Sie ihn aus der
-          Anlage.
+          Es wurde kein Parkour ausgewählt. Bitte öffnen Sie ihn aus der Anlage.
         </Alert>
       </div>
     );
   }
 
   if (anlage.isLoading) {
-    return <ParcoursSkeleton />;
+    return <ParkourSkeleton />;
   }
 
-  const parcours = anlage.data?.parcours.find(
-    (eintrag) => eintrag.id === parcoursId,
+  const parkour = anlage.data?.parkour.find(
+    (eintrag) => eintrag.id === parkourId,
   );
-  if (anlage.isError || !anlage.data || !parcours) {
+  if (anlage.isError || !anlage.data || !parkour) {
     return (
       <div className="p-6">
         <Alert variant="error">
           {apiErrorMessage(anlage.error, {
             unauthorized: "Bitte melden Sie sich an.",
-            fallback: "Der Parcours konnte nicht geladen werden.",
+            fallback: "Der Parkour konnte nicht geladen werden.",
           })}
         </Alert>
       </div>
     );
   }
 
-  return <ParcoursInhalt anlage={anlage.data} parcours={parcours} />;
+  return <ParkourInhalt anlage={anlage.data} parkour={parkour} />;
 }
 
-/** A printed placeholder: the head and the ledgers, before the Parcours arrives. */
-function ParcoursSkeleton() {
+/** A printed placeholder: the head and the ledgers, before the Parkour arrives. */
+function ParkourSkeleton() {
   return (
     <div aria-busy="true" className="space-y-6 p-6">
       <div className="space-y-3">
@@ -149,24 +148,24 @@ function ParcoursSkeleton() {
   );
 }
 
-function ParcoursInhalt({
+function ParkourInhalt({
   anlage,
-  parcours,
+  parkour,
 }: {
   anlage: Anlage;
-  parcours: Parcours;
+  parkour: Parkour;
 }) {
-  const { parcoursSetupAendern, parcoursUmbenennen, parcoursEntfernen } =
+  const { parkourSetupAendern, parkourUmbenennen, parkourEntfernen } =
     useStammdatenMutations();
   const umbenennenMeldung = useErfolgsmeldung();
   const aufstellungMeldung = useErfolgsmeldung();
   const pflockMeldung = useErfolgsmeldung();
   const router = useRouter();
-  const [name, setName] = useState(parcours.name);
+  const [name, setName] = useState(parkour.name);
   const [entfernenOffen, setEntfernenOffen] = useState(false);
-  const [setup, setSetup] = useState<ParcoursSetupInput>(() => ({
-    pflöcke: parcours.pflöcke.map((pflock) => ({ ...pflock })),
-    platzierungen: parcours.platzierungen.map((platzierung) => ({
+  const [setup, setSetup] = useState<ParkourSetupInput>(() => ({
+    pflöcke: parkour.pflöcke.map((pflock) => ({ ...pflock })),
+    platzierungen: parkour.platzierungen.map((platzierung) => ({
       zielId: platzierung.zielId,
       abstände: platzierung.abstände.map((abstand) => ({ ...abstand })),
     })),
@@ -178,7 +177,7 @@ function ParcoursInhalt({
   const geaendert = JSON.stringify(setup) !== gespeichert;
 
   const gesperrt =
-    anlage.zustand === "Archiviert" || parcours.zustand === "Archiviert";
+    anlage.zustand === "Archiviert" || parkour.zustand === "Archiviert";
   const ziele = useMemo(
     () => anlage.ziele.filter((ziel) => ziel.zustand === "Aktiv"),
     [anlage.ziele],
@@ -198,7 +197,7 @@ function ParcoursInhalt({
     }));
   }
 
-  /** The Pflock array order *is* the far-to-near order, so a drag rewrites it. */
+  /** The Pflock array order *is* the near-to-far order, so a drag rewrites it. */
   function pflockVerschieben(von: number, nach: number) {
     setSetup((bisher) => ({
       ...bisher,
@@ -207,12 +206,13 @@ function ParcoursInhalt({
   }
 
   /**
-   * A new Pflock joins the near end of the row: the user drags it into place, and the
-   * array order stays the only statement of the far-to-near order. Its colour is the
-   * standard one, or the first free colour of the club's vocabulary when that is taken,
+   * A new Pflock joins the far end of the row: the user drags it into place, and the
+   * array order stays the only statement of the near-to-far order (the first Pflock is
+   * the nearest). Its colour is
+   * the standard one, or the first free colour of the club's vocabulary when that is taken,
    * because the domain refuses two Pflöcke of one colour (AC-6).
    *
-   * This edits the draft, not the Parcours: the row appearing *is* the confirmation,
+   * This edits the draft, not the Parkour: the row appearing *is* the confirmation,
    * and the dirty note beside "Aufstellung speichern" says the draft is not stored yet.
    */
   function pflockHinzufuegen() {
@@ -228,10 +228,10 @@ function ParcoursInhalt({
 
   /**
    * Remove one Pflock *and* every distance measured from it, on every placement. The
-   * domain rejects a distance keyed to a Pflock that is not in the Parcours
-   * (`PflockNichtImParcours`), so leaving the entries behind would make the whole
+   * domain rejects a distance keyed to a Pflock that is not in the Parkour
+   * (`PflockNichtImParkour`), so leaving the entries behind would make the whole
    * setup unsaveable. Dropping entries only ever removes distances, which keeps the
-   * far-to-near decrease of the remaining ones intact.
+   * near-to-far increase of the remaining ones intact.
    *
    * One Pflock always stays: `KeinePflöcke` is a domain error, so the row's remove
    * action is disabled at one and the list says why.
@@ -254,7 +254,15 @@ function ParcoursInhalt({
     pflockMeldung.melden("Pflock entfernt.");
   }
 
-  function abstandAendern(zielId: string, pflockId: string, meter: number) {
+  /**
+   * An empty field means "no distance configured", which the API expresses by omitting
+   * `meter` — never by `0` or `NaN`.
+   */
+  function abstandAendern(
+    zielId: string,
+    pflockId: string,
+    meter: number | undefined,
+  ) {
     setSetup((bisher) => ({
       ...bisher,
       platzierungen: bisher.platzierungen.map((platzierung) =>
@@ -289,22 +297,20 @@ function ParcoursInhalt({
 
   return (
     <div className="space-y-6 p-6">
-      <SetBreadcrumbLabel label={parcours.name} />
+      <SetBreadcrumbLabel label={parkour.name} />
 
       <PageHeader
-        register={["Verwaltung", "Parcours"]}
-        title={parcours.name}
+        register={["Verwaltung", "Parkour"]}
+        title={parkour.name}
         description={`${anlage.name} · Aufstellung, Pflöcke und Abstände`}
         actions={
           <>
             <Badge
-              variant={
-                parcours.zustand === "Archiviert" ? "warning" : "success"
-              }
+              variant={parkour.zustand === "Archiviert" ? "warning" : "success"}
             >
-              {parcours.zustand === "Archiviert" ? "Archiviert" : "Aktiv"}
+              {parkour.zustand === "Archiviert" ? "Archiviert" : "Aktiv"}
             </Badge>
-            {parcours.zustand === "Archiviert" ? (
+            {parkour.zustand === "Archiviert" ? (
               <StampMark>Archiviert</StampMark>
             ) : null}
           </>
@@ -316,11 +322,11 @@ function ParcoursInhalt({
           <CardTitle>Name</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {parcoursUmbenennen.isError ? (
+          {parkourUmbenennen.isError ? (
             <Alert variant="error">
-              {apiErrorMessage(parcoursUmbenennen.error, {
-                badRequest: "Bitte prüfen Sie den Parcoursnamen.",
-                fallback: "Der Parcours konnte nicht umbenannt werden.",
+              {apiErrorMessage(parkourUmbenennen.error, {
+                badRequest: "Bitte prüfen Sie den Parkournamen.",
+                fallback: "Der Parkour konnte nicht umbenannt werden.",
               })}
             </Alert>
           ) : null}
@@ -329,9 +335,8 @@ function ParcoursInhalt({
             onSubmit={(event) => {
               event.preventDefault();
               umbenennenMeldung.verwerfen();
-              parcoursUmbenennen.mutate([anlage.id, parcours.id, name], {
-                onSuccess: () =>
-                  umbenennenMeldung.melden("Parcours umbenannt."),
+              parkourUmbenennen.mutate([anlage.id, parkour.id, name], {
+                onSuccess: () => umbenennenMeldung.melden("Parkour umbenannt."),
               });
             }}
           >
@@ -341,13 +346,13 @@ function ParcoursInhalt({
                 <Button
                   type="submit"
                   size="field"
-                  disabled={gesperrt || parcoursUmbenennen.isPending}
+                  disabled={gesperrt || parkourUmbenennen.isPending}
                 >
                   Umbenennen
                 </Button>
               }
             >
-              <Field label="Parcoursname">
+              <Field label="Parkourname">
                 <Input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
@@ -414,7 +419,7 @@ function ParcoursInhalt({
               variant="secondary"
               size="sm"
               onClick={pflockHinzufuegen}
-              disabled={keineFreieFarbe || parcoursSetupAendern.isPending}
+              disabled={keineFreieFarbe || parkourSetupAendern.isPending}
             >
               <Plus />
               Pflock hinzufügen
@@ -429,14 +434,13 @@ function ParcoursInhalt({
           </div>
         )}
         <MarginNote label="Reihenfolge">
-          Die Reihe ist die Entfernung: oben steht der weiteste Pflock, unten
-          der nächste. Ziehen am Griff ändert die Reihenfolge.
+          Die Reihe ist die Entfernung: oben steht der nächste Pflock, unten der
+          weiteste. Ziehen am Griff ändert die Reihenfolge.
         </MarginNote>
         {!gesperrt && letzterPflock ? (
           <MarginNote label="Mindestens ein Pflock">
-            Ein Parcours braucht mindestens einen Pflock. Der letzte Pflock
-            lässt sich deshalb nicht entfernen; legen Sie zuerst einen weiteren
-            an.
+            Ein Parkour braucht mindestens einen Pflock. Der letzte Pflock lässt
+            sich deshalb nicht entfernen; legen Sie zuerst einen weiteren an.
           </MarginNote>
         ) : null}
         <Erfolgsmeldung meldung={pflockMeldung.meldung} />
@@ -503,9 +507,9 @@ function ParcoursInhalt({
       </MarginNote>
 
       <section aria-label="Aufstellung speichern" className="space-y-3">
-        {parcoursSetupAendern.isError ? (
+        {parkourSetupAendern.isError ? (
           <Alert variant="error">
-            {apiErrorMessage(parcoursSetupAendern.error, {
+            {apiErrorMessage(parkourSetupAendern.error, {
               badRequest: "Bitte prüfen Sie die Aufstellung.",
               fallback: "Die Aufstellung konnte nicht gespeichert werden.",
             })}
@@ -515,11 +519,11 @@ function ParcoursInhalt({
         <Erfolgsmeldung meldung={aufstellungMeldung.meldung} />
         <div className="flex flex-wrap gap-3">
           <Button
-            disabled={gesperrt || parcoursSetupAendern.isPending}
+            disabled={gesperrt || parkourSetupAendern.isPending}
             onClick={() => {
               aufstellungMeldung.verwerfen();
               pflockMeldung.verwerfen();
-              parcoursSetupAendern.mutate([anlage.id, parcours.id, setup], {
+              parkourSetupAendern.mutate([anlage.id, parkour.id, setup], {
                 onSuccess: () => {
                   setGespeichert(JSON.stringify(setup));
                   aufstellungMeldung.melden("Aufstellung gespeichert.");
@@ -527,7 +531,7 @@ function ParcoursInhalt({
               });
             }}
           >
-            {parcoursSetupAendern.isPending
+            {parkourSetupAendern.isPending
               ? "Wird gespeichert…"
               : "Aufstellung speichern"}
           </Button>
@@ -550,18 +554,18 @@ function ParcoursInhalt({
           <HatchBand height="lg" />
           <Card>
             <CardHeader>
-              <CardTitle>Parcours entfernen</CardTitle>
+              <CardTitle>Parkour entfernen</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-secondary">
-                Wurde der Parcours schon einmal gestartet, wird er archiviert
-                und bleibt in alten Runden sichtbar. Sonst wird er gelöscht.
+                Wurde der Parkour schon einmal gestartet, wird er archiviert und
+                bleibt in alten Runden sichtbar. Sonst wird er gelöscht.
               </p>
               <Button
                 variant="destructive"
-                disabled={parcoursEntfernen.isPending}
+                disabled={parkourEntfernen.isPending}
                 onClick={() => {
-                  parcoursEntfernen.reset();
+                  parkourEntfernen.reset();
                   setEntfernenOffen(true);
                 }}
               >
@@ -573,17 +577,17 @@ function ParcoursInhalt({
           <Dialog open={entfernenOffen} onOpenChange={setEntfernenOffen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Parcours entfernen?</DialogTitle>
+                <DialogTitle>Parkour entfernen?</DialogTitle>
                 <DialogDescription>
-                  Wurde der Parcours schon einmal gestartet, wird er archiviert
+                  Wurde der Parkour schon einmal gestartet, wird er archiviert
                   und bleibt in alten Runden sichtbar. Sonst wird er endgültig
                   gelöscht.
                 </DialogDescription>
               </DialogHeader>
-              {parcoursEntfernen.isError ? (
+              {parkourEntfernen.isError ? (
                 <Alert variant="error">
-                  {apiErrorMessage(parcoursEntfernen.error, {
-                    fallback: "Der Parcours konnte nicht entfernt werden.",
+                  {apiErrorMessage(parkourEntfernen.error, {
+                    fallback: "Der Parkour konnte nicht entfernt werden.",
                   })}
                 </Alert>
               ) : null}
@@ -591,16 +595,16 @@ function ParcoursInhalt({
                 <Button
                   variant="secondary"
                   onClick={() => setEntfernenOffen(false)}
-                  disabled={parcoursEntfernen.isPending}
+                  disabled={parkourEntfernen.isPending}
                 >
                   Abbrechen
                 </Button>
                 <Button
                   variant="destructive"
-                  disabled={parcoursEntfernen.isPending}
+                  disabled={parkourEntfernen.isPending}
                   onClick={() =>
-                    parcoursEntfernen.mutate([anlage.id, parcours.id], {
-                      // The removed Parcours no longer exists for this page to read,
+                    parkourEntfernen.mutate([anlage.id, parkour.id], {
+                      // The removed Parkour no longer exists for this page to read,
                       // so the confirmation is the Anlage's own ledger without it.
                       onSuccess: () =>
                         router.push(
@@ -609,7 +613,7 @@ function ParcoursInhalt({
                     })
                   }
                 >
-                  {parcoursEntfernen.isPending ? "Wird entfernt…" : "Entfernen"}
+                  {parkourEntfernen.isPending ? "Wird entfernt…" : "Entfernen"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -617,7 +621,7 @@ function ParcoursInhalt({
         </>
       )}
 
-      <ParcoursZiele ziele={ziele} platzierungen={setup.platzierungen} />
+      <ParkourZiele ziele={ziele} platzierungen={setup.platzierungen} />
     </div>
   );
 }
@@ -639,7 +643,11 @@ function SortablePlatzierung({
   tiername: string;
   gesperrt: boolean;
   pflöcke: Pflock[];
-  onAbstandAendern: (zielId: string, pflockId: string, meter: number) => void;
+  onAbstandAendern: (
+    zielId: string,
+    pflockId: string,
+    meter: number | undefined,
+  ) => void;
 }) {
   const {
     attributes,
@@ -650,7 +658,7 @@ function SortablePlatzierung({
     isDragging,
   } = useSortable({ id: platzierung.zielId });
 
-  // Distances follow the Pflock list, so a reordered setup reads far to near here too.
+  // Distances follow the Pflock list, so a reordered setup reads near to far here too.
   const abständeInReihenfolge = [...platzierung.abstände].sort(
     (a, b) =>
       pflöcke.findIndex((pflock) => pflock.id === a.pflockId) -
@@ -699,19 +707,23 @@ function SortablePlatzierung({
             <Field
               key={abstand.pflockId}
               label={`Abstand Pflock ${nummer + 1} · ${pflock?.farbe ?? ""}`}
-              hint="Meter"
+              hint="Meter, leer = nicht erfasst"
             >
               <Input
                 type="number"
                 min={1}
-                value={abstand.meter}
-                onChange={(event) =>
+                value={abstand.meter ?? ""}
+                onChange={(event) => {
+                  const eingabe = event.target.value;
+                  const meter = eingabe === "" ? undefined : Number(eingabe);
                   onAbstandAendern(
                     platzierung.zielId,
                     abstand.pflockId,
-                    Number(event.target.value),
-                  )
-                }
+                    meter !== undefined && Number.isFinite(meter)
+                      ? meter
+                      : undefined,
+                  );
+                }}
                 disabled={gesperrt}
               />
             </Field>
@@ -724,12 +736,12 @@ function SortablePlatzierung({
 
 /**
  * One Pflock of the setup, draggable by its handle only. The row position *is* the
- * far-to-near order, so the number is the record and the drag is the edit; the
+ * near-to-far order, so the number is the record and the drag is the edit; the
  * colour itself is chosen on the picker, which names every option in words.
  *
  * Removing the row removes the Pflock from the setup — and with it every distance
  * measured from it (see `pflockEntfernen`). The last remaining row cannot be removed,
- * because the domain refuses a Parcours without a Pflock; the section says why beside
+ * because the domain refuses a Parkour without a Pflock; the section says why beside
  * the list, so the reason is visible whether or not the button is reachable.
  */
 function SortablePflock({
@@ -802,7 +814,7 @@ function SortablePflock({
 }
 
 /** Which active Ziele of the Anlage are already in this route, and which are not. */
-function ParcoursZiele({
+function ParkourZiele({
   ziele,
   platzierungen,
 }: {
@@ -820,8 +832,8 @@ function ParcoursZiele({
         <TableHead>
           <TableRow>
             <TableHeader>Tiername</TableHeader>
-            <TableHeader>Zielgruppe</TableHeader>
-            <TableHeader>In diesem Parcours</TableHeader>
+            <TableHeader>Nummer</TableHeader>
+            <TableHeader>In diesem Parkour</TableHeader>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -833,7 +845,7 @@ function ParcoursZiele({
               <TableRow key={ziel.id}>
                 <TableCell className="font-medium">{ziel.tiername}</TableCell>
                 <TableCell className="tabular-nums">
-                  {ziel.zielgruppe}
+                  {ziel.zielnummer}
                 </TableCell>
                 <TableCell>
                   <Badge variant={platziert ? "success" : "default"}>

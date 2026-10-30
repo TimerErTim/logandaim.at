@@ -8,7 +8,7 @@ export {
   useBenutzerNachEmailQuery,
   useBenutzerQuery,
   useHealthQuery,
-  useParcoursQuery,
+  useParkourQuery,
   useRundenQuery,
   useRundeQuery,
 } from "./queries";

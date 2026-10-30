@@ -15,7 +15,7 @@
 use error_stack::{IntoReport, Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
-    domain::{AnlageId, ParcoursId, RundeId, ZielId, konto::BenutzerId},
+    domain::{AnlageId, ParkourId, RundeId, ZielId, konto::BenutzerId},
     service::{
         AbmeldungFehler, BenutzerLöschenFehler, PasswortWiederherstellenFehler,
         RundeAbschliessenFehler, RundeAnzeigenFehler, RundeStartenFehler, RundenAnzeigenFehler,
@@ -43,15 +43,15 @@ use crate::{
         LogandaimAppApi,
         requests::{
             AnlageErstellungRequest, AnlageVerwaltungRequest, AnlageÄnderungRequest,
-            AnmeldungRequest, BenutzerLöschungRequest, ParcoursErstellungRequest,
-            ParcoursSetupRequest, ParcoursUmbenennenRequest, PasswortVergessenRequest,
+            AnmeldungRequest, BenutzerLöschungRequest, ParkourErstellungRequest,
+            ParkourSetupRequest, ParkourUmbenennenRequest, PasswortVergessenRequest,
             PasswortWiederherstellenRequest, RegistrierungAbschlussRequest,
             RegistrierungStartRequest, RundeStartenRequest, SchussErstellungRequest, ZielRequest,
         },
     },
     schema::{
-        Anlage, AnlagenZeile, AnlageÖffentlich, Benutzer, Ok, ParcoursÖffentlich, Runde,
-        RundenZeile, Schuss,
+        Anlage, AnlageZugriff, AnlageÖffentlich, AuthenticatedBenutzer, Benutzer, Ok,
+        ParkourÖffentlich, Runde, RundeBasic, Schuss,
     },
 };
 
@@ -61,8 +61,8 @@ pub enum ApiTag {
     /// Anlage master data: identity, address, contact, roles, Ziele, and the public
     /// directory.
     Anlagen,
-    /// Parcours: Pflock setup, route order, and the distances between them.
-    Parcours,
+    /// Parkour: Pflock setup, route order, and the distances between them.
+    Parkour,
     /// Runden and the Schüsse logged in them.
     Runden,
     /// Registration, sign-in, session, password recovery, and the own Benutzer.
@@ -131,7 +131,7 @@ impl LogandaimApiSpec {
     async fn anlagen_anzeigen(
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
-    ) -> TypicalJsonResponse<Vec<AnlagenZeile>> {
+    ) -> TypicalJsonResponse<Vec<AnlageZugriff>> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
             Ok(auth) => self.app_api.anlagen_anzeigen(auth).await,
             Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
@@ -139,7 +139,7 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// List the active Anlagen with the Parcours each offers. No sign-in needed.
+    /// List the active Anlagen with the Parkour each offers. No sign-in needed.
     ///
     /// This is the public directory. It carries no contact data, and a broken token is
     /// answered as anonymous rather than as an error.
@@ -182,7 +182,7 @@ impl LogandaimApiSpec {
 
     /// Rewrite the Anlage's own fields: name, address, and contact. Administrator only.
     ///
-    /// The whole set is replaced; omitted contact fields become empty. Ziele, Parcours, and
+    /// The whole set is replaced; omitted contact fields become empty. Ziele, Parkour, and
     /// role assignments are untouched.
     #[oai(path = "/anlagen/:anlage_id", method = "put", tag = "ApiTag::Anlagen")]
     async fn anlage_ändern(
@@ -265,7 +265,7 @@ impl LogandaimApiSpec {
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         e_mail_adresse: Query<String>,
-    ) -> TypicalJsonResponse<Vec<crate::schema::BenutzerSuchtreffer>> {
+    ) -> TypicalJsonResponse<Vec<Benutzer>> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
             Ok(auth) => {
                 self.app_api
@@ -436,24 +436,24 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Create a Parcours with its Pflock setup and its route.
+    /// Create a Parkour with its Pflock setup and its route.
     ///
     /// The Pflöcke and their order are given explicitly; a colour never implies an order.
     #[oai(
-        path = "/anlagen/:anlage_id/parcours",
+        path = "/anlagen/:anlage_id/parkour",
         method = "post",
-        tag = "ApiTag::Parcours"
+        tag = "ApiTag::Parkour"
     )]
-    async fn parcours_hinzufügen(
+    async fn parkour_hinzufügen(
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
-        body: Json<ParcoursErstellungRequest>,
+        body: Json<ParkourErstellungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
             Ok(auth) => {
                 self.app_api
-                    .parcours_hinzufügen(auth, AnlageId(anlage_id.0), body.0)
+                    .parkour_hinzufügen(auth, AnlageId(anlage_id.0), body.0)
                     .await
             }
             Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
@@ -465,24 +465,24 @@ impl LogandaimApiSpec {
     ///
     /// Existing Runden keep the snapshot they captured; only future Runden see the change.
     #[oai(
-        path = "/anlagen/:anlage_id/parcours/:parcours_id/setup",
+        path = "/anlagen/:anlage_id/parkour/:parkour_id/setup",
         method = "put",
-        tag = "ApiTag::Parcours"
+        tag = "ApiTag::Parkour"
     )]
-    async fn parcours_setup_ändern(
+    async fn parkour_setup_ändern(
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
-        parcours_id: Path<Uuid>,
-        body: Json<ParcoursSetupRequest>,
+        parkour_id: Path<Uuid>,
+        body: Json<ParkourSetupRequest>,
     ) -> TypicalJsonResponse<Anlage> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
             Ok(auth) => {
                 self.app_api
-                    .parcours_setup_ändern(
+                    .parkour_setup_ändern(
                         auth,
                         AnlageId(anlage_id.0),
-                        ParcoursId(parcours_id.0),
+                        ParkourId(parkour_id.0),
                         body.0,
                     )
                     .await
@@ -492,28 +492,28 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Rename a Parcours.
+    /// Rename a Parkour.
     ///
     /// The identity stays, and every captured snapshot keeps the name it recorded.
     #[oai(
-        path = "/anlagen/:anlage_id/parcours/:parcours_id",
+        path = "/anlagen/:anlage_id/parkour/:parkour_id",
         method = "put",
-        tag = "ApiTag::Parcours"
+        tag = "ApiTag::Parkour"
     )]
-    async fn parcours_umbenennen(
+    async fn parkour_umbenennen(
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
-        parcours_id: Path<Uuid>,
-        body: Json<ParcoursUmbenennenRequest>,
+        parkour_id: Path<Uuid>,
+        body: Json<ParkourUmbenennenRequest>,
     ) -> TypicalJsonResponse<Anlage> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
             Ok(auth) => {
                 self.app_api
-                    .parcours_umbenennen(
+                    .parkour_umbenennen(
                         auth,
                         AnlageId(anlage_id.0),
-                        ParcoursId(parcours_id.0),
+                        ParkourId(parkour_id.0),
                         body.0,
                     )
                     .await
@@ -523,24 +523,24 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Remove a Parcours: archive it when a Runde captured it, delete it otherwise.
+    /// Remove a Parkour: archive it when a Runde captured it, delete it otherwise.
     ///
     /// Answers the Anlage as it stands afterwards.
     #[oai(
-        path = "/anlagen/:anlage_id/parcours/:parcours_id",
+        path = "/anlagen/:anlage_id/parkour/:parkour_id",
         method = "delete",
-        tag = "ApiTag::Parcours"
+        tag = "ApiTag::Parkour"
     )]
-    async fn parcours_entfernen(
+    async fn parkour_entfernen(
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
-        parcours_id: Path<Uuid>,
+        parkour_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
             Ok(auth) => {
                 self.app_api
-                    .parcours_entfernen(auth, AnlageId(anlage_id.0), ParcoursId(parcours_id.0))
+                    .parkour_entfernen(auth, AnlageId(anlage_id.0), ParkourId(parkour_id.0))
                     .await
             }
             Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
@@ -548,29 +548,29 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// List every active Parcours of every active Anlage. No sign-in needed.
+    /// List every active Parkour of every active Anlage. No sign-in needed.
     ///
     /// This is the list a client starts a Runde from.
-    #[oai(path = "/parcours", method = "get", tag = "ApiTag::Parcours")]
-    async fn parcours_anzeigen(
+    #[oai(path = "/parkour", method = "get", tag = "ApiTag::Parkour")]
+    async fn parkour_anzeigen(
         &self,
         #[oai(name = "Authorization")] authorization: BearerAuthorization,
-    ) -> TypicalJsonResponse<Vec<ParcoursÖffentlich>> {
+    ) -> TypicalJsonResponse<Vec<ParkourÖffentlich>> {
         // A broken token is answered as anonymous here, never as an error: this route is
         // public, and a stale token must not hide master data from its own reader.
         let auth = self
             .auth_context(authorization.0.as_deref())
             .await
             .unwrap_or(logandaim_core::application::AuthContext::Anonymous);
-        self.app_api.parcours_anzeigen(auth).await.into()
+        self.app_api.parkour_anzeigen(auth).await.into()
     }
 
     // ------------------------------------------------------------------ Runden
 
-    /// Start a Runde on one active Parcours.
+    /// Start a Runde on one active Parkour.
     ///
     /// The setup is captured as a snapshot in the same transaction, so a later change to the
-    /// Parcours cannot alter this Runde.
+    /// Parkour cannot alter this Runde.
     #[oai(path = "/runden", method = "post", tag = "ApiTag::Runden")]
     async fn runde_starten(
         &self,
@@ -591,7 +591,7 @@ impl LogandaimApiSpec {
     async fn runden_anzeigen(
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
-    ) -> TypicalJsonResponse<Vec<RundenZeile>> {
+    ) -> TypicalJsonResponse<Vec<RundeBasic>> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
             Ok(auth) => self.app_api.runden_anzeigen(auth).await,
             Err(_) => Err(Report::new(RundenAnzeigenFehler::NichtAngemeldet)),
@@ -831,15 +831,15 @@ impl LogandaimApiSpec {
         EndSessionResponse::from(ergebnis.map(|()| Ok { ok: true }))
     }
 
-    /// Read the authenticated Benutzer, including its account-level role.
+    /// Read the authenticated caller, including its account-level role.
     ///
     /// Answers `401` when the token is missing or unusable; there is no anonymous answer.
     #[oai(path = "/benutzer", method = "get", tag = "ApiTag::Konto")]
     async fn benutzer_anzeigen(
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
-    ) -> UncachedJsonResponse<Benutzer> {
-        let ergebnis: ResultReport<Benutzer, StammdatenFehler> =
+    ) -> UncachedJsonResponse<AuthenticatedBenutzer> {
+        let ergebnis: ResultReport<AuthenticatedBenutzer, StammdatenFehler> =
             match self.auth_context(authorization.0.as_deref()).await {
                 Ok(auth) => {
                     self.app_api
@@ -925,9 +925,9 @@ pub fn openapi_service_from_api(
         "## Sections\n",
         "\n",
         "`Anlagen` holds master data: an Anlage with its address, contact details, role\n",
-        "assignments, Ziele, and Parcours, plus the public directory. `Parcours` covers the\n",
+        "assignments, Ziele, and Parkour, plus the public directory. `Parkour` covers the\n",
         "shooting setup itself: Pflöcke, their order, and the distances to the Ziele placed\n",
-        "among them. `Runden` covers shooting a Parcours and logging Schüsse. `Konto` covers\n",
+        "among them. `Runden` covers shooting a Parkour and logging Schüsse. `Konto` covers\n",
         "registration, sign-in, sessions, password recovery, and the caller's own Benutzer.\n",
         "\n",
         "## Authentication\n",

@@ -58,7 +58,7 @@ change is one edit that the app, the agent rule, and this spec all reflect.
 - User-facing theme switcher. Identity is one default; the class-based dark variant exists for review
   and system preference, not as a setting.
 - A second locale. Copy rules live in the charter's language bar.
-- User journeys. Whether a parcours shows as a map, a progress bar, or a step list is a product
+- User journeys. Whether a parkour shows as a map, a progress bar, or a step list is a product
   decision, not settled by this identity.
 
 ## User journeys

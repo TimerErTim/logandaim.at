@@ -18,7 +18,7 @@ import {
   type AnlageAdresse,
   type AnlageKontakt,
   AnlageVerwaltungRolle,
-  type ParcoursInput,
+  type ParkourInput,
   type Pflock,
   type ZielInput,
 } from "@/api/logandaim-api";
@@ -176,7 +176,7 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
       <Tabs defaultValue="ziele">
         <TabsList>
           <TabsTrigger value="ziele">Ziele</TabsTrigger>
-          <TabsTrigger value="parcours">Parcours</TabsTrigger>
+          <TabsTrigger value="parkour">Parkour</TabsTrigger>
           <TabsTrigger value="verwaltung">Verwaltung</TabsTrigger>
           <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
         </TabsList>
@@ -185,8 +185,8 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
           <Ziele anlage={anlage} gesperrt={deaktiviert} />
         </TabsContent>
 
-        <TabsContent value="parcours">
-          <ParcoursListe anlage={anlage} gesperrt={deaktiviert} />
+        <TabsContent value="parkour">
+          <ParkourListe anlage={anlage} gesperrt={deaktiviert} />
         </TabsContent>
 
         <TabsContent value="verwaltung">
@@ -216,7 +216,7 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
 
 // --------------------------------------------------------------------------- Ziele
 
-const leeresZiel: ZielInput = { tiername: "", zielgruppe: 1 };
+const leeresZiel: ZielInput = { tiername: "" };
 
 function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
   const { zielHinzufuegen, zielAendern, zielErsetzen, zielEntfernen } =
@@ -250,7 +250,7 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
             <TableHead>
               <TableRow>
                 <TableHeader>Tiername</TableHeader>
-                <TableHeader>Zielgruppe</TableHeader>
+                <TableHeader>Nummer</TableHeader>
                 <TableHeader>Verwendung</TableHeader>
                 <TableHeader>Status</TableHeader>
                 <TableHeader>
@@ -263,13 +263,19 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                 <TableRow key={ziel.id}>
                   <TableCell className="font-medium">{ziel.tiername}</TableCell>
                   <TableCell className="tabular-nums">
-                    {ziel.zielgruppe}
+                    {ziel.zielnummer}
                   </TableCell>
                   <TableCell className="text-secondary">
                     {ziel.verwendungen.length === 0
                       ? "nicht platziert"
                       : ziel.verwendungen
-                          .map((verwendung) => verwendung.parcoursName)
+                          .map(
+                            (verwendung) =>
+                              anlage.parkour.find(
+                                (parkour) =>
+                                  parkour.id === verwendung.parkourId,
+                              )?.name ?? "Parkour",
+                          )
                           .join(", ")}
                   </TableCell>
                   <TableCell>
@@ -289,10 +295,7 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                           size="sm"
                           onClick={() => {
                             setBearbeitet(ziel.id);
-                            setForm({
-                              tiername: ziel.tiername,
-                              zielgruppe: ziel.zielgruppe,
-                            });
+                            setForm({ tiername: ziel.tiername });
                           }}
                         >
                           Bearbeiten
@@ -304,11 +307,7 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                           onClick={() => {
                             meldung.verwerfen();
                             zielErsetzen.mutate(
-                              [
-                                anlage.id,
-                                ziel.id,
-                                { ...ziel, zielgruppe: ziel.zielgruppe },
-                              ],
+                              [anlage.id, ziel.id, { tiername: ziel.tiername }],
                               {
                                 onSuccess: () =>
                                   meldung.melden("Ziel ersetzt."),
@@ -427,23 +426,6 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                     required
                   />
                 </Field>
-                <Field label="Zielgruppe" hint="1 bis 4">
-                  <Select
-                    value={String(form.zielgruppe)}
-                    onChange={(event) =>
-                      setForm((bisher) => ({
-                        ...bisher,
-                        zielgruppe: Number(event.target.value),
-                      }))
-                    }
-                  >
-                    {[1, 2, 3, 4].map((wert) => (
-                      <option key={wert} value={wert}>
-                        {wert}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
               </FormRow>
             </form>
           </section>
@@ -453,16 +435,16 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
   );
 }
 
-// ------------------------------------------------------------------------ Parcours
+// ------------------------------------------------------------------------ Parkour
 
-function ParcoursListe({
+function ParkourListe({
   anlage,
   gesperrt,
 }: {
   anlage: Anlage;
   gesperrt: boolean;
 }) {
-  const { parcoursHinzufuegen } = useStammdatenMutations();
+  const { parkourHinzufuegen } = useStammdatenMutations();
   const meldung = useErfolgsmeldung();
   const aktiveZiele = anlage.ziele.filter((ziel) => ziel.zustand === "Aktiv");
   const [name, setName] = useState("");
@@ -484,31 +466,31 @@ function ParcoursListe({
     meldung.melden("Pflock hinzugefügt.");
   }
 
-  /** One Pflock stays: the domain refuses a Parcours without any (`KeinePflöcke`). */
+  /** One Pflock stays: the domain refuses a Parkour without any (`KeinePflöcke`). */
   function pflockEntfernen(id: string) {
     if (pfloecke.length <= 1) return;
     setPfloecke((aktuell) => aktuell.filter((pflock) => pflock.id !== id));
     meldung.melden("Pflock entfernt.");
   }
 
-  function parcoursErstellen(event: FormEvent<HTMLFormElement>) {
+  function parkourErstellen(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const eingabe: ParcoursInput = {
+    const eingabe: ParkourInput = {
       name,
       pflöcke: pfloecke,
-      // A new Parcours has no distances yet, so every placement starts empty.
+      // A new Parkour has no distances yet, so every placement starts empty.
       platzierungen: ausgewaehlteZiele.map((zielId) => ({
         zielId,
         abstände: [],
       })),
     };
     meldung.verwerfen();
-    parcoursHinzufuegen.mutate([anlage.id, eingabe], {
+    parkourHinzufuegen.mutate([anlage.id, eingabe], {
       onSuccess: () => {
         setName("");
         setPfloecke([neuerPflock([])]);
         setAusgewaehlteZiele([]);
-        meldung.melden("Parcours angelegt.");
+        meldung.melden("Parkour angelegt.");
       },
     });
   }
@@ -516,39 +498,39 @@ function ParcoursListe({
   return (
     <div className="space-y-6">
       {!gesperrt ? (
-        <section aria-label="Parcours anlegen" className="space-y-3">
-          <h2 className="text-sm font-semibold text-ink">Parcours anlegen</h2>
+        <section aria-label="Parkour anlegen" className="space-y-3">
+          <h2 className="text-sm font-semibold text-ink">Parkour anlegen</h2>
           <div className="space-y-4">
             {aktiveZiele.length === 0 ? (
               <Alert variant="warning">
                 Erfassen Sie zuerst mindestens ein aktives Ziel, damit Sie es
-                dem Parcours zuordnen können.
+                dem Parkour zuordnen können.
               </Alert>
             ) : null}
-            {parcoursHinzufuegen.isError ? (
+            {parkourHinzufuegen.isError ? (
               <Alert variant="error">
-                {apiErrorMessage(parcoursHinzufuegen.error, {
+                {apiErrorMessage(parkourHinzufuegen.error, {
                   unauthorized:
-                    "Sie dürfen an dieser Anlage keine Parcours anlegen.",
+                    "Sie dürfen an dieser Anlage keine Parkours anlegen.",
                   badRequest:
-                    "Bitte prüfen Sie den Parcoursnamen und die Zielauswahl.",
-                  fallback: "Der Parcours konnte nicht angelegt werden.",
+                    "Bitte prüfen Sie den Parkournamen und die Zielauswahl.",
+                  fallback: "Der Parkour konnte nicht angelegt werden.",
                 })}
               </Alert>
             ) : null}
             {/* One slot for the result of this form: failure above, success here. */}
             <Erfolgsmeldung meldung={meldung.meldung} />
-            <form className="space-y-4" onSubmit={parcoursErstellen}>
-              <Field label="Parcoursname" className="sm:max-w-md">
+            <form className="space-y-4" onSubmit={parkourErstellen}>
+              <Field label="Parkourname" className="sm:max-w-md">
                 <Input
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  disabled={parcoursHinzufuegen.isPending}
+                  disabled={parkourHinzufuegen.isPending}
                   required
                 />
               </Field>
               <section
-                aria-label="Pflöcke des neuen Parcours"
+                aria-label="Pflöcke des neuen Parkours"
                 className="space-y-3"
               >
                 <h3 className="text-sm font-semibold text-ink">Pflöcke</h3>
@@ -568,7 +550,7 @@ function ParcoursListe({
                             size="icon"
                             aria-label={`Pflock ${index + 1} entfernen`}
                             disabled={
-                              parcoursHinzufuegen.isPending ||
+                              parkourHinzufuegen.isPending ||
                               pfloecke.length <= 1
                             }
                             onClick={() => pflockEntfernen(pflock.id)}
@@ -589,7 +571,7 @@ function ParcoursListe({
                               ),
                             )
                           }
-                          disabled={parcoursHinzufuegen.isPending}
+                          disabled={parkourHinzufuegen.isPending}
                         />
                       </FormRow>
                     </li>
@@ -600,7 +582,7 @@ function ParcoursListe({
                   size="sm"
                   onClick={pflockHinzufuegen}
                   disabled={
-                    parcoursHinzufuegen.isPending ||
+                    parkourHinzufuegen.isPending ||
                     freiePflockFarbe(pfloecke) === null
                   }
                 >
@@ -616,7 +598,7 @@ function ParcoursListe({
                 ) : null}
                 {pfloecke.length <= 1 ? (
                   <MarginNote label="Mindestens ein Pflock">
-                    Ein Parcours braucht mindestens einen Pflock. Der letzte
+                    Ein Parkour braucht mindestens einen Pflock. Der letzte
                     Pflock lässt sich deshalb nicht entfernen; legen Sie zuerst
                     einen weiteren an.
                   </MarginNote>
@@ -624,25 +606,25 @@ function ParcoursListe({
               </section>
               <section className="space-y-2">
                 <h3 className="text-sm font-semibold text-ink">
-                  Ziele im Parcours
+                  Ziele im Parkour
                 </h3>
                 <div className="grid gap-x-4 sm:grid-cols-2">
                   {aktiveZiele.map((ziel) => (
                     <Checkbox
                       key={ziel.id}
-                      label={`${ziel.tiername} · Gruppe ${ziel.zielgruppe}`}
+                      label={`${ziel.tiername} · Nr. ${ziel.zielnummer}`}
                       checked={ausgewaehlteZiele.includes(ziel.id)}
                       onChange={(event) =>
                         toggleZiel(ziel.id, event.target.checked)
                       }
-                      disabled={parcoursHinzufuegen.isPending}
+                      disabled={parkourHinzufuegen.isPending}
                     />
                   ))}
                 </div>
               </section>
               <MarginNote label="Aufbau">
-                Die Pflöcke stehen von fern nach nah. Distanzen tragen Sie nach
-                dem Anlegen im Parcours ein.
+                Die Pflöcke stehen von nah nach fern: der erste Pflock ist der
+                nächste. Distanzen tragen Sie nach dem Anlegen im Parkour ein.
               </MarginNote>
               <Button
                 type="submit"
@@ -650,27 +632,27 @@ function ParcoursListe({
                 disabled={
                   !aktiveZiele.length ||
                   !ausgewaehlteZiele.length ||
-                  parcoursHinzufuegen.isPending
+                  parkourHinzufuegen.isPending
                 }
               >
-                {parcoursHinzufuegen.isPending
-                  ? "Parcours wird angelegt…"
-                  : "Parcours anlegen"}
+                {parkourHinzufuegen.isPending
+                  ? "Parkour wird angelegt…"
+                  : "Parkour anlegen"}
               </Button>
             </form>
           </div>
         </section>
       ) : null}
       {!gesperrt ? <HatchBand /> : null}
-      <section aria-label="Parcours der Anlage" className="space-y-2">
+      <section aria-label="Parkours der Anlage" className="space-y-2">
         <div className="flex items-baseline gap-3">
           <h2 className="text-sm font-semibold text-ink">
-            Parcours der Anlage
+            Parkours der Anlage
           </h2>
-          <SheetNumber>{anlage.parcours.length}</SheetNumber>
+          <SheetNumber>{anlage.parkour.length}</SheetNumber>
         </div>
-        {anlage.parcours.length === 0 ? (
-          <p className="text-sm text-secondary">Noch kein Parcours erfasst.</p>
+        {anlage.parkour.length === 0 ? (
+          <p className="text-sm text-secondary">Noch kein Parkour erfasst.</p>
         ) : (
           <Table>
             <TableHead>
@@ -685,28 +667,26 @@ function ParcoursListe({
               </TableRow>
             </TableHead>
             <TableBody>
-              {anlage.parcours.map((parcours) => (
-                <TableRow key={parcours.id}>
-                  <TableCell className="font-medium">{parcours.name}</TableCell>
+              {anlage.parkour.map((parkour) => (
+                <TableRow key={parkour.id}>
+                  <TableCell className="font-medium">{parkour.name}</TableCell>
                   <TableCell>
                     <span className="flex flex-wrap gap-3 text-sm">
-                      {parcours.pflöcke.map((pflock) => (
+                      {parkour.pflöcke.map((pflock) => (
                         <PflockMarker key={pflock.id} farbe={pflock.farbe} />
                       ))}
                     </span>
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    {parcours.platzierungen.length}
+                    {parkour.platzierungen.length}
                   </TableCell>
                   <TableCell>
                     <Badge
                       variant={
-                        parcours.zustand === "Archiviert"
-                          ? "warning"
-                          : "success"
+                        parkour.zustand === "Archiviert" ? "warning" : "success"
                       }
                     >
-                      {parcours.zustand === "Archiviert"
+                      {parkour.zustand === "Archiviert"
                         ? "Archiviert"
                         : "Aktiv"}
                     </Badge>
@@ -714,7 +694,7 @@ function ParcoursListe({
                   <TableCell className="text-right">
                     <Button variant="secondary" size="sm" asChild>
                       <Link
-                        href={`${paths.verwaltungParcours}?id=${parcours.id}&anlage=${anlage.id}`}
+                        href={`${paths.verwaltungParkour}?id=${parkour.id}&anlage=${anlage.id}`}
                       >
                         Öffnen
                       </Link>
@@ -1197,7 +1177,7 @@ function Stammdaten({
             <CardContent className="space-y-4">
               <p className="text-sm text-secondary">
                 Eine deaktivierte Anlage ist nur noch für Systemadministratoren
-                einsehbar, nimmt keine Änderung mehr an, und ihre Parcours
+                einsehbar, nimmt keine Änderung mehr an, und ihre Parkours
                 starten keine neuen Runden. Die Deaktivierung ist endgültig.
               </p>
               {fehler ? (

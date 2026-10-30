@@ -8,16 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Added account screens for registration, sign-in, and password recovery.
-- Added an administration area for Anlagen: create an Anlage, edit its details, grant and revoke
-  staff roles, maintain Ziele and Parcours with their Pflock setup and distances, and deactivate an
-  Anlage for good.
-- Added a public Parcours list that needs no sign-in, showing every active Parcours of every active
-  Anlage.
-- Added a Runden view: start a Runde on a Parcours, read the setup exactly as it was captured, and see
-  both Wertungen per Ziel and for the whole Runde.
-
-### Removed
-- Removed the placeholder shot-logging page; a Schuss is now logged inside a Runde.
+- Account screens for registration, sign-in, and password recovery.
+- An administration area for Anlagen, including staff roles and Parkour setup with Pflocks and
+  distances.
+- A public Parkour list that needs no sign-in.
+- A Runden view: run a Runde and see its Wertungen per Ziel and for the whole Runde.
 
 [Unreleased]: https://github.com/TimerErTim/logandaim.at/commits/main

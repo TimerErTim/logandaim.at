@@ -10,7 +10,7 @@ use tracing::info;
 
 use crate::{
     application::ExecutionContext,
-    domain::{NeuerSchuss, RundeId, Schuss, SchussFehler, Wertungszone, ZielId, Zuordnung},
+    domain::{Erfasser, NeuerSchuss, RundeId, Schuss, SchussFehler, Wertungszone, ZielId},
     ports::RepositoryError,
     service::UseCase,
 };
@@ -92,7 +92,7 @@ impl UseCase<Schuss> for SchussRegistrieren {
 
             let neu = NeuerSchuss::neu(
                 self.runde_id,
-                Zuordnung::Benutzer(benutzer_id),
+                Erfasser::Benutzer(benutzer_id),
                 self.ziel_id,
                 self.pfeil,
                 self.wertungszone,

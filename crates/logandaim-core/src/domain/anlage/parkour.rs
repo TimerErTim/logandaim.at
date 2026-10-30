@@ -1,113 +1,55 @@
 //! A named route at one `Anlage`: its Pflock setup and its ordered Ziel arrangement.
 //!
-//! A `Parcours` is an entity inside the `Anlage` aggregate. Its Pflock colours and
-//! far-to-near order are its own, and there is no product-wide palette (SPEC-stammdaten
+//! A `Parkour` is an entity inside the `Anlage` aggregate. Its Pflock colours and its
+//! near-to-far order are its own, and there is no product-wide palette (SPEC-stammdaten
 //! rule 6, AC-6).
 
 use uuid::Uuid;
 
 use super::ziel::{ZielId, Zustand};
+use crate::domain::common::{Farbe, NonEmptyString};
 
-/// Identity of one Parcours.
+/// Identity of one Parkour.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct ParcoursId(pub Uuid);
+pub struct ParkourId(pub Uuid);
 
-/// Identity of one Pflock setup (a shooting position at one Parcours).
+/// Identity of one Pflock setup (a shooting position at one Parkour).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct PflockId(pub Uuid);
 
 #[derive(Debug, thiserror::Error)]
-pub enum ParcoursFehler {
-    #[error("der Parcoursname darf nicht leer sein")]
-    NameLeer,
-    #[error("die Pflock-Farbe „{0}“ ist keine Hex-Farbe der Form #rrggbb")]
-    PflockFarbeUngültig(String),
-    #[error("die Pflock-Farbe „{0}“ ist in diesem Parcours doppelt")]
-    PflockFarbeDoppelt(String),
-    #[error("ein Parcours braucht mindestens einen Pflock")]
+pub enum ParkourFehler {
+    #[error("die Pflock-Farbe ist in diesem Parkour doppelt")]
+    FarbeDoppelt,
+    #[error("ein Parkour braucht mindestens einen Pflock")]
     KeinePflöcke,
     #[error("die Reihenfolge der Pflöcke ist widersprüchlich")]
     PflockReihenfolgeUngültig,
-    #[error("der Abstand muss positiv sein, war aber {0} m")]
-    AbstandNichtPositiv(u32),
-    #[error("die Abstände müssen von fern nach nah streng abnehmen")]
-    AbständeNichtAbnehmend,
-    #[error("ein Abstand gehört zu einem Pflock, der nicht in diesem Parcours liegt")]
-    PflockNichtImParcours,
-    #[error("dasselbe Ziel darf in einem Parcours nur einmal vorkommen")]
+    #[error("die Abstände müssen vom ersten Pflock zum letzten streng zunehmen")]
+    AbständeNichtSteigend,
+    #[error("ein Abstand gehört zu einem Pflock, der nicht in diesem Parkour liegt")]
+    PflockNichtImParkour,
+    #[error("dasselbe Ziel darf in einem Parkour nur einmal vorkommen")]
     ZielDoppelt,
     #[error("das Ziel gehört nicht zu dieser Anlage")]
     ZielFremdeAnlage,
     #[error("die neue Reihenfolge deckt nicht genau die platzierten Ziele ab")]
     ReihenfolgeUngültig,
-    #[error("der Parcours wurde nicht gefunden")]
-    ParcoursNichtGefunden,
-    #[error("der Parcours ist archiviert und kann nicht mehr geändert werden")]
+    #[error("der Parkour wurde nicht gefunden")]
+    ParkourNichtGefunden,
+    #[error("der Parkour ist archiviert und kann nicht mehr geändert werden")]
     Archiviert,
 }
 
-/// Non-empty name of one Parcours.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ParcoursName(String);
-
-impl ParcoursName {
-    pub fn neu<S: AsRef<str>>(wert: S) -> Result<Self, ParcoursFehler> {
-        let wert = wert.as_ref().trim();
-        if wert.is_empty() {
-            return Err(ParcoursFehler::NameLeer);
-        }
-        Ok(Self(wert.to_owned()))
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl AsRef<str> for ParcoursName {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-/// Colour of one Pflock, chosen by Anlage staff.
-///
-/// Caller data, not a design token: the product has no fixed palette (rule 6). Normalised to
-/// lowercase `#rrggbb`, so two spellings of one colour compare equal and the uniqueness rule
-/// below cannot be bypassed by casing.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct PflockFarbe(String);
-
-impl PflockFarbe {
-    pub fn neu<S: AsRef<str>>(wert: S) -> Result<Self, ParcoursFehler> {
-        let wert = wert.as_ref().trim().to_lowercase();
-        let hex = wert.strip_prefix('#').unwrap_or("");
-        if hex.len() != 6 || !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-            return Err(ParcoursFehler::PflockFarbeUngültig(wert));
-        }
-        Ok(Self(wert))
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl AsRef<str> for PflockFarbe {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-/// One shooting position in a Parcours' setup.
+/// One shooting position in a Parkour's setup.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Pflock {
     id: PflockId,
-    farbe: PflockFarbe,
+    farbe: Farbe,
 }
 
 impl Pflock {
-    pub fn neu(id: PflockId, farbe: PflockFarbe) -> Self {
+    pub fn neu(id: PflockId, farbe: Farbe) -> Self {
         Self { id, farbe }
     }
 
@@ -115,59 +57,42 @@ impl Pflock {
         self.id
     }
 
-    pub fn farbe(&self) -> &PflockFarbe {
-        &self.farbe
+    pub fn farbe(&self) -> Farbe {
+        self.farbe
     }
 }
 
-/// A configured distance in metres. Positive by construction.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Abstand(u32);
-
-impl Abstand {
-    pub fn neu(meter: u32) -> Result<Self, ParcoursFehler> {
-        if meter == 0 {
-            return Err(ParcoursFehler::AbstandNichtPositiv(0));
-        }
-        Ok(Self(meter))
-    }
-
-    pub fn meter(self) -> u32 {
-        self.0
-    }
-}
-
-/// One Ziel's use in one Parcours, with an optional distance per Pflock.
+/// One Ziel's use in one Parkour, with an optional distance per Pflock.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Zielplatzierung {
     ziel_id: ZielId,
-    /// In far-to-near order of the Parcours' Pflöcke. A missing entry is a missing
+    /// Near to far, matching the Parkour's Pflock order. A missing entry is a missing
     /// distance, not a zero.
-    abstände: Vec<(PflockId, Abstand)>,
+    abstände: Vec<(PflockId, crate::domain::common::Abstand)>,
 }
 
 impl Zielplatzierung {
     pub fn neu(
         ziel_id: ZielId,
-        abstände: Vec<(PflockId, Abstand)>,
-    ) -> Result<Self, ParcoursFehler> {
+        abstände: Vec<(PflockId, crate::domain::common::Abstand)>,
+    ) -> Result<Self, ParkourFehler> {
         Self::mit_pflöcken(ziel_id, abstände, &[])
     }
 
-    /// Validate the distances against the Parcours' Pflock list: every key must be a
-    /// Pflock of this Parcours, and the configured metres must strictly decrease.
+    /// Validate the distances against the Parkour's Pflock list: every key must be a
+    /// Pflock of this Parkour, and the configured metres must strictly increase.
     fn mit_pflöcken(
         ziel_id: ZielId,
-        abstände: Vec<(PflockId, Abstand)>,
+        mut abstände: Vec<(PflockId, crate::domain::common::Abstand)>,
         pflöcke: &[Pflock],
-    ) -> Result<Self, ParcoursFehler> {
+    ) -> Result<Self, ParkourFehler> {
         if !pflöcke.is_empty() {
             for (pflock_id, _) in &abstände {
                 if !pflöcke.iter().any(|pflock| pflock.id == *pflock_id) {
-                    return Err(ParcoursFehler::PflockNichtImParcours);
+                    return Err(ParkourFehler::PflockNichtImParkour);
                 }
             }
-            // Far to near: strictly decreasing in Pflock order. Only configured
+            // Near to far: strictly increasing in Pflock order. Only configured
             // distances participate, because a missing one has no estimate.
             let reihe: Vec<u32> = pflöcke
                 .iter()
@@ -178,9 +103,15 @@ impl Zielplatzierung {
                         .map(|(_, abstand)| abstand.meter())
                 })
                 .collect();
-            if reihe.windows(2).any(|paar| paar[0] <= paar[1]) {
-                return Err(ParcoursFehler::AbständeNichtAbnehmend);
+            if reihe.windows(2).any(|paar| paar[0] >= paar[1]) {
+                return Err(ParkourFehler::AbständeNichtSteigend);
             }
+            // Normalise to the Parkour's own near-to-far Pflock order, so the list always
+            // reads first Pflock first whatever order the caller supplied.
+            abstände = pflöcke
+                .iter()
+                .filter_map(|pflock| abstände.iter().find(|(id, _)| *id == pflock.id).copied())
+                .collect();
         }
         Ok(Self { ziel_id, abstände })
     }
@@ -189,12 +120,12 @@ impl Zielplatzierung {
         self.ziel_id
     }
 
-    pub fn abstände(&self) -> &[(PflockId, Abstand)] {
+    pub fn abstände(&self) -> &[(PflockId, crate::domain::common::Abstand)] {
         &self.abstände
     }
 
     /// The configured distance for one Pflock, if any.
-    pub fn abstand_für(&self, pflock_id: PflockId) -> Option<Abstand> {
+    pub fn abstand_für(&self, pflock_id: PflockId) -> Option<crate::domain::common::Abstand> {
         self.abstände
             .iter()
             .find(|(id, _)| *id == pflock_id)
@@ -204,43 +135,43 @@ impl Zielplatzierung {
     /// Replace the distance map, re-validating against `pflöcke`.
     fn setze_abstände(
         &mut self,
-        abstände: Vec<(PflockId, Abstand)>,
+        abstände: Vec<(PflockId, crate::domain::common::Abstand)>,
         pflöcke: &[Pflock],
-    ) -> Result<(), ParcoursFehler> {
+    ) -> Result<(), ParkourFehler> {
         let neu = Self::mit_pflöcken(self.ziel_id, abstände, pflöcke)?;
         self.abstände = neu.abstände;
         Ok(())
     }
 }
 
-/// Creation input of a Parcours: the Pflock setup plus the ordered Ziel list.
+/// Creation input of a Parkour: the Pflock setup plus the ordered Ziel list.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NeuerParcours {
-    name: ParcoursName,
+pub struct NeuerParkour {
+    name: NonEmptyString,
     pflöcke: Vec<Pflock>,
     platzierungen: Vec<Zielplatzierung>,
 }
 
-impl NeuerParcours {
+impl NeuerParkour {
     /// Validate the invariants: unique Pflock colours, at least one Pflock, no duplicate
-    /// Ziel placement, and distances that decrease far to near (AC-4, AC-6).
+    /// Ziel placement, and distances that increase near to far (AC-4, AC-6).
     pub fn neu(
-        name: ParcoursName,
+        name: NonEmptyString,
         pflöcke: Vec<Pflock>,
         platzierungen: Vec<Zielplatzierung>,
-    ) -> Result<Self, ParcoursFehler> {
+    ) -> Result<Self, ParkourFehler> {
         if pflöcke.is_empty() {
-            return Err(ParcoursFehler::KeinePflöcke);
+            return Err(ParkourFehler::KeinePflöcke);
         }
         for (index, pflock) in pflöcke.iter().enumerate() {
             if pflöcke[..index]
                 .iter()
                 .any(|früher| früher.farbe == pflock.farbe)
             {
-                return Err(ParcoursFehler::PflockFarbeDoppelt(pflock.farbe.0.clone()));
+                return Err(ParkourFehler::FarbeDoppelt);
             }
         }
-        Self::pruefe_platzierungen(&pflöcke, &platzierungen)?;
+        let platzierungen = Self::pruefe_platzierungen(&pflöcke, platzierungen)?;
         Ok(Self {
             name,
             pflöcke,
@@ -248,29 +179,32 @@ impl NeuerParcours {
         })
     }
 
+    /// Validate the placements and return them re-expressed in Pflock order, so the stored
+    /// list reads first Pflock first whatever order the caller supplied.
     fn pruefe_platzierungen(
         pflöcke: &[Pflock],
-        platzierungen: &[Zielplatzierung],
-    ) -> Result<(), ParcoursFehler> {
+        platzierungen: Vec<Zielplatzierung>,
+    ) -> Result<Vec<Zielplatzierung>, ParkourFehler> {
+        let mut geprüft = Vec::with_capacity(platzierungen.len());
         for (index, platzierung) in platzierungen.iter().enumerate() {
             if platzierungen[..index]
                 .iter()
                 .any(|früher| früher.ziel_id == platzierung.ziel_id)
             {
-                return Err(ParcoursFehler::ZielDoppelt);
+                return Err(ParkourFehler::ZielDoppelt);
             }
             // Re-validate: a caller may hand in a placement built with `neu` that never
             // saw the Pflock list.
-            Zielplatzierung::mit_pflöcken(
+            geprüft.push(Zielplatzierung::mit_pflöcken(
                 platzierung.ziel_id,
                 platzierung.abstände.clone(),
                 pflöcke,
-            )?;
+            )?);
         }
-        Ok(())
+        Ok(geprüft)
     }
 
-    pub fn name(&self) -> &ParcoursName {
+    pub fn name(&self) -> &NonEmptyString {
         &self.name
     }
 
@@ -285,18 +219,18 @@ impl NeuerParcours {
 
 /// One named route at one Anlage.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Parcours {
-    id: ParcoursId,
-    name: ParcoursName,
-    /// In far-to-near order. Order is never inferred from a colour.
+pub struct Parkour {
+    id: ParkourId,
+    name: NonEmptyString,
+    /// Near to far: the first Pflock is the nearest. Order is never inferred from a colour.
     pflöcke: Vec<Pflock>,
     /// In route order.
     platzierungen: Vec<Zielplatzierung>,
     zustand: Zustand,
 }
 
-impl Parcours {
-    pub fn neu(id: ParcoursId, neu: NeuerParcours) -> Self {
+impl Parkour {
+    pub fn neu(id: ParkourId, neu: NeuerParkour) -> Self {
         Self {
             id,
             name: neu.name,
@@ -306,29 +240,31 @@ impl Parcours {
         }
     }
 
-    /// Rebuild a persisted Parcours.
+    /// Rebuild a persisted Parkour. The re-validation also normalises every placement's
+    /// distance list into the Parkour's near-to-far Pflock order, so a stored row order the
+    /// database did not guarantee cannot leak into the aggregate.
     pub fn from_parts(
-        id: ParcoursId,
-        name: ParcoursName,
+        id: ParkourId,
+        name: NonEmptyString,
         pflöcke: Vec<Pflock>,
         platzierungen: Vec<Zielplatzierung>,
         zustand: Zustand,
-    ) -> Result<Self, ParcoursFehler> {
-        let neu = NeuerParcours::neu(name, pflöcke.clone(), platzierungen.clone())?;
+    ) -> Result<Self, ParkourFehler> {
+        let neu = NeuerParkour::neu(name, pflöcke, platzierungen)?;
         Ok(Self {
             id,
             name: neu.name,
-            pflöcke,
-            platzierungen,
+            pflöcke: neu.pflöcke,
+            platzierungen: neu.platzierungen,
             zustand,
         })
     }
 
-    pub fn id(&self) -> ParcoursId {
+    pub fn id(&self) -> ParkourId {
         self.id
     }
 
-    pub fn name(&self) -> &ParcoursName {
+    pub fn name(&self) -> &NonEmptyString {
         &self.name
     }
 
@@ -348,15 +284,15 @@ impl Parcours {
         matches!(self.zustand, Zustand::Archiviert)
     }
 
-    fn nur_aktiv(&self) -> Result<(), ParcoursFehler> {
+    fn nur_aktiv(&self) -> Result<(), ParkourFehler> {
         match self.zustand {
             Zustand::Aktiv => Ok(()),
-            Zustand::Archiviert => Err(ParcoursFehler::Archiviert),
+            Zustand::Archiviert => Err(ParkourFehler::Archiviert),
         }
     }
 
-    /// Rename the Parcours. Refused while archived.
-    pub fn umbenennen(&mut self, name: ParcoursName) -> Result<(), ParcoursFehler> {
+    /// Rename the Parkour. Refused while archived.
+    pub fn umbenennen(&mut self, name: NonEmptyString) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         self.name = name;
         Ok(())
@@ -368,9 +304,9 @@ impl Parcours {
         &mut self,
         pflöcke: Vec<Pflock>,
         platzierungen: Vec<Zielplatzierung>,
-    ) -> Result<(), ParcoursFehler> {
+    ) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
-        let geprüft = NeuerParcours::neu(self.name.clone(), pflöcke, platzierungen)?;
+        let geprüft = NeuerParkour::neu(self.name.clone(), pflöcke, platzierungen)?;
         self.pflöcke = geprüft.pflöcke;
         self.platzierungen = geprüft.platzierungen;
         Ok(())
@@ -380,14 +316,14 @@ impl Parcours {
     pub fn platzierung_hinzufügen(
         &mut self,
         platzierung: Zielplatzierung,
-    ) -> Result<(), ParcoursFehler> {
+    ) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         if self
             .platzierungen
             .iter()
             .any(|vorhanden| vorhanden.ziel_id == platzierung.ziel_id)
         {
-            return Err(ParcoursFehler::ZielDoppelt);
+            return Err(ParkourFehler::ZielDoppelt);
         }
         let geprüft = Zielplatzierung::mit_pflöcken(
             platzierung.ziel_id,
@@ -399,7 +335,7 @@ impl Parcours {
     }
 
     /// Remove one Ziel from the current arrangement; its history is untouched (AC-11).
-    pub fn platzierung_entfernen(&mut self, ziel_id: ZielId) -> Result<(), ParcoursFehler> {
+    pub fn platzierung_entfernen(&mut self, ziel_id: ZielId) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         self.platzierungen
             .retain(|platzierung| platzierung.ziel_id != ziel_id);
@@ -408,10 +344,10 @@ impl Parcours {
 
     /// Reorder the route. Every listed id must already be placed, and the result must
     /// still cover the same set.
-    pub fn reihenfolge_ändern(&mut self, reihenfolge: &[ZielId]) -> Result<(), ParcoursFehler> {
+    pub fn reihenfolge_ändern(&mut self, reihenfolge: &[ZielId]) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         if reihenfolge.len() != self.platzierungen.len() {
-            return Err(ParcoursFehler::ReihenfolgeUngültig);
+            return Err(ParkourFehler::ReihenfolgeUngültig);
         }
         let mut neu: Vec<Zielplatzierung> = Vec::with_capacity(reihenfolge.len());
         for ziel_id in reihenfolge {
@@ -420,10 +356,10 @@ impl Parcours {
                 .iter()
                 .find(|platzierung| platzierung.ziel_id == *ziel_id)
             else {
-                return Err(ParcoursFehler::ReihenfolgeUngültig);
+                return Err(ParkourFehler::ReihenfolgeUngültig);
             };
             if neu.iter().any(|vorhanden| vorhanden.ziel_id == *ziel_id) {
-                return Err(ParcoursFehler::ReihenfolgeUngültig);
+                return Err(ParkourFehler::ReihenfolgeUngültig);
             }
             neu.push(platzierung.clone());
         }
@@ -433,14 +369,14 @@ impl Parcours {
 
     /// Swap the physical Ziel of one placement in place, keeping its route position and its
     /// distances (AC-5: a replaced target is a new identity at the same slot).
-    pub fn platzierung_ersetzen(&mut self, alt: ZielId, neu: ZielId) -> Result<(), ParcoursFehler> {
+    pub fn platzierung_ersetzen(&mut self, alt: ZielId, neu: ZielId) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         if self
             .platzierungen
             .iter()
             .any(|platzierung| platzierung.ziel_id == neu)
         {
-            return Err(ParcoursFehler::ZielDoppelt);
+            return Err(ParkourFehler::ZielDoppelt);
         }
         let Some(platzierung) = self
             .platzierungen
@@ -453,12 +389,12 @@ impl Parcours {
         Ok(())
     }
 
-    /// Set one placement's distance map, re-validated against this Parcours' Pflöcke.
+    /// Set one placement's distance map, re-validated against this Parkour's Pflöcke.
     pub fn abstände_setzen(
         &mut self,
         ziel_id: ZielId,
-        abstände: Vec<(PflockId, Abstand)>,
-    ) -> Result<(), ParcoursFehler> {
+        abstände: Vec<(PflockId, crate::domain::common::Abstand)>,
+    ) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         let pflöcke = &self.pflöcke;
         let Some(platzierung) = self
@@ -466,13 +402,13 @@ impl Parcours {
             .iter_mut()
             .find(|platzierung| platzierung.ziel_id == ziel_id)
         else {
-            return Err(ParcoursFehler::ZielFremdeAnlage);
+            return Err(ParkourFehler::ZielFremdeAnlage);
         };
         platzierung.setze_abstände(abstände, pflöcke)
     }
 
-    /// Archive the Parcours: it leaves active selection and keeps its history.
-    pub fn archiviere(&mut self) -> Result<(), ParcoursFehler> {
+    /// Archive the Parkour: it leaves active selection and keeps its history.
+    pub fn archiviere(&mut self) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         self.zustand = Zustand::Archiviert;
         Ok(())
@@ -483,12 +419,14 @@ impl Parcours {
 mod tests {
     use super::*;
     use crate::domain::anlage::ziel::Zustand;
+    use crate::domain::common::Abstand;
+
+    fn name(wert: &str) -> NonEmptyString {
+        NonEmptyString::neu(wert).unwrap()
+    }
 
     fn pflock(id: u128, farbe: &str) -> Pflock {
-        Pflock::neu(
-            PflockId(Uuid::from_u128(id)),
-            PflockFarbe::neu(farbe).unwrap(),
-        )
+        Pflock::neu(PflockId(Uuid::from_u128(id)), Farbe::neu(farbe).unwrap())
     }
 
     fn drei_pflöcke() -> Vec<Pflock> {
@@ -519,14 +457,14 @@ mod tests {
         .unwrap()
     }
 
-    fn parcours() -> Parcours {
-        Parcours::neu(
-            ParcoursId(Uuid::nil()),
-            NeuerParcours::neu(
-                ParcoursName::neu("Waldrunde").unwrap(),
+    fn parkour() -> Parkour {
+        Parkour::neu(
+            ParkourId(Uuid::nil()),
+            NeuerParkour::neu(
+                name("Waldrunde"),
                 drei_pflöcke(),
                 vec![
-                    platzierung(ziel(10), &[(1, 40), (2, 30), (3, 20)]),
+                    platzierung(ziel(10), &[(1, 20), (2, 30), (3, 40)]),
                     platzierung(ziel(11), &[]),
                 ],
             )
@@ -537,182 +475,174 @@ mod tests {
     #[test_log::test]
     fn ac6_pflock_farben_sind_eindeutig() {
         let doppelt = vec![pflock(1, "#c0392b"), pflock(2, "#C0392B")];
-        let ergebnis =
-            NeuerParcours::neu(ParcoursName::neu("Waldrunde").unwrap(), doppelt, Vec::new());
-        assert!(matches!(
-            ergebnis,
-            Err(ParcoursFehler::PflockFarbeDoppelt(_))
-        ));
+        let ergebnis = NeuerParkour::neu(name("Waldrunde"), doppelt, Vec::new());
+        assert!(matches!(ergebnis, Err(ParkourFehler::FarbeDoppelt)));
     }
 
     #[test_log::test]
-    fn pflock_farbe_wird_validiert_und_normalisiert() {
-        assert_eq!(PflockFarbe::neu("#C0392B").unwrap().as_str(), "#c0392b");
-        assert_eq!(PflockFarbe::neu(" #c0392B ").unwrap().as_str(), "#c0392b");
-        for wert in ["", "Rot", "#c0392", "#c0392bb", "c0392b", "#c0392g"] {
-            assert!(
-                matches!(
-                    PflockFarbe::neu(wert),
-                    Err(ParcoursFehler::PflockFarbeUngültig(_))
-                ),
-                "{wert:?} ist keine Hex-Farbe"
-            );
-        }
-    }
-
-    #[test_log::test]
-    fn ac6_abstaende_nehmen_von_fern_nach_nah_streng_ab() {
-        let gleich = NeuerParcours::neu(
-            ParcoursName::neu("Waldrunde").unwrap(),
+    fn ac6_abstaende_nehmen_vom_ersten_zum_letzten_pflock_streng_zu() {
+        let gleich = NeuerParkour::neu(
+            name("Waldrunde"),
             drei_pflöcke(),
             vec![platzierung(ziel(10), &[(1, 30), (2, 30)])],
         );
-        assert!(matches!(
-            gleich,
-            Err(ParcoursFehler::AbständeNichtAbnehmend)
-        ));
+        assert!(matches!(gleich, Err(ParkourFehler::AbständeNichtSteigend)));
 
-        let steigend = NeuerParcours::neu(
-            ParcoursName::neu("Waldrunde").unwrap(),
+        let fallend = NeuerParkour::neu(
+            name("Waldrunde"),
+            drei_pflöcke(),
+            vec![platzierung(ziel(10), &[(1, 40), (2, 30)])],
+        );
+        assert!(matches!(fallend, Err(ParkourFehler::AbständeNichtSteigend)));
+
+        let steigend = NeuerParkour::neu(
+            name("Waldrunde"),
             drei_pflöcke(),
             vec![platzierung(ziel(10), &[(1, 20), (2, 30)])],
         );
-        assert!(matches!(
-            steigend,
-            Err(ParcoursFehler::AbständeNichtAbnehmend)
-        ));
+        assert!(steigend.is_ok());
     }
 
     #[test_log::test]
     fn ac6_fehlende_abstaende_sind_erlaubt() {
-        let ergebnis = NeuerParcours::neu(
-            ParcoursName::neu("Waldrunde").unwrap(),
+        let ergebnis = NeuerParkour::neu(
+            name("Waldrunde"),
             drei_pflöcke(),
-            vec![platzierung(ziel(10), &[(1, 40), (3, 20)])],
+            vec![platzierung(ziel(10), &[(3, 40)])],
         );
         assert!(ergebnis.is_ok());
     }
 
     #[test_log::test]
-    fn ac6_abstand_muss_positiv_sein() {
-        assert!(matches!(
-            Abstand::neu(0),
-            Err(ParcoursFehler::AbstandNichtPositiv(0))
-        ));
-    }
-
-    #[test_log::test]
     fn ac4_dasselbe_ziel_darf_nur_einmal_vorkommen() {
-        let ergebnis = NeuerParcours::neu(
-            ParcoursName::neu("Waldrunde").unwrap(),
+        let ergebnis = NeuerParkour::neu(
+            name("Waldrunde"),
             drei_pflöcke(),
             vec![
                 platzierung(ziel(10), &[]),
                 platzierung(ziel(10), &[(1, 40)]),
             ],
         );
-        assert!(matches!(ergebnis, Err(ParcoursFehler::ZielDoppelt)));
+        assert!(matches!(ergebnis, Err(ParkourFehler::ZielDoppelt)));
     }
 
     #[test_log::test]
-    fn ein_parcours_braucht_mindestens_einen_pflock() {
-        let ergebnis = NeuerParcours::neu(
-            ParcoursName::neu("Waldrunde").unwrap(),
-            Vec::new(),
-            Vec::new(),
-        );
-        assert!(matches!(ergebnis, Err(ParcoursFehler::KeinePflöcke)));
+    fn ein_parkour_braucht_mindestens_einen_pflock() {
+        let ergebnis = NeuerParkour::neu(name("Waldrunde"), Vec::new(), Vec::new());
+        assert!(matches!(ergebnis, Err(ParkourFehler::KeinePflöcke)));
     }
 
     #[test_log::test]
     fn ac6_reihenfolge_ist_unabhaengig_von_der_farbe() {
         // Distinct colours, but the order still comes only from the list.
-        let pflöcke = drei_pflöcke();
-        let parcours = Parcours::neu(
-            ParcoursId(Uuid::nil()),
-            NeuerParcours::neu(ParcoursName::neu("Waldrunde").unwrap(), pflöcke, Vec::new())
-                .unwrap(),
+        let parkour = Parkour::neu(
+            ParkourId(Uuid::nil()),
+            NeuerParkour::neu(name("Waldrunde"), drei_pflöcke(), Vec::new()).unwrap(),
         );
-        let farben: Vec<_> = parcours
+        let farben: Vec<_> = parkour
             .pflöcke()
             .iter()
-            .map(|pflock| pflock.farbe().as_str())
+            .map(|pflock| pflock.farbe().to_hex())
             .collect();
         assert_eq!(farben, ["#c0392b", "#1b4f9c", "#e8b81c"]);
     }
 
     #[test_log::test]
     fn reihenfolge_aendern_haelt_die_zielmenge() {
-        let mut parcours = parcours();
-        parcours.reihenfolge_ändern(&[ziel(11), ziel(10)]).unwrap();
-        let ids: Vec<_> = parcours
+        let mut parkour = parkour();
+        parkour.reihenfolge_ändern(&[ziel(11), ziel(10)]).unwrap();
+        let ids: Vec<_> = parkour
             .platzierungen()
             .iter()
             .map(|platzierung| platzierung.ziel_id())
             .collect();
         assert_eq!(ids, [ziel(11), ziel(10)]);
 
-        assert!(parcours.reihenfolge_ändern(&[ziel(10)]).is_err());
-        assert!(parcours.reihenfolge_ändern(&[ziel(10), ziel(10)]).is_err());
+        assert!(parkour.reihenfolge_ändern(&[ziel(10)]).is_err());
+        assert!(parkour.reihenfolge_ändern(&[ziel(10), ziel(10)]).is_err());
     }
 
     #[test_log::test]
     fn abstände_setzen_prueft_die_pflockliste() {
-        let mut parcours = parcours();
+        let mut parkour = parkour();
         assert!(matches!(
-            parcours.abstände_setzen(
+            parkour.abstände_setzen(
                 ziel(10),
                 vec![(PflockId(Uuid::from_u128(99)), Abstand::neu(10).unwrap())]
             ),
-            Err(ParcoursFehler::PflockNichtImParcours)
+            Err(ParkourFehler::PflockNichtImParkour)
         ));
     }
 
     #[test_log::test]
-    fn ac11_archivierter_parcours_verweigert_jede_aenderung() {
-        let mut parcours = parcours();
-        parcours.archiviere().unwrap();
-        assert!(parcours.ist_archiviert());
+    fn ac11_archivierter_parkour_verweigert_jede_aenderung() {
+        let mut parkour = parkour();
+        parkour.archiviere().unwrap();
+        assert!(parkour.ist_archiviert());
         assert!(matches!(
-            parcours.umbenennen(ParcoursName::neu("Neu").unwrap()),
-            Err(ParcoursFehler::Archiviert)
+            parkour.umbenennen(name("Neu")),
+            Err(ParkourFehler::Archiviert)
         ));
         assert!(matches!(
-            parcours.archiviere(),
-            Err(ParcoursFehler::Archiviert)
+            parkour.archiviere(),
+            Err(ParkourFehler::Archiviert)
         ));
         assert!(matches!(
-            parcours.platzierung_entfernen(ziel(10)),
-            Err(ParcoursFehler::Archiviert)
+            parkour.platzierung_entfernen(ziel(10)),
+            Err(ParkourFehler::Archiviert)
         ));
     }
 
     #[test_log::test]
-    fn ein_ziel_hat_in_jedem_parcours_eigene_abstaende() {
-        let a = parcours();
-        let b = Parcours::neu(
-            ParcoursId(Uuid::from_u128(2)),
-            NeuerParcours::neu(
-                ParcoursName::neu("Feldrunde").unwrap(),
+    fn ein_ziel_hat_in_jedem_parkour_eigene_abstaende() {
+        let a = parkour();
+        let b = Parkour::neu(
+            ParkourId(Uuid::from_u128(2)),
+            NeuerParkour::neu(
+                name("Feldrunde"),
                 drei_pflöcke(),
-                vec![platzierung(ziel(10), &[(1, 55), (2, 45), (3, 35)])],
+                vec![platzierung(ziel(10), &[(1, 35), (2, 45), (3, 55)])],
             )
             .unwrap(),
         );
         assert_eq!(
             a.platzierungen()[0].abstand_für(PflockId(Uuid::from_u128(1))),
-            Some(Abstand::neu(40).unwrap())
+            Some(Abstand::neu(20).unwrap())
         );
         assert_eq!(
             b.platzierungen()[0].abstand_für(PflockId(Uuid::from_u128(1))),
-            Some(Abstand::neu(55).unwrap())
+            Some(Abstand::neu(35).unwrap())
+        );
+    }
+
+    #[test_log::test]
+    fn from_parts_ordnet_die_abstaende_nah_zu_fern() {
+        // A stored row order the database did not guarantee: the rebuild still reads first
+        // Pflock first.
+        let ungeordnet = parkour();
+        let geladen = Parkour::from_parts(
+            ungeordnet.id(),
+            ungeordnet.name().clone(),
+            ungeordnet.pflöcke().to_vec(),
+            vec![platzierung(ziel(10), &[(2, 30), (1, 20)])],
+            Zustand::Aktiv,
+        )
+        .unwrap();
+        let reihenfolge: Vec<PflockId> = geladen.platzierungen()[0]
+            .abstände()
+            .iter()
+            .map(|(pflock_id, _)| *pflock_id)
+            .collect();
+        assert_eq!(
+            reihenfolge,
+            vec![PflockId(Uuid::from_u128(1)), PflockId(Uuid::from_u128(2))]
         );
     }
 
     #[test_log::test]
     fn from_parts_roundtrip() {
-        let original = parcours();
-        let geladen = Parcours::from_parts(
+        let original = parkour();
+        let geladen = Parkour::from_parts(
             original.id(),
             original.name().clone(),
             original.pflöcke().to_vec(),

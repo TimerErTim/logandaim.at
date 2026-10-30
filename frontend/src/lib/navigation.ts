@@ -36,12 +36,12 @@ export const paths = {
   anlagen: "/anlagen",
   anlagenDetail: "/anlagen/detail",
   /** Redirect source only; the archer journey starts at `anlagen`. */
-  parcours: "/parcours",
+  parkour: "/parkour",
   runden: "/runden",
   verwaltung: "/verwaltung",
   verwaltungAnlage: "/verwaltung/anlage",
   verwaltungAnlageNeu: "/verwaltung/anlage/neu",
-  verwaltungParcours: "/verwaltung/parcours",
+  verwaltungParkour: "/verwaltung/parkour",
   profil: "/profil",
   optionen: "/optionen",
 } as const;
@@ -119,7 +119,7 @@ type BreadcrumbSegment = {
 
 const routeLabels: Record<string, string> = {
   anlagen: "Anlagen",
-  parcours: "Parcours",
+  parkour: "Parkour",
   historie: "Historie",
   runden: "Historie",
   verwaltung: "Verwaltung",

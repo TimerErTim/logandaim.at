@@ -62,7 +62,7 @@ fn jede_operation_hat_genau_einen_veröffentlichten_tag() {
         .collect();
     assert_eq!(
         dokumentiert,
-        ["Anlagen", "Betrieb", "Konto", "Parcours", "Runden"],
+        ["Anlagen", "Betrieb", "Konto", "Parkour", "Runden"],
         "the public sections are fixed"
     );
 
@@ -112,7 +112,7 @@ fn bearer_schema_ist_veröffentlicht() {
         ("/passwort/vergessen", "post"),
         ("/passwort/wiederherstellen", "post"),
     ];
-    const AUCH_ANONYM: [(&str, &str); 2] = [("/anlagen/oeffentlich", "get"), ("/parcours", "get")];
+    const AUCH_ANONYM: [(&str, &str); 2] = [("/anlagen/oeffentlich", "get"), ("/parkour", "get")];
 
     for (path, method, operation) in operationen(&spec) {
         let key = (path, method);

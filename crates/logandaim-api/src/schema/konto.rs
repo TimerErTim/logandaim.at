@@ -33,13 +33,13 @@ impl From<DomainBenutzerRolle> for BenutzerRolle {
     }
 }
 
-/// The authenticated Benutzer, as `GET /benutzer` answers it.
+/// The authenticated caller, as `GET /benutzer` answers it.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Benutzer {
+pub struct AuthenticatedBenutzer {
     /// Identity of the Benutzer.
     pub id: Uuid,
     /// Its e-mail address, which is also the sign-in name.
@@ -48,20 +48,20 @@ pub struct Benutzer {
     pub rolle: BenutzerRolle,
 }
 
-/// The single account found by an exact e-mail lookup, for granting an Anlage role.
+/// A known Benutzer: the account an exact e-mail lookup found.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BenutzerSuchtreffer {
+pub struct Benutzer {
     /// Identity of the matching Benutzer.
     pub id: Uuid,
     /// The address that matched.
     pub e_mail_adresse: EmailAdresse,
 }
 
-impl From<(domain::konto::Benutzer, domain::EmailAdresse)> for BenutzerSuchtreffer {
+impl From<(domain::konto::Benutzer, domain::EmailAdresse)> for Benutzer {
     fn from((benutzer, email): (domain::konto::Benutzer, domain::EmailAdresse)) -> Self {
         Self {
             id: benutzer.id().0,
@@ -70,7 +70,7 @@ impl From<(domain::konto::Benutzer, domain::EmailAdresse)> for BenutzerSuchtreff
     }
 }
 
-impl From<(domain::konto::Benutzer, domain::EmailAdresse)> for Benutzer {
+impl From<(domain::konto::Benutzer, domain::EmailAdresse)> for AuthenticatedBenutzer {
     fn from((benutzer, email): (domain::konto::Benutzer, domain::EmailAdresse)) -> Self {
         Self {
             id: benutzer.id().0,

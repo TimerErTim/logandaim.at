@@ -3,7 +3,7 @@ import { cn } from "@/lib/cn";
 /**
  * A Pflock's colour is *caller data*, not a design token: the club stores a
  * `#rrggbb` hex value once and the same colour must look the same on the admin page,
- * on the public Parcours list, and in a captured Runde snapshot.
+ * on the public Parkour list, and in a captured Runde snapshot.
  *
  * The swatch therefore receives the value through the `--pflock-farbe` custom property
  * and paints it with `bg-[var(--pflock-farbe)]`. That is the one permitted inline style

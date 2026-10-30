@@ -25,7 +25,7 @@ import { paths } from "@/lib/navigation";
 import { useQueryParam } from "@/lib/use-query-param";
 
 /**
- * The archer's first screen: every active Anlage with the number of Parcours it offers.
+ * The archer's first screen: every active Anlage with the number of Parkours it offers.
  *
  * Public by design — the directory answers without a session, so the page has no auth
  * guard and no `enabled` gate on its read. Filtering is client-side over the whole
@@ -74,7 +74,7 @@ export default function AnlagenPage() {
       <PageHeader
         register={["Logbuch", "Anlagen"]}
         title="Anlagen"
-        description="Die Anlagen des Logbuchs. Wählen Sie eine Anlage, um ihre Parcours zu sehen und eine Runde zu starten."
+        description="Die Anlagen des Logbuchs. Wählen Sie eine Anlage, um ihre Parkours zu sehen und eine Runde zu starten."
       />
 
       {verzeichnis.isError ? (
@@ -125,7 +125,7 @@ export default function AnlagenPage() {
                 <TableRow>
                   <TableHeader>Anlage</TableHeader>
                   <TableHeader>Ort</TableHeader>
-                  <TableHeader className="text-right">Parcours</TableHeader>
+                  <TableHeader className="text-right">Parkour</TableHeader>
                   <TableHeader>
                     <span className="sr-only">Öffnen</span>
                   </TableHeader>
@@ -148,7 +148,7 @@ export default function AnlagenPage() {
                         {anlage.ort}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {anlage.parcours.length}
+                        {anlage.parkour.length}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="secondary" size="sm" asChild>

@@ -53,7 +53,7 @@ import { useQueryParam } from "@/lib/use-query-param";
 
 /**
  * One Runde, read as it was captured. Everything on this page comes from the snapshot:
- * the Parcours name, the Pflock order and colours, every distance, and each animal's
+ * the Parkour name, the Pflock order and colours, every distance, and each animal's
  * name and target group. The Wertungen are folded from the logged Schüsse — there is no
  * separate Wertung request (SPEC-wertung rule 6).
  */
@@ -134,16 +134,16 @@ function RundeInhalt({ runde }: { runde: Runde }) {
   const offen = runde.zustand === "InBearbeitung";
   const zieleGesamt = runde.ziele.length;
   const fortschritt =
-    zieleGesamt > 0 ? (runde.zieleMitErgebnis / zieleGesamt) * 100 : 0;
+    zieleGesamt > 0 ? (runde.zieleMitWertung / zieleGesamt) * 100 : 0;
 
   return (
     <div className="flex min-h-full flex-col">
       {/* The bottom padding keeps the last Ziel clear of the sticky action bar. */}
       <div className="flex-1 space-y-6 p-6 pb-24">
-        <SetBreadcrumbLabel label={runde.parcoursName} />
+        <SetBreadcrumbLabel label={runde.parkourName} />
         <PageHeader
           register={["Logbuch", "Historie"]}
-          title={runde.parcoursName}
+          title={runde.parkourName}
           plate={runde.id.slice(0, 8)}
           description="Aufstellung zum Start der Runde. Spätere Änderungen an den Stammdaten ändern diese Runde nicht."
           actions={
@@ -185,13 +185,13 @@ function RundeInhalt({ runde }: { runde: Runde }) {
                   </div>
                   <div className="space-y-1">
                     <dt className="text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
-                      Ziele mit Ergebnis
+                      Ziele mit Wertung
                     </dt>
                     <dd className="font-serif text-2xl font-semibold tabular-nums text-ink">
-                      {runde.zieleMitErgebnis} / {zieleGesamt}
+                      {runde.zieleMitWertung} / {zieleGesamt}
                       <Progress
                         value={fortschritt}
-                        aria-label={`Ziele mit Ergebnis: ${runde.zieleMitErgebnis} von ${zieleGesamt}`}
+                        aria-label={`Ziele mit Wertung: ${runde.zieleMitWertung} von ${zieleGesamt}`}
                         className="mt-2"
                       />
                     </dd>
@@ -319,9 +319,9 @@ function RundeInhalt({ runde }: { runde: Runde }) {
               </span>
             </span>
             <span className="inline-flex items-baseline gap-2">
-              <span className="text-xs text-secondary">Ziele mit Ergebnis</span>
+              <span className="text-xs text-secondary">Ziele mit Wertung</span>
               <span className="text-sm font-semibold tabular-nums text-ink">
-                {runde.zieleMitErgebnis} / {zieleGesamt}
+                {runde.zieleMitWertung} / {zieleGesamt}
               </span>
             </span>
           </div>
@@ -417,7 +417,7 @@ function Zielabschnitt({
           {String(reihenfolge).padStart(2, "0")}
         </SheetNumber>
         <h3 className="text-sm font-semibold text-ink">{ziel.tiername}</h3>
-        <Badge>Zielgruppe {ziel.zielgruppe}</Badge>
+        <Badge>Ziel Nr. {ziel.zielnummer}</Badge>
         <SheetNumber>{ziel.zielId.slice(0, 8)}</SheetNumber>
       </div>
 
@@ -442,24 +442,24 @@ function Zielabschnitt({
         )}
       </div>
 
-      {ziel.ergebnis ? (
+      {ziel.wertung ? (
         <dl className="grid gap-3 text-sm sm:grid-cols-4">
           <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="text-secondary">Erster Treffer</dt>
             <dd className="font-medium tabular-nums">
-              {ziel.ergebnis.ersterTreffer}
+              {ziel.wertung.ersterTreffer}
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="text-secondary">Mehrschuss</dt>
             <dd className="font-medium tabular-nums">
-              {ziel.ergebnis.mehrschuss}
+              {ziel.wertung.mehrschuss}
             </dd>
           </div>
           <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="text-secondary">Erster Pfeil</dt>
             <dd className="font-medium">
-              {ziel.ergebnis.ersterPfeilGetroffen
+              {ziel.wertung.ersterPfeilGetroffen
                 ? "getroffen"
                 : "nicht getroffen"}
             </dd>
@@ -467,7 +467,7 @@ function Zielabschnitt({
           <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="text-secondary">Schüsse</dt>
             <dd className="font-medium tabular-nums">
-              {ziel.ergebnis.anzahlSchüsse}
+              {ziel.wertung.anzahlSchüsse}
             </dd>
           </div>
         </dl>
@@ -480,10 +480,10 @@ function Zielabschnitt({
       {offen ? (
         <SchussErfassung
           tiername={ziel.tiername}
-          naechsterPfeil={(ziel.ergebnis?.anzahlSchüsse ?? 0) + 1}
+          naechsterPfeil={(ziel.wertung?.anzahlSchüsse ?? 0) + 1}
           ausstehend={ausstehend}
           onErfassen={(zone) =>
-            onErfassen(zone, (ziel.ergebnis?.anzahlSchüsse ?? 0) + 1)
+            onErfassen(zone, (ziel.wertung?.anzahlSchüsse ?? 0) + 1)
           }
         />
       ) : null}

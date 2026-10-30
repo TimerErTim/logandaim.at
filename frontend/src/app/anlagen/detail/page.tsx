@@ -14,7 +14,7 @@ import {
 import type {
   AnlageÖffentlich,
   AuthPhase,
-  ParcoursKurz,
+  ParkourKurz,
 } from "@/api/logandaim-api";
 import { Ländercode } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
@@ -45,7 +45,7 @@ const laender: Record<Ländercode, string> = {
 };
 
 /**
- * One Anlage's sheet: the Parcours it offers, and the way to start a Runde on one.
+ * One Anlage's sheet: the Parkour it offers, and the way to start a Runde on one.
  *
  * The page reads the public directory and picks its entry out of it — there is no
  * single-Anlage read without a session, and the directory entry is exactly what a
@@ -126,19 +126,19 @@ function AnlageBlatt({ anlage }: { anlage: AnlageÖffentlich }) {
         description={anlage.ort}
       />
 
-      <section aria-label="Parcours" className="space-y-2">
+      <section aria-label="Parkour" className="space-y-2">
         <div className="flex items-baseline gap-3">
-          <h2 className="text-sm font-semibold text-ink">Parcours</h2>
-          <SheetNumber>{anlage.parcours.length}</SheetNumber>
+          <h2 className="text-sm font-semibold text-ink">Parkour</h2>
+          <SheetNumber>{anlage.parkour.length}</SheetNumber>
         </div>
 
-        {anlage.parcours.length === 0 ? (
-          <MarginNote label="Kein Parcours">
-            Diese Anlage bietet zurzeit keinen Parcours an. Sobald einer
+        {anlage.parkour.length === 0 ? (
+          <MarginNote label="Kein Parkour">
+            Diese Anlage bietet zurzeit keinen Parkour an. Sobald einer
             freigegeben ist, erscheint er hier.
           </MarginNote>
         ) : (
-          <ParcoursLedger parcours={anlage.parcours} phase={phase.status} />
+          <ParkourLedger parkour={anlage.parkour} phase={phase.status} />
         )}
       </section>
 
@@ -165,15 +165,15 @@ function AnlageBlatt({ anlage }: { anlage: AnlageÖffentlich }) {
 }
 
 /**
- * The offered Parcours as a ruled ledger. The last column is the action: each row
+ * The offered Parkour as a ruled ledger. The last column is the action: each row
  * starts its own Runde, so the pending label belongs to the row that was clicked —
  * one shared `isPending` flag would make every row read "Wird gestartet…".
  */
-function ParcoursLedger({
-  parcours,
+function ParkourLedger({
+  parkour,
   phase,
 }: {
-  parcours: ParcoursKurz[];
+  parkour: ParkourKurz[];
   phase: AuthPhase["status"];
 }) {
   const { rundeStarten } = useStammdatenMutations();
@@ -205,7 +205,7 @@ function ParcoursLedger({
           </TableRow>
         </TableHead>
         <TableBody>
-          {parcours.map((eintrag) => {
+          {parkour.map((eintrag) => {
             const laeuft = startend === eintrag.id;
             return (
               <TableRow key={eintrag.id}>

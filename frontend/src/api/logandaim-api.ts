@@ -2,7 +2,9 @@ import {
   AnlageVerwaltungRolle,
   AnlageZustand,
   type components,
-  CountryCode as Ländercode,
+  // openapi-typescript transliterates the umlaut in `Ländercode` to `LNdercode`; the
+  // seam keeps the domain spelling so call sites never see the codegen artefact.
+  LNdercode as Ländercode,
   RundeZustand,
   Wertungszone,
 } from "./schema";
@@ -24,7 +26,7 @@ export interface LogandaimApi {
   health(): Promise<string>;
 
   // ---------------------------------------------------------------- master data
-  anlagenAnzeigen(): Promise<AnlagenZeile[]>;
+  anlagenAnzeigen(): Promise<AnlageZugriff[]>;
   anlageAnzeigen(id: string): Promise<Anlage>;
   anlageErstellen(anlage: AnlageErstellungInput): Promise<Anlage>;
   anlageAendern(id: string, anlage: AnlageErstellungInput): Promise<Anlage>;
@@ -33,7 +35,7 @@ export interface LogandaimApi {
   benutzerNachEmailSuchen(
     anlageId: string,
     eMailAdresse: string,
-  ): Promise<BenutzerSuchtreffer[]>;
+  ): Promise<Benutzer[]>;
   verwaltungGewaehren(
     anlageId: string,
     benutzerId: string,
@@ -59,31 +61,28 @@ export interface LogandaimApi {
   ): Promise<Anlage>;
   zielEntfernen(anlageId: string, zielId: string): Promise<Anlage>;
 
-  parcoursHinzufuegen(
+  parkourHinzufuegen(anlageId: string, parkour: ParkourInput): Promise<Anlage>;
+  parkourSetupAendern(
     anlageId: string,
-    parcours: ParcoursInput,
+    parkourId: string,
+    setup: ParkourSetupInput,
   ): Promise<Anlage>;
-  parcoursSetupAendern(
+  parkourUmbenennen(
     anlageId: string,
-    parcoursId: string,
-    setup: ParcoursSetupInput,
-  ): Promise<Anlage>;
-  parcoursUmbenennen(
-    anlageId: string,
-    parcoursId: string,
+    parkourId: string,
     name: string,
   ): Promise<Anlage>;
-  parcoursEntfernen(anlageId: string, parcoursId: string): Promise<Anlage>;
+  parkourEntfernen(anlageId: string, parkourId: string): Promise<Anlage>;
 
   /** AC-13: no credentials needed; a stale token is answered as anonymous. */
-  parcoursAnzeigen(): Promise<ParcoursÖffentlich[]>;
+  parkourAnzeigen(): Promise<ParkourÖffentlich[]>;
 
   /** The public Anlagen directory: no credentials, no contact data, no session. */
   anlagenVerzeichnis(): Promise<AnlageÖffentlich[]>;
 
   // ---------------------------------------------------------------- Runden
-  rundenAnzeigen(): Promise<RundenZeile[]>;
-  rundeStarten(parcoursId: string): Promise<Runde>;
+  rundenAnzeigen(): Promise<RundeBasic[]>;
+  rundeStarten(parkourId: string): Promise<Runde>;
   rundeAnzeigen(id: string): Promise<Runde>;
   rundeAbschliessen(id: string): Promise<Runde>;
   schussRegistrieren(
@@ -97,7 +96,7 @@ export interface LogandaimApi {
   anmelden(eMailAdresse: string, passwort: string): Promise<void>;
   passwortVergessen(eMailAdresse: string): Promise<void>;
   passwortWiederherstellen(token: string, neuesPasswort: string): Promise<void>;
-  benutzerAbrufen(): Promise<Benutzer>;
+  benutzerAbrufen(): Promise<AuthenticatedBenutzer>;
   benutzerLoeschen(passwort: string, bestätigt: boolean): Promise<void>;
 }
 
@@ -119,9 +118,10 @@ export interface AuthSession {
 type Schemas = components["schemas"];
 
 export type Benutzer = Schemas["Benutzer"];
-export type BenutzerSuchtreffer = Schemas["BenutzerSuchtreffer"];
+/** The authenticated caller: the only shape that carries a `rolle`. */
+export type AuthenticatedBenutzer = Schemas["AuthenticatedBenutzer"];
 export type Anlage = Schemas["Anlage"];
-export type AnlagenZeile = Schemas["AnlagenZeile"];
+export type AnlageZugriff = Schemas["AnlageZugriff"];
 export type AnlageAdresse = Schemas["AnlageAdresse"];
 export type AnlageKontakt = Schemas["AnlageKontakt"];
 export type AnlageVerwaltung = Schemas["AnlageVerwaltung"];
@@ -132,23 +132,22 @@ export type Zielverwendung = Schemas["Zielverwendung"];
 export type Pflock = Schemas["Pflock"];
 export type PflockAbstand = Schemas["PflockAbstand"];
 export type Zielplatzierung = Schemas["Zielplatzierung"];
-export type ZielplatzierungAbstand = Schemas["ZielplatzierungAbstand"];
-export type Parcours = Schemas["Parcours"];
-export type ParcoursÖffentlich = Schemas["ParcoursÖffentlich"];
+export type Parkour = Schemas["Parkour"];
+export type ParkourÖffentlich = Schemas["ParkourÖffentlich"];
 export type AnlageÖffentlich = Schemas["AnlageÖffentlich"];
-export type ParcoursKurz = Schemas["ParcoursKurz"];
+export type ParkourKurz = Schemas["ParkourKurz"];
 export type Runde = Schemas["Runde"];
-export type RundenZeile = Schemas["RundenZeile"];
-export type SnapshotPflock = Schemas["SnapshotPflock"];
-export type SnapshotZiel = Schemas["SnapshotZiel"];
+export type RundeBasic = Schemas["RundeBasic"];
+export type RundePflock = Schemas["RundePflock"];
+export type RundeZiel = Schemas["RundeZiel"];
 export type Schuss = Schemas["Schuss"];
-export type Zielergebnis = Schemas["Zielergebnis"];
-export type Zuordnung = Schemas["Zuordnung"];
+export type Zielwertung = Schemas["Zielwertung"];
+export type Erfasser = Schemas["Erfasser"];
 
 export type AnlageErstellungInput = Schemas["AnlageErstellungRequest"];
 export type ZielInput = Schemas["ZielRequest"];
-export type ParcoursInput = Schemas["ParcoursErstellungRequest"];
-export type ParcoursSetupInput = Schemas["ParcoursSetupRequest"];
+export type ParkourInput = Schemas["ParkourErstellungRequest"];
+export type ParkourSetupInput = Schemas["ParkourSetupRequest"];
 
 export type SchussErstellungInput = {
   zielId: string;

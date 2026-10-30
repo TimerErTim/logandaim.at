@@ -2,8 +2,8 @@
 //!
 //! The core suite already proves the rules against both adapters. What only this layer can
 //! prove is the contract a client sees: which status an unauthenticated or unprivileged
-//! caller gets, that the public Parcours list needs no header, that a read of archived data
-//! answers `200` while its writes answer `409` (AC-11), and that a Ziel or Parcours is
+//! caller gets, that the public Parkour list needs no header, that a read of archived data
+//! answers `200` while its writes answer `409` (AC-11), and that a Ziel or Parkour is
 //! removed as archive-or-delete depending on whether history references it (AC-11, AC-12).
 
 use poem::http::StatusCode;
@@ -43,7 +43,7 @@ async fn ziel_hinzufügen(harness: &E2eHarness, bearer: &str, anlage_id: &str) -
         .client
         .post_json_auth(
             &format!("/api/anlagen/{anlage_id}/ziele"),
-            json!({ "tiername": "Keiler", "zielgruppe": 2 }),
+            json!({ "tiername": "Keiler" }),
             bearer,
         )
         .await;
@@ -58,8 +58,8 @@ async fn ziel_hinzufügen(harness: &E2eHarness, bearer: &str, anlage_id: &str) -
         .to_owned()
 }
 
-/// Create a Parcours over `ziel_id` with two Pflöcke and return its id.
-async fn parcours_hinzufügen(
+/// Create a Parkour over `ziel_id` with two Pflöcke and return its id.
+async fn parkour_hinzufügen(
     harness: &E2eHarness,
     bearer: &str,
     anlage_id: &str,
@@ -70,32 +70,32 @@ async fn parcours_hinzufügen(
     let (status, body) = harness
         .client
         .post_json_auth(
-            &format!("/api/anlagen/{anlage_id}/parcours"),
+            &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Waldrunde",
                 "pflöcke": [
-                    { "id": weit, "farbe": "#c0392b" },
                     { "id": nah, "farbe": "#1b4f9c" },
+                    { "id": weit, "farbe": "#c0392b" },
                 ],
                 "platzierungen": [{
                     "zielId": ziel_id,
                     "abstände": [
-                        { "pflockId": weit, "meter": 40 },
                         { "pflockId": nah, "meter": 20 },
+                        { "pflockId": weit, "meter": 40 },
                     ],
                 }],
             }),
             bearer,
         )
         .await;
-    assert_eq!(status, StatusCode::OK, "AC-4: parcours anlegen: {body}");
-    body["parcours"]
+    assert_eq!(status, StatusCode::OK, "AC-4: parkour anlegen: {body}");
+    body["parkour"]
         .as_array()
-        .expect("parcours im Body")
+        .expect("parkour im Body")
         .last()
-        .expect("die Anlage hat einen Parcours")["id"]
+        .expect("die Anlage hat einen Parkour")["id"]
         .as_str()
-        .expect("id im Parcours")
+        .expect("id im Parkour")
         .to_owned()
 }
 
@@ -157,7 +157,7 @@ async fn ac3_schreiben_auf_eine_fremde_anlage_antwortet_403() {
         .client
         .post_json_auth(
             &format!("/api/anlagen/{anlage_id}/ziele"),
-            json!({ "tiername": "Keiler", "zielgruppe": 2 }),
+            json!({ "tiername": "Keiler" }),
             &außenstehender,
         )
         .await;
@@ -192,7 +192,7 @@ async fn ac2_verwaltung_gewaehren_und_einen_mitarbeiter_zulassen() {
         .client
         .post_json_auth(
             &format!("/api/anlagen/{anlage_id}/ziele"),
-            json!({ "tiername": "Keiler", "zielgruppe": 2 }),
+            json!({ "tiername": "Keiler" }),
             &benutzer,
         )
         .await;
@@ -373,7 +373,7 @@ async fn ac11_eine_deaktivierte_anlage_schreibt_nicht_und_liest_nur_der_systemad
         .client
         .post_json_auth(
             &format!("/api/anlagen/{anlage_id}/ziele"),
-            json!({ "tiername": "Reh", "zielgruppe": 1 }),
+            json!({ "tiername": "Reh" }),
             &admin,
         )
         .await;
@@ -506,13 +506,13 @@ async fn ac11_und_ac12_ein_ziel_ohne_historie_wird_geloescht_mit_historie_archiv
     );
 
     // AC-11: a Ziel a captured Runde snapshot references is archived instead, and stays
-    // readable. A Parcours placement alone is not history — the snapshot is (AC-12 keeps
+    // readable. A Parkour placement alone is not history — the snapshot is (AC-12 keeps
     // that case deletable, which the core suite pins down).
     let benutzt = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
-    let parcours_id = parcours_hinzufügen(&harness, &admin, &anlage_id, &benutzt).await;
+    let parkour_id = parkour_hinzufügen(&harness, &admin, &anlage_id, &benutzt).await;
     let (status, _) = harness
         .client
-        .post_json_auth("/api/runden", json!({ "parcoursId": parcours_id }), &admin)
+        .post_json_auth("/api/runden", json!({ "parkourId": parkour_id }), &admin)
         .await;
     assert_eq!(status, StatusCode::OK, "eine Runde referenziert das Ziel");
 
@@ -533,62 +533,64 @@ async fn ac11_und_ac12_ein_ziel_ohne_historie_wird_geloescht_mit_historie_archiv
 // ------------------------------------------------------------------------- AC-13
 
 #[test_log::test(pollster::test)]
-async fn ac13_die_parcoursliste_ist_oeffentlich_und_zeigt_nur_aktive_parcours() {
+async fn ac13_die_parkourliste_ist_oeffentlich_und_zeigt_nur_aktive_parkour() {
     let harness = E2eHarness::new().await;
     let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
     befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
     let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
 
-    // One Parcours that stays, one that is removed again (archived, so not public).
+    // One Parkour that stays, one that is removed again (archived, so not public).
     let aktives_ziel = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
-    let bleibt = parcours_hinzufügen(&harness, &admin, &anlage_id, &aktives_ziel).await;
-    let entfernt = parcours_hinzufügen(&harness, &admin, &anlage_id, &aktives_ziel).await;
+    let bleibt = parkour_hinzufügen(&harness, &admin, &anlage_id, &aktives_ziel).await;
+    let entfernt = parkour_hinzufügen(&harness, &admin, &anlage_id, &aktives_ziel).await;
     let (status, _) = harness
         .client
         .delete_auth(
-            &format!("/api/anlagen/{anlage_id}/parcours/{entfernt}"),
+            &format!("/api/anlagen/{anlage_id}/parkour/{entfernt}"),
             &admin,
         )
         .await;
-    assert_eq!(
-        status,
-        StatusCode::OK,
-        "AC-11: der Parcours wird archiviert"
-    );
+    assert_eq!(status, StatusCode::OK, "AC-11: der Parkour wird archiviert");
 
     // AC-13: no header at all, and no cookie.
-    let (status, body) = harness.client.get_json("/api/parcours").await;
+    let (status, body) = harness.client.get_json("/api/parkour").await;
     assert_eq!(
         status,
         StatusCode::OK,
         "AC-13: die Liste ist öffentlich: {body}"
     );
-    let parcours = body.as_array().expect("die Antwort ist eine Liste");
-    assert_eq!(parcours.len(), 1, "AC-13: nur der aktive Parcours");
-    assert_eq!(parcours[0]["parcours"]["id"], bleibt);
-    assert_eq!(parcours[0]["anlageName"], "Breitenstein");
+    let parkour = body.as_array().expect("die Antwort ist eine Liste");
+    assert_eq!(parkour.len(), 1, "AC-13: nur der aktive Parkour");
+    assert_eq!(parkour[0]["parkour"]["id"], bleibt);
+    assert_eq!(parkour[0]["anlageName"], "Breitenstein");
     assert_eq!(
-        parcours[0]["parcours"]["pflöcke"][0]["farbe"], "#c0392b",
-        "die Pflockfarbe ist Nutzerdaten, keine Gestaltungsfarbe"
+        parkour[0]["parkour"]["pflöcke"]
+            .as_array()
+            .expect("pflöcke")
+            .iter()
+            .map(|pflock| pflock["farbe"].as_str())
+            .collect::<Vec<_>>(),
+        vec![Some("#1b4f9c"), Some("#c0392b")],
+        "die Pflockfarben sind Nutzerdaten und stehen nah zu fern"
     );
 }
 
 // ------------------------------------------------------------------------- AC-6, AC-7
 
 #[test_log::test(pollster::test)]
-async fn ac6_und_ac7_ein_parcours_setup_ersetzt_die_ganze_aufstellung() {
+async fn ac6_und_ac7_ein_parkour_setup_ersetzt_die_ganze_aufstellung() {
     let harness = E2eHarness::new().await;
     let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
     befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
     let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
     let ziel_id = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
-    let parcours_id = parcours_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
+    let parkour_id = parkour_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
 
     let nah = Uuid::new_v4();
     let (status, body) = harness
         .client
         .put_json_auth(
-            &format!("/api/anlagen/{anlage_id}/parcours/{parcours_id}/setup"),
+            &format!("/api/anlagen/{anlage_id}/parkour/{parkour_id}/setup"),
             json!({
                 "pflöcke": [{ "id": nah, "farbe": "#e8b81c" }],
                 "platzierungen": [{
@@ -605,15 +607,15 @@ async fn ac6_und_ac7_ein_parcours_setup_ersetzt_die_ganze_aufstellung() {
         "AC-6: das Setup wird ersetzt: {body}"
     );
 
-    let parcours = &body["parcours"][0];
+    let parkour = &body["parkour"][0];
     assert_eq!(
-        parcours["pflöcke"].as_array().expect("pflöcke").len(),
+        parkour["pflöcke"].as_array().expect("pflöcke").len(),
         1,
         "AC-6: der alte Pflock ist fort"
     );
-    assert_eq!(parcours["pflöcke"][0]["farbe"], "#e8b81c");
+    assert_eq!(parkour["pflöcke"][0]["farbe"], "#e8b81c");
     assert_eq!(
-        parcours["pflöcke"][0].get("bezeichnung"),
+        parkour["pflöcke"][0].get("bezeichnung"),
         None,
         "ein Pflock trägt keine Bezeichnung mehr"
     );
@@ -628,13 +630,13 @@ async fn ac5_ein_ersatz_ziel_erbt_den_platz_nicht_die_historie() {
     befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
     let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
     let alt = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
-    parcours_hinzufügen(&harness, &admin, &anlage_id, &alt).await;
+    parkour_hinzufügen(&harness, &admin, &anlage_id, &alt).await;
 
     let (status, body) = harness
         .client
         .post_json_auth(
             &format!("/api/anlagen/{anlage_id}/ziele/{alt}/ersatz"),
-            json!({ "tiername": "Neuer Keiler", "zielgruppe": 3 }),
+            json!({ "tiername": "Neuer Keiler" }),
             &admin,
         )
         .await;
@@ -653,7 +655,7 @@ async fn ac5_ein_ersatz_ziel_erbt_den_platz_nicht_die_historie() {
         .expect("ein aktives Ziel");
     assert_ne!(neu, alt, "AC-5: eine neue Identität");
     assert_eq!(
-        body["parcours"][0]["platzierungen"][0]["zielId"], neu,
+        body["parkour"][0]["platzierungen"][0]["zielId"], neu,
         "AC-5: der Platz wandert zum Ersatz"
     );
 }
@@ -689,20 +691,16 @@ async fn das_anlagenverzeichnis_ist_oeffentlich_und_ohne_kontaktdaten() {
     assert_eq!(status, StatusCode::OK, "die Anlage entsteht: {body}");
     let anlage_id = body["id"].as_str().expect("id").to_owned();
     let ziel_id = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
-    let bleibt = parcours_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
-    let entfernt = parcours_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
+    let bleibt = parkour_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
+    let entfernt = parkour_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
     let (status, _) = harness
         .client
         .delete_auth(
-            &format!("/api/anlagen/{anlage_id}/parcours/{entfernt}"),
+            &format!("/api/anlagen/{anlage_id}/parkour/{entfernt}"),
             &admin,
         )
         .await;
-    assert_eq!(
-        status,
-        StatusCode::OK,
-        "der zweite Parcours wird archiviert"
-    );
+    assert_eq!(status, StatusCode::OK, "der zweite Parkour wird archiviert");
 
     // No header at all: the directory is public.
     let (status, body) = harness.client.get_json("/api/anlagen/oeffentlich").await;
@@ -719,12 +717,12 @@ async fn das_anlagenverzeichnis_ist_oeffentlich_und_ohne_kontaktdaten() {
     assert_eq!(anlage["ort"], "St. Pölten");
     assert_eq!(anlage["ländercode"], "AT");
 
-    let parcours = anlage["parcours"].as_array().expect("parcours");
-    assert_eq!(parcours.len(), 1, "nur der aktive Parcours");
-    assert_eq!(parcours[0]["id"], bleibt);
-    assert_eq!(parcours[0]["name"], "Waldrunde");
-    assert_eq!(parcours[0]["anzahlPflöcke"], 2);
-    assert_eq!(parcours[0]["anzahlZiele"], 1);
+    let parkour = anlage["parkour"].as_array().expect("parkour");
+    assert_eq!(parkour.len(), 1, "nur der aktive Parkour");
+    assert_eq!(parkour[0]["id"], bleibt);
+    assert_eq!(parkour[0]["name"], "Waldrunde");
+    assert_eq!(parkour[0]["anzahlPflöcke"], 2);
+    assert_eq!(parkour[0]["anzahlZiele"], 1);
 
     // No contact data in the public payload.
     let serialisiert = anlage.to_string();
@@ -828,7 +826,7 @@ async fn die_anlage_zeigt_wo_ihre_ziele_verwendet_werden() {
     befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
     let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
     let ziel_id = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
-    parcours_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
+    parkour_hinzufügen(&harness, &admin, &anlage_id, &ziel_id).await;
 
     let (status, body) = harness
         .client
@@ -839,13 +837,16 @@ async fn die_anlage_zeigt_wo_ihre_ziele_verwendet_werden() {
         .as_array()
         .expect("verwendungen");
     assert_eq!(verwendungen.len(), 1);
-    assert_eq!(verwendungen[0]["parcoursName"], "Waldrunde");
+    assert_eq!(body["parkour"][0]["name"], "Waldrunde");
     assert_eq!(
-        verwendungen[0]["abstände"],
-        json!([
-            { "pflock": "#c0392b", "meter": 40 },
-            { "pflock": "#1b4f9c", "meter": 20 },
-        ])
+        verwendungen[0]["abstände"]
+            .as_array()
+            .expect("abstände")
+            .iter()
+            .map(|abstand| abstand["meter"].as_u64())
+            .collect::<Vec<_>>(),
+        vec![Some(20), Some(40)],
+        "die Abstände stehen in Nah-zu-Fern-Reihenfolge"
     );
 }
 
@@ -859,7 +860,7 @@ async fn ein_pflock_verlangt_eine_hex_farbe() {
     let (status, _) = harness
         .client
         .post_json_auth(
-            &format!("/api/anlagen/{anlage_id}/parcours"),
+            &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Waldrunde",
                 "pflöcke": [{ "id": Uuid::new_v4(), "farbe": "Rot" }],

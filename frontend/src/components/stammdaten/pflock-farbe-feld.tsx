@@ -21,7 +21,7 @@ export const PFLOCK_FARBEN = [
   { name: "Orange", farbe: "#d9731a" },
 ] as const;
 
-/** The colour a newly created Parcours starts with. */
+/** The colour a newly created Parkour starts with. */
 export const PFLOCK_FARBE_STANDARD = "#c0392b";
 
 /** `<input type="color">` takes only a full `#rrggbb`, so it never gets anything else. */

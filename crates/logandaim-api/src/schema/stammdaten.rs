@@ -1,18 +1,12 @@
-//! Outbound schemas of master data: the Anlage with its Ziele and Parcours, the role
-//! assignments, and the public Parcours list.
+//! Outbound schemas of master data: the Anlage with its Ziele and Parkour, the role
+//! assignments, and the public Parkour list.
 //!
 //! The domain stays free of OpenAPI and serde; every struct here is an API mirror, built by
 //! the `From` impls at the bottom so a handler never assembles one by hand.
 
 use uuid::Uuid;
 
-use logandaim_core::{
-    domain,
-    service::{
-        AnlageAnsicht, AnlagenZeile as AnlagenZeileAnsicht,
-        ParcoursÖffentlich as ParcoursÖffentlichAnsicht,
-    },
-};
+use logandaim_core::{domain, service};
 
 use crate::schema::EmailAdresse;
 
@@ -22,10 +16,39 @@ use crate::schema::EmailAdresse;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub enum CountryCode {
+pub enum Ländercode {
     AT,
     DE,
     CH,
+}
+
+/// A Pflock colour as validated `#rrggbb`.
+///
+/// Caller data, not a design token, so it cannot come from the design system's palette.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::NewType))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(transparent)]
+pub struct Farbe(String);
+
+impl Farbe {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<domain::Farbe> for Farbe {
+    fn from(farbe: domain::Farbe) -> Self {
+        Self(farbe.to_hex())
+    }
+}
+
+impl TryFrom<Farbe> for domain::Farbe {
+    type Error = domain::common::FarbeFehler;
+
+    fn try_from(farbe: Farbe) -> Result<Self, Self::Error> {
+        domain::Farbe::neu(farbe.0)
+    }
 }
 
 /// One structured address. Every field is required.
@@ -42,7 +65,7 @@ pub struct AnlageAdresse {
     /// The place itself.
     pub ort: String,
     /// Two-letter country code; only `AT`, `DE`, and `CH` are accepted.
-    pub ländercode: CountryCode,
+    pub ländercode: Ländercode,
 }
 
 /// Optional contact details of an Anlage; each may be absent on its own.
@@ -76,7 +99,7 @@ pub enum AnlageZustand {
 /// `Administrator` or `Mitarbeiter`: the Anlage's role inside one Anlage.
 ///
 /// An Administrator may change the Anlage, its roles, and its master data; a Mitarbeiter
-/// may maintain Ziele and Parcours but not the Anlage's own fields.
+/// may maintain Ziele and Parkour but not the Anlage's own fields.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -111,47 +134,45 @@ pub struct Ziel {
     pub id: Uuid,
     /// Animal name shown to the shooter.
     pub tiername: String,
-    /// Target group, `1` to `4`.
-    pub zielgruppe: u8,
+    /// 1-based ordinal that tells duplicate animal names apart ("Reh 1", "Reh 2").
+    pub zielnummer: u32,
     /// Whether the Ziel is in use or retired.
     pub zustand: AnlageZustand,
-    /// Where this physical Ziel currently lies, across this Anlage's active Parcours.
+    /// Where this physical Ziel currently lies, across this Anlage's active Parkour.
     pub verwendungen: Vec<Zielverwendung>,
 }
 
-/// One Parcours' use of one Ziel, with that Parcours' own distances.
+/// One Parkour' use of one Ziel, with that Parkour' own distances.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Zielverwendung {
-    /// The Parcours that places this Ziel.
-    pub parcours_id: Uuid,
-    /// The Parcours' name at the time of reading.
-    pub parcours_name: String,
-    /// The Parcours' position in the Anlage's list.
-    pub parcours_ordnung: usize,
-    /// 0-based position in that Parcours' route.
+    /// The Parkour that places this Ziel.
+    pub parkour_id: Uuid,
+    /// 0-based position in that Parkour' route.
     pub position: usize,
-    /// Pflock colour to metres, far to near.
+    /// Pflock identity to metres, near to far.
     pub abstände: Vec<PflockAbstand>,
 }
 
-/// One Pflock colour with the distance configured for it.
+/// One distance from a Pflock to a Ziel.
+///
+/// `meter` is absent when no distance is configured for that Pflock.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PflockAbstand {
-    /// The Pflock's colour as `#rrggbb`.
-    pub pflock: String,
-    /// Distance from that Pflock to the Ziel, in metres.
-    pub meter: u32,
+    /// The Pflock the distance is measured from.
+    pub pflock_id: Uuid,
+    /// Distance from that Pflock to the Ziel, in metres; absent when unconfigured.
+    pub meter: Option<u32>,
 }
 
-// ------------------------------------------------------------------ Parcours
+// ------------------------------------------------------------------ Parkour
 
 /// One shooting position. Its colour identifies it; no label exists.
 #[derive(Debug, Clone)]
@@ -160,13 +181,13 @@ pub struct PflockAbstand {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Pflock {
-    /// Identity of the Pflock inside its Parcours.
+    /// Identity of the Pflock inside its Parkour.
     pub id: Uuid,
-    /// The Pflock's colour as `#rrggbb`. It is what distinguishes one Pflock from another.
-    pub farbe: String,
+    /// The Pflock's colour. It is what distinguishes one Pflock from another.
+    pub farbe: Farbe,
 }
 
-/// One Ziel's place in a Parcours, with its distances keyed by Pflock identity.
+/// One Ziel's place in a Parkour, with its distances keyed by Pflock identity.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
@@ -175,35 +196,22 @@ pub struct Pflock {
 pub struct Zielplatzierung {
     /// The Ziel that stands here.
     pub ziel_id: Uuid,
-    /// Pflock id to metres. A missing Pflock means no distance is configured for it.
-    pub abstände: Vec<ZielplatzierungAbstand>,
+    /// Distances by Pflock identity; a missing entry means no distance is configured.
+    pub abstände: Vec<PflockAbstand>,
 }
 
-/// One distance from a Pflock of this Parcours to the placed Ziel.
+/// One Parkour of the Anlage: its name, its Pflöcke, and the route they form.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ZielplatzierungAbstand {
-    /// The Pflock the distance is measured from.
-    pub pflock_id: Uuid,
-    /// Distance to the Ziel, in metres.
-    pub meter: u32,
-}
-
-/// One Parcours of the Anlage: its name, its Pflöcke, and the route they form.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Parcours {
-    /// Identity of the Parcours.
+pub struct Parkour {
+    /// Identity of the Parkour.
     pub id: Uuid,
     /// Shown name. Renaming keeps the identity and every captured snapshot.
     pub name: String,
-    /// Whether the Parcours is in use or retired.
+    /// Whether the Parkour is in use or retired.
     pub zustand: AnlageZustand,
     /// Far to near, in the order the shooter walks them. Never inferred from a colour.
     pub pflöcke: Vec<Pflock>,
@@ -211,31 +219,31 @@ pub struct Parcours {
     pub platzierungen: Vec<Zielplatzierung>,
 }
 
-/// One active Parcours with the Anlage that holds it, for starting a Runde.
+/// One active Parkour with the Anlage that holds it, for starting a Runde.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ParcoursÖffentlich {
-    /// The Anlage that offers this Parcours.
+pub struct ParkourÖffentlich {
+    /// The Anlage that offers this Parkour.
     pub anlage_id: Uuid,
     /// That Anlage's name.
     pub anlage_name: String,
-    /// The Parcours with its whole setup.
-    pub parcours: Parcours,
+    /// The Parkour with its whole setup.
+    pub parkour: Parkour,
 }
 
-/// One active Parcours as the public directory names it: counts only, no setup.
+/// One active Parkour as the public directory names it: counts only, no setup.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ParcoursKurz {
-    /// Identity of the Parcours.
+pub struct ParkourKurz {
+    /// Identity of the Parkour.
     pub id: Uuid,
-    /// Shown name of the Parcours.
+    /// Shown name of the Parkour.
     pub name: String,
     /// How many Pflöcke the route uses.
     pub anzahl_pflöcke: usize,
@@ -260,9 +268,9 @@ pub struct AnlageÖffentlich {
     /// The place the Anlage is in.
     pub ort: String,
     /// Two-letter country code of that place.
-    pub ländercode: CountryCode,
-    /// The Parcours it currently offers, without their setup.
-    pub parcours: Vec<ParcoursKurz>,
+    pub ländercode: Ländercode,
+    /// The Parkour it currently offers, without their setup.
+    pub parkour: Vec<ParkourKurz>,
 }
 
 // ------------------------------------------------------------------ Anlage views
@@ -288,17 +296,17 @@ pub struct Anlage {
     pub verwaltungen: Vec<AnlageVerwaltung>,
     /// Its physical Ziele.
     pub ziele: Vec<Ziel>,
-    /// Its Parcours, each with its setup and route.
-    pub parcours: Vec<Parcours>,
+    /// Its Parkour, each with its setup and route.
+    pub parkour: Vec<Parkour>,
 }
 
-/// One row of `GET /anlagen`, with the caller's role so a client can gate its controls.
+/// One Anlage together with the caller's access to it.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AnlagenZeile {
+pub struct AnlageZugriff {
     /// The Anlage itself, with its whole master data.
     pub anlage: Anlage,
     /// The caller's role in this Anlage, absent when it holds none.
@@ -336,7 +344,7 @@ impl TryFrom<AnlageVerwaltungRolle> for domain::AnlageVerwaltungRolle {
     }
 }
 
-impl From<domain::Ländercode> for CountryCode {
+impl From<domain::Ländercode> for Ländercode {
     fn from(code: domain::Ländercode) -> Self {
         match code {
             domain::Ländercode::AT => Self::AT,
@@ -381,7 +389,7 @@ impl From<domain::Pflock> for Pflock {
     fn from(pflock: domain::Pflock) -> Self {
         Self {
             id: pflock.id().0,
-            farbe: pflock.farbe().as_str().to_owned(),
+            farbe: pflock.farbe().into(),
         }
     }
 }
@@ -393,23 +401,23 @@ impl From<domain::Zielplatzierung> for Zielplatzierung {
             abstände: platzierung
                 .abstände()
                 .iter()
-                .map(|(pflock_id, abstand)| ZielplatzierungAbstand {
+                .map(|(pflock_id, abstand)| PflockAbstand {
                     pflock_id: pflock_id.0,
-                    meter: abstand.meter(),
+                    meter: Some(abstand.meter()),
                 })
                 .collect(),
         }
     }
 }
 
-impl From<domain::Parcours> for Parcours {
-    fn from(parcours: domain::Parcours) -> Self {
+impl From<domain::Parkour> for Parkour {
+    fn from(parkour: domain::Parkour) -> Self {
         Self {
-            id: parcours.id().0,
-            name: parcours.name().as_str().to_owned(),
-            zustand: zustand(parcours.zustand()),
-            pflöcke: parcours.pflöcke().iter().cloned().map(Into::into).collect(),
-            platzierungen: parcours
+            id: parkour.id().0,
+            name: parkour.name().as_str().to_owned(),
+            zustand: zustand(parkour.zustand()),
+            pflöcke: parkour.pflöcke().iter().cloned().map(Into::into).collect(),
+            platzierungen: parkour
                 .platzierungen()
                 .iter()
                 .cloned()
@@ -422,14 +430,15 @@ impl From<domain::Parcours> for Parcours {
 impl From<domain::Zielverwendung> for Zielverwendung {
     fn from(verwendung: domain::Zielverwendung) -> Self {
         Self {
-            parcours_id: verwendung.parcours_id.0,
-            parcours_name: verwendung.parcours_name,
-            parcours_ordnung: verwendung.parcours_ordnung,
+            parkour_id: verwendung.parkour_id.0,
             position: verwendung.position,
             abstände: verwendung
                 .abstände
                 .into_iter()
-                .map(|(pflock, meter)| PflockAbstand { pflock, meter })
+                .map(|(pflock_id, abstand)| PflockAbstand {
+                    pflock_id: pflock_id.0,
+                    meter: Some(abstand.meter()),
+                })
                 .collect(),
         }
     }
@@ -440,7 +449,7 @@ impl From<domain::Ziel> for Ziel {
         Self {
             id: ziel.id().0,
             tiername: ziel.tiername().as_str().to_owned(),
-            zielgruppe: ziel.zielgruppe().value(),
+            zielnummer: ziel.zielnummer().get(),
             zustand: zustand(ziel.zustand()),
             verwendungen: Vec::new(),
         }
@@ -467,13 +476,13 @@ impl From<domain::Anlage> for Anlage {
                 .map(Into::into)
                 .collect(),
             ziele: anlage.ziele().iter().cloned().map(Into::into).collect(),
-            parcours: anlage.parcours().iter().cloned().map(Into::into).collect(),
+            parkour: anlage.parkour().iter().cloned().map(Into::into).collect(),
         }
     }
 }
 
-impl From<AnlageAnsicht> for Anlage {
-    fn from(ansicht: AnlageAnsicht) -> Self {
+impl From<service::AnlageAnsicht> for Anlage {
+    fn from(ansicht: service::AnlageAnsicht) -> Self {
         // The placement aggregation the admin page renders, attached to each Ziel.
         let verwendungen: std::collections::HashMap<_, _> =
             ansicht.zielverwendungen.into_iter().collect();
@@ -488,28 +497,28 @@ impl From<AnlageAnsicht> for Anlage {
     }
 }
 
-impl From<AnlagenZeileAnsicht> for AnlagenZeile {
-    fn from(zeile: AnlagenZeileAnsicht) -> Self {
+impl From<service::AnlageZugriff> for AnlageZugriff {
+    fn from(zugriff: service::AnlageZugriff) -> Self {
         Self {
-            anlage: zeile.anlage.into(),
-            rolle: zeile.rolle.map(Into::into),
-            ist_systemadministrator: zeile.ist_systemadministrator,
+            anlage: zugriff.anlage.into(),
+            rolle: zugriff.rolle.map(Into::into),
+            ist_systemadministrator: zugriff.ist_systemadministrator,
         }
     }
 }
 
-impl From<ParcoursÖffentlichAnsicht> for ParcoursÖffentlich {
-    fn from(parcours: ParcoursÖffentlichAnsicht) -> Self {
+impl From<service::ParkourÖffentlich> for ParkourÖffentlich {
+    fn from(parkour: service::ParkourÖffentlich) -> Self {
         Self {
-            anlage_id: parcours.anlage_id.0,
-            anlage_name: parcours.anlage_name.as_str().to_owned(),
-            parcours: parcours.parcours.into(),
+            anlage_id: parkour.anlage_id.0,
+            anlage_name: parkour.anlage_name.as_str().to_owned(),
+            parkour: parkour.parkour.into(),
         }
     }
 }
 
-impl From<logandaim_core::service::ParcoursKurz> for ParcoursKurz {
-    fn from(kurz: logandaim_core::service::ParcoursKurz) -> Self {
+impl From<service::ParkourKurz> for ParkourKurz {
+    fn from(kurz: service::ParkourKurz) -> Self {
         Self {
             id: kurz.id.0,
             name: kurz.name.as_str().to_owned(),
@@ -519,14 +528,14 @@ impl From<logandaim_core::service::ParcoursKurz> for ParcoursKurz {
     }
 }
 
-impl From<logandaim_core::service::AnlageÖffentlich> for AnlageÖffentlich {
-    fn from(anlage: logandaim_core::service::AnlageÖffentlich) -> Self {
+impl From<service::AnlageÖffentlich> for AnlageÖffentlich {
+    fn from(anlage: service::AnlageÖffentlich) -> Self {
         Self {
             anlage_id: anlage.anlage_id.0,
             name: anlage.name.as_str().to_owned(),
             ort: anlage.ort,
             ländercode: anlage.ländercode.into(),
-            parcours: anlage.parcours.into_iter().map(Into::into).collect(),
+            parkour: anlage.parkour.into_iter().map(Into::into).collect(),
         }
     }
 }

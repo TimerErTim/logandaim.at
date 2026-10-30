@@ -20,28 +20,20 @@ use crate::{
     service::StammdatenFehler,
 };
 
-/// Whether a Benutzer may maintain this Anlage's Parcours, Ziele, and Pflöcke (rule 10).
-pub fn darf_masterdaten_pflegen(
-    benutzer: &Benutzer,
-    anlage: &Anlage,
-    benutzer_id: BenutzerId,
-) -> bool {
+/// Whether a Benutzer may maintain this Anlage's Parkour, Ziele, and Pflöcke (rule 10).
+pub fn darf_masterdaten_pflegen(benutzer: &Benutzer, anlage: &Anlage) -> bool {
     benutzer.ist_systemadministrator()
         || anlage
-            .rolle_von(benutzer_id)
+            .rolle_von(benutzer.id())
             .is_some_and(AnlageVerwaltungRolle::darf_masterdaten_pflegen)
 }
 
 /// Whether a Benutzer may edit the Anlage's own fields, deactivate it, or manage its
 /// `AnlageVerwaltungen` (rule 2, rule 10).
-pub fn darf_anlage_verwalten(
-    benutzer: &Benutzer,
-    anlage: &Anlage,
-    benutzer_id: BenutzerId,
-) -> bool {
+pub fn darf_anlage_verwalten(benutzer: &Benutzer, anlage: &Anlage) -> bool {
     benutzer.ist_systemadministrator()
         || anlage
-            .rolle_von(benutzer_id)
+            .rolle_von(benutzer.id())
             .is_some_and(AnlageVerwaltungRolle::darf_anlage_verwalten)
 }
 
@@ -63,14 +55,14 @@ where
         .is_some_and(|error| matches!(error, RepositoryError::NotFound))
 }
 
-/// The signed-in identity, or 401.
+/// The signed-in identity, or `NichtAngemeldet`.
 pub fn anmeldung(ctx: &ExecutionContext<'_>) -> Result<BenutzerId, Report<StammdatenFehler>> {
     ctx.auth()
         .require_benutzer_id()
         .change_context(StammdatenFehler::NichtAngemeldet)
 }
 
-/// Load the caller's own Benutzer row, or report 404.
+/// Load the caller's own Benutzer row, or `BenutzerNichtGefunden`.
 pub async fn benutzer_laden(
     uow: &UnitOfWork<'_>,
     benutzer_id: BenutzerId,
@@ -84,7 +76,7 @@ pub async fn benutzer_laden(
     }
 }
 
-/// Load one Anlage, or report 404. Archived Anlagen load fine: who may read them is
+/// Load one Anlage. Archived Anlagen load fine: who may read them is
 /// [`darf_anlage_lesen`]'s decision, not the loader's.
 pub async fn anlage_laden(
     uow: &UnitOfWork<'_>,

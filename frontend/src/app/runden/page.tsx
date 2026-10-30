@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/api/auth-provider";
 import { apiErrorMessage } from "@/api/errors";
 import { useRundenQuery } from "@/api/hooks";
-import type { RundenZeile } from "@/api/logandaim-api";
+import type { RundeBasic } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert } from "@/components/ui/alert";
@@ -113,7 +113,7 @@ function RundenAbschnitt({
   leer,
 }: {
   titel: string;
-  runden: RundenZeile[];
+  runden: RundeBasic[];
   offen?: boolean;
   leer: string;
 }) {
@@ -130,7 +130,7 @@ function RundenAbschnitt({
         <Table>
           <TableHead>
             <TableRow>
-              <TableHeader>Parcours</TableHeader>
+              <TableHeader>Parkour</TableHeader>
               <TableHeader>Begonnen</TableHeader>
               <TableHeader>
                 <span className="sr-only">Status</span>
@@ -144,7 +144,7 @@ function RundenAbschnitt({
             {runden.map((runde) => (
               <TableRow key={runde.id}>
                 <TableCell className="font-medium">
-                  {runde.parcoursName}
+                  {runde.parkourName}
                 </TableCell>
                 <TableCell className="tabular-nums text-secondary">
                   {new Date(runde.begonnenAm).toLocaleString("de-AT")}
@@ -182,7 +182,7 @@ function Leerzustand() {
     <div className="space-y-4">
       <p className="text-sm text-secondary">
         Noch keine Runde begonnen. Wählen Sie im Anlagen-Verzeichnis einen
-        Parcours, um die erste Runde zu starten.
+        Parkour, um die erste Runde zu starten.
       </p>
       <Button asChild>
         <Link href={paths.anlagen}>Zu den Anlagen</Link>

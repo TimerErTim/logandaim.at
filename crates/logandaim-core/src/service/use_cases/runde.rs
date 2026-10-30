@@ -1,21 +1,22 @@
 //! Starting and closing a Runde.
 //!
-//! `RundeStarten` captures the Parcours setup as a value copy inside the same transaction that
+//! `RundeStarten` captures the Parkour setup as a value copy inside the same transaction that
 //! creates the Runde, so no later master-data edit can reach it (SPEC-stammdaten AC-7/AC-9).
 //! Reading a Runde lives in the API facade: its read model (`RundeAnsicht`, `Zielansicht`)
-//! and the fold over `Schussmenge` stay here, but the transaction is opened by the caller,
+//! and the fold over `ZielSchüsse` stay here, but the transaction is opened by the caller,
 //! because a read authorises from the owner-or-Systemadministrator rule and aggregates
 //! nothing a use case would own.
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
+use std::num::NonZeroU32;
 use tracing::info;
 
 use crate::{
     application::ExecutionContext,
     domain::{
-        Anlage, NeueRunde, ParcoursId, Runde, RundeId, Schuss, Schussmenge, ZielId, Zielergebnis,
-        Zuordnung,
+        Abstand, Anlage, Erfasser, Farbe, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId,
+        Schuss, ZielId, ZielSchüsse, Zielwertung,
     },
     service::{UseCase, ist_nicht_gefunden},
 };
@@ -28,9 +29,9 @@ use crate::{
 pub enum RundeStartenFehler {
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
     NichtAngemeldet,
-    #[error("der Parcours wurde nicht gefunden")]
+    #[error("der Parkour wurde nicht gefunden")]
     NichtGefunden,
-    #[error("der Parcours oder seine Anlage ist nicht mehr aktiv")]
+    #[error("der Parkour oder seine Anlage ist nicht mehr aktiv")]
     NichtAktiv,
     #[error("die Anlage konnte nicht geladen werden")]
     AnlageLaden,
@@ -38,10 +39,10 @@ pub enum RundeStartenFehler {
     Starten,
 }
 
-/// Start a Runde at one active Parcours of one active Anlage.
+/// Start a Runde at one active Parkour of one active Anlage.
 #[derive(Debug, Clone)]
 pub struct RundeStarten {
-    pub parcours_id: ParcoursId,
+    pub parkour_id: ParkourId,
 }
 
 #[async_trait]
@@ -61,7 +62,7 @@ impl UseCase<Runde> for RundeStarten {
             .change_context(RundeStartenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            // A Parcours id alone does not say which aggregate holds it, so active Anlagen are
+            // A Parkour id alone does not say which aggregate holds it, so active Anlagen are
             // searched. Fine for a handful of pilot sites; a read-model port is the escape hatch.
             let anlagen = uow
                 .anlagen()
@@ -76,19 +77,19 @@ impl UseCase<Runde> for RundeStarten {
                 let Anlage::Aktiv(aktiv) = &**anlage else {
                     continue;
                 };
-                let Some(parcours) = aktiv.parcours_mit_id(self.parcours_id) else {
+                let Some(parkour) = aktiv.parkour_mit_id(self.parkour_id) else {
                     continue;
                 };
                 existiert = true;
-                if parcours.ist_archiviert() {
+                if parkour.ist_archiviert() {
                     continue;
                 }
-                gefunden = Some((anlage, parcours));
+                gefunden = Some((anlage, parkour));
                 break;
             }
 
-            let Some((anlage, parcours)) = gefunden else {
-                // "No such Parcours" is 404; "exists but archived" is 409.
+            let Some((anlage, parkour)) = gefunden else {
+                // "No such Parkour" is 404; "exists but archived" is 409.
                 return Err(Report::new(if existiert {
                     RundeStartenFehler::NichtAktiv
                 } else {
@@ -97,7 +98,7 @@ impl UseCase<Runde> for RundeStarten {
             };
 
             // AC-7/AC-9: one value copy, taken in this transaction.
-            let Some(snapshot) = anlage.snapshot_für(parcours.id()) else {
+            let Ok(snapshot) = anlage.snapshot_für(parkour.id()) else {
                 return Err(Report::new(RundeStartenFehler::NichtGefunden));
             };
             let anlage_id = anlage.id();
@@ -105,7 +106,7 @@ impl UseCase<Runde> for RundeStarten {
             uow.runden()
                 .create(NeueRunde::neu(
                     anlage_id,
-                    Zuordnung::Benutzer(benutzer_id),
+                    Erfasser::Benutzer(benutzer_id),
                     snapshot,
                     jetzt,
                 ))
@@ -119,7 +120,7 @@ impl UseCase<Runde> for RundeStarten {
         let runde = uow.finish(ergebnis, RundeStartenFehler::Starten).await?;
         info!(
             id = ?runde.id(),
-            parcours_id = ?runde.parcours_id(),
+            parkour_id = ?runde.parkour_id(),
             "runde gestartet"
         );
         Ok(runde)
@@ -130,16 +131,15 @@ impl UseCase<Runde> for RundeStarten {
 // RundeAnzeigen
 // ---------------------------------------------------------------------------------------
 
-/// One captured Ziel's setup plus its folded result, if any Schuss was logged.
+/// One captured Ziel's setup plus its folded Wertung, if any Schuss was logged.
 #[derive(Debug, Clone)]
 pub struct Zielansicht {
     pub ziel_id: ZielId,
-    pub tiername: String,
-    pub zielgruppe: u8,
-    /// Pflock colour to metres, for the distances captured for this Ziel.
-    pub abstände: Vec<(String, u32)>,
+    pub tiername: NonEmptyString,
+    pub zielnummer: NonZeroU32,
+    pub abstände: Vec<(Farbe, Abstand)>,
     /// `None` for a Ziel with no Schuss yet.
-    pub ergebnis: Option<Zielergebnis>,
+    pub wertung: Option<Zielwertung>,
 }
 
 /// The whole read model of one Runde: who, where, the frozen setup, and both Wertungen.
@@ -150,28 +150,32 @@ pub struct RundeAnsicht {
     pub gesamt_erster_treffer: u32,
     pub gesamt_mehrschuss: u32,
     /// How many captured Ziele contributed a result.
-    pub ziele_mit_ergebnis: usize,
+    pub ziele_mit_wertung: usize,
     pub schüsse: Vec<Schuss>,
 }
 
 impl RundeAnsicht {
     /// Fold the loaded Schüsse over the captured route.
     ///
-    /// The aggregation is domain code (`Schussmenge`, `Runde::ergebnis`), so a caller that
+    /// The aggregation is domain code (`ZielSchüsse`, `Runde::wertung`), so a caller that
     /// loaded a Runde and its Schüsse never re-derives a Wertung at the API edge.
     pub fn neu(runde: Runde, schüsse: Vec<Schuss>) -> Self {
-        let mengen: Vec<Schussmenge> = runde
+        let je_ziel: Vec<(ZielId, Option<Zielwertung>)> = runde
             .snapshot()
             .ziele()
             .iter()
             .map(|ziel| {
-                Schussmenge::für_ziel(
+                let menge = ZielSchüsse::für_ziel(
                     ziel.ziel_id(),
                     schüsse
                         .iter()
-                        .filter(|schuss| schuss.ziel_id() == ziel.ziel_id())
+                        .filter(|schuss| {
+                            schuss.runde_id() == runde.id() && schuss.ziel_id() == ziel.ziel_id()
+                        })
                         .cloned(),
                 )
+                .expect("jeder Schuss ist auf dieses Ziel gefiltert");
+                (ziel.ziel_id(), menge.wertung())
             })
             .collect();
 
@@ -181,23 +185,23 @@ impl RundeAnsicht {
             .iter()
             .map(|ziel| Zielansicht {
                 ziel_id: ziel.ziel_id(),
-                tiername: ziel.tiername().to_owned(),
-                zielgruppe: ziel.zielgruppe(),
+                tiername: ziel.tiername().clone(),
+                zielnummer: ziel.zielnummer(),
                 abstände: ziel.abstände().to_vec(),
-                ergebnis: mengen
+                wertung: je_ziel
                     .iter()
-                    .find(|menge| menge.ziel_id() == ziel.ziel_id())
-                    .and_then(Schussmenge::ergebnis),
+                    .find(|(id, _)| *id == ziel.ziel_id())
+                    .and_then(|(_, wertung)| *wertung),
             })
             .collect();
 
-        let gesamt = runde.ergebnis(&mengen);
+        let gesamt = runde.wertung(schüsse.iter().cloned());
         Self {
             runde,
             ziele,
-            gesamt_erster_treffer: gesamt.erster_treffer().value(),
-            gesamt_mehrschuss: gesamt.mehrschuss().value(),
-            ziele_mit_ergebnis: gesamt.ziele_mit_ergebnis(),
+            gesamt_erster_treffer: gesamt.erster_treffer(),
+            gesamt_mehrschuss: gesamt.mehrschuss(),
+            ziele_mit_wertung: gesamt.ziele_mit_wertung(),
             schüsse,
         }
     }
@@ -275,9 +279,11 @@ impl UseCase<Runde> for RundeAbschliessen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeAbschliessenFehler::NichtErlaubt));
             }
-            runde
-                .abschliessen(jetzt)
-                .change_context(RundeAbschliessenFehler::BereitsAbgeschlossen)?;
+            // The typestate makes closing once-only: a closed Runde has no `abschliessen`.
+            let Runde::InBearbeitung(offen) = runde.cloned_data() else {
+                return Err(Report::new(RundeAbschliessenFehler::BereitsAbgeschlossen));
+            };
+            runde.set_data(offen.abschliessen(jetzt).into());
 
             uow.runden()
                 .update(&mut runde)

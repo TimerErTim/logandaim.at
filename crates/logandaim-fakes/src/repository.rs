@@ -9,8 +9,8 @@ use logandaim_core::{
     ResultReport,
     application::uow::Versioned,
     domain::{
-        Anlage, AnlageAktiv, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss,
-        ParcoursId, Runde, RundeId, Schuss, SchussId, ZielId,
+        Anlage, AnlageAktiv, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId,
+        Runde, RundeId, RundeInBearbeitung, Schuss, SchussId, ZielId,
         konto::{
             Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
             NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
@@ -251,7 +251,7 @@ impl FakeRundeRepository {
 impl RundeRepository for FakeRundeRepository {
     async fn create(&self, runde: NeueRunde) -> RepositoryResult<Versioned<Runde>> {
         let id = RundeId(Uuid::new_v4());
-        let erstellt = Versioned::init(Runde::neu(id, runde));
+        let erstellt = Versioned::init(Runde::InBearbeitung(RundeInBearbeitung::neu(id, runde)));
         self.datastore.runden().insert(id, erstellt.clone());
         Ok(erstellt)
     }
@@ -295,12 +295,12 @@ impl RundeRepository for FakeRundeRepository {
             .any(|runde| runde.anlage_id() == id))
     }
 
-    async fn exists_referencing_parcours(&self, id: ParcoursId) -> RepositoryResult<bool> {
+    async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool> {
         Ok(self
             .datastore
             .runden()
             .values()
-            .any(|runde| runde.parcours_id() == id))
+            .any(|runde| runde.parkour_id() == id))
     }
 
     async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool> {
@@ -367,7 +367,7 @@ impl SchussRepository for FakeSchussRepository {
             .datastore
             .schüsse()
             .values()
-            .filter(|schuss| schuss.zuordnung().benutzer() == Some(benutzer_id))
+            .filter(|schuss| schuss.erfasser().benutzer() == Some(benutzer_id))
             .cloned()
             .collect())
     }

@@ -6,11 +6,10 @@ import { useEffect } from "react";
 import { paths } from "@/lib/navigation";
 
 /**
- * The old public Parcours list. The archer journey now begins at the Anlagen
- * directory, one level up, so this route only redirects — it stays on disk because
- * links to `/parcours` were handed out and must keep resolving.
+ * The old public Parkour list, now at `/parkour`. The archer journey begins at the
+ * Anlagen directory, one level up, so this route only redirects.
  */
-export default function ParcoursRedirectPage() {
+export default function ParkourRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {

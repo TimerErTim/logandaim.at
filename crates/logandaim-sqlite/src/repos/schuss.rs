@@ -1,7 +1,7 @@
 //! `Schuss` rows: one logged arrow, its Runde, and its attribution.
 //!
 //! A Schuss is a standalone aggregate root, so it stores the links it needs (`runde_id`,
-//! `ziel_id`) and its `Zuordnung` as two nullable columns rather than joining to either. An
+//! `ziel_id`) and its `Erfasser` as two nullable columns rather than joining to either. An
 //! anonymised row keeps scoring but loses its owner, which is what the retention rule asks for.
 
 use std::sync::Arc;
@@ -16,7 +16,7 @@ use logandaim_core::{
     ErrorReportExt,
     application::uow::Versioned,
     domain::{
-        NeuerSchuss, RundeId, Schuss, SchussId, Wertungszone, ZielId, Zuordnung, konto::BenutzerId,
+        Erfasser, NeuerSchuss, RundeId, Schuss, SchussId, Wertungszone, ZielId, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, SchussRepository},
 };
@@ -47,10 +47,10 @@ fn schuss_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
     let zone: String = row.get(6).contextualize(RepositoryError::Data)?;
 
     let zuordnung = match (benutzer_id, anonymisiert_am) {
-        (Some(benutzer_id), None) => Zuordnung::Benutzer(BenutzerId(
+        (Some(benutzer_id), None) => Erfasser::Benutzer(BenutzerId(
             parse_uuid(&benutzer_id).contextualize(RepositoryError::Data)?,
         )),
-        (None, Some(am)) => Zuordnung::Anonymisiert {
+        (None, Some(am)) => Erfasser::Anonymisiert {
             am: parse_datetime(&am).contextualize(RepositoryError::Data)?,
         },
         _ => return Err(RepositoryError::Data.into()),
@@ -70,10 +70,10 @@ fn schuss_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
     ))
 }
 
-fn zuordnungsspalten(zuordnung: Zuordnung) -> (Option<String>, Option<String>) {
+fn zuordnungsspalten(zuordnung: Erfasser) -> (Option<String>, Option<String>) {
     match zuordnung {
-        Zuordnung::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
-        Zuordnung::Anonymisiert { am } => (None, Some(format_datetime(am))),
+        Erfasser::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
+        Erfasser::Anonymisiert { am } => (None, Some(format_datetime(am))),
     }
 }
 
@@ -113,7 +113,7 @@ impl SchussRepository for SQLiteSchussRepository {
     async fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Versioned<Schuss>> {
         let id = SchussId(Uuid::new_v4());
         let domain = Schuss::neu(id, schuss);
-        let (benutzer_id, anonymisiert_am) = zuordnungsspalten(domain.zuordnung());
+        let (benutzer_id, anonymisiert_am) = zuordnungsspalten(domain.erfasser());
 
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
@@ -188,7 +188,7 @@ impl SchussRepository for SQLiteSchussRepository {
     async fn update(&self, schuss: &mut Versioned<Schuss>) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
-        let (benutzer_id, anonymisiert_am) = zuordnungsspalten(schuss.zuordnung());
+        let (benutzer_id, anonymisiert_am) = zuordnungsspalten(schuss.erfasser());
 
         update_versioned(
             tx,

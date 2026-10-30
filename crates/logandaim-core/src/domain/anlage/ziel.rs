@@ -4,7 +4,11 @@
 //! lifecycle outside its Anlage and no repository loads or saves it alone. Callers
 //! outside the aggregate hold [`ZielId`] and nothing else (SPEC-stammdaten rule 9).
 
+use std::num::NonZeroU32;
+
 use uuid::Uuid;
+
+use crate::domain::common::NonEmptyString;
 
 /// Identity of one physical Ziel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -52,88 +56,45 @@ impl std::str::FromStr for Zustand {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ZielFehler {
-    #[error("der Tiername darf nicht leer sein")]
-    TiernameLeer,
-    #[error("die Zielgruppe muss zwischen 1 und 4 liegen, war aber {0}")]
-    ZielgruppeUngültig(u8),
     #[error("das Ziel ist archiviert und kann nicht mehr geändert werden")]
     Archiviert,
-}
-
-/// Non-empty animal name of a physical Ziel.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Tiername(String);
-
-impl Tiername {
-    pub fn neu<S: AsRef<str>>(wert: S) -> Result<Self, ZielFehler> {
-        let wert = wert.as_ref().trim();
-        if wert.is_empty() {
-            return Err(ZielFehler::TiernameLeer);
-        }
-        Ok(Self(wert.to_owned()))
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl AsRef<str> for Tiername {
-    fn as_ref(&self) -> &str {
-        &self.0
-    }
-}
-
-/// Target group of a 3D target, exactly 1, 2, 3, or 4.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct Zielgruppe(u8);
-
-impl Zielgruppe {
-    pub fn neu(wert: u8) -> Result<Self, ZielFehler> {
-        match wert {
-            1..=4 => Ok(Self(wert)),
-            _ => Err(ZielFehler::ZielgruppeUngültig(wert)),
-        }
-    }
-
-    pub fn value(self) -> u8 {
-        self.0
-    }
 }
 
 /// Creation input of a Ziel.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NeuesZiel {
-    tiername: Tiername,
-    zielgruppe: Zielgruppe,
+    tiername: NonEmptyString,
+    zielnummer: NonZeroU32,
 }
 
 impl NeuesZiel {
-    pub fn neu(tiername: Tiername, zielgruppe: Zielgruppe) -> Self {
+    /// `zielnummer` is the Anlage's 1-based ordinal: two Ziele named "Reh" stay distinct
+    /// because "Reh 1" is not "Reh 2".
+    pub fn neu(tiername: NonEmptyString, zielnummer: NonZeroU32) -> Self {
         Self {
             tiername,
-            zielgruppe,
+            zielnummer,
         }
     }
 
-    pub fn tiername(&self) -> &Tiername {
+    pub fn tiername(&self) -> &NonEmptyString {
         &self.tiername
     }
 
-    pub fn zielgruppe(&self) -> Zielgruppe {
-        self.zielgruppe
+    pub fn zielnummer(&self) -> NonZeroU32 {
+        self.zielnummer
     }
 }
 
 /// One physical target at one Anlage.
 ///
-/// Its identity survives route edits and Parcours changes; only replacing the physical
+/// Its identity survives route edits and Parkour changes; only replacing the physical
 /// target creates a new identity (SPEC-stammdaten rule 5, AC-5).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Ziel {
     id: ZielId,
-    tiername: Tiername,
-    zielgruppe: Zielgruppe,
+    tiername: NonEmptyString,
+    zielnummer: NonZeroU32,
     zustand: Zustand,
 }
 
@@ -142,7 +103,7 @@ impl Ziel {
         Self {
             id,
             tiername: neu.tiername,
-            zielgruppe: neu.zielgruppe,
+            zielnummer: neu.zielnummer,
             zustand: Zustand::Aktiv,
         }
     }
@@ -150,14 +111,14 @@ impl Ziel {
     /// Rebuild a persisted Ziel, including its lifecycle state.
     pub fn from_parts(
         id: ZielId,
-        tiername: Tiername,
-        zielgruppe: Zielgruppe,
+        tiername: NonEmptyString,
+        zielnummer: NonZeroU32,
         zustand: Zustand,
     ) -> Self {
         Self {
             id,
             tiername,
-            zielgruppe,
+            zielnummer,
             zustand,
         }
     }
@@ -166,12 +127,13 @@ impl Ziel {
         self.id
     }
 
-    pub fn tiername(&self) -> &Tiername {
+    pub fn tiername(&self) -> &NonEmptyString {
         &self.tiername
     }
 
-    pub fn zielgruppe(&self) -> Zielgruppe {
-        self.zielgruppe
+    /// The ordinal that tells two Ziele of the same Tiername apart.
+    pub fn zielnummer(&self) -> NonZeroU32 {
+        self.zielnummer
     }
 
     pub fn zustand(&self) -> Zustand {
@@ -190,14 +152,10 @@ impl Ziel {
     }
 
     /// Edit the descriptive fields. `Err(ZielFehler::Archiviert)` when archived (AC-11).
-    pub fn ändern(
-        &mut self,
-        tiername: Tiername,
-        zielgruppe: Zielgruppe,
-    ) -> Result<(), ZielFehler> {
+    /// The Zielnummer is the identity of the slot and stays as it is.
+    pub fn ändern(&mut self, tiername: NonEmptyString) -> Result<(), ZielFehler> {
         self.nur_aktiv()?;
         self.tiername = tiername;
-        self.zielgruppe = zielgruppe;
         Ok(())
     }
 
@@ -212,7 +170,7 @@ impl Ziel {
     /// A new identity for the same physical slot; the old one stays archived (AC-5).
     pub fn duplicate(&self) -> Result<NeuesZiel, ZielFehler> {
         self.nur_aktiv()?;
-        Ok(NeuesZiel::neu(self.tiername.clone(), self.zielgruppe))
+        Ok(NeuesZiel::neu(self.tiername.clone(), self.zielnummer))
     }
 }
 
@@ -220,13 +178,18 @@ impl Ziel {
 mod tests {
     use super::*;
 
+    fn name(wert: &str) -> NonEmptyString {
+        NonEmptyString::neu(wert).unwrap()
+    }
+
+    fn nummer(wert: u32) -> NonZeroU32 {
+        NonZeroU32::new(wert).unwrap()
+    }
+
     fn ziel() -> Ziel {
         Ziel::neu(
             ZielId(Uuid::nil()),
-            NeuesZiel::neu(
-                Tiername::neu("Keiler").unwrap(),
-                Zielgruppe::neu(2).unwrap(),
-            ),
+            NeuesZiel::neu(name("Keiler"), nummer(2)),
         )
     }
 
@@ -236,24 +199,18 @@ mod tests {
     }
 
     #[test_log::test]
-    fn leere_tiernamen_werden_abgelehnt() {
-        assert!(matches!(Tiername::neu("  "), Err(ZielFehler::TiernameLeer)));
-        assert!(matches!(Tiername::neu(""), Err(ZielFehler::TiernameLeer)));
-    }
-
-    #[test_log::test]
-    fn zielgruppe_ist_eins_bis_vier() {
-        for wert in 1..=4 {
-            assert_eq!(Zielgruppe::neu(wert).unwrap().value(), wert);
-        }
-        assert!(matches!(
-            Zielgruppe::neu(0),
-            Err(ZielFehler::ZielgruppeUngültig(0))
-        ));
-        assert!(matches!(
-            Zielgruppe::neu(5),
-            Err(ZielFehler::ZielgruppeUngültig(5))
-        ));
+    fn die_zielnummer_unterscheidet_gleichnamige_ziele() {
+        let erstes = Ziel::neu(
+            ZielId(Uuid::from_u128(1)),
+            NeuesZiel::neu(name("Reh"), nummer(1)),
+        );
+        let zweites = Ziel::neu(
+            ZielId(Uuid::from_u128(2)),
+            NeuesZiel::neu(name("Reh"), nummer(2)),
+        );
+        assert_eq!(erstes.tiername(), zweites.tiername());
+        assert_ne!(erstes.zielnummer(), zweites.zielnummer());
+        assert_ne!(erstes, zweites);
     }
 
     #[test_log::test]
@@ -264,21 +221,20 @@ mod tests {
 
         assert!(matches!(ziel.archiviere(), Err(ZielFehler::Archiviert)));
         assert!(matches!(
-            ziel.ändern(Tiername::neu("Reh").unwrap(), Zielgruppe::neu(1).unwrap()),
+            ziel.ändern(name("Reh")),
             Err(ZielFehler::Archiviert)
         ));
         assert!(matches!(ziel.duplicate(), Err(ZielFehler::Archiviert)));
     }
 
     #[test_log::test]
-    fn aendern_haelt_die_identitaet() {
+    fn aendern_haelt_identitaet_und_nummer() {
         let mut ziel = ziel();
         let id = ziel.id();
-        ziel.ändern(Tiername::neu("Reh").unwrap(), Zielgruppe::neu(4).unwrap())
-            .unwrap();
+        ziel.ändern(name("Reh")).unwrap();
         assert_eq!(ziel.id(), id);
         assert_eq!(ziel.tiername().as_str(), "Reh");
-        assert_eq!(ziel.zielgruppe().value(), 4);
+        assert_eq!(ziel.zielnummer().get(), 2);
     }
 
     #[test_log::test]
@@ -287,7 +243,7 @@ mod tests {
         let geladen = Ziel::from_parts(
             original.id(),
             original.tiername().clone(),
-            original.zielgruppe(),
+            original.zielnummer(),
             original.zustand(),
         );
         assert_eq!(original, geladen);

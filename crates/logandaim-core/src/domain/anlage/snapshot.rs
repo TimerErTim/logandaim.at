@@ -1,41 +1,31 @@
 //! The immutable shooting setup a `Runde` captures at start.
 //!
 //! A snapshot is a value copy, not a reference into the `Anlage`: archiving a Ziel or
-//! editing a Parcours may not change a past Runde (SPEC-stammdaten rules 7–8, AC-7/AC-9).
+//! editing a Parkour may not change a past Runde (SPEC-stammdaten rules 7–8, AC-7/AC-9).
 //! It is the only value object that crosses the aggregate boundary.
 
-use uuid::Uuid;
+use std::num::NonZeroU32;
 
-use super::parcours::{ParcoursId, PflockId};
-use super::ziel::{Tiername, ZielId, Zielgruppe};
+use super::Anlage;
+use super::parkour::{Parkour, ParkourId, PflockId};
+use super::ziel::{Ziel, ZielId};
+use crate::domain::common::{Abstand, Farbe, NonEmptyString};
 
-/// A persisted Pflock row: colour and position.
-type PflockRoh = (String, usize);
-/// A persisted Ziel row: identity, animal name, group, Pflock-to-metre distances.
-type ZielRoh = (Uuid, String, u8, Vec<(String, u32)>);
-/// A child Pflock before capture: identity and colour.
-type QuellePflock = (PflockId, String);
-/// A child Ziel before capture: identity, animal name, group, per-Pflock distances.
-type QuelleZiel = (ZielId, Tiername, Zielgruppe, Vec<(PflockId, u32)>);
-
-/// One Pflock as captured: its colour and its position in the far-to-near order.
+/// One Pflock as captured: its colour and its position in the near-to-far order.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SnapshotPflock {
-    farbe: String,
-    /// 0-based position in the captured far-to-near order.
+pub struct PflockSnapshot {
+    farbe: Farbe,
+    /// 0-based position in the captured near-to-far order.
     position: usize,
 }
 
-impl SnapshotPflock {
-    pub fn neu(farbe: String, position: usize) -> Result<Self, SnapshotFehler> {
-        if farbe.trim().is_empty() {
-            return Err(SnapshotFehler::PflockFarbeLeer);
-        }
-        Ok(Self { farbe, position })
+impl PflockSnapshot {
+    pub fn neu(farbe: Farbe, position: usize) -> Self {
+        Self { farbe, position }
     }
 
-    pub fn farbe(&self) -> &str {
-        &self.farbe
+    pub fn farbe(&self) -> Farbe {
+        self.farbe
     }
 
     pub fn position(&self) -> usize {
@@ -43,145 +33,111 @@ impl SnapshotPflock {
     }
 }
 
-/// One Ziel as captured: identity, animal name, group, and per-Pflock distances.
+/// One Ziel as captured: identity, ordinal, animal name, and per-Pflock distances.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SnapshotZiel {
+pub struct ZielSnapshot {
     ziel_id: ZielId,
-    tiername: String,
-    zielgruppe: u8,
+    zielnummer: NonZeroU32,
+    tiername: NonEmptyString,
     /// Pflock colour to metres, for the distances that were configured.
-    abstände: Vec<(String, u32)>,
+    abstände: Vec<(Farbe, Abstand)>,
 }
 
-impl SnapshotZiel {
+impl ZielSnapshot {
     pub fn neu(
         ziel_id: ZielId,
-        tiername: String,
-        zielgruppe: u8,
-        abstände: Vec<(String, u32)>,
-    ) -> Result<Self, SnapshotFehler> {
-        if tiername.trim().is_empty() {
-            return Err(SnapshotFehler::TiernameLeer);
-        }
-        if !(1..=4).contains(&zielgruppe) {
-            return Err(SnapshotFehler::ZielgruppeUngültig(zielgruppe));
-        }
-        Ok(Self {
+        zielnummer: NonZeroU32,
+        tiername: NonEmptyString,
+        abstände: Vec<(Farbe, Abstand)>,
+    ) -> Self {
+        Self {
             ziel_id,
+            zielnummer,
             tiername,
-            zielgruppe,
             abstände,
-        })
+        }
     }
 
     pub fn ziel_id(&self) -> ZielId {
         self.ziel_id
     }
 
-    pub fn tiername(&self) -> &str {
+    /// The 1-based ordinal that tells duplicate animal names apart.
+    pub fn zielnummer(&self) -> NonZeroU32 {
+        self.zielnummer
+    }
+
+    pub fn tiername(&self) -> &NonEmptyString {
         &self.tiername
     }
 
-    pub fn zielgruppe(&self) -> u8 {
-        self.zielgruppe
-    }
-
-    pub fn abstände(&self) -> &[(String, u32)] {
+    pub fn abstände(&self) -> &[(Farbe, Abstand)] {
         &self.abstände
     }
 
     /// The captured distance for one Pflock colour, if one was configured.
-    pub fn abstand_für(&self, pflock_farbe: &str) -> Option<u32> {
+    pub fn abstand_für(&self, pflock_farbe: Farbe) -> Option<Abstand> {
         self.abstände
             .iter()
-            .find(|(farbe, _)| farbe == pflock_farbe)
-            .map(|(_, meter)| *meter)
+            .find(|(farbe, _)| *farbe == pflock_farbe)
+            .map(|(_, abstand)| *abstand)
     }
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum SnapshotFehler {
-    #[error("der Parcoursname darf nicht leer sein")]
-    ParcoursNameLeer,
-    #[error("die Pflock-Farbe darf nicht leer sein")]
-    PflockFarbeLeer,
-    #[error("der Tiername darf nicht leer sein")]
-    TiernameLeer,
-    #[error("die Zielgruppe muss zwischen 1 und 4 liegen, war aber {0}")]
-    ZielgruppeUngültig(u8),
+    #[error("der Parkour wurde nicht gefunden")]
+    ParkourNichtGefunden,
+    #[error("ein platziertes Ziel wurde nicht gefunden")]
+    ZielNichtGefunden,
 }
 
-/// The complete shooting setup of one Parcours, frozen at the instant a Runde started.
+/// The complete shooting setup of one Parkour, frozen at the instant a Runde started.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ParcoursSnapshot {
-    parcours_id: ParcoursId,
-    parcours_name: String,
-    /// In far-to-near order, positions assigned from the sequence.
-    pflöcke: Vec<SnapshotPflock>,
+pub struct ParkourSnapshot {
+    parkour_id: ParkourId,
+    parkour_name: NonEmptyString,
+    /// Near to far, positions assigned from the sequence.
+    pflöcke: Vec<PflockSnapshot>,
     /// In route order.
-    ziele: Vec<SnapshotZiel>,
+    ziele: Vec<ZielSnapshot>,
 }
 
-impl ParcoursSnapshot {
-    /// Capture the snapshot from the pieces it is made of. The caller (the `Anlage`
-    /// aggregate) supplies the current values; this constructor only validates.
-    pub fn neu(
-        parcours_id: ParcoursId,
-        parcours_name: impl AsRef<str>,
-        pflöcke: Vec<SnapshotPflock>,
-        ziele: Vec<SnapshotZiel>,
-    ) -> Result<Self, SnapshotFehler> {
-        let parcours_name = parcours_name.as_ref().trim();
-        if parcours_name.is_empty() {
-            return Err(SnapshotFehler::ParcoursNameLeer);
-        }
-        Ok(Self {
-            parcours_id,
-            parcours_name: parcours_name.to_owned(),
+impl ParkourSnapshot {
+    /// Rebuild a stored snapshot or capture a fresh one: every field is already validated,
+    /// so there is nothing left to refuse.
+    pub fn from_parts(
+        parkour_id: ParkourId,
+        parkour_name: NonEmptyString,
+        pflöcke: Vec<PflockSnapshot>,
+        ziele: Vec<ZielSnapshot>,
+    ) -> Self {
+        Self {
+            parkour_id,
+            parkour_name,
             pflöcke,
             ziele,
-        })
+        }
     }
 
-    /// Rebuild a persisted snapshot; the same shape `neu` takes, so a stored row obeys
-    /// the same invariants as a captured one.
-    pub fn from_parts(
-        parcours_id: Uuid,
-        parcours_name: String,
-        pflöcke: Vec<PflockRoh>,
-        ziele: Vec<ZielRoh>,
-    ) -> Result<Self, SnapshotFehler> {
-        let pflöcke = pflöcke
-            .into_iter()
-            .map(|(farbe, position)| SnapshotPflock::neu(farbe, position))
-            .collect::<Result<Vec<_>, _>>()?;
-        let ziele = ziele
-            .into_iter()
-            .map(|(ziel_id, tiername, zielgruppe, abstände)| {
-                SnapshotZiel::neu(ZielId(ziel_id), tiername, zielgruppe, abstände)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        Self::neu(ParcoursId(parcours_id), parcours_name, pflöcke, ziele)
+    pub fn parkour_id(&self) -> ParkourId {
+        self.parkour_id
     }
 
-    pub fn parcours_id(&self) -> ParcoursId {
-        self.parcours_id
+    pub fn parkour_name(&self) -> &NonEmptyString {
+        &self.parkour_name
     }
 
-    pub fn parcours_name(&self) -> &str {
-        &self.parcours_name
-    }
-
-    pub fn pflöcke(&self) -> &[SnapshotPflock] {
+    pub fn pflöcke(&self) -> &[PflockSnapshot] {
         &self.pflöcke
     }
 
-    pub fn ziele(&self) -> &[SnapshotZiel] {
+    pub fn ziele(&self) -> &[ZielSnapshot] {
         &self.ziele
     }
 
     /// The captured Ziel with this identity, if it was part of the route.
-    pub fn ziel(&self, ziel_id: ZielId) -> Option<&SnapshotZiel> {
+    pub fn ziel(&self, ziel_id: ZielId) -> Option<&ZielSnapshot> {
         self.ziele.iter().find(|ziel| ziel.ziel_id == ziel_id)
     }
 
@@ -191,143 +147,188 @@ impl ParcoursSnapshot {
     }
 }
 
-/// What capturing one Parcours from an `Anlage` needs: the child's current values.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SnapshotQuelle {
-    parcours_id: ParcoursId,
-    parcours_name: String,
-    pflöcke: Vec<QuellePflock>,
-    ziele: Vec<QuelleZiel>,
+/// Capture one Parkour's current setup, resolving every Pflock id to its colour so the
+/// snapshot no longer depends on any master-data row.
+pub fn snapshot(anlage: &Anlage, parkour_id: ParkourId) -> Result<ParkourSnapshot, SnapshotFehler> {
+    let parkour = anlage
+        .parkour_mit_id(parkour_id)
+        .ok_or(SnapshotFehler::ParkourNichtGefunden)?;
+    snapshot_aus_parkour(parkour, |ziel_id| anlage.ziel(ziel_id))
 }
 
-impl SnapshotQuelle {
-    pub fn neu(
-        parcours_id: ParcoursId,
-        parcours_name: impl Into<String>,
-        pflöcke: Vec<QuellePflock>,
-        ziele: Vec<QuelleZiel>,
-    ) -> Self {
-        Self {
-            parcours_id,
-            parcours_name: parcours_name.into(),
-            pflöcke,
-            ziele,
-        }
-    }
+/// The capture rule once the Parkour is known, shared with the active typestate.
+pub(crate) fn snapshot_aus_parkour<'a>(
+    parkour: &Parkour,
+    ziel: impl Fn(ZielId) -> Option<&'a Ziel>,
+) -> Result<ParkourSnapshot, SnapshotFehler> {
+    let pflöcke = parkour
+        .pflöcke()
+        .iter()
+        .enumerate()
+        .map(|(position, pflock)| PflockSnapshot::neu(pflock.farbe(), position))
+        .collect::<Vec<_>>();
 
-    /// Turn the source into a snapshot, resolving Pflock ids to colours so the snapshot
-    /// does not depend on any row still existing.
-    pub fn in_snapshot(&self) -> Result<ParcoursSnapshot, SnapshotFehler> {
-        let pflöcke = self
-            .pflöcke
-            .iter()
-            .enumerate()
-            .map(|(position, (_, farbe))| SnapshotPflock::neu(farbe.clone(), position))
-            .collect::<Result<Vec<_>, _>>()?;
+    let ziele = parkour
+        .platzierungen()
+        .iter()
+        .map(|platzierung| {
+            let ziel = ziel(platzierung.ziel_id()).ok_or(SnapshotFehler::ZielNichtGefunden)?;
+            let abstände = platzierung
+                .abstände()
+                .iter()
+                .map(|(pflock_id, abstand)| {
+                    let farbe = pflock_farbe(parkour, *pflock_id)
+                        .ok_or(SnapshotFehler::ZielNichtGefunden)?;
+                    Ok((farbe, *abstand))
+                })
+                .collect::<Result<Vec<_>, SnapshotFehler>>()?;
+            Ok(ZielSnapshot::neu(
+                ziel.id(),
+                ziel.zielnummer(),
+                ziel.tiername().clone(),
+                abstände,
+            ))
+        })
+        .collect::<Result<Vec<_>, SnapshotFehler>>()?;
 
-        let ziele = self
-            .ziele
-            .iter()
-            .map(|(ziel_id, tiername, zielgruppe, abstände)| {
-                let abstände = abstände
-                    .iter()
-                    .map(|(pflock_id, meter)| {
-                        let farbe = self
-                            .pflöcke
-                            .iter()
-                            .find(|(id, _)| id == pflock_id)
-                            .map(|(_, farbe)| farbe.clone())
-                            .ok_or(SnapshotFehler::PflockFarbeLeer)?;
-                        Ok((farbe, *meter))
-                    })
-                    .collect::<Result<Vec<_>, SnapshotFehler>>()?;
-                SnapshotZiel::neu(
-                    *ziel_id,
-                    tiername.as_str().to_owned(),
-                    zielgruppe.value(),
-                    abstände,
-                )
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+    Ok(ParkourSnapshot::from_parts(
+        parkour.id(),
+        parkour.name().clone(),
+        pflöcke,
+        ziele,
+    ))
+}
 
-        ParcoursSnapshot::neu(self.parcours_id, &self.parcours_name, pflöcke, ziele)
-    }
+fn pflock_farbe(parkour: &super::parkour::Parkour, pflock_id: PflockId) -> Option<Farbe> {
+    parkour
+        .pflöcke()
+        .iter()
+        .find(|pflock| pflock.id() == pflock_id)
+        .map(|pflock| pflock.farbe())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::Ländercode;
+    use crate::domain::anlage::{
+        AnlageAdresse, AnlageAktiv, AnlageId, AnlageKontakt, AnlageName, NeueAnlage, NeuerParkour,
+        Pflock, Zielplatzierung, Zustand,
+    };
+    use uuid::Uuid;
 
-    fn pflock(id: u128, farbe: &str) -> (PflockId, String) {
-        (PflockId(Uuid::from_u128(id)), farbe.to_owned())
+    fn name(wert: &str) -> NonEmptyString {
+        NonEmptyString::neu(wert).unwrap()
     }
 
-    fn quelle() -> SnapshotQuelle {
-        SnapshotQuelle::neu(
-            ParcoursId(Uuid::from_u128(7)),
-            "Waldrunde",
-            vec![pflock(1, "#c0392b"), pflock(2, "#1b4f9c")],
-            vec![(
-                ZielId(Uuid::from_u128(10)),
-                Tiername::neu("Keiler").unwrap(),
-                Zielgruppe::neu(2).unwrap(),
-                vec![(PflockId(Uuid::from_u128(1)), 40)],
-            )],
-        )
+    fn ziel_id(id: u128) -> ZielId {
+        ZielId(Uuid::from_u128(id))
+    }
+
+    fn pflock(id: u128, farbe: &str) -> Pflock {
+        Pflock::neu(PflockId(Uuid::from_u128(id)), Farbe::neu(farbe).unwrap())
+    }
+
+    fn anlage() -> (AnlageAktiv, ParkourId) {
+        let mut anlage = AnlageAktiv::neu(
+            AnlageId(Uuid::nil()),
+            NeueAnlage::neu(
+                AnlageName::neu("Breitenstein").unwrap(),
+                AnlageAdresse::neu("Waldweg 1", "3100", "St. Pölten", Ländercode::AT).unwrap(),
+                AnlageKontakt::leer(),
+            ),
+        );
+        anlage.ziel_hinzufügen(ziel_id(10), name("Keiler"));
+        let parkour_id = ParkourId(Uuid::from_u128(7));
+        anlage
+            .parkour_hinzufügen(
+                parkour_id,
+                NeuerParkour::neu(
+                    name("Waldrunde"),
+                    vec![pflock(1, "#c0392b"), pflock(2, "#1b4f9c")],
+                    vec![
+                        Zielplatzierung::neu(
+                            ziel_id(10),
+                            vec![
+                                (PflockId(Uuid::from_u128(1)), Abstand::neu(20).unwrap()),
+                                (PflockId(Uuid::from_u128(2)), Abstand::neu(30).unwrap()),
+                            ],
+                        )
+                        .unwrap(),
+                    ],
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        (anlage, parkour_id)
     }
 
     #[test_log::test]
     fn snapshot_traegt_namen_ziele_und_abstaende() {
-        let snapshot = quelle().in_snapshot().unwrap();
-        assert_eq!(snapshot.parcours_name(), "Waldrunde");
+        let (anlage, parkour_id) = anlage();
+        let snapshot = snapshot(&anlage.into(), parkour_id).unwrap();
+        assert_eq!(snapshot.parkour_name().as_str(), "Waldrunde");
         assert_eq!(snapshot.pflöcke().len(), 2);
         assert_eq!(snapshot.pflöcke()[0].position(), 0);
         assert_eq!(snapshot.pflöcke()[1].position(), 1);
-        let ziel = snapshot.ziele()[0].clone();
-        assert_eq!(ziel.tiername(), "Keiler");
-        assert_eq!(ziel.zielgruppe(), 2);
-        assert_eq!(ziel.abstand_für("#c0392b"), Some(40));
-        assert_eq!(ziel.abstand_für("#1b4f9c"), None);
+
+        let ziel = &snapshot.ziele()[0];
+        assert_eq!(ziel.tiername().as_str(), "Keiler");
+        assert_eq!(ziel.zielnummer().get(), 1);
+        assert_eq!(
+            ziel.abstand_für(Farbe::neu("#c0392b").unwrap()),
+            Some(Abstand::neu(20).unwrap())
+        );
+        assert_eq!(
+            ziel.abstand_für(Farbe::neu("#1b4f9c").unwrap()),
+            Some(Abstand::neu(30).unwrap())
+        );
     }
 
     #[test_log::test]
-    fn snapshot_enthält_nur_platzierte_ziele() {
-        let snapshot = quelle().in_snapshot().unwrap();
-        assert!(snapshot.enthält(ZielId(Uuid::from_u128(10))));
-        assert!(!snapshot.enthält(ZielId(Uuid::from_u128(11))));
+    fn snapshot_enthaelt_nur_platzierte_ziele() {
+        let (anlage, parkour_id) = anlage();
+        let snapshot = snapshot(&anlage.into(), parkour_id).unwrap();
+        assert!(snapshot.enthält(ziel_id(10)));
+        assert!(!snapshot.enthält(ziel_id(11)));
     }
 
     #[test_log::test]
-    fn leerer_name_wird_abgelehnt() {
-        let ergebnis = ParcoursSnapshot::neu(ParcoursId(Uuid::nil()), "  ", Vec::new(), Vec::new());
-        assert!(matches!(ergebnis, Err(SnapshotFehler::ParcoursNameLeer)));
+    fn unbekannter_parkour_wird_abgelehnt() {
+        let (anlage, _) = anlage();
+        let ergebnis = snapshot(&anlage.into(), ParkourId(Uuid::from_u128(99)));
+        assert!(matches!(
+            ergebnis,
+            Err(SnapshotFehler::ParkourNichtGefunden)
+        ));
     }
 
     #[test_log::test]
     fn from_parts_roundtrip() {
-        let original = quelle().in_snapshot().unwrap();
-        let geladen = ParcoursSnapshot::from_parts(
-            original.parcours_id().0,
-            original.parcours_name().to_owned(),
-            original
-                .pflöcke()
-                .iter()
-                .map(|pflock| (pflock.farbe().to_owned(), pflock.position()))
-                .collect(),
-            original
-                .ziele()
-                .iter()
-                .map(|ziel| {
-                    (
-                        ziel.ziel_id().0,
-                        ziel.tiername().to_owned(),
-                        ziel.zielgruppe(),
-                        ziel.abstände().to_vec(),
-                    )
-                })
-                .collect(),
-        )
-        .unwrap();
+        let (anlage, parkour_id) = anlage();
+        let original = snapshot(&anlage.into(), parkour_id).unwrap();
+        let geladen = ParkourSnapshot::from_parts(
+            original.parkour_id(),
+            original.parkour_name().clone(),
+            original.pflöcke().to_vec(),
+            original.ziele().to_vec(),
+        );
         assert_eq!(original, geladen);
+        assert_eq!(geladen.ziele()[0].zielnummer().get(), 1);
+        assert_eq!(geladen.pflöcke()[0].position(), 0);
+    }
+
+    #[test_log::test]
+    fn archivistand_bleibt_im_snapshot_unberuehrt() {
+        let (mut anlage, parkour_id) = anlage();
+        let snapshot = snapshot(&anlage.clone().into(), parkour_id).unwrap();
+        anlage.ziel_archivieren(ziel_id(10)).unwrap();
+        assert_eq!(
+            snapshot.ziele()[0].tiername().as_str(),
+            "Keiler",
+            "ein archiviertes Ziel bleibt im gefrorenen Snapshot"
+        );
+        assert_eq!(snapshot.ziele()[0].zielnummer().get(), 1);
+        let _ = Zustand::Aktiv;
     }
 }

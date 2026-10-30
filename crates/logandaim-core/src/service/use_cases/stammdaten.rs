@@ -1,15 +1,8 @@
-//! Master data: the `Anlage` and everything it owns, plus the authority to maintain it.
+//! Master data: the `Anlage` and everything it owns.
 //!
-//! Every use case decides authorisation itself, from the `Benutzer` and the `Anlage` it
-//! loads (NFR-2, SPEC-konto rule 17). The predicates in [`crate::service::access`] are the
-//! whole permission model: no table, no middleware, no role string handed in by an endpoint.
-//! They live there, not here, because a read the API facade runs inline must answer the same
-//! question the same way a write does.
-//!
-//! Removal follows AC-11/AC-12: master data still referenced by a logged or in-progress Runde
-//! is archived, never destroyed; master data with no reference is deleted outright. Archiving
-//! is a domain mutation, so the decision is a pure index lookup followed by `update` on the
-//! root aggregate.
+//! Writes authorise themselves from the loaded `Benutzer` and `Anlage` (SPEC-konto rule 17);
+//! reads run inline in the API facade. Removal archives what history references and deletes
+//! the rest (AC-11/AC-12).
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
@@ -20,9 +13,8 @@ use crate::{
     application::{ExecutionContext, uow::Versioned},
     domain::{
         Anlage, AnlageAdresse, AnlageAktiv, AnlageFehler, AnlageId, AnlageKontakt, AnlageName,
-        AnlageVerwaltungRolle, NeueAnlage, NeuerParcours, NeuesZiel, Parcours, ParcoursFehler,
-        ParcoursId, ParcoursName, Pflock, Tiername, ZielFehler, ZielId, Zielgruppe,
-        Zielplatzierung, Zielverwendung, konto::BenutzerId,
+        AnlageVerwaltungRolle, NeueAnlage, NeuerParkour, NonEmptyString, Parkour, ParkourFehler,
+        ParkourId, Pflock, ZielFehler, ZielId, Zielplatzierung, Zielverwendung, konto::BenutzerId,
     },
     service::{
         UseCase, anlage_laden, anmeldung, benutzer_laden, darf_anlage_verwalten,
@@ -35,9 +27,6 @@ use crate::{
 // ---------------------------------------------------------------------------------------
 
 /// The refusals of every master-data write.
-///
-/// Each variant has exactly one HTTP meaning (401, 403, 400, 404, 409), mapped in
-/// `logandaim-api/src/errors/http_status.rs`.
 #[derive(Debug, thiserror::Error)]
 pub enum StammdatenFehler {
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
@@ -68,8 +57,8 @@ impl From<AnlageFehler> for StammdatenFehler {
     }
 }
 
-impl From<ParcoursFehler> for StammdatenFehler {
-    fn from(_: ParcoursFehler) -> Self {
+impl From<ParkourFehler> for StammdatenFehler {
+    fn from(_: ParkourFehler) -> Self {
         Self::UngültigeAnfrage
     }
 }
@@ -80,7 +69,7 @@ impl From<ZielFehler> for StammdatenFehler {
     }
 }
 
-/// Load an Anlage that must still be active, or report 404 / 409.
+/// Load an Anlage that must still be active, or `Archiviert`.
 async fn aktive_anlage(
     uow: &crate::application::uow::UnitOfWork<'_>,
     anlage_id: AnlageId,
@@ -126,7 +115,7 @@ async fn berechtigt_für_masterdaten(
     let benutzer_id = anmeldung(ctx)?;
     let benutzer = benutzer_laden(uow, benutzer_id).await?;
     let anlage = aktive_anlage(uow, anlage_id).await?;
-    if !darf_masterdaten_pflegen(&benutzer, &anlage, benutzer_id) {
+    if !darf_masterdaten_pflegen(&benutzer, &anlage) {
         return Err(Report::new(StammdatenFehler::NichtErlaubt));
     }
     Ok((benutzer_id, anlage))
@@ -141,7 +130,7 @@ async fn berechtigt_für_anlage(
     let benutzer_id = anmeldung(ctx)?;
     let benutzer = benutzer_laden(uow, benutzer_id).await?;
     let anlage = aktive_anlage(uow, anlage_id).await?;
-    if !darf_anlage_verwalten(&benutzer, &anlage, benutzer_id) {
+    if !darf_anlage_verwalten(&benutzer, &anlage) {
         return Err(Report::new(StammdatenFehler::NichtErlaubt));
     }
     Ok(benutzer_id)
@@ -155,7 +144,7 @@ async fn berechtigt_für_anlage(
 #[derive(Debug, Clone)]
 pub struct AnlageAnsicht {
     pub anlage: Anlage,
-    /// One entry per Ziel, listing every Parcours that currently places it.
+    /// One entry per Ziel, listing every Parkour that currently places it.
     pub zielverwendungen: Vec<(ZielId, Vec<Zielverwendung>)>,
 }
 
@@ -174,9 +163,9 @@ impl AnlageAnsicht {
     }
 }
 
-/// One row of the admin list, with the caller's role so the UI can gate its controls.
+/// One Anlage together with the caller's access to it, so a client can gate its controls.
 #[derive(Debug, Clone)]
-pub struct AnlagenZeile {
+pub struct AnlageZugriff {
     pub anlage: Anlage,
     pub rolle: Option<AnlageVerwaltungRolle>,
     pub ist_systemadministrator: bool,
@@ -422,8 +411,7 @@ impl UseCase<Anlage> for AnlageVerwaltungEntziehen {
 #[derive(Debug, Clone)]
 pub struct ZielHinzufügen {
     pub anlage_id: AnlageId,
-    pub tiername: Tiername,
-    pub zielgruppe: Zielgruppe,
+    pub tiername: NonEmptyString,
 }
 
 #[async_trait]
@@ -438,9 +426,9 @@ impl UseCase<Anlage> for ZielHinzufügen {
 
         let ergebnis = async {
             berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let neu = NeuesZiel::neu(self.tiername, self.zielgruppe);
+            let tiername = self.tiername;
             aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                aktiv.ziel_hinzufügen(ZielId(Uuid::new_v4()), neu);
+                aktiv.ziel_hinzufügen(ZielId(Uuid::new_v4()), tiername);
                 Ok(())
             })
             .await
@@ -451,13 +439,12 @@ impl UseCase<Anlage> for ZielHinzufügen {
     }
 }
 
-/// Edit a Ziel's animal name and target group. Its identity does not change (AC-5).
+/// Edit a Ziel's animal name. Its identity and its ordinal do not change (AC-5).
 #[derive(Debug, Clone)]
 pub struct ZielÄndern {
     pub anlage_id: AnlageId,
     pub ziel_id: ZielId,
-    pub tiername: Tiername,
-    pub zielgruppe: Zielgruppe,
+    pub tiername: NonEmptyString,
 }
 
 #[async_trait]
@@ -472,10 +459,10 @@ impl UseCase<Anlage> for ZielÄndern {
 
         let ergebnis = async {
             berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let (ziel_id, tiername, zielgruppe) = (self.ziel_id, self.tiername, self.zielgruppe);
+            let (ziel_id, tiername) = (self.ziel_id, self.tiername);
             aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
                 aktiv
-                    .ziel_ändern(ziel_id, tiername, zielgruppe)
+                    .ziel_ändern(ziel_id, tiername)
                     .change_context(StammdatenFehler::UngültigeAnfrage)?;
                 Ok(())
             })
@@ -496,8 +483,7 @@ impl UseCase<Anlage> for ZielÄndern {
 pub struct ZielErsetzen {
     pub anlage_id: AnlageId,
     pub ziel_id: ZielId,
-    pub tiername: Tiername,
-    pub zielgruppe: Zielgruppe,
+    pub tiername: NonEmptyString,
 }
 
 #[async_trait]
@@ -512,11 +498,11 @@ impl UseCase<Anlage> for ZielErsetzen {
 
         let ergebnis = async {
             berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let (ziel_id, tiername, zielgruppe) = (self.ziel_id, self.tiername, self.zielgruppe);
+            let (ziel_id, tiername) = (self.ziel_id, self.tiername);
             aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
                 let neu = ZielId(Uuid::new_v4());
                 aktiv
-                    .ziel_ersetzen(ziel_id, neu, NeuesZiel::neu(tiername, zielgruppe))
+                    .ziel_ersetzen(ziel_id, neu, tiername)
                     .change_context(StammdatenFehler::UngültigeAnfrage)?;
                 Ok(())
             })
@@ -575,20 +561,20 @@ impl UseCase<Anlage> for ZielEntfernen {
 }
 
 // ---------------------------------------------------------------------------------------
-// Parcours
+// Parkour
 // ---------------------------------------------------------------------------------------
 
-/// Add a Parcours with its Pflock setup and route (FR-3, AC-4, AC-6).
+/// Add a Parkour with its Pflock setup and route (FR-3, AC-4, AC-6).
 #[derive(Debug, Clone)]
-pub struct ParcoursHinzufügen {
+pub struct ParkourHinzufügen {
     pub anlage_id: AnlageId,
-    pub name: ParcoursName,
+    pub name: NonEmptyString,
     pub pflöcke: Vec<Pflock>,
     pub platzierungen: Vec<Zielplatzierung>,
 }
 
 #[async_trait]
-impl UseCase<Anlage> for ParcoursHinzufügen {
+impl UseCase<Anlage> for ParkourHinzufügen {
     type Error = Report<StammdatenFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
@@ -599,11 +585,11 @@ impl UseCase<Anlage> for ParcoursHinzufügen {
 
         let ergebnis = async {
             berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let neu = NeuerParcours::neu(self.name, self.pflöcke, self.platzierungen)
+            let neu = NeuerParkour::neu(self.name, self.pflöcke, self.platzierungen)
                 .change_context(StammdatenFehler::UngültigeAnfrage)?;
             aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
                 aktiv
-                    .parcours_hinzufügen(ParcoursId(Uuid::new_v4()), neu)
+                    .parkour_hinzufügen(ParkourId(Uuid::new_v4()), neu)
                     .change_context(StammdatenFehler::UngültigeAnfrage)?;
                 Ok(())
             })
@@ -615,19 +601,19 @@ impl UseCase<Anlage> for ParcoursHinzufügen {
     }
 }
 
-/// Replace a Parcours' whole shooting setup (FR-3, AC-6/AC-7).
+/// Replace a Parkour' whole shooting setup (FR-3, AC-6/AC-7).
 ///
 /// Only master data changes: an existing Runde keeps its captured snapshot (NFR-3).
 #[derive(Debug, Clone)]
-pub struct ParcoursSetupÄndern {
+pub struct ParkourSetupÄndern {
     pub anlage_id: AnlageId,
-    pub parcours_id: ParcoursId,
+    pub parkour_id: ParkourId,
     pub pflöcke: Vec<Pflock>,
     pub platzierungen: Vec<Zielplatzierung>,
 }
 
 #[async_trait]
-impl UseCase<Anlage> for ParcoursSetupÄndern {
+impl UseCase<Anlage> for ParkourSetupÄndern {
     type Error = Report<StammdatenFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
@@ -638,11 +624,11 @@ impl UseCase<Anlage> for ParcoursSetupÄndern {
 
         let ergebnis = async {
             berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let (parcours_id, pflöcke, platzierungen) =
-                (self.parcours_id, self.pflöcke, self.platzierungen);
+            let (parkour_id, pflöcke, platzierungen) =
+                (self.parkour_id, self.pflöcke, self.platzierungen);
             aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
                 aktiv
-                    .parcours_setup_ändern(parcours_id, pflöcke, platzierungen)
+                    .parkour_setup_ändern(parkour_id, pflöcke, platzierungen)
                     .change_context(StammdatenFehler::UngültigeAnfrage)?;
                 Ok(())
             })
@@ -654,16 +640,16 @@ impl UseCase<Anlage> for ParcoursSetupÄndern {
     }
 }
 
-/// Rename a Parcours. Its identity, and every snapshot naming it, stay unchanged.
+/// Rename a Parkour. Its identity, and every snapshot naming it, stay unchanged.
 #[derive(Debug, Clone)]
-pub struct ParcoursUmbenennen {
+pub struct ParkourUmbenennen {
     pub anlage_id: AnlageId,
-    pub parcours_id: ParcoursId,
-    pub name: ParcoursName,
+    pub parkour_id: ParkourId,
+    pub name: NonEmptyString,
 }
 
 #[async_trait]
-impl UseCase<Anlage> for ParcoursUmbenennen {
+impl UseCase<Anlage> for ParkourUmbenennen {
     type Error = Report<StammdatenFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
@@ -674,10 +660,10 @@ impl UseCase<Anlage> for ParcoursUmbenennen {
 
         let ergebnis = async {
             berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let (parcours_id, name) = (self.parcours_id, self.name);
+            let (parkour_id, name) = (self.parkour_id, self.name);
             aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
                 aktiv
-                    .parcours_umbenennen(parcours_id, name)
+                    .parkour_umbenennen(parkour_id, name)
                     .change_context(StammdatenFehler::UngültigeAnfrage)?;
                 Ok(())
             })
@@ -689,15 +675,15 @@ impl UseCase<Anlage> for ParcoursUmbenennen {
     }
 }
 
-/// Remove a Parcours: archive it when a Runde captured it, delete it when none did.
+/// Remove a Parkour: archive it when a Runde captured it, delete it when none did.
 #[derive(Debug, Clone)]
-pub struct ParcoursEntfernen {
+pub struct ParkourEntfernen {
     pub anlage_id: AnlageId,
-    pub parcours_id: ParcoursId,
+    pub parkour_id: ParkourId,
 }
 
 #[async_trait]
-impl UseCase<Anlage> for ParcoursEntfernen {
+impl UseCase<Anlage> for ParkourEntfernen {
     type Error = Report<StammdatenFehler>;
 
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
@@ -710,19 +696,19 @@ impl UseCase<Anlage> for ParcoursEntfernen {
             berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
             let referenziert = uow
                 .runden()
-                .exists_referencing_parcours(self.parcours_id)
+                .exists_referencing_parkour(self.parkour_id)
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(StammdatenFehler::AnlageLaden)?;
-            let parcours_id = self.parcours_id;
+            let parkour_id = self.parkour_id;
             aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
                 if referenziert {
                     aktiv
-                        .parcours_archivieren(parcours_id)
+                        .parkour_archivieren(parkour_id)
                         .change_context(StammdatenFehler::UngültigeAnfrage)
                 } else {
                     aktiv
-                        .parcours_entfernen(parcours_id)
+                        .parkour_entfernen(parkour_id)
                         .change_context(StammdatenFehler::UngültigeAnfrage)
                 }
             })
@@ -734,24 +720,24 @@ impl UseCase<Anlage> for ParcoursEntfernen {
     }
 }
 
-/// Public read model: one active Parcours with its Anlage, for selecting a Runde.
+/// Public read model: one active Parkour with its Anlage, for selecting a Runde.
 #[derive(Debug, Clone)]
-pub struct ParcoursÖffentlich {
+pub struct ParkourÖffentlich {
     pub anlage_id: AnlageId,
     pub anlage_name: AnlageName,
-    pub parcours: Parcours,
+    pub parkour: Parkour,
 }
 
-/// One active Parcours as the public Anlagen directory names it.
+/// One active Parkour as the public Anlagen directory names it.
 #[derive(Debug, Clone)]
-pub struct ParcoursKurz {
-    pub id: ParcoursId,
-    pub name: ParcoursName,
+pub struct ParkourKurz {
+    pub id: ParkourId,
+    pub name: NonEmptyString,
     pub anzahl_pflöcke: usize,
     pub anzahl_ziele: usize,
 }
 
-/// One active Anlage in the public directory: where it is, and which Parcours it offers.
+/// One active Anlage in the public directory: where it is, and which Parkour it offers.
 ///
 /// Deliberately no contact data: email and phone are personal data, and no spec approved
 /// publishing them.
@@ -761,5 +747,5 @@ pub struct AnlageÖffentlich {
     pub name: AnlageName,
     pub ort: String,
     pub ländercode: crate::domain::Ländercode,
-    pub parcours: Vec<ParcoursKurz>,
+    pub parkour: Vec<ParkourKurz>,
 }

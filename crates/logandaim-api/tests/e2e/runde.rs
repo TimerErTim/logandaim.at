@@ -11,9 +11,9 @@ use uuid::Uuid;
 
 use super::{E2eHarness, befördere_zum_systemadministrator, neuer_benutzer};
 
-/// A Systemadministrator's token plus one Anlage with a Ziel and a Parcours:
-/// `(admin, anlage_id, ziel_id, parcours_id)`.
-async fn anlage_mit_parcours(harness: &E2eHarness) -> (String, String, String, String) {
+/// A Systemadministrator's token plus one Anlage with a Ziel and a Parkour:
+/// `(admin, anlage_id, ziel_id, parkour_id)`.
+async fn anlage_mit_parkour(harness: &E2eHarness) -> (String, String, String, String) {
     let (admin, _) = neuer_benutzer(harness, "admin@muster.at").await;
     befördere_zum_systemadministrator(harness, "admin@muster.at").await;
 
@@ -41,7 +41,7 @@ async fn anlage_mit_parcours(harness: &E2eHarness) -> (String, String, String, S
         .client
         .post_json_auth(
             &format!("/api/anlagen/{anlage_id}/ziele"),
-            json!({ "tiername": "Keiler", "zielgruppe": 2 }),
+            json!({ "tiername": "Keiler" }),
             &admin,
         )
         .await;
@@ -52,7 +52,7 @@ async fn anlage_mit_parcours(harness: &E2eHarness) -> (String, String, String, S
     let (status, anlage) = harness
         .client
         .post_json_auth(
-            &format!("/api/anlagen/{anlage_id}/parcours"),
+            &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Waldrunde",
                 "pflöcke": [{ "id": weit, "farbe": "#c0392b" }],
@@ -67,18 +67,18 @@ async fn anlage_mit_parcours(harness: &E2eHarness) -> (String, String, String, S
     assert_eq!(
         status,
         StatusCode::OK,
-        "der Parcours wird angelegt: {anlage}"
+        "der Parkour wird angelegt: {anlage}"
     );
-    let parcours_id = anlage["parcours"][0]["id"].as_str().expect("id").to_owned();
+    let parkour_id = anlage["parkour"][0]["id"].as_str().expect("id").to_owned();
 
-    (admin, anlage_id, ziel_id, parcours_id)
+    (admin, anlage_id, ziel_id, parkour_id)
 }
 
 /// Start a Runde for `bearer` and return its id.
-async fn runde_starten(harness: &E2eHarness, bearer: &str, parcours_id: &str) -> String {
+async fn runde_starten(harness: &E2eHarness, bearer: &str, parkour_id: &str) -> String {
     let (status, body) = harness
         .client
-        .post_json_auth("/api/runden", json!({ "parcoursId": parcours_id }), bearer)
+        .post_json_auth("/api/runden", json!({ "parkourId": parkour_id }), bearer)
         .await;
     assert_eq!(status, StatusCode::OK, "AC-7: die Runde startet: {body}");
     body["id"].as_str().expect("id im Body").to_owned()
@@ -108,17 +108,17 @@ async fn schuss(
 #[test_log::test(pollster::test)]
 async fn ac7_eine_runde_startet_nur_angemeldet() {
     let harness = E2eHarness::new().await;
-    let (_, _, _, parcours_id) = anlage_mit_parcours(&harness).await;
+    let (_, _, _, parkour_id) = anlage_mit_parkour(&harness).await;
 
     let (status, _) = harness
         .client
-        .post_json("/api/runden", json!({ "parcoursId": parcours_id }))
+        .post_json("/api/runden", json!({ "parkourId": parkour_id }))
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "AC-7: 401 ohne Token");
 }
 
 #[test_log::test(pollster::test)]
-async fn ac7_ein_unbekannter_parcours_antwortet_404() {
+async fn ac7_ein_unbekannter_parkour_antwortet_404() {
     let harness = E2eHarness::new().await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
 
@@ -126,48 +126,44 @@ async fn ac7_ein_unbekannter_parcours_antwortet_404() {
         .client
         .post_json_auth(
             "/api/runden",
-            json!({ "parcoursId": Uuid::new_v4() }),
+            json!({ "parkourId": Uuid::new_v4() }),
             &benutzer,
         )
         .await;
     assert_eq!(
         status,
         StatusCode::NOT_FOUND,
-        "AC-7: 404 für einen fremden Parcours"
+        "AC-7: 404 für einen fremden Parkour"
     );
 }
 
 #[test_log::test(pollster::test)]
-async fn ac7_ein_archivierter_parcours_startet_keine_runde() {
+async fn ac7_ein_archivierter_parkour_startet_keine_runde() {
     let harness = E2eHarness::new().await;
-    let (admin, anlage_id, _, parcours_id) = anlage_mit_parcours(&harness).await;
+    let (admin, anlage_id, _, parkour_id) = anlage_mit_parkour(&harness).await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
 
-    // Reference it first: an unreferenced Parcours would be deleted outright (AC-12), and a
+    // Reference it first: an unreferenced Parkour would be deleted outright (AC-12), and a
     // deleted one is 404, not the 409 an archived one gives.
-    let _ = runde_starten(&harness, &admin, &parcours_id).await;
+    let _ = runde_starten(&harness, &admin, &parkour_id).await;
 
     let (status, _) = harness
         .client
         .delete_auth(
-            &format!("/api/anlagen/{anlage_id}/parcours/{parcours_id}"),
+            &format!("/api/anlagen/{anlage_id}/parkour/{parkour_id}"),
             &admin,
         )
         .await;
-    assert_eq!(status, StatusCode::OK, "der Parcours wird entfernt");
+    assert_eq!(status, StatusCode::OK, "der Parkour wird entfernt");
 
     let (status, _) = harness
         .client
-        .post_json_auth(
-            "/api/runden",
-            json!({ "parcoursId": parcours_id }),
-            &benutzer,
-        )
+        .post_json_auth("/api/runden", json!({ "parkourId": parkour_id }), &benutzer)
         .await;
     assert_eq!(
         status,
         StatusCode::CONFLICT,
-        "AC-7: ein archivierter Parcours startet nicht"
+        "AC-7: ein archivierter Parkour startet nicht"
     );
 }
 
@@ -176,9 +172,9 @@ async fn ac7_ein_archivierter_parcours_startet_keine_runde() {
 #[test_log::test(pollster::test)]
 async fn ac9_ein_schuss_ausserhalb_des_snapshots_antwortet_409() {
     let harness = E2eHarness::new().await;
-    let (_, _, _, parcours_id) = anlage_mit_parcours(&harness).await;
+    let (_, _, _, parkour_id) = anlage_mit_parkour(&harness).await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
-    let runde_id = runde_starten(&harness, &benutzer, &parcours_id).await;
+    let runde_id = runde_starten(&harness, &benutzer, &parkour_id).await;
 
     let (status, _) = schuss(
         &harness,
@@ -199,9 +195,9 @@ async fn ac9_ein_schuss_ausserhalb_des_snapshots_antwortet_409() {
 #[test_log::test(pollster::test)]
 async fn ac9_pfeil_null_ist_bad_request() {
     let harness = E2eHarness::new().await;
-    let (_, _, ziel_id, parcours_id) = anlage_mit_parcours(&harness).await;
+    let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
-    let runde_id = runde_starten(&harness, &benutzer, &parcours_id).await;
+    let runde_id = runde_starten(&harness, &benutzer, &parkour_id).await;
 
     let (status, _) = schuss(&harness, &benutzer, &runde_id, &ziel_id, 0, "Kill").await;
     assert_eq!(
@@ -214,10 +210,10 @@ async fn ac9_pfeil_null_ist_bad_request() {
 #[test_log::test(pollster::test)]
 async fn ac9_ein_schuss_in_eine_fremde_runde_antwortet_403() {
     let harness = E2eHarness::new().await;
-    let (admin, _, ziel_id, parcours_id) = anlage_mit_parcours(&harness).await;
+    let (admin, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (eigner, _) = neuer_benutzer(&harness, "anna@muster.at").await;
     let (fremder, _) = neuer_benutzer(&harness, "bea@muster.at").await;
-    let runde_id = runde_starten(&harness, &eigner, &parcours_id).await;
+    let runde_id = runde_starten(&harness, &eigner, &parkour_id).await;
 
     let (status, _) = schuss(&harness, &fremder, &runde_id, &ziel_id, 1, "Kill").await;
     assert_eq!(
@@ -248,9 +244,9 @@ async fn ac9_ein_schuss_in_eine_fremde_runde_antwortet_403() {
 #[test_log::test(pollster::test)]
 async fn ac9_eine_runde_zeigt_beide_wertungen_und_den_snapshot() {
     let harness = E2eHarness::new().await;
-    let (_, _, ziel_id, parcours_id) = anlage_mit_parcours(&harness).await;
+    let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
-    let runde_id = runde_starten(&harness, &benutzer, &parcours_id).await;
+    let runde_id = runde_starten(&harness, &benutzer, &parkour_id).await;
 
     for (pfeil, zone) in [(1, "Kill"), (2, "Kill"), (3, "Spot")] {
         let (status, body) = schuss(&harness, &benutzer, &runde_id, &ziel_id, pfeil, zone).await;
@@ -268,26 +264,26 @@ async fn ac9_eine_runde_zeigt_beide_wertungen_und_den_snapshot() {
     );
 
     // The snapshot, not current master data.
-    assert_eq!(body["parcoursName"], "Waldrunde");
+    assert_eq!(body["parkourName"], "Waldrunde");
     assert_eq!(body["pflöcke"][0]["farbe"], "#c0392b");
 
     // Both Wertungen folded at the one Ziel and over the whole Runde.
     let ziel = &body["ziele"][0];
-    assert_eq!(ziel["ergebnis"]["ersterTreffer"], 18);
-    assert_eq!(ziel["ergebnis"]["mehrschuss"], 38);
-    assert_eq!(ziel["ergebnis"]["ersterPfeilGetroffen"], true);
-    assert_eq!(ziel["ergebnis"]["anzahlSchüsse"], 3);
+    assert_eq!(ziel["wertung"]["ersterTreffer"], 18);
+    assert_eq!(ziel["wertung"]["mehrschuss"], 38);
+    assert_eq!(ziel["wertung"]["ersterPfeilGetroffen"], true);
+    assert_eq!(ziel["wertung"]["anzahlSchüsse"], 3);
     assert_eq!(body["gesamtErsterTreffer"], 18);
     assert_eq!(body["gesamtMehrschuss"], 38);
-    assert_eq!(body["zieleMitErgebnis"], 1);
+    assert_eq!(body["zieleMitWertung"], 1);
 }
 
 #[test_log::test(pollster::test)]
 async fn ac9_eine_beendete_runde_nimmt_keinen_schuss_mehr_an() {
     let harness = E2eHarness::new().await;
-    let (_, _, ziel_id, parcours_id) = anlage_mit_parcours(&harness).await;
+    let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
-    let runde_id = runde_starten(&harness, &benutzer, &parcours_id).await;
+    let runde_id = runde_starten(&harness, &benutzer, &parkour_id).await;
 
     let (status, body) = harness
         .client
@@ -317,19 +313,19 @@ async fn ac9_eine_beendete_runde_nimmt_keinen_schuss_mehr_an() {
 #[test_log::test(pollster::test)]
 async fn ac9_die_rundenliste_zeigt_nur_eigene_runden() {
     let harness = E2eHarness::new().await;
-    let (_, _, _, parcours_id) = anlage_mit_parcours(&harness).await;
+    let (_, _, _, parkour_id) = anlage_mit_parkour(&harness).await;
     let (anna, _) = neuer_benutzer(&harness, "anna@muster.at").await;
     let (bea, _) = neuer_benutzer(&harness, "bea@muster.at").await;
 
-    let annas = runde_starten(&harness, &anna, &parcours_id).await;
-    let _ = runde_starten(&harness, &bea, &parcours_id).await;
+    let annas = runde_starten(&harness, &anna, &parkour_id).await;
+    let _ = runde_starten(&harness, &bea, &parkour_id).await;
 
     let (status, body) = harness.client.get_json_auth("/api/runden", &anna).await;
     assert_eq!(status, StatusCode::OK);
     let runden = body.as_array().expect("die Antwort ist eine Liste");
     assert_eq!(runden.len(), 1, "AC-13: nur die eigene Runde");
     assert_eq!(runden[0]["id"], annas);
-    assert_eq!(runden[0]["parcoursName"], "Waldrunde");
+    assert_eq!(runden[0]["parkourName"], "Waldrunde");
 }
 
 // ------------------------------------------------------------------------- 404, Liste
@@ -337,7 +333,7 @@ async fn ac9_die_rundenliste_zeigt_nur_eigene_runden() {
 #[test_log::test(pollster::test)]
 async fn eine_unbekannte_runde_antwortet_404() {
     let harness = E2eHarness::new().await;
-    let (admin, _, _, _) = anlage_mit_parcours(&harness).await;
+    let (admin, _, _, _) = anlage_mit_parkour(&harness).await;
 
     let (status, _) = harness
         .client
@@ -353,12 +349,12 @@ async fn eine_unbekannte_runde_antwortet_404() {
 #[test_log::test(pollster::test)]
 async fn die_rundenliste_zeigt_die_eigenen_runden_neueste_zuerst() {
     let harness = E2eHarness::new().await;
-    let (_, _, _, parcours_id) = anlage_mit_parcours(&harness).await;
+    let (_, _, _, parkour_id) = anlage_mit_parkour(&harness).await;
     let (anna, _) = neuer_benutzer(&harness, "anna@muster.at").await;
 
-    let erste = runde_starten(&harness, &anna, &parcours_id).await;
+    let erste = runde_starten(&harness, &anna, &parkour_id).await;
     harness.vorspulen(chrono::Duration::minutes(5));
-    let zweite = runde_starten(&harness, &anna, &parcours_id).await;
+    let zweite = runde_starten(&harness, &anna, &parkour_id).await;
 
     let (status, body) = harness.client.get_json_auth("/api/runden", &anna).await;
     assert_eq!(status, StatusCode::OK);

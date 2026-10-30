@@ -65,16 +65,16 @@ export function useAnlageQuery(id: string | null) {
 }
 
 /** AC-13: no sign-in needed, so this one runs for every visitor. */
-export function useParcoursQuery() {
+export function useParkourQuery() {
   const { api } = useLogandaimApi();
   return useQuery({
-    queryKey: logandaimKeys.parcours.all(),
-    queryFn: () => api.parcoursAnzeigen(),
+    queryKey: logandaimKeys.parkour.all(),
+    queryFn: () => api.parkourAnzeigen(),
   });
 }
 
 /**
- * The public Anlagen directory. Public like the Parcours list, so it deliberately has
+ * The public Anlagen directory. Public like the Parkour list, so it deliberately has
  * no `enabled` gate on `useAuth`: a guest reads it, and a signed-in visitor does not
  * refetch it when the session changes.
  */

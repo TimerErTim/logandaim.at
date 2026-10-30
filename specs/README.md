@@ -34,7 +34,7 @@ The original PRD is **input**, not approved scope. Approved scope lives in
 ## Language
 
 Specs are written in English. Domain terms use the German ubiquitous language
-(`Anlage`, `Parcours`, `Ziel`, `Pflock`, `Runde`, `Schuss`, `Wertung`), matching code, API, and UI.
+(`Anlage`, `Parkour`, `Ziel`, `Pflock`, `Runde`, `Schuss`, `Wertung`), matching code, API, and UI.
 
 ## Lifecycle
 

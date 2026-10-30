@@ -13,9 +13,9 @@ export const logandaimKeys = {
         email,
       ] as const,
   },
-  parcours: {
+  parkour: {
     /** The public list (AC-13). */
-    all: () => [...logandaimKeys.root, "parcours"] as const,
+    all: () => [...logandaimKeys.root, "parkour"] as const,
   },
   anlagenVerzeichnis: {
     /** The public Anlagen directory: readable without a session. */

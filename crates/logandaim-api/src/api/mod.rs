@@ -18,30 +18,33 @@ use error_stack::{IntoReport, Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
-    domain::{AnlageId, EmailAdresse, ParcoursId, RundeId, ZielId, konto::BenutzerId},
+    domain::{AnlageId, EmailAdresse, ParkourId, RundeId, ZielId, konto::BenutzerId},
     ports::{ClientKey, ThrottleAction},
     service::{
         Abmeldung, AbmeldungFehler, AnlageAnsicht, AnlageBeschreibendeDatenÄndern,
         AnlageDeaktivieren, AnlageVerwaltungEntziehen, AnlageVerwaltungGewähren,
-        AnlageVerwaltungÄndern, AnlagenZeile as AnlagenZeileAnsicht, AnlageÖffentlich, Anmeldung,
-        AnmeldungFehler, BenutzerLöschen, BenutzerLöschenFehler, Erneuerung, ErneuerungFehler,
-        ParcoursEntfernen, ParcoursHinzufügen, ParcoursKurz, ParcoursSetupÄndern,
-        ParcoursUmbenennen, ParcoursÖffentlich as ParcoursÖffentlichAnsicht, PasswortVergessen,
-        PasswortVergessenFehler, PasswortWiederherstellen, PasswortWiederherstellenFehler,
-        RegistrierungAbschliessenFehler, RegistrierungAbschließen, RegistrierungStarten,
-        RegistrierungStartenFehler, RundeAbschliessen, RundeAbschliessenFehler, RundeAnsicht,
-        RundeAnzeigenFehler, RundeStarten, RundeStartenFehler, RundenAnzeigenFehler,
-        SchussRegistrieren, SchussRegistrierenFehler, SessionAusgestellt, StammdatenFehler,
-        ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern, anlage_laden, anmeldung,
-        benutzer_laden, darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
-        ist_nicht_gefunden, runden_neueste_zuerst,
+        AnlageVerwaltungÄndern, AnlageZugriff as AnlageZugriffAnsicht,
+        AnlageÖffentlich as AnlageÖffentlichAnsicht, Anmeldung, AnmeldungFehler, BenutzerLöschen,
+        BenutzerLöschenFehler, Erneuerung, ErneuerungFehler, ParkourEntfernen, ParkourHinzufügen,
+        ParkourKurz as ParkourKurzAnsicht, ParkourSetupÄndern, ParkourUmbenennen,
+        ParkourÖffentlich as ParkourÖffentlichAnsicht, PasswortVergessen, PasswortVergessenFehler,
+        PasswortWiederherstellen, PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler,
+        RegistrierungAbschließen, RegistrierungStarten, RegistrierungStartenFehler,
+        RundeAbschliessen, RundeAbschliessenFehler, RundeAnsicht, RundeAnzeigenFehler,
+        RundeStarten, RundeStartenFehler, RundenAnzeigenFehler, SchussRegistrieren,
+        SchussRegistrierenFehler, SessionAusgestellt, StammdatenFehler, ZielEntfernen,
+        ZielErsetzen, ZielHinzufügen, ZielÄndern, anlage_laden, anmeldung, benutzer_laden,
+        darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen, ist_nicht_gefunden,
+        runden_neueste_zuerst,
     },
 };
 use tracing::warn;
 
 pub mod requests;
 
-use crate::schema::{Anlage, AnlagenZeile, ParcoursÖffentlich, Runde, RundenZeile, Schuss};
+use crate::schema::{
+    Anlage, AnlageZugriff, AnlageÖffentlich, Benutzer, ParkourÖffentlich, Runde, RundeBasic, Schuss,
+};
 
 #[derive(Clone)]
 pub struct LogandaimAppApi {
@@ -84,7 +87,7 @@ impl LogandaimAppApi {
     pub async fn anlagen_anzeigen(
         &self,
         auth: AuthContext,
-    ) -> ResultReport<Vec<AnlagenZeile>, StammdatenFehler> {
+    ) -> ResultReport<Vec<AnlageZugriff>, StammdatenFehler> {
         self.app
             .execute_fn(auth, async |ctx| {
                 let uow = ctx
@@ -116,7 +119,7 @@ impl LogandaimAppApi {
 
                     Ok(anlagen
                         .into_iter()
-                        .map(|anlage| AnlagenZeileAnsicht {
+                        .map(|anlage| AnlageZugriffAnsicht {
                             rolle: anlage.rolle_von(benutzer_id),
                             ist_systemadministrator,
                             anlage: anlage.into_data(),
@@ -149,7 +152,7 @@ impl LogandaimAppApi {
                     let benutzer_id = anmeldung(&ctx)?;
                     let benutzer = benutzer_laden(&uow, benutzer_id).await?;
                     let anlage = anlage_laden(&uow, anlage_id).await?;
-                    if !darf_masterdaten_pflegen(&benutzer, &anlage, benutzer_id)
+                    if !darf_masterdaten_pflegen(&benutzer, &anlage)
                         || !darf_anlage_lesen(&benutzer, &anlage)
                     {
                         return Err(Report::new(StammdatenFehler::NichtErlaubt));
@@ -278,63 +281,63 @@ impl LogandaimAppApi {
         Ok(anlage.into())
     }
 
-    // ---------------------------------------------------------------- Parcours
+    // ---------------------------------------------------------------- Parkour
 
-    pub async fn parcours_hinzufügen(
+    pub async fn parkour_hinzufügen(
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        anfrage: requests::ParcoursErstellungRequest,
+        anfrage: requests::ParkourErstellungRequest,
     ) -> ResultReport<Anlage, StammdatenFehler> {
-        let use_case: ParcoursHinzufügen = anfrage.in_use_case(anlage_id)?;
+        let use_case: ParkourHinzufügen = anfrage.in_use_case(anlage_id)?;
         let anlage = self.app.execute(auth, use_case).await?;
         Ok(anlage.into())
     }
 
-    pub async fn parcours_setup_ändern(
+    pub async fn parkour_setup_ändern(
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        parcours_id: ParcoursId,
-        anfrage: requests::ParcoursSetupRequest,
+        parkour_id: ParkourId,
+        anfrage: requests::ParkourSetupRequest,
     ) -> ResultReport<Anlage, StammdatenFehler> {
-        let use_case: ParcoursSetupÄndern = anfrage.in_use_case(anlage_id, parcours_id)?;
+        let use_case: ParkourSetupÄndern = anfrage.in_use_case(anlage_id, parkour_id)?;
         let anlage = self.app.execute(auth, use_case).await?;
         Ok(anlage.into())
     }
 
-    pub async fn parcours_umbenennen(
+    pub async fn parkour_umbenennen(
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        parcours_id: ParcoursId,
-        anfrage: requests::ParcoursUmbenennenRequest,
+        parkour_id: ParkourId,
+        anfrage: requests::ParkourUmbenennenRequest,
     ) -> ResultReport<Anlage, StammdatenFehler> {
-        let use_case: ParcoursUmbenennen = anfrage.in_use_case(anlage_id, parcours_id)?;
+        let use_case: ParkourUmbenennen = anfrage.in_use_case(anlage_id, parkour_id)?;
         let anlage = self.app.execute(auth, use_case).await?;
         Ok(anlage.into())
     }
 
     /// Archive when a Runde captured it, delete when none did (AC-11, AC-12).
-    pub async fn parcours_entfernen(
+    pub async fn parkour_entfernen(
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        parcours_id: ParcoursId,
+        parkour_id: ParkourId,
     ) -> ResultReport<Anlage, StammdatenFehler> {
-        let use_case = ParcoursEntfernen {
+        let use_case = ParkourEntfernen {
             anlage_id,
-            parcours_id,
+            parkour_id,
         };
         let anlage = self.app.execute(auth, use_case).await?;
         Ok(anlage.into())
     }
 
-    /// Every active Parcours of every active Anlage. Needs no identity (AC-13).
-    pub async fn parcours_anzeigen(
+    /// Every active Parkour of every active Anlage. Needs no identity (AC-13).
+    pub async fn parkour_anzeigen(
         &self,
         auth: AuthContext,
-    ) -> ResultReport<Vec<ParcoursÖffentlich>, StammdatenFehler> {
+    ) -> ResultReport<Vec<ParkourÖffentlich>, StammdatenFehler> {
         self.app
             .execute_fn(auth, async |ctx| {
                 let uow = ctx
@@ -352,14 +355,14 @@ impl LogandaimAppApi {
 
                     let mut offen = Vec::new();
                     for anlage in anlagen {
-                        for parcours in anlage.parcours() {
-                            if parcours.ist_archiviert() {
+                        for parkour in anlage.parkour() {
+                            if parkour.ist_archiviert() {
                                 continue;
                             }
-                            offen.push(ParcoursÖffentlichAnsicht {
+                            offen.push(ParkourÖffentlichAnsicht {
                                 anlage_id: anlage.id(),
                                 anlage_name: anlage.name().clone(),
-                                parcours: parcours.clone(),
+                                parkour: parkour.clone(),
                             });
                         }
                     }
@@ -373,13 +376,13 @@ impl LogandaimAppApi {
             .await
     }
 
-    /// The public Anlagen directory: active Anlagen with a short Parcours list.
+    /// The public Anlagen directory: active Anlagen with a short Parkour list.
     ///
     /// Needs no identity, and carries no contact data (see [`AnlageÖffentlich`]).
     pub async fn anlagen_verzeichnis(
         &self,
         auth: AuthContext,
-    ) -> ResultReport<Vec<crate::schema::AnlageÖffentlich>, StammdatenFehler> {
+    ) -> ResultReport<Vec<AnlageÖffentlich>, StammdatenFehler> {
         self.app
             .execute_fn(auth, async |ctx| {
                 let uow = ctx
@@ -398,23 +401,23 @@ impl LogandaimAppApi {
                     Ok(anlagen
                         .into_iter()
                         .map(|anlage| {
-                            let parcours = anlage
-                                .parcours()
+                            let parkour = anlage
+                                .parkour()
                                 .iter()
-                                .filter(|parcours| !parcours.ist_archiviert())
-                                .map(|parcours| ParcoursKurz {
-                                    id: parcours.id(),
-                                    name: parcours.name().clone(),
-                                    anzahl_pflöcke: parcours.pflöcke().len(),
-                                    anzahl_ziele: parcours.platzierungen().len(),
+                                .filter(|parkour| !parkour.ist_archiviert())
+                                .map(|parkour| ParkourKurzAnsicht {
+                                    id: parkour.id(),
+                                    name: parkour.name().clone(),
+                                    anzahl_pflöcke: parkour.pflöcke().len(),
+                                    anzahl_ziele: parkour.platzierungen().len(),
                                 })
                                 .collect();
-                            AnlageÖffentlich {
+                            AnlageÖffentlichAnsicht {
                                 anlage_id: anlage.id(),
                                 name: anlage.name().clone(),
                                 ort: anlage.adresse().ort().to_owned(),
                                 ländercode: anlage.adresse().ländercode(),
-                                parcours,
+                                parkour,
                             }
                             .into()
                         })
@@ -509,7 +512,7 @@ impl LogandaimAppApi {
     pub async fn runden_anzeigen(
         &self,
         auth: AuthContext,
-    ) -> ResultReport<Vec<RundenZeile>, RundenAnzeigenFehler> {
+    ) -> ResultReport<Vec<RundeBasic>, RundenAnzeigenFehler> {
         self.app
             .execute_fn(auth, async |ctx| {
                 let benutzer_id = ctx
@@ -680,7 +683,7 @@ impl LogandaimAppApi {
         auth: AuthContext,
         anlage_id: AnlageId,
         e_mail_adresse: String,
-    ) -> ResultReport<Vec<crate::schema::BenutzerSuchtreffer>, StammdatenFehler> {
+    ) -> ResultReport<Vec<Benutzer>, StammdatenFehler> {
         self.app
             .execute_fn(auth, async |ctx| {
                 let e_mail_adresse = EmailAdresse::normalisiert(e_mail_adresse)
@@ -719,7 +722,7 @@ impl LogandaimAppApi {
                             return Err(fehler.change_context(StammdatenFehler::AnlageLaden));
                         }
                     };
-                    if !darf_anlage_verwalten(&benutzer, &anlage, benutzer_id) {
+                    if !darf_anlage_verwalten(&benutzer, &anlage) {
                         return Err(error_stack::Report::new(StammdatenFehler::NichtErlaubt));
                     }
                     if anlage.ist_archiviert() {

@@ -1,6 +1,6 @@
 //! Shared Runde and Schuss cases, run twice: against the fakes and against SQLite.
 //!
-//! These pin the archer-facing contract: start a Runde from an active Parcours, log arrows
+//! These pin the archer-facing contract: start a Runde from an active Parkour, log arrows
 //! against the captured route only, read the snapshot back exactly as captured, and close
 //! the Runde. AC-9 is the spine — nothing an archer sees may change after the fact.
 
@@ -9,15 +9,15 @@ use std::net::{IpAddr, Ipv4Addr};
 use logandaim_core::{
     application::AuthContext,
     domain::{
-        Abstand, AnlageAdresse, AnlageId, AnlageKontakt, AnlageName, EmailAdresse, Ländercode,
-        ParcoursId, ParcoursName, Pflock, PflockFarbe, PflockId, RundeZustand, Tiername,
-        Wertungszone, ZielId, Zielgruppe, Zielplatzierung, Zuordnung,
+        Abstand, AnlageAdresse, AnlageId, AnlageKontakt, AnlageName, EmailAdresse, Erfasser, Farbe,
+        Ländercode, NonEmptyString, ParkourId, Pflock, PflockId, RundeZustand, Wertungszone,
+        ZielId, Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
     ports::ClientKey,
     service::{
-        AnlageDeaktivieren, AnlageErstellen, ParcoursEntfernen, ParcoursHinzufügen,
+        AnlageDeaktivieren, AnlageErstellen, ParkourEntfernen, ParkourHinzufügen,
         RegistrierungAbschließen, RegistrierungStarten, RundeAbschliessen, RundeAbschliessenFehler,
         RundeStarten, RundeStartenFehler, SchussRegistrieren, SchussRegistrierenFehler,
         SessionAusgestellt, SystemadministratorBefördern, ZielHinzufügen,
@@ -87,11 +87,11 @@ async fn systemadministrator(harness: &Harness, email: &str) -> AuthContext {
     auth
 }
 
-/// One Anlage with a two-Pflock Parcours and one Ziel, created by `auth`.
-async fn parcours_mit_einem_ziel(
+/// One Anlage with a two-Pflock Parkour and one Ziel, created by `auth`.
+async fn parkour_mit_einem_ziel(
     harness: &Harness,
     auth: AuthContext,
-) -> (AnlageId, ZielId, ParcoursId) {
+) -> (AnlageId, ZielId, ParkourId) {
     let anlage = harness
         .app()
         .execute(
@@ -113,8 +113,7 @@ async fn parcours_mit_einem_ziel(
             auth,
             ZielHinzufügen {
                 anlage_id,
-                tiername: Tiername::neu("Keiler").expect("gültig"),
-                zielgruppe: Zielgruppe::neu(2).expect("gültig"),
+                tiername: NonEmptyString::neu("Keiler").expect("gültig"),
             },
         )
         .await
@@ -123,15 +122,16 @@ async fn parcours_mit_einem_ziel(
 
     let weit = PflockId(uuid::Uuid::new_v4());
     let nah = PflockId(uuid::Uuid::new_v4());
+    // Near to far: the first Pflock is the nearest, distances strictly increase.
     let pflöcke = vec![
-        Pflock::neu(weit, PflockFarbe::neu("#c0392b").expect("gültig")),
-        Pflock::neu(nah, PflockFarbe::neu("#1b4f9c").expect("gültig")),
+        Pflock::neu(nah, Farbe::neu("#1b4f9c").expect("gültig")),
+        Pflock::neu(weit, Farbe::neu("#c0392b").expect("gültig")),
     ];
     let platzierung = Zielplatzierung::neu(
         ziel_id,
         vec![
-            (weit, Abstand::neu(40).expect("positiv")),
             (nah, Abstand::neu(20).expect("positiv")),
+            (weit, Abstand::neu(40).expect("positiv")),
         ],
     )
     .expect("gültig");
@@ -140,18 +140,18 @@ async fn parcours_mit_einem_ziel(
         .app()
         .execute(
             auth,
-            ParcoursHinzufügen {
+            ParkourHinzufügen {
                 anlage_id,
-                name: ParcoursName::neu("Waldrunde").expect("gültig"),
+                name: NonEmptyString::neu("Waldrunde").expect("gültig"),
                 pflöcke,
                 platzierungen: vec![platzierung],
             },
         )
         .await
-        .expect("der Parcours entsteht");
-    let parcours_id = anlage.parcours().last().expect("ein Parcours").id();
+        .expect("der Parkour entsteht");
+    let parkour_id = anlage.parkour().last().expect("ein Parkour").id();
 
-    (anlage_id, ziel_id, parcours_id)
+    (anlage_id, ziel_id, parkour_id)
 }
 
 // --------------------------------------------------------------------------- AC-9
@@ -167,11 +167,11 @@ async fn parcours_mit_einem_ziel(
 async fn starten_braucht_eine_anmeldung() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let (_, _, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
+    let (_, _, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
 
     let fehler = harness
         .app()
-        .execute(AuthContext::Anonymous, RundeStarten { parcours_id })
+        .execute(AuthContext::Anonymous, RundeStarten { parkour_id })
         .await
         .expect_err("ein unangemeldeter Start antwortet 401");
     assert!(matches!(
@@ -181,21 +181,21 @@ async fn starten_braucht_eine_anmeldung() {
 }
 
 #[test_log::test(pollster::test)]
-async fn starten_auf_einen_unbekannten_parcours_ist_404() {
+async fn starten_auf_einen_unbekannten_parkour_ist_404() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
-    parcours_mit_einem_ziel(&harness, admin).await;
+    parkour_mit_einem_ziel(&harness, admin).await;
 
     let fehler = harness
         .app()
         .execute(
             admin,
             RundeStarten {
-                parcours_id: ParcoursId(uuid::Uuid::new_v4()),
+                parkour_id: ParkourId(uuid::Uuid::new_v4()),
             },
         )
         .await
-        .expect_err("ein unbekannter Parcours ist 404");
+        .expect_err("ein unbekannter Parkour ist 404");
     assert!(matches!(
         fehler.current_context(),
         RundeStartenFehler::NichtGefunden
@@ -203,32 +203,32 @@ async fn starten_auf_einen_unbekannten_parcours_ist_404() {
 }
 
 #[test_log::test(pollster::test)]
-async fn starten_auf_einen_archivierten_parcours_ist_409() {
+async fn starten_auf_einen_archivierten_parkour_ist_409() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let (anlage_id, _, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
+    let (anlage_id, _, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     harness
         .app()
-        .execute(admin, RundeStarten { parcours_id })
+        .execute(admin, RundeStarten { parkour_id })
         .await
-        .expect("eine Runde referenziert den Parcours");
+        .expect("eine Runde referenziert den Parkour");
     harness
         .app()
         .execute(
             admin,
-            ParcoursEntfernen {
+            ParkourEntfernen {
                 anlage_id,
-                parcours_id,
+                parkour_id,
             },
         )
         .await
-        .expect("der Parcours wird archiviert");
+        .expect("der Parkour wird archiviert");
 
     let fehler = harness
         .app()
-        .execute(admin, RundeStarten { parcours_id })
+        .execute(admin, RundeStarten { parkour_id })
         .await
-        .expect_err("ein archivierter Parcours ist 409");
+        .expect_err("ein archivierter Parkour ist 409");
     assert!(matches!(
         fehler.current_context(),
         RundeStartenFehler::NichtAktiv
@@ -239,7 +239,7 @@ async fn starten_auf_einen_archivierten_parcours_ist_409() {
 async fn starten_an_einer_deaktivierten_anlage_ist_abgelehnt() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let (anlage_id, _, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
+    let (anlage_id, _, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     harness
         .app()
         .execute(admin, AnlageDeaktivieren { anlage_id })
@@ -248,7 +248,7 @@ async fn starten_an_einer_deaktivierten_anlage_ist_abgelehnt() {
 
     let fehler = harness
         .app()
-        .execute(admin, RundeStarten { parcours_id })
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect_err("eine deaktivierte Anlage nimmt keine Runde an");
     assert!(matches!(
@@ -264,10 +264,10 @@ async fn schuesse_zaehlen_nur_in_der_eigenen_offenen_runde() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
     let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
-    let (_, ziel_id, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
+    let (_, ziel_id, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     let runde = harness
         .app()
-        .execute(admin, RundeStarten { parcours_id })
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("die Runde des Systemadministrators");
 
@@ -294,10 +294,10 @@ async fn schuesse_zaehlen_nur_in_der_eigenen_offenen_runde() {
 async fn ein_schuss_auf_ein_ziel_ausserhalb_des_snapshots_wird_abgelehnt() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let (_, _, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
+    let (_, _, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     let runde = harness
         .app()
-        .execute(admin, RundeStarten { parcours_id })
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("die Runde startet");
 
@@ -324,10 +324,10 @@ async fn ein_schuss_auf_ein_ziel_ausserhalb_des_snapshots_wird_abgelehnt() {
 async fn eine_abgeschlossene_runde_nimmt_keine_schuesse_mehr_an() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let (_, ziel_id, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
+    let (_, ziel_id, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     let runde = harness
         .app()
-        .execute(admin, RundeStarten { parcours_id })
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("die Runde startet");
     harness
@@ -364,10 +364,10 @@ async fn eine_abgeschlossene_runde_nimmt_keine_schuesse_mehr_an() {
 async fn pfeil_null_wird_als_ungueltige_anfrage_abgelehnt() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let (_, ziel_id, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
+    let (_, ziel_id, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     let runde = harness
         .app()
-        .execute(admin, RundeStarten { parcours_id })
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("die Runde startet");
 
@@ -396,10 +396,10 @@ async fn ein_schuss_traegt_den_angemeldeten_benutzer_als_eigentuemer() {
     let admin = systemadministrator(&harness, "admin@muster.at").await;
     let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
     let anna_id: BenutzerId = anna.benutzer_id().expect("angemeldet");
-    let (_, ziel_id, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
+    let (_, ziel_id, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     let runde = harness
         .app()
-        .execute(anna, RundeStarten { parcours_id })
+        .execute(anna, RundeStarten { parkour_id })
         .await
         .expect("Anna startet eine Runde");
 
@@ -416,7 +416,7 @@ async fn ein_schuss_traegt_den_angemeldeten_benutzer_als_eigentuemer() {
         )
         .await
         .expect("der Schuss wird registriert");
-    assert_eq!(schuss.zuordnung(), Zuordnung::Benutzer(anna_id));
+    assert_eq!(schuss.erfasser(), Erfasser::Benutzer(anna_id));
     assert_eq!(schuss.runde_id(), runde.id());
     assert_eq!(schuss.ziel_id(), ziel_id);
 }
@@ -427,10 +427,10 @@ async fn ein_schuss_traegt_den_angemeldeten_benutzer_als_eigentuemer() {
 async fn abschliessen_ist_einmalig_und_setzt_den_zustand() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let (_, _, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
+    let (_, _, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     let runde = harness
         .app()
-        .execute(admin, RundeStarten { parcours_id })
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("die Runde startet");
 
@@ -468,10 +468,10 @@ async fn eine_fremde_runde_wird_nicht_abgeschlossen() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
     let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
-    let (_, _, parcours_id) = parcours_mit_einem_ziel(&harness, admin).await;
+    let (_, _, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     let runde = harness
         .app()
-        .execute(admin, RundeStarten { parcours_id })
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("die Runde des Systemadministrators");
 

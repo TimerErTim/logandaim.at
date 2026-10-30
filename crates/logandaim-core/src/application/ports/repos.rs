@@ -8,7 +8,7 @@ use crate::domain::konto::{
     PasswortWiederherstellung, PasswortWiederherstellungId, SecretTokenHash, Session, SessionId,
 };
 use crate::domain::{
-    Anlage, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParcoursId, Runde, RundeId,
+    Anlage, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId, Runde, RundeId,
     Schuss, SchussId, ZielId,
 };
 
@@ -36,53 +36,22 @@ pub enum RepositoryError {
     Unknown,
 }
 
-/// How every repository looks.
-///
-/// Repositories are dumb: store and load, never compute points, never enforce a business
-/// rule. The shape is the same for every aggregate, and each trait repeats it rather than
-/// sharing one generic interface, because the extra lookup methods (`find_by_email`,
-/// `find_by_refresh_hash`, …) are the point of a hand-written port.
-///
-/// - `create(Neues*)` — insert a fresh row, return it with its version.
-/// - `find_by_id` — load one row with its version, or `NotFound`.
-/// - `update(&mut Versioned<T>)` — write the *whole* row back and bump its version in
-///   place. A stale version is `RepositoryError::VersionMismatch`.
-/// - `delete(Versioned<T>)` — remove the row, checking that the version the caller holds is
-///   still the stored one.
-///
-/// The load → domain mutation → write-back loop is the caller's:
-///
-/// ```ignore
-/// let mut konto = uow.konten().find_by_id(id).await?;
-/// konto.setze_password_hash(hash);
-/// uow.konten().update(&mut konto).await?;
-/// ```
-///
-/// A missing mutator is a sign the rule belongs to the use case; a purpose-built method
-/// such as `revoke_all` is a sign the logic belongs to a use case loop over `find_by_*`.
-/// The `Anlage` aggregate's repository. `Ziel` and `Parcours` are children, so they have
-/// no repository of their own: one `update` writes the root and replaces its child rows in
-/// the same transaction.
+/// Store and load one aggregate; never compute or enforce a business rule.
 #[async_trait]
 pub trait AnlageRepository: Send + Sync {
     async fn create(&self, anlage: NeueAnlage) -> RepositoryResult<Versioned<Anlage>>;
 
-    /// Load either lifecycle state, so a caller can answer "is this archived?" without a
-    /// second method.
+    /// Load either lifecycle state.
     async fn find_by_id(&self, id: AnlageId) -> RepositoryResult<Versioned<Anlage>>;
 
-    /// Every active Anlage, as full aggregates. Fine for two pilot sites; a read-model
-    /// port is the escape hatch if the list grows.
     async fn find_aktiv(&self) -> RepositoryResult<Vec<Versioned<Anlage>>>;
 
-    /// Every Anlage this Benutzer holds a `AnlageVerwaltung` in, active or archived.
     async fn find_by_verwaltung(
         &self,
         benutzer_id: BenutzerId,
     ) -> RepositoryResult<Vec<Versioned<Anlage>>>;
 
-    /// Write the whole aggregate back: the root row and every child row, guarded by the
-    /// root `_version`.
+    /// Write the root and its child rows back, guarded by the root version.
     async fn update(&self, anlage: &mut Versioned<Anlage>) -> RepositoryResult<()>;
 
     async fn delete(&self, anlage: Versioned<Anlage>) -> RepositoryResult<()>;
@@ -94,8 +63,7 @@ pub trait RundeRepository: Send + Sync {
 
     async fn find_by_id(&self, id: RundeId) -> RepositoryResult<Versioned<Runde>>;
 
-    /// Every Runde this Benutzer logged, including anonymised rows are excluded because
-    /// they no longer match.
+    /// Every Runde of one Benutzer; anonymised rows no longer match.
     async fn find_by_benutzer(
         &self,
         benutzer_id: BenutzerId,
@@ -105,23 +73,16 @@ pub trait RundeRepository: Send + Sync {
 
     async fn delete(&self, runde: Versioned<Runde>) -> RepositoryResult<()>;
 
-    /// Whether any logged or in-progress Runde still refers to this Anlage (AC-11/AC-12).
-    ///
-    /// The history-reference lookups live here, not on `AnlageRepository`, because the
-    /// references are written by `Runde` and read as an index: a master-data removal is then
-    /// one index read, never a scan of the aggregate it is about to change.
+    /// Whether any Runde still refers to this Anlage.
     async fn exists_referencing_anlage(&self, id: AnlageId) -> RepositoryResult<bool>;
 
-    /// Whether any Runde refers to this Parcours.
-    async fn exists_referencing_parcours(&self, id: ParcoursId) -> RepositoryResult<bool>;
+    /// Whether any Runde refers to this Parkour.
+    async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool>;
 
     /// Whether any Runde's captured route contains this Ziel identity.
     async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool>;
 }
 
-/// A `Schuss` is a standalone aggregate root: it carries `runde_id`, `ziel_id`, and its
-/// `Zuordnung`, so it can be listed per Runde, per Ziel, or per Benutzer without loading
-/// the aggregates it references.
 #[async_trait]
 pub trait SchussRepository: Send + Sync {
     async fn create(&self, schuss: NeuerSchuss) -> RepositoryResult<Versioned<Schuss>>;
@@ -130,8 +91,7 @@ pub trait SchussRepository: Send + Sync {
 
     async fn find_by_runde(&self, runde_id: RundeId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
 
-    /// Per-physical-Ziel history, independent of which Runde or Parcours produced it
-    /// (AC-8).
+    /// Per-physical-Ziel history, independent of the Runde that produced it.
     async fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
 
     async fn find_by_benutzer(
@@ -161,7 +121,7 @@ pub trait KontoRepository: Send + Sync {
 
     async fn find_by_id(&self, id: KontoId) -> RepositoryResult<Versioned<Konto>>;
 
-    /// `NotFound` when no Konto holds the address; callers match on the error.
+    /// `NotFound` when no Konto holds the address.
     async fn find_by_email(&self, email: &EmailAdresse) -> RepositoryResult<Versioned<Konto>>;
 
     async fn find_by_benutzer(
@@ -174,23 +134,19 @@ pub trait KontoRepository: Send + Sync {
     async fn delete(&self, konto: Versioned<Konto>) -> RepositoryResult<()>;
 }
 
-/// Rows are **retained** when spent, revoked, or expired (see
-/// [`SessionIn`](crate::domain::konto::SessionIn)): replay detection needs to find the row
-/// a spent refresh token names, and a revocation timestamp is the record of what happened.
+/// Rows are retained when spent, revoked, or expired.
 #[async_trait]
 pub trait SessionRepository: Send + Sync {
     async fn create(&self, session: NeueSession) -> RepositoryResult<Versioned<Session>>;
 
     async fn find_by_id(&self, id: SessionId) -> RepositoryResult<Versioned<Session>>;
 
-    /// `Ok(None)` for an unknown or already rotated refresh token.
+    /// `NotFound` for an unknown or already rotated refresh token.
     async fn find_by_refresh_hash(
         &self,
         hash: &SecretTokenHash,
     ) -> RepositoryResult<Versioned<Session>>;
 
-    /// Every session of one Benutzer, for the load-then-update revoke loop a use case runs
-    /// (logout everywhere, password recovery). Retention means this must not delete.
     async fn find_by_benutzer(
         &self,
         benutzer_id: BenutzerId,
@@ -200,8 +156,7 @@ pub trait SessionRepository: Send + Sync {
 
     async fn delete(&self, session: Versioned<Session>) -> RepositoryResult<()>;
 
-    /// Remove every session of a Benutzer. Only `BenutzerLöschen` uses this: the identity
-    /// itself is going away, so there is nothing left to replay.
+    /// Remove every session of one Benutzer, when the identity itself goes away.
     async fn delete_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<()>;
 }
 
@@ -212,7 +167,7 @@ pub trait EmailBestätigungRepository: Send + Sync {
         bestätigung: NeueBestätigung,
     ) -> RepositoryResult<Versioned<EmailBestätigung>>;
 
-    /// Keyed by the token hash, because that is what step 2 presents.
+    /// Keyed by the token hash, which is what confirmation step 2 presents.
     async fn find_by_hash(
         &self,
         hash: &SecretTokenHash,
@@ -222,7 +177,6 @@ pub trait EmailBestätigungRepository: Send + Sync {
         &self, id: BestätigungId
     ) -> RepositoryResult<Versioned<EmailBestätigung>>;
 
-    /// Every outstanding row for one address, so a resend can spend them one by one.
     async fn find_by_email(
         &self,
         email: &EmailAdresse,
@@ -253,8 +207,6 @@ pub trait PasswortWiederherstellungRepository: Send + Sync {
         hash: &SecretTokenHash,
     ) -> RepositoryResult<Versioned<PasswortWiederherstellung>>;
 
-    /// Every outstanding row for one Konto, so a new request can spend them one by one
-    /// (rule 7).
     async fn find_by_konto(
         &self,
         konto_id: KontoId,

@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { useAuth } from "@/api/auth-provider";
 import { useRundenQuery, useRundeQuery } from "@/api/hooks";
-import type { RundenZeile } from "@/api/logandaim-api";
+import type { RundeBasic } from "@/api/logandaim-api";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,7 +112,7 @@ function EingetragenesLogbuch() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableHeader>Parcours</TableHeader>
+              <TableHeader>Parkour</TableHeader>
               <TableHeader>Begonnen</TableHeader>
               <TableHeader className="text-right">Erster Treffer</TableHeader>
               <TableHeader className="text-right">Mehrschuss</TableHeader>
@@ -143,13 +143,13 @@ function EingetragenesLogbuch() {
  * read from the Runde itself — three detail reads, each gated on the session like every
  * other authenticated query.
  */
-function LetzteRundeZeile({ runde }: { runde: RundenZeile }) {
+function LetzteRundeZeile({ runde }: { runde: RundeBasic }) {
   const detail = useRundeQuery(runde.id);
   const offen = runde.zustand === "InBearbeitung";
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{runde.parcoursName}</TableCell>
+      <TableCell className="font-medium">{runde.parkourName}</TableCell>
       <TableCell className="tabular-nums text-secondary">
         {new Date(runde.begonnenAm).toLocaleString("de-AT")}
       </TableCell>
@@ -186,7 +186,7 @@ function LetzteRundeZeile({ runde }: { runde: RundenZeile }) {
 }
 
 /** The one Runde the caller should pick up, with the single primary action of the page. */
-function AktiveRunde({ runde }: { runde: RundenZeile }) {
+function AktiveRunde({ runde }: { runde: RundeBasic }) {
   return (
     <section
       aria-label="Offene Runde"
@@ -194,7 +194,7 @@ function AktiveRunde({ runde }: { runde: RundenZeile }) {
     >
       <div className="flex flex-wrap items-center gap-3">
         <SheetNumber>Offen</SheetNumber>
-        <h2 className="text-sm font-semibold text-ink">{runde.parcoursName}</h2>
+        <h2 className="text-sm font-semibold text-ink">{runde.parkourName}</h2>
         <span className="text-xs text-secondary tabular-nums">
           begonnen {new Date(runde.begonnenAm).toLocaleString("de-AT")}
         </span>
@@ -229,7 +229,7 @@ function Leerzustand() {
     <div className="space-y-4">
       <MarginNote label="Noch keine Runde">
         Sie haben noch keine Runde begonnen. Im Anlagen-Verzeichnis wählen Sie
-        eine Anlage und starten dort einen Parcours.
+        eine Anlage und starten dort einen Parkour.
       </MarginNote>
       <Button asChild>
         <Link href={paths.anlagen}>Zu den Anlagen</Link>

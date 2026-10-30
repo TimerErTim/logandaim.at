@@ -138,7 +138,7 @@ impl UseCase<()> for BenutzerLöschen {
                 .change_context(BenutzerLöschenFehler::SessionLöschen)?;
 
             // Retain the sporting record, drop the attribution: the domain replaces the owner
-            // with `Zuordnung::Anonymisiert`, and the plain `update` writes it back. Idempotent,
+            // with `Erfasser::Anonymisiert`, and the plain `update` writes it back. Idempotent,
             // because an anonymised row no longer matches `find_by_benutzer`.
             let jetzt = ctx.clock().now();
             for mut runde in uow

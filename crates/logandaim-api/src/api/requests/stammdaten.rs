@@ -2,97 +2,138 @@
 //!
 //! Every conversion performs the domain validation exactly once, at the edge, and folds a
 //! failure into the use case's own `UngültigeAnfrage` variant — so no route invents a second
-//! error vocabulary. `AnlageAdresse`, `Tiername`, `Zielgruppe`, `PflockFarbe`, and
-//! `Abstand` are validated newtypes: the DTOs never re-check them.
+//! error vocabulary. `AnlageAdresse`, `NonEmptyString`, `Farbe`, `Abstand`, and
+//! `WebsiteUrl` are validated newtypes: the DTOs never re-check them.
+//!
+//! A refused parse attaches what it was parsing, so a report names the field and the index
+//! that failed rather than only the top-level request.
 
-use error_stack::Report;
+use error_stack::{Report, ResultExt};
 use uuid::Uuid;
 
 use logandaim_core::{
     domain::{
-        Abstand, AnlageAdresse, AnlageId, AnlageKontakt, AnlageName, AnlageVerwaltungRolle,
-        Ländercode, ParcoursId, ParcoursName, Pflock, PflockFarbe, PflockId, Tiername, ZielId,
-        Zielgruppe, Zielplatzierung, anlage::Website, konto::BenutzerId,
+        self, AnlageId, NonEmptyString, ParkourId, PflockId, ZielId, anlage::WebsiteUrl,
+        konto::BenutzerId,
     },
     service::{
         AnlageBeschreibendeDatenÄndern, AnlageErstellen, AnlageVerwaltungGewähren,
-        AnlageVerwaltungÄndern, ParcoursHinzufügen, ParcoursSetupÄndern, ParcoursUmbenennen,
+        AnlageVerwaltungÄndern, ParkourHinzufügen, ParkourSetupÄndern, ParkourUmbenennen,
         StammdatenFehler, ZielErsetzen, ZielHinzufügen, ZielÄndern,
     },
 };
 
 use crate::schema::{
     AnlageAdresse as AnlageAdresseSchema, AnlageKontakt as AnlageKontaktSchema,
-    AnlageVerwaltungRolle as RolleSchema, CountryCode as LändercodeSchema, Pflock as PflockSchema,
+    AnlageVerwaltungRolle as RolleSchema, Farbe as FarbeSchema, Ländercode, Pflock as PflockSchema,
     Zielplatzierung as ZielplatzierungSchema,
 };
 
-fn ungültig() -> Report<StammdatenFehler> {
-    Report::new(StammdatenFehler::UngültigeAnfrage)
+fn name(wert: String) -> Result<domain::AnlageName, Report<StammdatenFehler>> {
+    domain::AnlageName::neu(wert)
+        .change_context(StammdatenFehler::UngültigeAnfrage)
+        .attach("Anlage: Name")
 }
 
-fn name(wert: String) -> Result<AnlageName, Report<StammdatenFehler>> {
-    AnlageName::neu(wert).map_err(|_| ungültig())
-}
-
-fn adresse(wert: AnlageAdresseSchema) -> Result<AnlageAdresse, Report<StammdatenFehler>> {
+fn adresse(wert: AnlageAdresseSchema) -> Result<domain::AnlageAdresse, Report<StammdatenFehler>> {
     let ländercode = match wert.ländercode {
-        LändercodeSchema::AT => Ländercode::AT,
-        LändercodeSchema::DE => Ländercode::DE,
-        LändercodeSchema::CH => Ländercode::CH,
+        Ländercode::AT => domain::Ländercode::AT,
+        Ländercode::DE => domain::Ländercode::DE,
+        Ländercode::CH => domain::Ländercode::CH,
     };
-    AnlageAdresse::neu(wert.straße, wert.postleitzahl, wert.ort, ländercode).map_err(|_| ungültig())
+    domain::AnlageAdresse::neu(wert.straße, wert.postleitzahl, wert.ort, ländercode)
+        .change_context(StammdatenFehler::UngültigeAnfrage)
+        .attach("Anlage: Adresse")
 }
 
-fn kontakt(wert: AnlageKontaktSchema) -> Result<AnlageKontakt, Report<StammdatenFehler>> {
-    let email = match wert.email {
-        Some(email) => Some(email.try_into().map_err(|_| ungültig())?),
-        None => None,
-    };
-    let telefon = match wert.telefon {
-        Some(nummer) => {
-            Some(logandaim_core::domain::Mobilnummer::new(nummer).map_err(|_| ungültig())?)
-        }
-        None => None,
-    };
-    let website = match wert.website {
-        Some(website) => Some(Website::neu(website).map_err(|_| ungültig())?),
-        None => None,
-    };
-    Ok(AnlageKontakt::neu(wert.name, email, telefon, website))
-}
-
-fn tiername(wert: String) -> Result<Tiername, Report<StammdatenFehler>> {
-    Tiername::neu(wert).map_err(|_| ungültig())
-}
-
-fn zielgruppe(wert: u8) -> Result<Zielgruppe, Report<StammdatenFehler>> {
-    Zielgruppe::neu(wert).map_err(|_| ungültig())
-}
-
-fn parcours_name(wert: String) -> Result<ParcoursName, Report<StammdatenFehler>> {
-    ParcoursName::neu(wert).map_err(|_| ungültig())
-}
-
-fn pflock(wert: PflockSchema) -> Result<Pflock, Report<StammdatenFehler>> {
-    Ok(Pflock::neu(
-        PflockId(wert.id),
-        PflockFarbe::neu(wert.farbe).map_err(|_| ungültig())?,
+fn kontakt(wert: AnlageKontaktSchema) -> Result<domain::AnlageKontakt, Report<StammdatenFehler>> {
+    let email = wert
+        .email
+        .map(TryInto::try_into)
+        .transpose()
+        .change_context(StammdatenFehler::UngültigeAnfrage)
+        .attach("Anlage: Kontakt-E-Mail-Adresse")?;
+    let telefon = wert
+        .telefon
+        .map(domain::Mobilnummer::new)
+        .transpose()
+        .change_context(StammdatenFehler::UngültigeAnfrage)
+        .attach("Anlage: Kontakt-Telefonnummer")?;
+    let website = wert
+        .website
+        .map(WebsiteUrl::neu)
+        .transpose()
+        .change_context(StammdatenFehler::UngültigeAnfrage)
+        .attach("Anlage: Kontakt-Website")?;
+    Ok(domain::AnlageKontakt::neu(
+        wert.name, email, telefon, website,
     ))
 }
 
-fn platzierung(wert: ZielplatzierungSchema) -> Result<Zielplatzierung, Report<StammdatenFehler>> {
+fn tiername(wert: String) -> Result<NonEmptyString, Report<StammdatenFehler>> {
+    NonEmptyString::neu(wert)
+        .change_context(StammdatenFehler::UngültigeAnfrage)
+        .attach("Ziel: Tiername")
+}
+
+fn parkour_name(wert: String) -> Result<NonEmptyString, Report<StammdatenFehler>> {
+    NonEmptyString::neu(wert)
+        .change_context(StammdatenFehler::UngültigeAnfrage)
+        .attach("Parkour: Name")
+}
+
+fn farbe(wert: FarbeSchema) -> Result<domain::Farbe, Report<StammdatenFehler>> {
+    wert.try_into()
+        .change_context(StammdatenFehler::UngültigeAnfrage)
+        .attach("Pflock: Farbe")
+}
+
+fn pflock(wert: PflockSchema) -> Result<domain::Pflock, Report<StammdatenFehler>> {
+    Ok(domain::Pflock::neu(PflockId(wert.id), farbe(wert.farbe)?))
+}
+
+fn platzierung(
+    wert: ZielplatzierungSchema,
+) -> Result<domain::Zielplatzierung, Report<StammdatenFehler>> {
+    // An absent distance is simply not configured for that Pflock.
     let abstände = wert
         .abstände
         .into_iter()
-        .map(|abstand| {
+        .filter_map(|abstand| abstand.meter.map(|meter| (abstand.pflock_id, meter)))
+        .map(|(pflock_id, meter)| {
             Ok((
-                PflockId(abstand.pflock_id),
-                Abstand::neu(abstand.meter).map_err(|_| ungültig())?,
+                PflockId(pflock_id),
+                domain::Abstand::neu(meter)
+                    .change_context(StammdatenFehler::UngültigeAnfrage)
+                    .attach(format!("Ziel: Abstand für Pflock {pflock_id:?}"))?,
             ))
         })
         .collect::<Result<Vec<_>, Report<StammdatenFehler>>>()?;
-    Zielplatzierung::neu(ZielId(wert.ziel_id), abstände).map_err(|_| ungültig())
+    domain::Zielplatzierung::neu(ZielId(wert.ziel_id), abstände)
+        .change_context(StammdatenFehler::UngültigeAnfrage)
+        .attach(format!("Ziel {}", wert.ziel_id))
+}
+
+fn anlage_kontext(anlage_id: AnlageId) -> String {
+    format!("Anlage {:?}", anlage_id.0)
+}
+
+fn pflöcke(werte: Vec<PflockSchema>) -> Result<Vec<domain::Pflock>, Report<StammdatenFehler>> {
+    werte
+        .into_iter()
+        .enumerate()
+        .map(|(index, wert)| pflock(wert).attach(format!("Parkour: Pflock {index}")))
+        .collect()
+}
+
+fn platzierungen(
+    werte: Vec<ZielplatzierungSchema>,
+) -> Result<Vec<domain::Zielplatzierung>, Report<StammdatenFehler>> {
+    werte
+        .into_iter()
+        .enumerate()
+        .map(|(index, wert)| platzierung(wert).attach(format!("Parkour: Platzierung {index}")))
+        .collect()
 }
 
 // ------------------------------------------------------------------ Anlage
@@ -166,8 +207,10 @@ pub struct AnlageVerwaltungRequest {
     pub rolle: RolleSchema,
 }
 
-fn rolle(wert: RolleSchema) -> Result<AnlageVerwaltungRolle, Report<StammdatenFehler>> {
-    wert.try_into().map_err(|_| ungültig())
+fn rolle(wert: RolleSchema) -> Result<domain::AnlageVerwaltungRolle, Report<StammdatenFehler>> {
+    wert.try_into()
+        .change_context(StammdatenFehler::UngültigeAnfrage)
+        .attach("AnlageVerwaltung: Rolle")
 }
 
 impl AnlageVerwaltungRequest {
@@ -207,8 +250,6 @@ impl AnlageVerwaltungRequest {
 pub struct ZielRequest {
     /// Animal name shown to the shooter.
     pub tiername: String,
-    /// Target group, `1` to `4`.
-    pub zielgruppe: u8,
 }
 
 impl ZielRequest {
@@ -219,7 +260,6 @@ impl ZielRequest {
         Ok(ZielHinzufügen {
             anlage_id,
             tiername: tiername(self.tiername)?,
-            zielgruppe: zielgruppe(self.zielgruppe)?,
         })
     }
 
@@ -232,7 +272,6 @@ impl ZielRequest {
             anlage_id,
             ziel_id,
             tiername: tiername(self.tiername)?,
-            zielgruppe: zielgruppe(self.zielgruppe)?,
         })
     }
 
@@ -245,21 +284,20 @@ impl ZielRequest {
             anlage_id,
             ziel_id,
             tiername: tiername(self.tiername)?,
-            zielgruppe: zielgruppe(self.zielgruppe)?,
         })
     }
 }
 
-// ------------------------------------------------------------------ Parcours
+// ------------------------------------------------------------------ Parkour
 
-/// Create a Parcours with its Pflock setup and its route.
+/// Create a Parkour with its Pflock setup and its route.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ParcoursErstellungRequest {
-    /// Shown name of the new Parcours.
+pub struct ParkourErstellungRequest {
+    /// Shown name of the new Parkour.
     pub name: String,
     /// The Pflöcke, far to near.
     pub pflöcke: Vec<PflockSchema>,
@@ -268,35 +306,27 @@ pub struct ParcoursErstellungRequest {
     pub platzierungen: Vec<ZielplatzierungSchema>,
 }
 
-impl ParcoursErstellungRequest {
+impl ParkourErstellungRequest {
     pub fn in_use_case(
         self,
         anlage_id: AnlageId,
-    ) -> Result<ParcoursHinzufügen, Report<StammdatenFehler>> {
-        Ok(ParcoursHinzufügen {
+    ) -> Result<ParkourHinzufügen, Report<StammdatenFehler>> {
+        Ok(ParkourHinzufügen {
             anlage_id,
-            name: parcours_name(self.name)?,
-            pflöcke: self
-                .pflöcke
-                .into_iter()
-                .map(pflock)
-                .collect::<Result<Vec<_>, _>>()?,
-            platzierungen: self
-                .platzierungen
-                .into_iter()
-                .map(platzierung)
-                .collect::<Result<Vec<_>, _>>()?,
+            name: parkour_name(self.name).attach(anlage_kontext(anlage_id))?,
+            pflöcke: pflöcke(self.pflöcke).attach(anlage_kontext(anlage_id))?,
+            platzierungen: platzierungen(self.platzierungen).attach(anlage_kontext(anlage_id))?,
         })
     }
 }
 
-/// Replace a Parcours' whole shooting setup.
+/// Replace a Parkour' whole shooting setup.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ParcoursSetupRequest {
+pub struct ParkourSetupRequest {
     /// The Pflöcke, far to near.
     pub pflöcke: Vec<PflockSchema>,
     /// The Ziele on the route, in walking order. May be empty.
@@ -304,50 +334,48 @@ pub struct ParcoursSetupRequest {
     pub platzierungen: Vec<ZielplatzierungSchema>,
 }
 
-impl ParcoursSetupRequest {
+impl ParkourSetupRequest {
     pub fn in_use_case(
         self,
         anlage_id: AnlageId,
-        parcours_id: ParcoursId,
-    ) -> Result<ParcoursSetupÄndern, Report<StammdatenFehler>> {
-        Ok(ParcoursSetupÄndern {
+        parkour_id: ParkourId,
+    ) -> Result<ParkourSetupÄndern, Report<StammdatenFehler>> {
+        Ok(ParkourSetupÄndern {
             anlage_id,
-            parcours_id,
-            pflöcke: self
-                .pflöcke
-                .into_iter()
-                .map(pflock)
-                .collect::<Result<Vec<_>, _>>()?,
-            platzierungen: self
-                .platzierungen
-                .into_iter()
-                .map(platzierung)
-                .collect::<Result<Vec<_>, _>>()?,
+            parkour_id,
+            pflöcke: pflöcke(self.pflöcke)
+                .attach(anlage_kontext(anlage_id))
+                .attach(format!("Parkour {parkour_id:?}"))?,
+            platzierungen: platzierungen(self.platzierungen)
+                .attach(anlage_kontext(anlage_id))
+                .attach(format!("Parkour {parkour_id:?}"))?,
         })
     }
 }
 
-/// Rename a Parcours. Existing snapshots keep the name they captured.
+/// Rename a Parkour. Existing snapshots keep the name they captured.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ParcoursUmbenennenRequest {
+pub struct ParkourUmbenennenRequest {
     /// The new shown name.
     pub name: String,
 }
 
-impl ParcoursUmbenennenRequest {
+impl ParkourUmbenennenRequest {
     pub fn in_use_case(
         self,
         anlage_id: AnlageId,
-        parcours_id: ParcoursId,
-    ) -> Result<ParcoursUmbenennen, Report<StammdatenFehler>> {
-        Ok(ParcoursUmbenennen {
+        parkour_id: ParkourId,
+    ) -> Result<ParkourUmbenennen, Report<StammdatenFehler>> {
+        Ok(ParkourUmbenennen {
             anlage_id,
-            parcours_id,
-            name: parcours_name(self.name)?,
+            parkour_id,
+            name: parkour_name(self.name)
+                .attach(anlage_kontext(anlage_id))
+                .attach(format!("Parkour {parkour_id:?}"))?,
         })
     }
 }
