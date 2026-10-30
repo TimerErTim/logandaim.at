@@ -6,9 +6,14 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/api/auth-provider";
 import { apiErrorMessage } from "@/api/errors";
-import { useRundeQuery, useStammdatenMutations } from "@/api/hooks";
+import {
+  useErfolgsmeldung,
+  useRundeQuery,
+  useStammdatenMutations,
+} from "@/api/hooks";
 import type { Runde } from "@/api/logandaim-api";
 import { Wertungszone } from "@/api/logandaim-api";
+import { Erfolgsmeldung } from "@/components/feedback/erfolgsmeldung";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
 import { PflockMarker } from "@/components/stammdaten/pflock-swatch";
@@ -123,6 +128,8 @@ function RundeSkeleton() {
 
 function RundeInhalt({ runde }: { runde: Runde }) {
   const { rundeAbschliessen, schussRegistrieren } = useStammdatenMutations();
+  const schussMeldung = useErfolgsmeldung();
+  const abschlussMeldung = useErfolgsmeldung();
   const [abschliessenOffen, setAbschliessenOffen] = useState(false);
   const offen = runde.zustand === "InBearbeitung";
   const zieleGesamt = runde.ziele.length;
@@ -134,7 +141,6 @@ function RundeInhalt({ runde }: { runde: Runde }) {
       {/* The bottom padding keeps the last Ziel clear of the sticky action bar. */}
       <div className="flex-1 space-y-6 p-6 pb-24">
         <SetBreadcrumbLabel label={runde.parcoursName} />
-
         <PageHeader
           register={["Logbuch", "Historie"]}
           title={runde.parcoursName}
@@ -152,7 +158,6 @@ function RundeInhalt({ runde }: { runde: Runde }) {
             </>
           }
         />
-
         <Card>
           <CardHeader>
             <CardTitle>Wertung</CardTitle>
@@ -201,9 +206,7 @@ function RundeInhalt({ runde }: { runde: Runde }) {
             </div>
           </CardContent>
         </Card>
-
         <HatchBand />
-
         <section aria-label="Pflöcke" className="space-y-2">
           <div className="flex items-baseline gap-3">
             <h2 className="text-sm font-semibold text-ink">Pflöcke</h2>
@@ -239,14 +242,22 @@ function RundeInhalt({ runde }: { runde: Runde }) {
             </Table>
           )}
         </section>
-
         <Perforation />
-
         <section aria-label="Ziele" className="space-y-4">
           <div className="flex items-baseline gap-3">
             <h2 className="text-sm font-semibold text-ink">Ziele</h2>
             <SheetNumber>{zieleGesamt}</SheetNumber>
           </div>
+
+          {schussRegistrieren.isError ? (
+            <Alert variant="error">
+              {apiErrorMessage(schussRegistrieren.error, {
+                badRequest: "Bitte prüfen Sie den Schuss.",
+                fallback: "Der Schuss konnte nicht registriert werden.",
+              })}
+            </Alert>
+          ) : null}
+          <Erfolgsmeldung meldung={schussMeldung.meldung} />
 
           {zieleGesamt === 0 ? (
             <p className="text-sm text-secondary">
@@ -260,27 +271,36 @@ function RundeInhalt({ runde }: { runde: Runde }) {
                   reihenfolge={index + 1}
                   offen={offen}
                   ausstehend={schussRegistrieren.isPending}
-                  onErfassen={(wertungszone, pfeil) =>
-                    schussRegistrieren.mutate({
-                      rundeId: runde.id,
-                      schuss: {
-                        zielId: ziel.zielId,
-                        pfeil,
-                        wertungszone,
+                  onErfassen={(wertungszone, pfeil) => {
+                    schussMeldung.verwerfen();
+                    schussRegistrieren.mutate(
+                      {
+                        rundeId: runde.id,
+                        schuss: {
+                          zielId: ziel.zielId,
+                          pfeil,
+                          wertungszone,
+                        },
                       },
-                    })
-                  }
+                      {
+                        onSuccess: () =>
+                          schussMeldung.melden("Schuss registriert."),
+                      },
+                    );
+                  }}
                 />
                 {index < runde.ziele.length - 1 ? <Separator /> : null}
               </div>
             ))
           )}
         </section>
-
         <HatchBand height="lg" />
       </div>
 
       <div className="sticky bottom-0 z-20 border-t border-subtle bg-surface">
+        <div className="px-6">
+          <Erfolgsmeldung meldung={abschlussMeldung.meldung} className="mt-3" />
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-3">
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
             <span className="text-[10px] font-semibold tracking-[0.09em] text-secondary uppercase">
@@ -311,6 +331,7 @@ function RundeInhalt({ runde }: { runde: Runde }) {
               <Button
                 variant="destructive"
                 onClick={() => {
+                  abschlussMeldung.verwerfen();
                   rundeAbschliessen.reset();
                   setAbschliessenOffen(true);
                 }}
@@ -354,7 +375,10 @@ function RundeInhalt({ runde }: { runde: Runde }) {
               disabled={rundeAbschliessen.isPending}
               onClick={() =>
                 rundeAbschliessen.mutate(runde.id, {
-                  onSuccess: () => setAbschliessenOffen(false),
+                  onSuccess: () => {
+                    setAbschliessenOffen(false);
+                    abschlussMeldung.melden("Runde abgeschlossen.");
+                  },
                 })
               }
             >

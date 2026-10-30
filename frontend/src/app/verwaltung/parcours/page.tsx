@@ -16,14 +16,18 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/api/auth-provider";
 import { apiErrorMessage } from "@/api/errors";
-import { useAnlageQuery, useStammdatenMutations } from "@/api/hooks";
+import {
+  useAnlageQuery,
+  useErfolgsmeldung,
+  useStammdatenMutations,
+} from "@/api/hooks";
 import type {
   Anlage,
   Parcours,
@@ -31,8 +35,13 @@ import type {
   Pflock,
   Zielplatzierung,
 } from "@/api/logandaim-api";
+import { Erfolgsmeldung } from "@/components/feedback/erfolgsmeldung";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  freiePflockFarbe,
+  neuerPflock,
+} from "@/components/stammdaten/neuer-pflock";
 import { PflockFarbeFeld } from "@/components/stammdaten/pflock-farbe-feld";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -149,6 +158,10 @@ function ParcoursInhalt({
 }) {
   const { parcoursSetupAendern, parcoursUmbenennen, parcoursEntfernen } =
     useStammdatenMutations();
+  const umbenennenMeldung = useErfolgsmeldung();
+  const aufstellungMeldung = useErfolgsmeldung();
+  const pflockMeldung = useErfolgsmeldung();
+  const router = useRouter();
   const [name, setName] = useState(parcours.name);
   const [entfernenOffen, setEntfernenOffen] = useState(false);
   const [setup, setSetup] = useState<ParcoursSetupInput>(() => ({
@@ -158,6 +171,11 @@ function ParcoursInhalt({
       abstände: platzierung.abstände.map((abstand) => ({ ...abstand })),
     })),
   }));
+  // The draft as it was last read from or written to the server, so the page can say
+  // whether the setup on screen still is the one stored. A local Pflock row or a drag
+  // changes only the draft; nothing is written until "Aufstellung speichern".
+  const [gespeichert, setGespeichert] = useState(() => JSON.stringify(setup));
+  const geaendert = JSON.stringify(setup) !== gespeichert;
 
   const gesperrt =
     anlage.zustand === "Archiviert" || parcours.zustand === "Archiviert";
@@ -166,10 +184,10 @@ function ParcoursInhalt({
     [anlage.ziele],
   );
 
-  const fehler =
-    parcoursSetupAendern.error ??
-    parcoursUmbenennen.error ??
-    parcoursEntfernen.error;
+  /** One Pflock cannot be removed: the domain refuses a setup without any (`KeinePflöcke`). */
+  const letzterPflock = setup.pflöcke.length <= 1;
+  /** No vocabulary colour is left for a new row, so the user must pick a custom one. */
+  const keineFreieFarbe = freiePflockFarbe(setup.pflöcke) === null;
 
   function pflockFarbeAendern(id: string, farbe: string) {
     setSetup((bisher) => ({
@@ -186,6 +204,54 @@ function ParcoursInhalt({
       ...bisher,
       pflöcke: arrayMove(bisher.pflöcke, von, nach),
     }));
+  }
+
+  /**
+   * A new Pflock joins the near end of the row: the user drags it into place, and the
+   * array order stays the only statement of the far-to-near order. Its colour is the
+   * standard one, or the first free colour of the club's vocabulary when that is taken,
+   * because the domain refuses two Pflöcke of one colour (AC-6).
+   *
+   * This edits the draft, not the Parcours: the row appearing *is* the confirmation,
+   * and the dirty note beside "Aufstellung speichern" says the draft is not stored yet.
+   */
+  function pflockHinzufuegen() {
+    if (freiePflockFarbe(setup.pflöcke) === null) return;
+    setSetup((bisher) => {
+      const neu = neuerPflock(bisher.pflöcke);
+      // The new row has no distances yet, so no placement needs an entry for it.
+      return { ...bisher, pflöcke: [...bisher.pflöcke, neu] };
+    });
+    // The row exists in the draft only; the "Nicht gespeichert" note below says so.
+    pflockMeldung.melden("Pflock hinzugefügt.");
+  }
+
+  /**
+   * Remove one Pflock *and* every distance measured from it, on every placement. The
+   * domain rejects a distance keyed to a Pflock that is not in the Parcours
+   * (`PflockNichtImParcours`), so leaving the entries behind would make the whole
+   * setup unsaveable. Dropping entries only ever removes distances, which keeps the
+   * far-to-near decrease of the remaining ones intact.
+   *
+   * One Pflock always stays: `KeinePflöcke` is a domain error, so the row's remove
+   * action is disabled at one and the list says why.
+   */
+  function pflockEntfernen(id: string) {
+    if (setup.pflöcke.length <= 1) return;
+    setSetup((bisher) => {
+      if (bisher.pflöcke.length <= 1) return bisher;
+      return {
+        ...bisher,
+        pflöcke: bisher.pflöcke.filter((pflock) => pflock.id !== id),
+        platzierungen: bisher.platzierungen.map((platzierung) => ({
+          ...platzierung,
+          abstände: platzierung.abstände.filter(
+            (abstand) => abstand.pflockId !== id,
+          ),
+        })),
+      };
+    });
+    pflockMeldung.melden("Pflock entfernt.");
   }
 
   function abstandAendern(zielId: string, pflockId: string, meter: number) {
@@ -245,24 +311,28 @@ function ParcoursInhalt({
         }
       />
 
-      {fehler ? (
-        <Alert variant="error">
-          {apiErrorMessage(fehler, {
-            badRequest: "Bitte prüfen Sie die Aufstellung.",
-            fallback: "Die Änderung konnte nicht gespeichert werden.",
-          })}
-        </Alert>
-      ) : null}
-
       <Card>
         <CardHeader>
           <CardTitle>Name</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {parcoursUmbenennen.isError ? (
+            <Alert variant="error">
+              {apiErrorMessage(parcoursUmbenennen.error, {
+                badRequest: "Bitte prüfen Sie den Parcoursnamen.",
+                fallback: "Der Parcours konnte nicht umbenannt werden.",
+              })}
+            </Alert>
+          ) : null}
+          <Erfolgsmeldung meldung={umbenennenMeldung.meldung} />
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              parcoursUmbenennen.mutate([anlage.id, parcours.id, name]);
+              umbenennenMeldung.verwerfen();
+              parcoursUmbenennen.mutate([anlage.id, parcours.id, name], {
+                onSuccess: () =>
+                  umbenennenMeldung.melden("Parcours umbenannt."),
+              });
             }}
           >
             <FormRow
@@ -331,15 +401,45 @@ function ParcoursInhalt({
                   index={index}
                   gesperrt={gesperrt}
                   onFarbeAendern={pflockFarbeAendern}
+                  onEntfernen={pflockEntfernen}
+                  entfernenGesperrt={letzterPflock}
                 />
               ))}
             </SortableContext>
           </DndContext>
         )}
+        {gesperrt ? null : (
+          <div className="space-y-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={pflockHinzufuegen}
+              disabled={keineFreieFarbe || parcoursSetupAendern.isPending}
+            >
+              <Plus />
+              Pflock hinzufügen
+            </Button>
+            {keineFreieFarbe ? (
+              <MarginNote label="Farbe wählen">
+                Alle Farben der Liste sind bereits vergeben. Geben Sie einem
+                Pflock eine eigene Farbe, dann ist wieder eine Farbe für einen
+                weiteren Pflock frei.
+              </MarginNote>
+            ) : null}
+          </div>
+        )}
         <MarginNote label="Reihenfolge">
           Die Reihe ist die Entfernung: oben steht der weiteste Pflock, unten
           der nächste. Ziehen am Griff ändert die Reihenfolge.
         </MarginNote>
+        {!gesperrt && letzterPflock ? (
+          <MarginNote label="Mindestens ein Pflock">
+            Ein Parcours braucht mindestens einen Pflock. Der letzte Pflock
+            lässt sich deshalb nicht entfernen; legen Sie zuerst einen weiteren
+            an.
+          </MarginNote>
+        ) : null}
+        <Erfolgsmeldung meldung={pflockMeldung.meldung} />
       </section>
 
       <HatchBand />
@@ -402,23 +502,48 @@ function ParcoursInhalt({
         letzte.
       </MarginNote>
 
-      <div className="flex flex-wrap gap-3">
-        <Button
-          disabled={gesperrt || parcoursSetupAendern.isPending}
-          onClick={() =>
-            parcoursSetupAendern.mutate([anlage.id, parcours.id, setup])
-          }
-        >
-          {parcoursSetupAendern.isPending
-            ? "Wird gespeichert…"
-            : "Aufstellung speichern"}
-        </Button>
-        <Button variant="secondary" asChild>
-          <Link href={`${paths.verwaltungAnlage}?id=${anlage.id}`}>
-            Zurück zur Anlage
-          </Link>
-        </Button>
-      </div>
+      <section aria-label="Aufstellung speichern" className="space-y-3">
+        {parcoursSetupAendern.isError ? (
+          <Alert variant="error">
+            {apiErrorMessage(parcoursSetupAendern.error, {
+              badRequest: "Bitte prüfen Sie die Aufstellung.",
+              fallback: "Die Aufstellung konnte nicht gespeichert werden.",
+            })}
+          </Alert>
+        ) : null}
+        {/* Same slot as the failure: one result, in the section the save belongs to. */}
+        <Erfolgsmeldung meldung={aufstellungMeldung.meldung} />
+        <div className="flex flex-wrap gap-3">
+          <Button
+            disabled={gesperrt || parcoursSetupAendern.isPending}
+            onClick={() => {
+              aufstellungMeldung.verwerfen();
+              pflockMeldung.verwerfen();
+              parcoursSetupAendern.mutate([anlage.id, parcours.id, setup], {
+                onSuccess: () => {
+                  setGespeichert(JSON.stringify(setup));
+                  aufstellungMeldung.melden("Aufstellung gespeichert.");
+                },
+              });
+            }}
+          >
+            {parcoursSetupAendern.isPending
+              ? "Wird gespeichert…"
+              : "Aufstellung speichern"}
+          </Button>
+          <Button variant="secondary" asChild>
+            <Link href={`${paths.verwaltungAnlage}?id=${anlage.id}`}>
+              Zurück zur Anlage
+            </Link>
+          </Button>
+        </div>
+        {geaendert ? (
+          <MarginNote label="Nicht gespeichert">
+            Die Änderungen an Pflöcken, Reihenfolge und Abständen gelten erst
+            nach „Aufstellung speichern“.
+          </MarginNote>
+        ) : null}
+      </section>
 
       {gesperrt ? null : (
         <>
@@ -475,7 +600,12 @@ function ParcoursInhalt({
                   disabled={parcoursEntfernen.isPending}
                   onClick={() =>
                     parcoursEntfernen.mutate([anlage.id, parcours.id], {
-                      onSuccess: () => setEntfernenOffen(false),
+                      // The removed Parcours no longer exists for this page to read,
+                      // so the confirmation is the Anlage's own ledger without it.
+                      onSuccess: () =>
+                        router.push(
+                          `${paths.verwaltungAnlage}?id=${anlage.id}`,
+                        ),
                     })
                   }
                 >
@@ -596,17 +726,26 @@ function SortablePlatzierung({
  * One Pflock of the setup, draggable by its handle only. The row position *is* the
  * far-to-near order, so the number is the record and the drag is the edit; the
  * colour itself is chosen on the picker, which names every option in words.
+ *
+ * Removing the row removes the Pflock from the setup — and with it every distance
+ * measured from it (see `pflockEntfernen`). The last remaining row cannot be removed,
+ * because the domain refuses a Parcours without a Pflock; the section says why beside
+ * the list, so the reason is visible whether or not the button is reachable.
  */
 function SortablePflock({
   pflock,
   index,
   gesperrt,
   onFarbeAendern,
+  onEntfernen,
+  entfernenGesperrt,
 }: {
   pflock: Pflock;
   index: number;
   gesperrt: boolean;
   onFarbeAendern: (id: string, farbe: string) => void;
+  onEntfernen: (id: string) => void;
+  entfernenGesperrt: boolean;
 }) {
   const {
     attributes,
@@ -648,6 +787,16 @@ function SortablePflock({
         disabled={gesperrt}
         className="min-w-0 flex-1"
       />
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={`Pflock ${index + 1} entfernen`}
+        className="text-secondary"
+        disabled={gesperrt || entfernenGesperrt}
+        onClick={() => onEntfernen(pflock.id)}
+      >
+        <Trash2 />
+      </Button>
     </div>
   );
 }

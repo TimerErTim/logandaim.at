@@ -1,5 +1,6 @@
 "use client";
 
+import { Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
@@ -9,6 +10,7 @@ import { apiErrorMessage } from "@/api/errors";
 import {
   useAnlageQuery,
   useBenutzerNachEmailQuery,
+  useErfolgsmeldung,
   useStammdatenMutations,
 } from "@/api/hooks";
 import {
@@ -17,14 +19,17 @@ import {
   type AnlageKontakt,
   AnlageVerwaltungRolle,
   type ParcoursInput,
+  type Pflock,
   type ZielInput,
 } from "@/api/logandaim-api";
+import { Erfolgsmeldung } from "@/components/feedback/erfolgsmeldung";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
 import {
-  PFLOCK_FARBE_STANDARD,
-  PflockFarbeFeld,
-} from "@/components/stammdaten/pflock-farbe-feld";
+  freiePflockFarbe,
+  neuerPflock,
+} from "@/components/stammdaten/neuer-pflock";
+import { PflockFarbeFeld } from "@/components/stammdaten/pflock-farbe-feld";
 import { PflockMarker } from "@/components/stammdaten/pflock-swatch";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -133,6 +138,7 @@ function AnlageSkeleton() {
 
 function AnlageInhalt({ anlage }: { anlage: Anlage }) {
   const mutations = useStammdatenMutations();
+  const deaktivierenMeldung = useErfolgsmeldung();
   const deaktiviert = anlage.zustand === "Archiviert";
 
   return (
@@ -163,6 +169,10 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
         </Alert>
       ) : null}
 
+      {/* The confirmation lives here, not in the card that deactivated: a success
+          replaces that card with the archived state of the whole page. */}
+      <Erfolgsmeldung meldung={deaktivierenMeldung.meldung} />
+
       <Tabs defaultValue="ziele">
         <TabsList>
           <TabsTrigger value="ziele">Ziele</TabsTrigger>
@@ -187,9 +197,13 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
           <Stammdaten
             anlage={anlage}
             gesperrt={deaktiviert}
-            onDeaktivieren={() =>
-              mutations.anlageDeaktivieren.mutate(anlage.id)
-            }
+            onDeaktivieren={() => {
+              deaktivierenMeldung.verwerfen();
+              mutations.anlageDeaktivieren.mutate(anlage.id, {
+                onSuccess: () =>
+                  deaktivierenMeldung.melden("Anlage deaktiviert."),
+              });
+            }}
             laeuft={mutations.anlageDeaktivieren.isPending}
             fehler={mutations.anlageDeaktivieren.error}
             aenderungSpeichert={mutations.anlageAendern}
@@ -207,11 +221,15 @@ const leeresZiel: ZielInput = { tiername: "", zielgruppe: 1 };
 function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
   const { zielHinzufuegen, zielAendern, zielErsetzen, zielEntfernen } =
     useStammdatenMutations();
+  const meldung = useErfolgsmeldung();
   const [form, setForm] = useState<ZielInput>(leeresZiel);
   const [bearbeitet, setBearbeitet] = useState<string | null>(null);
 
   const fehler =
-    zielHinzufuegen.error ?? zielAendern.error ?? zielEntfernen.error;
+    zielHinzufuegen.error ??
+    zielAendern.error ??
+    zielErsetzen.error ??
+    zielEntfernen.error;
 
   const aktive = anlage.ziele.filter((ziel) => ziel.zustand === "Aktiv");
   const archivierte = anlage.ziele.filter(
@@ -283,13 +301,20 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                           variant="secondary"
                           size="sm"
                           disabled={zielErsetzen.isPending}
-                          onClick={() =>
-                            zielErsetzen.mutate([
-                              anlage.id,
-                              ziel.id,
-                              { ...ziel, zielgruppe: ziel.zielgruppe },
-                            ])
-                          }
+                          onClick={() => {
+                            meldung.verwerfen();
+                            zielErsetzen.mutate(
+                              [
+                                anlage.id,
+                                ziel.id,
+                                { ...ziel, zielgruppe: ziel.zielgruppe },
+                              ],
+                              {
+                                onSuccess: () =>
+                                  meldung.melden("Ziel ersetzt."),
+                              },
+                            );
+                          }}
                         >
                           Ersetzen
                         </Button>
@@ -297,9 +322,12 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                           variant="destructive"
                           size="sm"
                           disabled={zielEntfernen.isPending}
-                          onClick={() =>
-                            zielEntfernen.mutate([anlage.id, ziel.id])
-                          }
+                          onClick={() => {
+                            meldung.verwerfen();
+                            zielEntfernen.mutate([anlage.id, ziel.id], {
+                              onSuccess: () => meldung.melden("Ziel entfernt."),
+                            });
+                          }}
                         >
                           Entfernen
                         </Button>
@@ -324,6 +352,8 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
             })}
           </Alert>
         ) : null}
+
+        <Erfolgsmeldung meldung={meldung.meldung} />
       </section>
 
       {gesperrt ? null : (
@@ -339,13 +369,20 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
             <form
               onSubmit={(event) => {
                 event.preventDefault();
+                meldung.verwerfen();
                 if (bearbeitet) {
                   zielAendern.mutate([anlage.id, bearbeitet, form], {
-                    onSuccess: () => setBearbeitet(null),
+                    onSuccess: () => {
+                      setBearbeitet(null);
+                      meldung.melden("Ziel geändert.");
+                    },
                   });
                 } else {
                   zielHinzufuegen.mutate([anlage.id, form], {
-                    onSuccess: () => setForm(leeresZiel),
+                    onSuccess: () => {
+                      setForm(leeresZiel);
+                      meldung.melden("Ziel hinzugefügt.");
+                    },
                   });
                 }
               }}
@@ -418,11 +455,6 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
 
 // ------------------------------------------------------------------------ Parcours
 
-const neuerPflock = () => ({
-  id: crypto.randomUUID(),
-  farbe: PFLOCK_FARBE_STANDARD,
-});
-
 function ParcoursListe({
   anlage,
   gesperrt,
@@ -431,9 +463,10 @@ function ParcoursListe({
   gesperrt: boolean;
 }) {
   const { parcoursHinzufuegen } = useStammdatenMutations();
+  const meldung = useErfolgsmeldung();
   const aktiveZiele = anlage.ziele.filter((ziel) => ziel.zustand === "Aktiv");
   const [name, setName] = useState("");
-  const [pflock, setPflock] = useState(neuerPflock);
+  const [pfloecke, setPfloecke] = useState<Pflock[]>(() => [neuerPflock([])]);
   const [ausgewaehlteZiele, setAusgewaehlteZiele] = useState<string[]>([]);
 
   function toggleZiel(zielId: string, ausgewaehlt: boolean) {
@@ -444,21 +477,38 @@ function ParcoursListe({
     );
   }
 
+  /** A row joins the draft; the list itself is the record, so the note only confirms it. */
+  function pflockHinzufuegen() {
+    if (freiePflockFarbe(pfloecke) === null) return;
+    setPfloecke((aktuell) => [...aktuell, neuerPflock(aktuell)]);
+    meldung.melden("Pflock hinzugefügt.");
+  }
+
+  /** One Pflock stays: the domain refuses a Parcours without any (`KeinePflöcke`). */
+  function pflockEntfernen(id: string) {
+    if (pfloecke.length <= 1) return;
+    setPfloecke((aktuell) => aktuell.filter((pflock) => pflock.id !== id));
+    meldung.melden("Pflock entfernt.");
+  }
+
   function parcoursErstellen(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const eingabe: ParcoursInput = {
       name,
-      pflöcke: [pflock],
+      pflöcke: pfloecke,
+      // A new Parcours has no distances yet, so every placement starts empty.
       platzierungen: ausgewaehlteZiele.map((zielId) => ({
         zielId,
         abstände: [],
       })),
     };
+    meldung.verwerfen();
     parcoursHinzufuegen.mutate([anlage.id, eingabe], {
       onSuccess: () => {
         setName("");
-        setPflock(neuerPflock());
+        setPfloecke([neuerPflock([])]);
         setAusgewaehlteZiele([]);
+        meldung.melden("Parcours angelegt.");
       },
     });
   }
@@ -486,25 +536,92 @@ function ParcoursListe({
                 })}
               </Alert>
             ) : null}
+            {/* One slot for the result of this form: failure above, success here. */}
+            <Erfolgsmeldung meldung={meldung.meldung} />
             <form className="space-y-4" onSubmit={parcoursErstellen}>
-              <FormRow className="sm:grid-cols-2">
-                <Field label="Parcoursname">
-                  <Input
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    disabled={parcoursHinzufuegen.isPending}
-                    required
-                  />
-                </Field>
-                <PflockFarbeFeld
-                  label="Pflockfarbe"
-                  value={pflock.farbe}
-                  onValueChange={(farbe) =>
-                    setPflock((aktuell) => ({ ...aktuell, farbe }))
-                  }
+              <Field label="Parcoursname" className="sm:max-w-md">
+                <Input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
                   disabled={parcoursHinzufuegen.isPending}
+                  required
                 />
-              </FormRow>
+              </Field>
+              <section
+                aria-label="Pflöcke des neuen Parcours"
+                className="space-y-3"
+              >
+                <h3 className="text-sm font-semibold text-ink">Pflöcke</h3>
+                <ul className="space-y-3">
+                  {pfloecke.map((pflock, index) => (
+                    <li
+                      key={pflock.id}
+                      className="rounded-sm border border-subtle bg-surface p-3"
+                    >
+                      {/* A row of the print form: the picker, and its action aligned
+                          to the control row rather than to the row's bottom edge. */}
+                      <FormRow
+                        className="sm:grid-cols-[minmax(0,1fr)_auto]"
+                        actions={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Pflock ${index + 1} entfernen`}
+                            disabled={
+                              parcoursHinzufuegen.isPending ||
+                              pfloecke.length <= 1
+                            }
+                            onClick={() => pflockEntfernen(pflock.id)}
+                          >
+                            <Trash2 />
+                          </Button>
+                        }
+                      >
+                        <PflockFarbeFeld
+                          label={`Farbe Pflock ${index + 1}`}
+                          value={pflock.farbe}
+                          onValueChange={(farbe) =>
+                            setPfloecke((aktuell) =>
+                              aktuell.map((eintrag) =>
+                                eintrag.id === pflock.id
+                                  ? { ...eintrag, farbe }
+                                  : eintrag,
+                              ),
+                            )
+                          }
+                          disabled={parcoursHinzufuegen.isPending}
+                        />
+                      </FormRow>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={pflockHinzufuegen}
+                  disabled={
+                    parcoursHinzufuegen.isPending ||
+                    freiePflockFarbe(pfloecke) === null
+                  }
+                >
+                  <Plus />
+                  Pflock hinzufügen
+                </Button>
+                {freiePflockFarbe(pfloecke) === null ? (
+                  <MarginNote label="Farbe wählen">
+                    Alle Farben der Liste sind bereits vergeben. Geben Sie einem
+                    Pflock eine eigene Farbe, dann ist wieder eine Farbe für
+                    einen weiteren Pflock frei.
+                  </MarginNote>
+                ) : null}
+                {pfloecke.length <= 1 ? (
+                  <MarginNote label="Mindestens ein Pflock">
+                    Ein Parcours braucht mindestens einen Pflock. Der letzte
+                    Pflock lässt sich deshalb nicht entfernen; legen Sie zuerst
+                    einen weiteren an.
+                  </MarginNote>
+                ) : null}
+              </section>
               <section className="space-y-2">
                 <h3 className="text-sm font-semibold text-ink">
                   Ziele im Parcours
@@ -524,8 +641,8 @@ function ParcoursListe({
                 </div>
               </section>
               <MarginNote label="Aufbau">
-                Der Parcours startet mit einem Pflock. Weitere Pflöcke und
-                Distanzen können Sie nach dem Anlegen bearbeiten.
+                Die Pflöcke stehen von fern nach nah. Distanzen tragen Sie nach
+                dem Anlegen im Parcours ein.
               </MarginNote>
               <Button
                 type="submit"
@@ -624,6 +741,7 @@ function Verwaltungen({
 }) {
   const { verwaltungGewaehren, verwaltungEntziehen, verwaltungAendern } =
     useStammdatenMutations();
+  const meldung = useErfolgsmeldung();
   const [emailEingabe, setEmailEingabe] = useState("");
   const [emailAbfrage, setEmailAbfrage] = useState("");
   const [ausgewaehlteBenutzerId, setAusgewaehlteBenutzerId] = useState("");
@@ -678,16 +796,23 @@ function Verwaltungen({
                           variant="ghost"
                           size="sm"
                           disabled={verwaltungAendern.isPending}
-                          onClick={() =>
-                            verwaltungAendern.mutate([
-                              anlage.id,
-                              verwaltung.benutzerId,
-                              verwaltung.rolle ===
-                              AnlageVerwaltungRolle.Administrator
-                                ? AnlageVerwaltungRolle.Mitarbeiter
-                                : AnlageVerwaltungRolle.Administrator,
-                            ])
-                          }
+                          onClick={() => {
+                            meldung.verwerfen();
+                            verwaltungAendern.mutate(
+                              [
+                                anlage.id,
+                                verwaltung.benutzerId,
+                                verwaltung.rolle ===
+                                AnlageVerwaltungRolle.Administrator
+                                  ? AnlageVerwaltungRolle.Mitarbeiter
+                                  : AnlageVerwaltungRolle.Administrator,
+                              ],
+                              {
+                                onSuccess: () =>
+                                  meldung.melden("Verwaltung geändert."),
+                              },
+                            );
+                          }}
                         >
                           {verwaltung.rolle ===
                           AnlageVerwaltungRolle.Administrator
@@ -698,12 +823,16 @@ function Verwaltungen({
                           variant="destructive"
                           size="sm"
                           disabled={verwaltungEntziehen.isPending}
-                          onClick={() =>
-                            verwaltungEntziehen.mutate([
-                              anlage.id,
-                              verwaltung.benutzerId,
-                            ])
-                          }
+                          onClick={() => {
+                            meldung.verwerfen();
+                            verwaltungEntziehen.mutate(
+                              [anlage.id, verwaltung.benutzerId],
+                              {
+                                onSuccess: () =>
+                                  meldung.melden("Verwaltung entzogen."),
+                              },
+                            );
+                          }}
                         >
                           Entziehen
                         </Button>
@@ -726,6 +855,8 @@ function Verwaltungen({
           })}
         </Alert>
       ) : null}
+
+      <Erfolgsmeldung meldung={meldung.meldung} />
 
       <MarginNote label="Rollen">
         Eine Anlage wird von Mitarbeitern gepflegt; ein Administrator darf
@@ -809,6 +940,7 @@ function Verwaltungen({
               onSubmit={(event) => {
                 event.preventDefault();
                 if (!ausgewaehlteBenutzerId) return;
+                meldung.verwerfen();
                 verwaltungGewaehren.mutate(
                   [anlage.id, ausgewaehlteBenutzerId, rolle],
                   {
@@ -816,6 +948,7 @@ function Verwaltungen({
                       setEmailEingabe("");
                       setEmailAbfrage("");
                       setAusgewaehlteBenutzerId("");
+                      meldung.melden("Verwaltung vergeben.");
                     },
                   },
                 );
@@ -882,6 +1015,7 @@ function Stammdaten({
   const [adresse, setAdresse] = useState<AnlageAdresse>(anlage.adresse);
   const [kontakt, setKontakt] = useState<AnlageKontakt>(anlage.kontakt);
   const [deaktivierenOffen, setDeaktivierenOffen] = useState(false);
+  const meldung = useErfolgsmeldung();
 
   return (
     <div className="space-y-0">
@@ -894,10 +1028,13 @@ function Stammdaten({
             className="space-y-6"
             onSubmit={(event) => {
               event.preventDefault();
-              aenderungSpeichert.mutate([
-                anlage.id,
-                { ...anlage, name, adresse, kontakt },
-              ]);
+              meldung.verwerfen();
+              aenderungSpeichert.mutate(
+                [anlage.id, { ...anlage, name, adresse, kontakt }],
+                {
+                  onSuccess: () => meldung.melden("Stammdaten gespeichert."),
+                },
+              );
             }}
           >
             <div className="grid gap-4 sm:grid-cols-2">
@@ -1046,6 +1183,7 @@ function Stammdaten({
               })}
             </Alert>
           ) : null}
+          <Erfolgsmeldung meldung={meldung.meldung} className="mt-4" />
         </CardContent>
       </Card>
 

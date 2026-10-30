@@ -47,10 +47,10 @@ export default function VerwaltungPage() {
         title="Anlagen"
         description="Stammdaten der Anlagen, für die Sie zuständig sind. Deaktivierte Anlagen sind nur für Systemadministratoren einsehbar und nehmen keine Änderung mehr an."
         actions={
-          istSystemadministrator ? (
+          istSystemadministrator && !leer ? (
             // Exactly one primary action per screen: while the ledger is empty the
-            // empty state carries it, so the header action steps back to secondary.
-            <Button variant={leer ? "secondary" : "primary"} asChild>
+            // empty state owns it, so the header does not repeat it there.
+            <Button asChild>
               <Link href={paths.verwaltungAnlageNeu}>
                 <Plus />
                 Anlage anlegen
@@ -148,9 +148,9 @@ function AnlagenSkeleton() {
 }
 
 /**
- * The empty state names the next action. A Systemadministrator creates the missing
- * Anlage with the header's primary action; everyone else has no way to give themselves
- * one, so the note names who can.
+ * The empty state names the next action, and carries it: an empty ledger is the one
+ * state where creating the first Anlage is the screen's purpose. Everyone else has no
+ * way to give themselves one, so the note names who can.
  */
 function Leerzustand({
   istSystemadministrator,

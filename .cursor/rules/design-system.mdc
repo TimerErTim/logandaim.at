@@ -196,11 +196,26 @@ Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour 
   one stamp in brand ink.
 - **`Alert`** — a margin note: coloured left rule, tinted wash, never a full coloured block. `error`
   uses `role="alert"`.
+- **`Erfolgsmeldung`** — the positive counterpart of `Alert`, in
+  `components/feedback/`: the same wash and left rule as `Alert variant="success"`, a check icon as a
+  second channel besides colour, and one German sentence that names the write („Aufstellung
+  gespeichert.“). It is an `<output aria-atomic="true">`, not `role="alert"`: a success is polite
+  news, and the element stays mounted (`sr-only`) while empty so a live region is never inserted
+  together with its text. Paired with `useErfolgsmeldung` (one per section): the newest sentence
+  replaces the older one, a new mutation clears the slot first, and a timer clears it after `5s`. It
+  sits where that mutation's failure `Alert` sits — one result slot per section, never one inside a
+  card and one outside. Writes that navigate express their success by the destination instead.
 - **`Separator`** — the ruled line; the standard section divider.
 - **`Input`, `Textarea`, `Select`, `SearchInput`** — `--bg-elevated` with a `--border-control`
   contour, turning `--color-primary` on focus and darkening on hover. All are drawn at 44px: they are
   replaced elements and cannot take an overlay. `Select` stays native on purpose — the platform picker
   survives touch and one-handed use; its chevron is a `currentColor` mask, so it flips with the theme.
+- **`PasswordInput`** — a password field with an `Eye`/`EyeOff` toggle. The toggle is a real control
+  (`aria-pressed`, a German name stating what the next press does) sitting *inside* the field's
+  trailing area: the field reserves `pr-12` and the button occupies the 44×44 corner, so nothing is
+  drawn taller than the row. Its focus ring is drawn inside the field (`-outline-offset-2`) to stay
+  visible against the control contour. `id` is forwarded to the real `<input>`, so `Field`'s
+  `htmlFor` keeps pointing at the element that takes focus.
 - **Inked controls.** Anything drawn rather than typed carries a strong contour, because a mark on
   paper is inked: `Checkbox` and `Switch` track and thumb are `border-2`, `RadioGroupItem` is
   `border-[3px]`. A form must read as marks, not browser chrome. `Checkbox` fills green with a
@@ -261,6 +276,13 @@ product decision, not settled here.
 4. Figures right-aligned and `tabular-nums`. IDs, references, and coordinates `font-mono`.
 5. Exactly one primary action per screen, in the first action row.
 6. Status as a word (plus icon or stamp); colour only as the second channel.
+7. A page that ends in links closes with one `HatchBand` before them and *nothing after them* — the
+   footer is the last block, so a page without a footer simply ends with its content. Never a
+   trailing rule that divides nothing.
+8. An `Alert` about a form's own submission sits on that form's sheet, immediately above the action
+   that caused it; an `Alert` about the page itself (the session could not be checked, a link in the
+   URL is spent) sits above the cards and spans the page. One rule, so a reader always knows whether
+   resubmitting can help.
 
 ## The gallery at `/dev`
 
