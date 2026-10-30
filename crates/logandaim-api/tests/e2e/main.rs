@@ -29,6 +29,7 @@ use serde_json::Value;
 pub mod konto;
 pub mod mailpit;
 pub mod runde;
+pub mod spec;
 pub mod stammdaten;
 
 /// The frontend origin every e2e case's mailed links are spelled from, and the routes the

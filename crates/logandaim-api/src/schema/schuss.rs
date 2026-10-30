@@ -9,8 +9,9 @@ use uuid::Uuid;
 
 use logandaim_core::domain;
 
-/// API mirror of [`domain::Wertungszone`]. Kept separate so the domain never learns
-/// about OpenAPI, serde, or HTTP.
+/// API mirror of the domain's scoring zone.
+///
+/// `Spot` and `Kill` are hits, `Body` a non-lethal hit, `Miss` a miss.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -43,14 +44,19 @@ impl From<Wertungszone> for domain::Wertungszone {
     }
 }
 
-/// Who a row belongs to. An anonymised row names no Benutzer (SPEC-datenschutz).
+/// Who a row belongs to.
+///
+/// A Benutzer deletion anonymises its rows: the identity is gone and only the anonymisation
+/// time remains, so history survives without naming anyone.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Zuordnung {
+    /// The owning Benutzer; absent once the row is anonymised.
     pub benutzer_id: Option<Uuid>,
+    /// When the row was anonymised, as an RFC 3339 timestamp; absent while it is owned.
     pub anonymisiert_am: Option<String>,
 }
 
@@ -70,25 +76,34 @@ impl From<domain::Zuordnung> for Zuordnung {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Schuss {
+    /// Identity of the Schuss.
     pub id: Uuid,
+    /// The Runde it belongs to.
     pub runde_id: Uuid,
+    /// The Ziel it hit or missed.
     pub ziel_id: Uuid,
+    /// Who logged it.
     pub zuordnung: Zuordnung,
     /// 1-based position of the arrow at its Ziel.
     pub pfeil: usize,
+    /// Where on the Ziel it landed.
     pub wertungszone: Wertungszone,
 }
 
-/// The fold of every Schuss at one Ziel: both Wertungen plus first-arrow hit.
+/// The fold of every Schuss at one Ziel: both Wertungen plus the first-arrow hit.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Zielergebnis {
+    /// First-arrow hits at this Ziel.
     pub erster_treffer: u32,
+    /// Follow-up hits at this Ziel.
     pub mehrschuss: u32,
+    /// Whether the very first arrow hit.
     pub erster_pfeil_getroffen: bool,
+    /// How many Schüsse were logged at this Ziel.
     pub anzahl_schüsse: usize,
 }
 

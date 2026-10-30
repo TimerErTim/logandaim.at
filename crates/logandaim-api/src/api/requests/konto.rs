@@ -16,63 +16,75 @@ use logandaim_core::{
 
 use crate::schema::EmailAdresse;
 
-/// Registration step 1.
+/// Registration step 1: the address to confirm.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrierungStartRequest {
+    /// The address to send the confirmation mail to. Its format is validated.
     pub e_mail_adresse: EmailAdresse,
 }
 
-/// Registration step 2.
+/// Registration step 2: the mailed token and the chosen password.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RegistrierungAbschlussRequest {
+    /// The single-use token from the confirmation mail.
     pub token: String,
+    /// The password to set. It is checked against the password policy.
     pub passwort: String,
 }
 
+/// Sign-in with the account's e-mail address and password.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnmeldungRequest {
+    /// The account's e-mail address.
     pub e_mail_adresse: EmailAdresse,
+    /// The account's password.
     pub passwort: String,
 }
 
+/// Request a password reset mail.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PasswortVergessenRequest {
+    /// The address to send the reset mail to.
     pub e_mail_adresse: EmailAdresse,
 }
 
+/// Set a new password from a mailed reset token.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PasswortWiederherstellenRequest {
+    /// The single-use token from the reset mail.
     pub token: String,
+    /// The new password. It is checked against the password policy.
     pub neues_passwort: String,
 }
 
-/// Deleting one's own Benutzer: the Passwort is re-entered, and the intent is explicit.
+/// Delete one's own Benutzer: the password is re-entered, and the intent is explicit.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BenutzerLöschungRequest {
+    /// The account's password, re-entered to prove the caller's identity.
     pub passwort: String,
     /// Must be `true`; a missing flag is a refusal, never a default.
     pub bestätigt: bool,

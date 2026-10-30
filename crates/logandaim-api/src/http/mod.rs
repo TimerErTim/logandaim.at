@@ -24,7 +24,7 @@ use logandaim_core::{
 };
 use poem::web::RealIp;
 use poem_openapi::{
-    OpenApi, OpenApiService, ServerObject,
+    OpenApi, OpenApiService, ServerObject, Tags,
     param::{Cookie, Header, Path, Query},
     payload::Json,
 };
@@ -55,6 +55,22 @@ use crate::{
     },
 };
 
+/// The sections the published API is grouped into.
+#[derive(Tags)]
+pub enum ApiTag {
+    /// Anlage master data: identity, address, contact, roles, Ziele, and the public
+    /// directory.
+    Anlagen,
+    /// Parcours: Pflock setup, route order, and the distances between them.
+    Parcours,
+    /// Runden and the Schüsse logged in them.
+    Runden,
+    /// Registration, sign-in, session, password recovery, and the own Benutzer.
+    Konto,
+    /// Liveness of the service.
+    Betrieb,
+}
+
 pub struct LogandaimApiSpec {
     app_api: LogandaimAppApi,
 }
@@ -79,18 +95,25 @@ impl From<App> for LogandaimApiSpec {
 
 #[OpenApi]
 impl LogandaimApiSpec {
-    #[oai(path = "/health", method = "get")]
+    /// Report that the service is up.
+    ///
+    /// Answers the literal `OK`. It touches no dependency, so a green answer means the
+    /// process is listening, not that its database is reachable.
+    #[oai(path = "/health", method = "get", tag = "ApiTag::Betrieb")]
     async fn health(&self) -> Json<String> {
         Json("OK".to_string())
     }
 
     // ------------------------------------------------------------------ master data
 
-    /// Only a Systemadministrator may create an Anlage (AC-1).
-    #[oai(path = "/anlagen", method = "post")]
+    /// Create an Anlage. Systemadministrator only.
+    ///
+    /// The caller becomes its first Administrator. The address is required, the contact
+    /// details are optional.
+    #[oai(path = "/anlagen", method = "post", tag = "ApiTag::Anlagen")]
     async fn anlage_erstellen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        authorization: RequiredBearerAuthorization,
         body: Json<AnlageErstellungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
@@ -100,11 +123,14 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// The Anlagen the caller may administer. Archived ones are not listed.
-    #[oai(path = "/anlagen", method = "get")]
+    /// List the Anlagen the caller may administer.
+    ///
+    /// Archived Anlagen are not listed. Each row carries the caller's role in that Anlage
+    /// so a client can gate its controls.
+    #[oai(path = "/anlagen", method = "get", tag = "ApiTag::Anlagen")]
     async fn anlagen_anzeigen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
     ) -> TypicalJsonResponse<Vec<AnlagenZeile>> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
             Ok(auth) => self.app_api.anlagen_anzeigen(auth).await,
@@ -113,13 +139,16 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Public: the active Anlagen and the Parcours each offers. No header needed.
+    /// List the active Anlagen with the Parcours each offers. No sign-in needed.
+    ///
+    /// This is the public directory. It carries no contact data, and a broken token is
+    /// answered as anonymous rather than as an error.
     //
     // The static segment wins over `/anlagen/:anlage_id`, so registration order is safe.
-    #[oai(path = "/anlagen/oeffentlich", method = "get")]
+    #[oai(path = "/anlagen/oeffentlich", method = "get", tag = "ApiTag::Anlagen")]
     async fn anlagen_verzeichnis(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: BearerAuthorization,
     ) -> TypicalJsonResponse<Vec<AnlageÖffentlich>> {
         // A broken token is answered as anonymous here, never as an error: this route is
         // public, and a stale token must not hide the directory from its own reader.
@@ -130,11 +159,14 @@ impl LogandaimApiSpec {
         self.app_api.anlagen_verzeichnis(auth).await.into()
     }
 
-    /// An archived Anlage answers only to a Systemadministrator; its writes still 409 (AC-11).
-    #[oai(path = "/anlagen/:anlage_id", method = "get")]
+    /// Read one Anlage with its whole master data.
+    ///
+    /// An archived Anlage answers only to a Systemadministrator; every write to one is
+    /// refused with `409`.
+    #[oai(path = "/anlagen/:anlage_id", method = "get", tag = "ApiTag::Anlagen")]
     async fn anlage_anzeigen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
@@ -148,11 +180,14 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Rewrites the Anlage's own fields (name, address, contact). Administrator only (AC-3).
-    #[oai(path = "/anlagen/:anlage_id", method = "put")]
+    /// Rewrite the Anlage's own fields: name, address, and contact. Administrator only.
+    ///
+    /// The whole set is replaced; omitted contact fields become empty. Ziele, Parcours, and
+    /// role assignments are untouched.
+    #[oai(path = "/anlagen/:anlage_id", method = "put", tag = "ApiTag::Anlagen")]
     async fn anlage_ändern(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         body: Json<AnlageÄnderungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
@@ -167,11 +202,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Irreversible: no route reactivates an Anlage (AC-10).
-    #[oai(path = "/anlagen/:anlage_id/deaktivierung", method = "post")]
+    /// Deactivate an Anlage once and for all.
+    ///
+    /// Irreversible: no route reactivates one. Reads keep working, writes answer `409`.
+    #[oai(
+        path = "/anlagen/:anlage_id/deaktivierung",
+        method = "post",
+        tag = "ApiTag::Anlagen"
+    )]
     async fn anlage_deaktivieren(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
@@ -185,11 +226,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Grant a role to an existing Benutzer. Administrator only (AC-2).
-    #[oai(path = "/anlagen/:anlage_id/verwaltungen", method = "post")]
+    /// Grant a role in the Anlage to an existing Benutzer. Administrator only.
+    ///
+    /// The Benutzer is named by identity; find it with `benutzer-suche` first.
+    #[oai(
+        path = "/anlagen/:anlage_id/verwaltungen",
+        method = "post",
+        tag = "ApiTag::Anlagen"
+    )]
     async fn verwaltung_gewähren(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         body: Json<AnlageVerwaltungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
@@ -204,11 +251,18 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Exact-email lookup used only by a caller who may manage this active Anlage.
-    #[oai(path = "/anlagen/:anlage_id/benutzer-suche", method = "get")]
+    /// Find a Benutzer by exact e-mail address, for granting a role.
+    ///
+    /// Usable only by a caller who may manage this active Anlage. Answers a single match or
+    /// an empty list.
+    #[oai(
+        path = "/anlagen/:anlage_id/benutzer-suche",
+        method = "get",
+        tag = "ApiTag::Anlagen"
+    )]
     async fn benutzer_nach_email_suchen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         e_mail_adresse: Query<String>,
     ) -> TypicalJsonResponse<Vec<crate::schema::BenutzerSuchtreffer>> {
@@ -223,11 +277,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Change an existing role. The target is in the path, so the body only names the role.
-    #[oai(path = "/anlagen/:anlage_id/verwaltungen/:benutzer_id", method = "put")]
+    /// Change an existing role. Administrator only.
+    ///
+    /// The target is in the path, so the body only names the role.
+    #[oai(
+        path = "/anlagen/:anlage_id/verwaltungen/:benutzer_id",
+        method = "put",
+        tag = "ApiTag::Anlagen"
+    )]
     async fn verwaltung_ändern(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         benutzer_id: Path<Uuid>,
         body: Json<AnlageVerwaltungRequest>,
@@ -248,14 +308,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Revoke a role. The last Administrator cannot be revoked (AC-2).
+    /// Revoke a role. Administrator only.
+    ///
+    /// The last Administrator of an Anlage cannot be revoked.
     #[oai(
         path = "/anlagen/:anlage_id/verwaltungen/:benutzer_id",
-        method = "delete"
+        method = "delete",
+        tag = "ApiTag::Anlagen"
     )]
     async fn verwaltung_entziehen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         benutzer_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
@@ -270,11 +333,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Add a physical Ziel (AC-5). A Mitarbeiter may; the Anlage fields are not touched.
-    #[oai(path = "/anlagen/:anlage_id/ziele", method = "post")]
+    /// Add a physical Ziel to the Anlage.
+    ///
+    /// A Mitarbeiter may do this; the Anlage's own fields are not touched.
+    #[oai(
+        path = "/anlagen/:anlage_id/ziele",
+        method = "post",
+        tag = "ApiTag::Anlagen"
+    )]
     async fn ziel_hinzufügen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         body: Json<ZielRequest>,
     ) -> TypicalJsonResponse<Anlage> {
@@ -289,11 +358,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Edit details; the identity and its history stay (AC-5).
-    #[oai(path = "/anlagen/:anlage_id/ziele/:ziel_id", method = "put")]
+    /// Edit a Ziel's details.
+    ///
+    /// The identity stays, and so does everything already recorded against it.
+    #[oai(
+        path = "/anlagen/:anlage_id/ziele/:ziel_id",
+        method = "put",
+        tag = "ApiTag::Anlagen"
+    )]
     async fn ziel_ändern(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         ziel_id: Path<Uuid>,
         body: Json<ZielRequest>,
@@ -309,11 +384,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Replace the physical target: a new identity that inherits the slot, not the history.
-    #[oai(path = "/anlagen/:anlage_id/ziele/:ziel_id/ersatz", method = "post")]
+    /// Replace the physical Ziel with a new one in the same slot.
+    ///
+    /// The replacement has a new identity; the history of the old Ziel stays as recorded.
+    #[oai(
+        path = "/anlagen/:anlage_id/ziele/:ziel_id/ersatz",
+        method = "post",
+        tag = "ApiTag::Anlagen"
+    )]
     async fn ziel_ersetzen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         ziel_id: Path<Uuid>,
         body: Json<ZielRequest>,
@@ -329,11 +410,18 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Archive when history references it, delete when nothing does (AC-11, AC-12).
-    #[oai(path = "/anlagen/:anlage_id/ziele/:ziel_id", method = "delete")]
+    /// Remove a Ziel: archive it when recorded Runden reference it, delete it otherwise.
+    ///
+    /// Answers the Anlage as it stands afterwards, so the Ziel is absent from `ziele` either
+    /// way and an archived one no longer appears among the active ones.
+    #[oai(
+        path = "/anlagen/:anlage_id/ziele/:ziel_id",
+        method = "delete",
+        tag = "ApiTag::Anlagen"
+    )]
     async fn ziel_entfernen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         ziel_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
@@ -348,11 +436,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Create a Parcours with its Pflock setup and route (AC-4, AC-6).
-    #[oai(path = "/anlagen/:anlage_id/parcours", method = "post")]
+    /// Create a Parcours with its Pflock setup and its route.
+    ///
+    /// The Pflöcke and their order are given explicitly; a colour never implies an order.
+    #[oai(
+        path = "/anlagen/:anlage_id/parcours",
+        method = "post",
+        tag = "ApiTag::Parcours"
+    )]
     async fn parcours_hinzufügen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         body: Json<ParcoursErstellungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
@@ -367,14 +461,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Replace the whole shooting setup; existing Runden keep their snapshot (AC-7).
+    /// Replace the whole shooting setup: Pflöcke and the route that places Ziele among them.
+    ///
+    /// Existing Runden keep the snapshot they captured; only future Runden see the change.
     #[oai(
         path = "/anlagen/:anlage_id/parcours/:parcours_id/setup",
-        method = "put"
+        method = "put",
+        tag = "ApiTag::Parcours"
     )]
     async fn parcours_setup_ändern(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         parcours_id: Path<Uuid>,
         body: Json<ParcoursSetupRequest>,
@@ -395,11 +492,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Rename a Parcours. Its identity and every existing snapshot stay (AC-9).
-    #[oai(path = "/anlagen/:anlage_id/parcours/:parcours_id", method = "put")]
+    /// Rename a Parcours.
+    ///
+    /// The identity stays, and every captured snapshot keeps the name it recorded.
+    #[oai(
+        path = "/anlagen/:anlage_id/parcours/:parcours_id",
+        method = "put",
+        tag = "ApiTag::Parcours"
+    )]
     async fn parcours_umbenennen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         parcours_id: Path<Uuid>,
         body: Json<ParcoursUmbenennenRequest>,
@@ -420,11 +523,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Archive when a Runde captured it, delete when none did (AC-11, AC-12).
-    #[oai(path = "/anlagen/:anlage_id/parcours/:parcours_id", method = "delete")]
+    /// Remove a Parcours: archive it when a Runde captured it, delete it otherwise.
+    ///
+    /// Answers the Anlage as it stands afterwards.
+    #[oai(
+        path = "/anlagen/:anlage_id/parcours/:parcours_id",
+        method = "delete",
+        tag = "ApiTag::Parcours"
+    )]
     async fn parcours_entfernen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
         parcours_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
@@ -439,11 +548,13 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Public: every active Parcours of every active Anlage, no header needed (AC-13).
-    #[oai(path = "/parcours", method = "get")]
+    /// List every active Parcours of every active Anlage. No sign-in needed.
+    ///
+    /// This is the list a client starts a Runde from.
+    #[oai(path = "/parcours", method = "get", tag = "ApiTag::Parcours")]
     async fn parcours_anzeigen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: BearerAuthorization,
     ) -> TypicalJsonResponse<Vec<ParcoursÖffentlich>> {
         // A broken token is answered as anonymous here, never as an error: this route is
         // public, and a stale token must not hide master data from its own reader.
@@ -456,11 +567,14 @@ impl LogandaimApiSpec {
 
     // ------------------------------------------------------------------ Runden
 
-    /// Start a Runde. The snapshot is captured in the same transaction (AC-7).
-    #[oai(path = "/runden", method = "post")]
+    /// Start a Runde on one active Parcours.
+    ///
+    /// The setup is captured as a snapshot in the same transaction, so a later change to the
+    /// Parcours cannot alter this Runde.
+    #[oai(path = "/runden", method = "post", tag = "ApiTag::Runden")]
     async fn runde_starten(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         body: Json<RundeStartenRequest>,
     ) -> TypicalJsonResponse<Runde> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
@@ -470,11 +584,13 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// The caller's own Runden, newest first.
-    #[oai(path = "/runden", method = "get")]
+    /// List the caller's own Runden, newest first.
+    ///
+    /// No one but the caller and a Systemadministrator ever sees a Runde here.
+    #[oai(path = "/runden", method = "get", tag = "ApiTag::Runden")]
     async fn runden_anzeigen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
     ) -> TypicalJsonResponse<Vec<RundenZeile>> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
             Ok(auth) => self.app_api.runden_anzeigen(auth).await,
@@ -483,11 +599,14 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Owner or Systemadministrator; staff never read another Benutzer's Runde (AC-13).
-    #[oai(path = "/runden/:runde_id", method = "get")]
+    /// Read one Runde with its whole snapshot and both Wertungen.
+    ///
+    /// The owner and a Systemadministrator may read it; staff may not read another
+    /// Benutzer's Runde.
+    #[oai(path = "/runden/:runde_id", method = "get", tag = "ApiTag::Runden")]
     async fn runde_anzeigen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         runde_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Runde> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
@@ -497,11 +616,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Close the caller's own Runde; afterwards it refuses further Schüsse.
-    #[oai(path = "/runden/:runde_id/abschluss", method = "post")]
+    /// Close the caller's own Runde.
+    ///
+    /// Afterwards it refuses further Schüsse and its Wertungen are final.
+    #[oai(
+        path = "/runden/:runde_id/abschluss",
+        method = "post",
+        tag = "ApiTag::Runden"
+    )]
     async fn runde_abschliessen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         runde_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Runde> {
         let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
@@ -515,11 +640,17 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Log one arrow. The owner comes from the token; the Ziel must be in the snapshot.
-    #[oai(path = "/runden/:runde_id/schüsse", method = "post")]
+    /// Log one arrow at a Ziel of the caller's own open Runde.
+    ///
+    /// The owner comes from the token, and the Ziel must be part of the Runde's snapshot.
+    #[oai(
+        path = "/runden/:runde_id/schüsse",
+        method = "post",
+        tag = "ApiTag::Runden"
+    )]
     async fn schuss_registrieren(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         runde_id: Path<Uuid>,
         body: Json<SchussErstellungRequest>,
     ) -> TypicalJsonResponse<Schuss> {
@@ -536,8 +667,11 @@ impl LogandaimApiSpec {
 
     // ------------------------------------------------------------------ konto
 
-    /// Step 1. Answers `200` whether the address is free or taken (AC-2).
-    #[oai(path = "/registrierung/start", method = "post")]
+    /// Registration step 1: request a confirmation mail for an e-mail address.
+    ///
+    /// Answers `200` whether the address is free or already taken, so the route cannot be
+    /// used to probe for accounts.
+    #[oai(path = "/registrierung/start", method = "post", tag = "ApiTag::Konto")]
     async fn registrierung_starten(
         &self,
         real_ip: RealIp,
@@ -558,8 +692,14 @@ impl LogandaimApiSpec {
         )
     }
 
-    /// Step 2: creates Benutzer + Konto and answers the first token pair.
-    #[oai(path = "/registrierung/abschluss", method = "post")]
+    /// Registration step 2: create the Benutzer and its Konto from the mailed token.
+    ///
+    /// Answers the first token pair; the refresh token leaves as the `__Host-` cookie.
+    #[oai(
+        path = "/registrierung/abschluss",
+        method = "post",
+        tag = "ApiTag::Konto"
+    )]
     async fn registrierung_abschließen(
         &self,
         real_ip: RealIp,
@@ -583,7 +723,10 @@ impl LogandaimApiSpec {
         )
     }
 
-    #[oai(path = "/anmeldung", method = "post")]
+    /// Sign in with e-mail address and password.
+    ///
+    /// Answers an access token in the body and a refresh token in the `__Host-` cookie.
+    #[oai(path = "/anmeldung", method = "post", tag = "ApiTag::Konto")]
     async fn anmelden(
         &self,
         real_ip: RealIp,
@@ -604,8 +747,10 @@ impl LogandaimApiSpec {
         ))
     }
 
-    /// Rotate the refresh token from the cookie.
-    #[oai(path = "/session/erneuern", method = "post")]
+    /// Rotate the refresh token from the `__Host-` cookie.
+    ///
+    /// Answers a fresh token pair. A `401` clears the unusable cookie.
+    #[oai(path = "/session/erneuern", method = "post", tag = "ApiTag::Konto")]
     async fn session_erneuern(
         &self,
         real_ip: RealIp,
@@ -628,10 +773,13 @@ impl LogandaimApiSpec {
         }))
     }
 
-    #[oai(path = "/session/abmelden", method = "post")]
+    /// End the current session.
+    ///
+    /// The refresh token is revoked and the cookie is cleared with it.
+    #[oai(path = "/session/abmelden", method = "post", tag = "ApiTag::Konto")]
     async fn abmelden(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
     ) -> EndSessionResponse<Ok> {
         let ergebnis: ResultReport<(), AbmeldungFehler> =
             match self.auth_context(authorization.0.as_deref()).await {
@@ -641,7 +789,11 @@ impl LogandaimApiSpec {
         EndSessionResponse::from(ergebnis.map(|()| Ok { ok: true }))
     }
 
-    #[oai(path = "/passwort/vergessen", method = "post")]
+    /// Request a password reset mail for an e-mail address.
+    ///
+    /// Answers `200` whether the address exists or not, so the route cannot be used to probe
+    /// for accounts.
+    #[oai(path = "/passwort/vergessen", method = "post", tag = "ApiTag::Konto")]
     async fn passwort_vergessen(
         &self,
         real_ip: RealIp,
@@ -662,8 +814,14 @@ impl LogandaimApiSpec {
         )
     }
 
-    /// Single use, and ends every session: the cookie is cleared with them.
-    #[oai(path = "/passwort/wiederherstellen", method = "post")]
+    /// Set a new password from a mailed reset token.
+    ///
+    /// The token is single use and ends every session; the cookie is cleared with them.
+    #[oai(
+        path = "/passwort/wiederherstellen",
+        method = "post",
+        tag = "ApiTag::Konto"
+    )]
     async fn passwort_wiederherstellen(
         &self,
         body: Json<PasswortWiederherstellenRequest>,
@@ -673,11 +831,13 @@ impl LogandaimApiSpec {
         EndSessionResponse::from(ergebnis.map(|()| Ok { ok: true }))
     }
 
-    /// The authenticated Benutzer, including its account-level role.
-    #[oai(path = "/benutzer", method = "get")]
+    /// Read the authenticated Benutzer, including its account-level role.
+    ///
+    /// Answers `401` when the token is missing or unusable; there is no anonymous answer.
+    #[oai(path = "/benutzer", method = "get", tag = "ApiTag::Konto")]
     async fn benutzer_anzeigen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
     ) -> UncachedJsonResponse<Benutzer> {
         let ergebnis: ResultReport<Benutzer, StammdatenFehler> =
             match self.auth_context(authorization.0.as_deref()).await {
@@ -724,11 +884,14 @@ impl LogandaimApiSpec {
         UncachedJsonResponse::from(ergebnis)
     }
 
-    /// Deletes the caller's own Benutzer. The cookie is cleared with the identity.
-    #[oai(path = "/benutzer/löschung", method = "post")]
+    /// Delete the caller's own Benutzer.
+    ///
+    /// The password is re-entered and the intent must be confirmed explicitly. The cookie
+    /// is cleared with the identity.
+    #[oai(path = "/benutzer/löschung", method = "post", tag = "ApiTag::Konto")]
     async fn benutzer_löschen(
         &self,
-        #[oai(name = "Authorization")] authorization: Header<Option<String>>,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         body: Json<BenutzerLöschungRequest>,
     ) -> EndSessionResponse<Ok> {
         let ergebnis: ResultReport<(), BenutzerLöschenFehler> =
@@ -747,8 +910,7 @@ pub fn openapi_service(
     openapi_service_from_api(LogandaimAppApi::new(app), server_urls)
 }
 
-/// The same service over a facade the caller already holds, so a harness can keep an
-/// `Arc<App>` for direct use-case calls without building a second app.
+/// The service: the spec, its servers, and a description of how to call it.
 pub fn openapi_service_from_api(
     app_api: LogandaimAppApi,
     server_urls: impl IntoIterator<Item = impl Into<ServerObject>>,
@@ -758,7 +920,34 @@ pub fn openapi_service_from_api(
         "logandaim.at API",
         env!("CARGO_PKG_VERSION"),
     )
-    .description(env!("CARGO_PKG_DESCRIPTION"));
+    .summary("Logbook for shooting ranges: master data, Runden, and the Wertungen.")
+    .description(concat!(
+        "## Sections\n",
+        "\n",
+        "`Anlagen` holds master data: an Anlage with its address, contact details, role\n",
+        "assignments, Ziele, and Parcours, plus the public directory. `Parcours` covers the\n",
+        "shooting setup itself: Pflöcke, their order, and the distances to the Ziele placed\n",
+        "among them. `Runden` covers shooting a Parcours and logging Schüsse. `Konto` covers\n",
+        "registration, sign-in, sessions, password recovery, and the caller's own Benutzer.\n",
+        "\n",
+        "## Authentication\n",
+        "\n",
+        "A protected route takes an access token as `Authorization: Bearer <token>`. Sign-in,\n",
+        "registration step 2, and session renewal hand that token back in the response body\n",
+        "and place the refresh token in the `__Host-logandaim_refresh` cookie. Every session\n",
+        "response is `Cache-Control: no-store`; the refresh token never appears in a body.\n",
+        "Routes that accept a token also work without one, as an anonymous caller, and then\n",
+        "usually answer `401`.\n",
+        "\n",
+        "## Errors\n",
+        "\n",
+        "Every failed request answers the same envelope: `message` says what failed,\n",
+        "`attachments` carries the free-text detail attached to it, and `sources` nests the\n",
+        "causes beneath it. A `500` answers a constant body and never reveals its cause. The\n",
+        "HTTP status carries the meaning: `400` for an invalid request, `401` for a missing or\n",
+        "unusable token, `403` for a caller that may not act, `404` for what is not there, and\n",
+        "`409` for a write an archived object refuses.\n",
+    ));
     for server_url in server_urls {
         service = service.server(server_url);
     }

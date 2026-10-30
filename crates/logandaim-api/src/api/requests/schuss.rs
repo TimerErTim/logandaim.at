@@ -14,16 +14,18 @@ use logandaim_core::{
 
 use crate::schema::Wertungszone;
 
-/// Register one Schuss inside the caller's own open Runde (AC-9).
+/// Register one Schuss inside the caller's own open Runde.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SchussErstellungRequest {
+    /// The Ziel that was aimed at; it must be part of the Runde's snapshot.
     pub ziel_id: Uuid,
-    /// 1-based; `0` is rejected as an invalid request.
+    /// 1-based position of the arrow at its Ziel; `0` is rejected.
     pub pfeil: usize,
+    /// Where on the Ziel the arrow landed.
     pub wertungszone: Wertungszone,
 }
 

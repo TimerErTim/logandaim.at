@@ -14,16 +14,16 @@ use logandaim_core::{
 
 use crate::schema::{Zielergebnis, Zuordnung};
 
-/// One captured Pflock, in far-to-near order.
+/// One Pflock captured in the snapshot, in far-to-near order.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SnapshotPflock {
-    /// Caller data (`#rrggbb`), never a design token.
+    /// The Pflock's colour as `#rrggbb`.
     pub farbe: String,
-    /// 0-based, far to near.
+    /// 0-based position, far to near.
     pub position: usize,
 }
 
@@ -36,24 +36,32 @@ pub struct SnapshotPflock {
 pub struct SnapshotAbstand {
     /// The captured Pflock's colour as `#rrggbb`.
     pub pflock: String,
+    /// Distance from that Pflock to the Ziel, in metres.
     pub meter: u32,
 }
 
-/// One captured Ziel: identity, animal name, target group, distances as they were.
+/// One captured Ziel: its identity, animal name, target group, and distances as recorded.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SnapshotZiel {
+    /// Identity of the Ziel as captured.
     pub ziel_id: Uuid,
+    /// Animal name as captured.
     pub tiername: String,
+    /// Target group as captured.
     pub zielgruppe: u8,
+    /// The distances as captured.
     pub abstände: Vec<SnapshotAbstand>,
-    /// Absent for a Ziel without any Schuss (AC-6 of SPEC-wertung).
+    /// Both Wertungen of this Ziel; absent while no Schuss has been logged at it.
     pub ergebnis: Option<Zielergebnis>,
 }
 
+/// `InBearbeitung` or `Abgeschlossen`.
+///
+/// A completed Runde refuses further Schüsse and its Wertungen are final.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -62,26 +70,38 @@ pub enum RundeZustand {
     Abgeschlossen,
 }
 
-/// `GET /runden/{id}`: the whole read model of one Runde.
+/// The whole read model of one Runde, as `GET /runden/{id}` answers it.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Runde {
+    /// Identity of the Runde.
     pub id: Uuid,
+    /// The Anlage the Parcours belongs to.
     pub anlage_id: Uuid,
+    /// The Parcours this Runde was started on.
     pub parcours_id: Uuid,
-    /// As captured at the start, not the Parcours' current name (AC-9).
+    /// The Parcours' name as captured at the start, not its current name.
     pub parcours_name: String,
+    /// Who the Runde belongs to.
     pub zuordnung: Zuordnung,
+    /// Whether it is still open or already closed.
     pub zustand: RundeZustand,
+    /// Start of the Runde, as an RFC 3339 timestamp.
     pub begonnen_am: String,
+    /// End of the Runde, as an RFC 3339 timestamp; absent while it is open.
     pub abgeschlossen_am: Option<String>,
+    /// The Pflöcke as captured, far to near.
     pub pflöcke: Vec<SnapshotPflock>,
+    /// The Ziele as captured, with their results.
     pub ziele: Vec<SnapshotZiel>,
+    /// First-arrow hits over the whole Runde.
     pub gesamt_erster_treffer: u32,
+    /// Follow-up hits over the whole Runde.
     pub gesamt_mehrschuss: u32,
+    /// How many Ziele already carry a result.
     pub ziele_mit_ergebnis: usize,
 }
 
@@ -92,12 +112,19 @@ pub struct Runde {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RundenZeile {
+    /// Identity of the Runde.
     pub id: Uuid,
+    /// The Anlage the Parcours belongs to.
     pub anlage_id: Uuid,
+    /// The Parcours this Runde was started on.
     pub parcours_id: Uuid,
+    /// The Parcours' name as captured at the start.
     pub parcours_name: String,
+    /// Whether it is still open or already closed.
     pub zustand: RundeZustand,
+    /// Start of the Runde, as an RFC 3339 timestamp.
     pub begonnen_am: String,
+    /// End of the Runde, as an RFC 3339 timestamp; absent while it is open.
     pub abgeschlossen_am: Option<String>,
 }
 

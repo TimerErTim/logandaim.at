@@ -28,34 +28,43 @@ pub enum CountryCode {
     CH,
 }
 
-/// One structured address. Every field is required (SPEC-stammdaten AC-1).
+/// One structured address. Every field is required.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnlageAdresse {
+    /// Street and house number.
     pub straße: String,
+    /// Postal code of the place.
     pub postleitzahl: String,
+    /// The place itself.
     pub ort: String,
+    /// Two-letter country code; only `AT`, `DE`, and `CH` are accepted.
     pub ländercode: CountryCode,
 }
 
-/// Optional contact details; each may be absent on its own (AC-1).
+/// Optional contact details of an Anlage; each may be absent on its own.
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnlageKontakt {
+    /// Name of the person to reach.
     pub name: Option<String>,
+    /// E-mail address of the person to reach.
     pub email: Option<EmailAdresse>,
+    /// Phone number of the person to reach.
     pub telefon: Option<String>,
+    /// Website of the Anlage.
     pub website: Option<String>,
 }
 
-/// `Aktiv` or `Archiviert`. Archived reads answer `200` with this state; writes to them
-/// answer `409` (AC-10, AC-11).
+/// `Aktiv` or `Archiviert`.
+///
+/// An archived Anlage stays readable; every write to one answers `409`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -64,7 +73,10 @@ pub enum AnlageZustand {
     Archiviert,
 }
 
-/// The Anlage's role inside one Anlage (AC-2, AC-3).
+/// `Administrator` or `Mitarbeiter`: the Anlage's role inside one Anlage.
+///
+/// An Administrator may change the Anlage, its roles, and its master data; a Mitarbeiter
+/// may maintain Ziele and Parcours but not the Anlage's own fields.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -73,50 +85,60 @@ pub enum AnlageVerwaltungRolle {
     Mitarbeiter,
 }
 
+/// One role assignment: which Benutzer holds which role in this Anlage.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnlageVerwaltung {
+    /// The Benutzer that holds the role.
     pub benutzer_id: Uuid,
+    /// The role it holds.
     pub rolle: AnlageVerwaltungRolle,
 }
 
 // ------------------------------------------------------------------ Ziel
 
+/// One physical Ziel of the Anlage.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Ziel {
+    /// Stable identity of this physical target.
     pub id: Uuid,
+    /// Animal name shown to the shooter.
     pub tiername: String,
-    /// 1–4 (AC-5).
+    /// Target group, `1` to `4`.
     pub zielgruppe: u8,
+    /// Whether the Ziel is in use or retired.
     pub zustand: AnlageZustand,
     /// Where this physical Ziel currently lies, across this Anlage's active Parcours.
     pub verwendungen: Vec<Zielverwendung>,
 }
 
-/// One Parcours' use of one Ziel, with that Parcours' own distances (AC-8).
+/// One Parcours' use of one Ziel, with that Parcours' own distances.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Zielverwendung {
+    /// The Parcours that places this Ziel.
     pub parcours_id: Uuid,
+    /// The Parcours' name at the time of reading.
     pub parcours_name: String,
+    /// The Parcours' position in the Anlage's list.
     pub parcours_ordnung: usize,
     /// 0-based position in that Parcours' route.
     pub position: usize,
-    /// Pflock label to metres, far to near.
+    /// Pflock colour to metres, far to near.
     pub abstände: Vec<PflockAbstand>,
 }
 
-/// One Pflock colour with the distance captured for it.
+/// One Pflock colour with the distance configured for it.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
@@ -125,20 +147,22 @@ pub struct Zielverwendung {
 pub struct PflockAbstand {
     /// The Pflock's colour as `#rrggbb`.
     pub pflock: String,
+    /// Distance from that Pflock to the Ziel, in metres.
     pub meter: u32,
 }
 
 // ------------------------------------------------------------------ Parcours
 
-/// One shooting position: its colour (`#rrggbb`) identifies it, and no label exists.
+/// One shooting position. Its colour identifies it; no label exists.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Pflock {
+    /// Identity of the Pflock inside its Parcours.
     pub id: Uuid,
-    /// Caller data, never a design token (AC-6).
+    /// The Pflock's colour as `#rrggbb`. It is what distinguishes one Pflock from another.
     pub farbe: String,
 }
 
@@ -149,106 +173,137 @@ pub struct Pflock {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Zielplatzierung {
+    /// The Ziel that stands here.
     pub ziel_id: Uuid,
-    /// Pflock id to metres. A missing entry means "no distance configured".
+    /// Pflock id to metres. A missing Pflock means no distance is configured for it.
     pub abstände: Vec<ZielplatzierungAbstand>,
 }
 
+/// One distance from a Pflock of this Parcours to the placed Ziel.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZielplatzierungAbstand {
+    /// The Pflock the distance is measured from.
     pub pflock_id: Uuid,
+    /// Distance to the Ziel, in metres.
     pub meter: u32,
 }
 
+/// One Parcours of the Anlage: its name, its Pflöcke, and the route they form.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Parcours {
+    /// Identity of the Parcours.
     pub id: Uuid,
+    /// Shown name. Renaming keeps the identity and every captured snapshot.
     pub name: String,
+    /// Whether the Parcours is in use or retired.
     pub zustand: AnlageZustand,
-    /// Far to near, never inferred from a colour (AC-6).
+    /// Far to near, in the order the shooter walks them. Never inferred from a colour.
     pub pflöcke: Vec<Pflock>,
     /// In route order.
     pub platzierungen: Vec<Zielplatzierung>,
 }
 
-/// One active Parcours with the Anlage that holds it, for starting a Runde (AC-13).
+/// One active Parcours with the Anlage that holds it, for starting a Runde.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ParcoursÖffentlich {
+    /// The Anlage that offers this Parcours.
     pub anlage_id: Uuid,
+    /// That Anlage's name.
     pub anlage_name: String,
+    /// The Parcours with its whole setup.
     pub parcours: Parcours,
 }
 
-/// One active Parcours as the public directory names it (counts only, no setup).
+/// One active Parcours as the public directory names it: counts only, no setup.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ParcoursKurz {
+    /// Identity of the Parcours.
     pub id: Uuid,
+    /// Shown name of the Parcours.
     pub name: String,
+    /// How many Pflöcke the route uses.
     pub anzahl_pflöcke: usize,
+    /// How many Ziele the route places.
     pub anzahl_ziele: usize,
 }
 
 /// One active Anlage in the public directory.
 ///
-/// Public, so it carries no contact data: an email or phone number is personal data and no
-/// spec approved publishing it.
+/// Public, so it carries no contact data: an email address or phone number is personal data
+/// and is not published.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnlageÖffentlich {
+    /// Identity of the Anlage.
     pub anlage_id: Uuid,
+    /// Shown name of the Anlage.
     pub name: String,
+    /// The place the Anlage is in.
     pub ort: String,
+    /// Two-letter country code of that place.
     pub ländercode: CountryCode,
+    /// The Parcours it currently offers, without their setup.
     pub parcours: Vec<ParcoursKurz>,
 }
 
 // ------------------------------------------------------------------ Anlage views
 
-/// `GET /anlagen/{id}`: the Anlage with its whole master data.
+/// The Anlage with its whole master data, as `GET /anlagen/{id}` answers it.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Anlage {
+    /// Identity of the Anlage.
     pub id: Uuid,
+    /// Shown name of the Anlage.
     pub name: String,
+    /// Its structured address.
     pub adresse: AnlageAdresse,
+    /// Its optional contact details.
     pub kontakt: AnlageKontakt,
+    /// Whether it is in use or archived.
     pub zustand: AnlageZustand,
+    /// The role assignments in this Anlage.
     pub verwaltungen: Vec<AnlageVerwaltung>,
+    /// Its physical Ziele.
     pub ziele: Vec<Ziel>,
+    /// Its Parcours, each with its setup and route.
     pub parcours: Vec<Parcours>,
 }
 
-/// One row of `GET /anlagen`, with the caller's role so the UI can gate its controls.
+/// One row of `GET /anlagen`, with the caller's role so a client can gate its controls.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnlagenZeile {
+    /// The Anlage itself, with its whole master data.
     pub anlage: Anlage,
+    /// The caller's role in this Anlage, absent when it holds none.
     pub rolle: Option<AnlageVerwaltungRolle>,
+    /// Whether the caller is a Systemadministrator and may act regardless of `rolle`.
     pub ist_systemadministrator: bool,
 }
 

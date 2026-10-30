@@ -11,6 +11,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Report that the service is up.
+         * @description Answers the literal `OK`. It touches no dependency, so a green answer means the
+         *     process is listening, not that its database is reachable.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -45,7 +50,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The Anlagen the caller may administer. Archived ones are not listed. */
+        /**
+         * List the Anlagen the caller may administer.
+         * @description Archived Anlagen are not listed. Each row carries the caller's role in that Anlage
+         *     so a client can gate its controls.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -84,12 +93,16 @@ export interface paths {
             };
         };
         put?: never;
-        /** Only a Systemadministrator may create an Anlage (AC-1). */
+        /**
+         * Create an Anlage. Systemadministrator only.
+         * @description The caller becomes its first Administrator. The address is required, the contact
+         *     details are optional.
+         */
         post: {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    authorization?: string;
                 };
                 path?: never;
                 cookie?: never;
@@ -139,7 +152,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Public: the active Anlagen and the Parcours each offers. No header needed. */
+        /**
+         * List the active Anlagen with the Parcours each offers. No sign-in needed.
+         * @description This is the public directory. It carries no contact data, and a broken token is
+         *     answered as anonymous rather than as an error.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -192,7 +209,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** An archived Anlage answers only to a Systemadministrator; its writes still 409 (AC-11). */
+        /**
+         * Read one Anlage with its whole master data.
+         * @description An archived Anlage answers only to a Systemadministrator; every write to one is
+         *     refused with `409`.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -232,7 +253,11 @@ export interface paths {
                 };
             };
         };
-        /** Rewrites the Anlage's own fields (name, address, contact). Administrator only (AC-3). */
+        /**
+         * Rewrite the Anlage's own fields: name, address, and contact. Administrator only.
+         * @description The whole set is replaced; omitted contact fields become empty. Ziele, Parcours, and
+         *     role assignments are untouched.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -292,7 +317,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Irreversible: no route reactivates an Anlage (AC-10). */
+        /**
+         * Deactivate an Anlage once and for all.
+         * @description Irreversible: no route reactivates one. Reads keep working, writes answer `409`.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -347,7 +375,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Grant a role to an existing Benutzer. Administrator only (AC-2). */
+        /**
+         * Grant a role in the Anlage to an existing Benutzer. Administrator only.
+         * @description The Benutzer is named by identity; find it with `benutzer-suche` first.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -404,7 +435,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Exact-email lookup used only by a caller who may manage this active Anlage. */
+        /**
+         * Find a Benutzer by exact e-mail address, for granting a role.
+         * @description Usable only by a caller who may manage this active Anlage. Answers a single match or
+         *     an empty list.
+         */
         get: {
             parameters: {
                 query: {
@@ -462,7 +497,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Change an existing role. The target is in the path, so the body only names the role. */
+        /**
+         * Change an existing role. Administrator only.
+         * @description The target is in the path, so the body only names the role.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -508,7 +546,10 @@ export interface paths {
             };
         };
         post?: never;
-        /** Revoke a role. The last Administrator cannot be revoked (AC-2). */
+        /**
+         * Revoke a role. Administrator only.
+         * @description The last Administrator of an Anlage cannot be revoked.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -563,7 +604,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Add a physical Ziel (AC-5). A Mitarbeiter may; the Anlage fields are not touched. */
+        /**
+         * Add a physical Ziel to the Anlage.
+         * @description A Mitarbeiter may do this; the Anlage's own fields are not touched.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -621,7 +665,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Edit details; the identity and its history stay (AC-5). */
+        /**
+         * Edit a Ziel's details.
+         * @description The identity stays, and so does everything already recorded against it.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -667,7 +714,11 @@ export interface paths {
             };
         };
         post?: never;
-        /** Archive when history references it, delete when nothing does (AC-11, AC-12). */
+        /**
+         * Remove a Ziel: archive it when recorded Runden reference it, delete it otherwise.
+         * @description Answers the Anlage as it stands afterwards, so the Ziel is absent from `ziele` either
+         *     way and an archived one no longer appears among the active ones.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -722,7 +773,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Replace the physical target: a new identity that inherits the slot, not the history. */
+        /**
+         * Replace the physical Ziel with a new one in the same slot.
+         * @description The replacement has a new identity; the history of the old Ziel stays as recorded.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -782,7 +836,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a Parcours with its Pflock setup and route (AC-4, AC-6). */
+        /**
+         * Create a Parcours with its Pflock setup and its route.
+         * @description The Pflöcke and their order are given explicitly; a colour never implies an order.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -840,7 +897,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Replace the whole shooting setup; existing Runden keep their snapshot (AC-7). */
+        /**
+         * Replace the whole shooting setup: Pflöcke and the route that places Ziele among them.
+         * @description Existing Runden keep the snapshot they captured; only future Runden see the change.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -900,7 +960,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Rename a Parcours. Its identity and every existing snapshot stay (AC-9). */
+        /**
+         * Rename a Parcours.
+         * @description The identity stays, and every captured snapshot keeps the name it recorded.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -946,7 +1009,10 @@ export interface paths {
             };
         };
         post?: never;
-        /** Archive when a Runde captured it, delete when none did (AC-11, AC-12). */
+        /**
+         * Remove a Parcours: archive it when a Runde captured it, delete it otherwise.
+         * @description Answers the Anlage as it stands afterwards.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -999,7 +1065,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Public: every active Parcours of every active Anlage, no header needed (AC-13). */
+        /**
+         * List every active Parcours of every active Anlage. No sign-in needed.
+         * @description This is the list a client starts a Runde from.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1052,7 +1121,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The caller's own Runden, newest first. */
+        /**
+         * List the caller's own Runden, newest first.
+         * @description No one but the caller and a Systemadministrator ever sees a Runde here.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1091,7 +1163,11 @@ export interface paths {
             };
         };
         put?: never;
-        /** Start a Runde. The snapshot is captured in the same transaction (AC-7). */
+        /**
+         * Start a Runde on one active Parcours.
+         * @description The setup is captured as a snapshot in the same transaction, so a later change to the
+         *     Parcours cannot alter this Runde.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1146,7 +1222,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Owner or Systemadministrator; staff never read another Benutzer's Runde (AC-13). */
+        /**
+         * Read one Runde with its whole snapshot and both Wertungen.
+         * @description The owner and a Systemadministrator may read it; staff may not read another
+         *     Benutzer's Runde.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1203,7 +1283,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Close the caller's own Runde; afterwards it refuses further Schüsse. */
+        /**
+         * Close the caller's own Runde.
+         * @description Afterwards it refuses further Schüsse and its Wertungen are final.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1258,7 +1341,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Log one arrow. The owner comes from the token; the Ziel must be in the snapshot. */
+        /**
+         * Log one arrow at a Ziel of the caller's own open Runde.
+         * @description The owner comes from the token, and the Ziel must be part of the Runde's snapshot.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1317,7 +1403,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Step 1. Answers `200` whether the address is free or taken (AC-2). */
+        /**
+         * Registration step 1: request a confirmation mail for an e-mail address.
+         * @description Answers `200` whether the address is free or already taken, so the route cannot be
+         *     used to probe for accounts.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1378,7 +1468,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Step 2: creates Benutzer + Konto and answers the first token pair. */
+        /**
+         * Registration step 2: create the Benutzer and its Konto from the mailed token.
+         * @description Answers the first token pair; the refresh token leaves as the `__Host-` cookie.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1441,6 +1534,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Sign in with e-mail address and password.
+         * @description Answers an access token in the body and a refresh token in the `__Host-` cookie.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1503,7 +1600,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Rotate the refresh token from the cookie. */
+        /**
+         * Rotate the refresh token from the `__Host-` cookie.
+         * @description Answers a fresh token pair. A `401` clears the unusable cookie.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1564,6 +1664,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * End the current session.
+         * @description The refresh token is revoked and the cookie is cleared with it.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1621,6 +1725,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Request a password reset mail for an e-mail address.
+         * @description Answers `200` whether the address exists or not, so the route cannot be used to probe
+         *     for accounts.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1681,7 +1790,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Single use, and ends every session: the cookie is cleared with them. */
+        /**
+         * Set a new password from a mailed reset token.
+         * @description The token is single use and ends every session; the cookie is cleared with them.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1739,7 +1851,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The authenticated Benutzer, including its account-level role. */
+        /**
+         * Read the authenticated Benutzer, including its account-level role.
+         * @description Answers `401` when the token is missing or unusable; there is no anonymous answer.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -1797,7 +1912,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Deletes the caller's own Benutzer. The cookie is cleared with the identity. */
+        /**
+         * Delete the caller's own Benutzer.
+         * @description The password is re-entered and the intent must be confirmed explicitly. The cookie
+         *     is cleared with the identity.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1856,157 +1975,224 @@ export interface components {
     schemas: {
         /**
          * Anlage
-         * @description `GET /anlagen/{id}`: the Anlage with its whole master data.
+         * @description The Anlage with its whole master data, as `GET /anlagen/{id}` answers it.
          */
         Anlage: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Anlage.
+             */
             id: string;
+            /** @description Shown name of the Anlage. */
             name: string;
-            adresse: components["schemas"]["AnlageAdresse"];
-            kontakt: components["schemas"]["AnlageKontakt"];
-            zustand: components["schemas"]["AnlageZustand"];
+            /** @description Its structured address. */
+            adresse: components["schemas"]["AnlageAdresse"] & unknown;
+            /** @description Its optional contact details. */
+            kontakt: components["schemas"]["AnlageKontakt"] & unknown;
+            /** @description Whether it is in use or archived. */
+            zustand: components["schemas"]["AnlageZustand"] & unknown;
+            /** @description The role assignments in this Anlage. */
             verwaltungen: components["schemas"]["AnlageVerwaltung"][];
+            /** @description Its physical Ziele. */
             ziele: components["schemas"]["Ziel"][];
+            /** @description Its Parcours, each with its setup and route. */
             parcours: components["schemas"]["Parcours"][];
         };
         /**
          * AnlageAdresse
-         * @description One structured address. Every field is required (SPEC-stammdaten AC-1).
+         * @description One structured address. Every field is required.
          */
         AnlageAdresse: {
+            /** @description Street and house number. */
             "stra\u00DFe": string;
+            /** @description Postal code of the place. */
             postleitzahl: string;
+            /** @description The place itself. */
             ort: string;
-            "l\u00E4ndercode": components["schemas"]["CountryCode"];
+            /** @description Two-letter country code; only `AT`, `DE`, and `CH` are accepted. */
+            "l\u00E4ndercode": components["schemas"]["CountryCode"] & unknown;
         };
         /**
          * AnlageErstellungRequest
-         * @description Create an Anlage (AC-1).
+         * @description Create an Anlage. Systemadministrator only.
          */
         AnlageErstellungRequest: {
+            /** @description Shown name of the new Anlage. */
             name: string;
-            adresse: components["schemas"]["AnlageAdresse"];
-            kontakt: components["schemas"]["AnlageKontakt"];
+            /** @description Its structured address; every address field is required. */
+            adresse: components["schemas"]["AnlageAdresse"] & unknown;
+            /** @description Optional contact details. */
+            kontakt: components["schemas"]["AnlageKontakt"] & unknown;
         };
         /**
          * AnlageKontakt
-         * @description Optional contact details; each may be absent on its own (AC-1).
+         * @description Optional contact details of an Anlage; each may be absent on its own.
          */
         AnlageKontakt: {
+            /** @description Name of the person to reach. */
             name?: string;
             /**
              * E-Mail-Adresse
+             * @description E-mail address of the person to reach.
              * @example test@example.com
              */
             email?: string;
+            /** @description Phone number of the person to reach. */
             telefon?: string;
+            /** @description Website of the Anlage. */
             website?: string;
         };
-        /** AnlageVerwaltung */
+        /**
+         * AnlageVerwaltung
+         * @description One role assignment: which Benutzer holds which role in this Anlage.
+         */
         AnlageVerwaltung: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Benutzer that holds the role.
+             */
             benutzerId: string;
-            rolle: components["schemas"]["AnlageVerwaltungRolle"];
+            /** @description The role it holds. */
+            rolle: components["schemas"]["AnlageVerwaltungRolle"] & unknown;
         };
         /**
          * AnlageVerwaltungRequest
-         * @description Grant or change one AnlageVerwaltung (AC-2).
+         * @description Grant or change one role in an Anlage.
          */
         AnlageVerwaltungRequest: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Benutzer that should hold the role.
+             */
             benutzerId: string;
-            rolle: components["schemas"]["AnlageVerwaltungRolle"];
+            /** @description The role to assert. */
+            rolle: components["schemas"]["AnlageVerwaltungRolle"] & unknown;
         };
         /**
-         * @description The Anlage's role inside one Anlage (AC-2, AC-3).
+         * @description `Administrator` or `Mitarbeiter`: the Anlage's role inside one Anlage.
+         *
+         *     An Administrator may change the Anlage, its roles, and its master data; a Mitarbeiter
+         *     may maintain Ziele and Parcours but not the Anlage's own fields.
          * @enum {string}
          */
         AnlageVerwaltungRolle: AnlageVerwaltungRolle;
         /**
-         * @description `Aktiv` or `Archiviert`. Archived reads answer `200` with this state; writes to them
-         *     answer `409` (AC-10, AC-11).
+         * @description `Aktiv` or `Archiviert`.
+         *
+         *     An archived Anlage stays readable; every write to one answers `409`.
          * @enum {string}
          */
         AnlageZustand: AnlageZustand;
         /**
          * AnlagenZeile
-         * @description One row of `GET /anlagen`, with the caller's role so the UI can gate its controls.
+         * @description One row of `GET /anlagen`, with the caller's role so a client can gate its controls.
          */
         AnlagenZeile: {
-            anlage: components["schemas"]["Anlage"];
-            rolle?: components["schemas"]["AnlageVerwaltungRolle"];
+            /** @description The Anlage itself, with its whole master data. */
+            anlage: components["schemas"]["Anlage"] & unknown;
+            /** @description The caller's role in this Anlage, absent when it holds none. */
+            rolle?: components["schemas"]["AnlageVerwaltungRolle"] & unknown;
+            /** @description Whether the caller is a Systemadministrator and may act regardless of `rolle`. */
             istSystemadministrator: boolean;
         };
         /**
          * AnlageÄnderungRequest
-         * @description Edit the Anlage's descriptive fields (AC-3).
+         * @description Rewrite the Anlage's descriptive fields.
          */
         "Anlage\u00C4nderungRequest": {
+            /** @description Shown name of the Anlage. */
             name: string;
-            adresse: components["schemas"]["AnlageAdresse"];
-            kontakt: components["schemas"]["AnlageKontakt"];
+            /** @description Its structured address; every address field is required. */
+            adresse: components["schemas"]["AnlageAdresse"] & unknown;
+            /** @description Optional contact details. */
+            kontakt: components["schemas"]["AnlageKontakt"] & unknown;
         };
         /**
          * AnlageÖffentlich
          * @description One active Anlage in the public directory.
          *
-         *     Public, so it carries no contact data: an email or phone number is personal data and no
-         *     spec approved publishing it.
+         *     Public, so it carries no contact data: an email address or phone number is personal data
+         *     and is not published.
          */
         "Anlage\u00D6ffentlich": {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Anlage.
+             */
             anlageId: string;
+            /** @description Shown name of the Anlage. */
             name: string;
+            /** @description The place the Anlage is in. */
             ort: string;
-            "l\u00E4ndercode": components["schemas"]["CountryCode"];
+            /** @description Two-letter country code of that place. */
+            "l\u00E4ndercode": components["schemas"]["CountryCode"] & unknown;
+            /** @description The Parcours it currently offers, without their setup. */
             parcours: components["schemas"]["ParcoursKurz"][];
         };
-        /** AnmeldungRequest */
+        /**
+         * AnmeldungRequest
+         * @description Sign-in with the account's e-mail address and password.
+         */
         AnmeldungRequest: {
             /**
              * E-Mail-Adresse
+             * @description The account's e-mail address.
              * @example test@example.com
              */
             eMailAdresse: string;
+            /** @description The account's password. */
             passwort: string;
         };
         /**
          * Benutzer
-         * @description The logged-in Benutzer as `GET /benutzer` answers it.
+         * @description The authenticated Benutzer, as `GET /benutzer` answers it.
          */
         Benutzer: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Benutzer.
+             */
             id: string;
             /**
              * E-Mail-Adresse
+             * @description Its e-mail address, which is also the sign-in name.
              * @example test@example.com
              */
             eMailAdresse: string;
-            rolle: components["schemas"]["BenutzerRolle"];
+            /** @description Its role on the whole instance. */
+            rolle: components["schemas"]["BenutzerRolle"] & unknown;
         };
         /**
          * BenutzerLöschungRequest
-         * @description Deleting one's own Benutzer: the Passwort is re-entered, and the intent is explicit.
+         * @description Delete one's own Benutzer: the password is re-entered, and the intent is explicit.
          */
         "BenutzerL\u00F6schungRequest": {
+            /** @description The account's password, re-entered to prove the caller's identity. */
             passwort: string;
             /** @description Must be `true`; a missing flag is a refusal, never a default. */
             "best\u00E4tigt": boolean;
         };
         /**
-         * @description Account-level role of a Benutzer.
+         * @description `Benutzer` or `Systemadministrator`: the role a Benutzer holds on the whole instance.
+         *
+         *     A Systemadministrator may create and administer any Anlage, independently of its
+         *     per-Anlage roles.
          * @enum {string}
          */
         BenutzerRolle: BenutzerRolle;
         /**
          * BenutzerSuchtreffer
-         * @description The single account found by an exact email lookup for Anlage administration.
+         * @description The single account found by an exact e-mail lookup, for granting an Anlage role.
          */
         BenutzerSuchtreffer: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the matching Benutzer.
+             */
             id: string;
             /**
              * E-Mail-Adresse
+             * @description The address that matched.
              * @example test@example.com
              */
             eMailAdresse: string;
@@ -2020,175 +2206,268 @@ export interface components {
          * Ok
          * @description Acknowledgement of a request that has nothing to return.
          *
-         *     A bare `204` would be indistinguishable from a proxy's empty answer, so the explicit
-         *     body is worth the two bytes.
+         *     A bare `204` would be indistinguishable from a proxy's empty answer, so the explicit body
+         *     is worth the two bytes.
          * @example {
          *       "ok": true
          *     }
          */
         Ok: {
+            /** @description Always `true`; the presence of the body is the acknowledgement. */
             ok: boolean;
         };
-        /** Parcours */
+        /**
+         * Parcours
+         * @description One Parcours of the Anlage: its name, its Pflöcke, and the route they form.
+         */
         Parcours: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Parcours.
+             */
             id: string;
+            /** @description Shown name. Renaming keeps the identity and every captured snapshot. */
             name: string;
-            zustand: components["schemas"]["AnlageZustand"];
-            /** @description Far to near, never inferred from a colour (AC-6). */
+            /** @description Whether the Parcours is in use or retired. */
+            zustand: components["schemas"]["AnlageZustand"] & unknown;
+            /** @description Far to near, in the order the shooter walks them. Never inferred from a colour. */
             "pfl\u00F6cke": components["schemas"]["Pflock"][];
             /** @description In route order. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
         /**
          * ParcoursErstellungRequest
-         * @description Create a Parcours with its Pflock setup and route (AC-4, AC-6).
+         * @description Create a Parcours with its Pflock setup and its route.
          */
         ParcoursErstellungRequest: {
+            /** @description Shown name of the new Parcours. */
             name: string;
+            /** @description The Pflöcke, far to near. */
             "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            /** @description The Ziele on the route, in walking order. May be empty. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
         /**
          * ParcoursKurz
-         * @description One active Parcours as the public directory names it (counts only, no setup).
+         * @description One active Parcours as the public directory names it: counts only, no setup.
          */
         ParcoursKurz: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Parcours.
+             */
             id: string;
+            /** @description Shown name of the Parcours. */
             name: string;
-            /** Format: uint64 */
+            /**
+             * Format: uint64
+             * @description How many Pflöcke the route uses.
+             */
             "anzahlPfl\u00F6cke": number;
-            /** Format: uint64 */
+            /**
+             * Format: uint64
+             * @description How many Ziele the route places.
+             */
             anzahlZiele: number;
         };
         /**
          * ParcoursSetupRequest
-         * @description Replace a Parcours' whole shooting setup (AC-6, AC-7).
+         * @description Replace a Parcours' whole shooting setup.
          */
         ParcoursSetupRequest: {
+            /** @description The Pflöcke, far to near. */
             "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            /** @description The Ziele on the route, in walking order. May be empty. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
         /**
          * ParcoursUmbenennenRequest
-         * @description Rename a Parcours (AC-9: existing snapshots keep the old name).
+         * @description Rename a Parcours. Existing snapshots keep the name they captured.
          */
         ParcoursUmbenennenRequest: {
+            /** @description The new shown name. */
             name: string;
         };
         /**
          * ParcoursÖffentlich
-         * @description One active Parcours with the Anlage that holds it, for starting a Runde (AC-13).
+         * @description One active Parcours with the Anlage that holds it, for starting a Runde.
          */
         "Parcours\u00D6ffentlich": {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Anlage that offers this Parcours.
+             */
             anlageId: string;
+            /** @description That Anlage's name. */
             anlageName: string;
-            parcours: components["schemas"]["Parcours"];
+            /** @description The Parcours with its whole setup. */
+            parcours: components["schemas"]["Parcours"] & unknown;
         };
-        /** PasswortVergessenRequest */
+        /**
+         * PasswortVergessenRequest
+         * @description Request a password reset mail.
+         */
         PasswortVergessenRequest: {
             /**
              * E-Mail-Adresse
+             * @description The address to send the reset mail to.
              * @example test@example.com
              */
             eMailAdresse: string;
         };
-        /** PasswortWiederherstellenRequest */
+        /**
+         * PasswortWiederherstellenRequest
+         * @description Set a new password from a mailed reset token.
+         */
         PasswortWiederherstellenRequest: {
+            /** @description The single-use token from the reset mail. */
             token: string;
+            /** @description The new password. It is checked against the password policy. */
             neuesPasswort: string;
         };
         /**
          * Pflock
-         * @description One shooting position: its colour (`#rrggbb`) identifies it, and no label exists.
+         * @description One shooting position. Its colour identifies it; no label exists.
          */
         Pflock: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Pflock inside its Parcours.
+             */
             id: string;
-            /** @description Caller data, never a design token (AC-6). */
+            /** @description The Pflock's colour as `#rrggbb`. It is what distinguishes one Pflock from another. */
             farbe: string;
         };
         /**
          * PflockAbstand
-         * @description One Pflock colour with the distance captured for it.
+         * @description One Pflock colour with the distance configured for it.
          */
         PflockAbstand: {
             /** @description The Pflock's colour as `#rrggbb`. */
             pflock: string;
-            /** Format: uint32 */
+            /**
+             * Format: uint32
+             * @description Distance from that Pflock to the Ziel, in metres.
+             */
             meter: number;
         };
         /**
          * RegistrierungAbschlussRequest
-         * @description Registration step 2.
+         * @description Registration step 2: the mailed token and the chosen password.
          */
         RegistrierungAbschlussRequest: {
+            /** @description The single-use token from the confirmation mail. */
             token: string;
+            /** @description The password to set. It is checked against the password policy. */
             passwort: string;
         };
         /**
          * RegistrierungStartRequest
-         * @description Registration step 1.
+         * @description Registration step 1: the address to confirm.
          */
         RegistrierungStartRequest: {
             /**
              * E-Mail-Adresse
+             * @description The address to send the confirmation mail to. Its format is validated.
              * @example test@example.com
              */
             eMailAdresse: string;
         };
         /**
          * Runde
-         * @description `GET /runden/{id}`: the whole read model of one Runde.
+         * @description The whole read model of one Runde, as `GET /runden/{id}` answers it.
          */
         Runde: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Runde.
+             */
             id: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Anlage the Parcours belongs to.
+             */
             anlageId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Parcours this Runde was started on.
+             */
             parcoursId: string;
-            /** @description As captured at the start, not the Parcours' current name (AC-9). */
+            /** @description The Parcours' name as captured at the start, not its current name. */
             parcoursName: string;
-            zuordnung: components["schemas"]["Zuordnung"];
-            zustand: components["schemas"]["RundeZustand"];
+            /** @description Who the Runde belongs to. */
+            zuordnung: components["schemas"]["Zuordnung"] & unknown;
+            /** @description Whether it is still open or already closed. */
+            zustand: components["schemas"]["RundeZustand"] & unknown;
+            /** @description Start of the Runde, as an RFC 3339 timestamp. */
             begonnenAm: string;
+            /** @description End of the Runde, as an RFC 3339 timestamp; absent while it is open. */
             abgeschlossenAm?: string;
+            /** @description The Pflöcke as captured, far to near. */
             "pfl\u00F6cke": components["schemas"]["SnapshotPflock"][];
+            /** @description The Ziele as captured, with their results. */
             ziele: components["schemas"]["SnapshotZiel"][];
-            /** Format: uint32 */
+            /**
+             * Format: uint32
+             * @description First-arrow hits over the whole Runde.
+             */
             gesamtErsterTreffer: number;
-            /** Format: uint32 */
+            /**
+             * Format: uint32
+             * @description Follow-up hits over the whole Runde.
+             */
             gesamtMehrschuss: number;
-            /** Format: uint64 */
+            /**
+             * Format: uint64
+             * @description How many Ziele already carry a result.
+             */
             zieleMitErgebnis: number;
         };
         /**
          * RundeStartenRequest
-         * @description Start a Runde at one active Parcours (AC-7).
+         * @description Start a Runde on one active Parcours.
          */
         RundeStartenRequest: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Parcours to shoot. It must be active.
+             */
             parcoursId: string;
         };
-        /** @enum {string} */
+        /**
+         * @description `InBearbeitung` or `Abgeschlossen`.
+         *
+         *     A completed Runde refuses further Schüsse and its Wertungen are final.
+         * @enum {string}
+         */
         RundeZustand: RundeZustand;
         /**
          * RundenZeile
          * @description One row of `GET /runden`.
          */
         RundenZeile: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Runde.
+             */
             id: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Anlage the Parcours belongs to.
+             */
             anlageId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Parcours this Runde was started on.
+             */
             parcoursId: string;
+            /** @description The Parcours' name as captured at the start. */
             parcoursName: string;
-            zustand: components["schemas"]["RundeZustand"];
+            /** @description Whether it is still open or already closed. */
+            zustand: components["schemas"]["RundeZustand"] & unknown;
+            /** @description Start of the Runde, as an RFC 3339 timestamp. */
             begonnenAm: string;
+            /** @description End of the Runde, as an RFC 3339 timestamp; absent while it is open. */
             abgeschlossenAm?: string;
         };
         /**
@@ -2196,36 +2475,58 @@ export interface components {
          * @description One logged arrow.
          */
         Schuss: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Schuss.
+             */
             id: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Runde it belongs to.
+             */
             rundeId: string;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Ziel it hit or missed.
+             */
             zielId: string;
-            zuordnung: components["schemas"]["Zuordnung"];
+            /** @description Who logged it. */
+            zuordnung: components["schemas"]["Zuordnung"] & unknown;
             /**
              * Format: uint64
              * @description 1-based position of the arrow at its Ziel.
              */
             pfeil: number;
-            wertungszone: components["schemas"]["Wertungszone"];
+            /** @description Where on the Ziel it landed. */
+            wertungszone: components["schemas"]["Wertungszone"] & unknown;
         };
         /**
          * SchussErstellungRequest
-         * @description Register one Schuss inside the caller's own open Runde (AC-9).
+         * @description Register one Schuss inside the caller's own open Runde.
          */
         SchussErstellungRequest: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Ziel that was aimed at; it must be part of the Runde's snapshot.
+             */
             zielId: string;
             /**
              * Format: uint64
-             * @description 1-based; `0` is rejected as an invalid request.
+             * @description 1-based position of the arrow at its Ziel; `0` is rejected.
              */
             pfeil: number;
-            wertungszone: components["schemas"]["Wertungszone"];
+            /** @description Where on the Ziel the arrow landed. */
+            wertungszone: components["schemas"]["Wertungszone"] & unknown;
         };
-        /** SessionResponseContent */
+        /**
+         * SessionResponseContent
+         * @description The access token of a session.
+         *
+         *     The matching refresh token is never in a body: it leaves as the `__Host-` cookie, and
+         *     every session response is `Cache-Control: no-store`.
+         */
         SessionResponseContent: {
+            /** @description The token to send as `Authorization: Bearer <token>`. */
             accessToken: string;
         };
         /**
@@ -2235,82 +2536,126 @@ export interface components {
         SnapshotAbstand: {
             /** @description The captured Pflock's colour as `#rrggbb`. */
             pflock: string;
-            /** Format: uint32 */
+            /**
+             * Format: uint32
+             * @description Distance from that Pflock to the Ziel, in metres.
+             */
             meter: number;
         };
         /**
          * SnapshotPflock
-         * @description One captured Pflock, in far-to-near order.
+         * @description One Pflock captured in the snapshot, in far-to-near order.
          */
         SnapshotPflock: {
-            /** @description Caller data (`#rrggbb`), never a design token. */
+            /** @description The Pflock's colour as `#rrggbb`. */
             farbe: string;
             /**
              * Format: uint64
-             * @description 0-based, far to near.
+             * @description 0-based position, far to near.
              */
             position: number;
         };
         /**
          * SnapshotZiel
-         * @description One captured Ziel: identity, animal name, target group, distances as they were.
+         * @description One captured Ziel: its identity, animal name, target group, and distances as recorded.
          */
         SnapshotZiel: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Identity of the Ziel as captured.
+             */
             zielId: string;
-            tiername: string;
-            /** Format: uint8 */
-            zielgruppe: number;
-            "abst\u00E4nde": components["schemas"]["SnapshotAbstand"][];
-            /** @description Absent for a Ziel without any Schuss (AC-6 of SPEC-wertung). */
-            ergebnis?: components["schemas"]["Zielergebnis"] & unknown;
-        };
-        /** StructuredError */
-        StructuredError: {
-            message: string;
-            attachments: string[];
-            sources: components["schemas"]["StructuredError"][];
-        };
-        /**
-         * @description API mirror of [`domain::Wertungszone`]. Kept separate so the domain never learns
-         *     about OpenAPI, serde, or HTTP.
-         * @enum {string}
-         */
-        Wertungszone: Wertungszone;
-        /** Ziel */
-        Ziel: {
-            /** Format: uuid */
-            id: string;
+            /** @description Animal name as captured. */
             tiername: string;
             /**
              * Format: uint8
-             * @description 1–4 (AC-5).
+             * @description Target group as captured.
              */
             zielgruppe: number;
-            zustand: components["schemas"]["AnlageZustand"];
+            /** @description The distances as captured. */
+            "abst\u00E4nde": components["schemas"]["SnapshotAbstand"][];
+            /** @description Both Wertungen of this Ziel; absent while no Schuss has been logged at it. */
+            ergebnis?: components["schemas"]["Zielergebnis"] & unknown;
+        };
+        /**
+         * StructuredError
+         * @description The one error envelope every failed request answers with.
+         *
+         *     It is the error chain flattened, not a code enum: read `message` for what failed and
+         *     `attachments` for the free-text detail attached to that failure. A `500` deliberately
+         *     answers a constant body, so an internal failure never leaks its cause.
+         */
+        StructuredError: {
+            /** @description What failed, as the error's own display text. */
+            message: string;
+            /** @description Free-text detail attached to that failure. */
+            attachments: string[];
+            /** @description The nested causes beneath it. */
+            sources: components["schemas"]["StructuredError"][];
+        };
+        /**
+         * @description API mirror of the domain's scoring zone.
+         *
+         *     `Spot` and `Kill` are hits, `Body` a non-lethal hit, `Miss` a miss.
+         * @enum {string}
+         */
+        Wertungszone: Wertungszone;
+        /**
+         * Ziel
+         * @description One physical Ziel of the Anlage.
+         */
+        Ziel: {
+            /**
+             * Format: uuid
+             * @description Stable identity of this physical target.
+             */
+            id: string;
+            /** @description Animal name shown to the shooter. */
+            tiername: string;
+            /**
+             * Format: uint8
+             * @description Target group, `1` to `4`.
+             */
+            zielgruppe: number;
+            /** @description Whether the Ziel is in use or retired. */
+            zustand: components["schemas"]["AnlageZustand"] & unknown;
             /** @description Where this physical Ziel currently lies, across this Anlage's active Parcours. */
             verwendungen: components["schemas"]["Zielverwendung"][];
         };
         /**
          * ZielRequest
-         * @description Add or edit a Ziel (AC-5).
+         * @description Add or edit a Ziel.
          */
         ZielRequest: {
+            /** @description Animal name shown to the shooter. */
             tiername: string;
-            /** Format: uint8 */
+            /**
+             * Format: uint8
+             * @description Target group, `1` to `4`.
+             */
             zielgruppe: number;
         };
         /**
          * Zielergebnis
-         * @description The fold of every Schuss at one Ziel: both Wertungen plus first-arrow hit.
+         * @description The fold of every Schuss at one Ziel: both Wertungen plus the first-arrow hit.
          */
         Zielergebnis: {
-            /** Format: uint32 */
+            /**
+             * Format: uint32
+             * @description First-arrow hits at this Ziel.
+             */
             ersterTreffer: number;
-            /** Format: uint32 */
+            /**
+             * Format: uint32
+             * @description Follow-up hits at this Ziel.
+             */
             mehrschuss: number;
+            /** @description Whether the very first arrow hit. */
             ersterPfeilGetroffen: boolean;
-            /** Format: uint64 */
+            /**
+             * Format: uint64
+             * @description How many Schüsse were logged at this Ziel.
+             */
             "anzahlSch\u00FCsse": number;
         };
         /**
@@ -2318,43 +2663,69 @@ export interface components {
          * @description One Ziel's place in a Parcours, with its distances keyed by Pflock identity.
          */
         Zielplatzierung: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Ziel that stands here.
+             */
             zielId: string;
-            /** @description Pflock id to metres. A missing entry means "no distance configured". */
+            /** @description Pflock id to metres. A missing Pflock means no distance is configured for it. */
             "abst\u00E4nde": components["schemas"]["ZielplatzierungAbstand"][];
         };
-        /** ZielplatzierungAbstand */
+        /**
+         * ZielplatzierungAbstand
+         * @description One distance from a Pflock of this Parcours to the placed Ziel.
+         */
         ZielplatzierungAbstand: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Pflock the distance is measured from.
+             */
             pflockId: string;
-            /** Format: uint32 */
+            /**
+             * Format: uint32
+             * @description Distance to the Ziel, in metres.
+             */
             meter: number;
         };
         /**
          * Zielverwendung
-         * @description One Parcours' use of one Ziel, with that Parcours' own distances (AC-8).
+         * @description One Parcours' use of one Ziel, with that Parcours' own distances.
          */
         Zielverwendung: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The Parcours that places this Ziel.
+             */
             parcoursId: string;
+            /** @description The Parcours' name at the time of reading. */
             parcoursName: string;
-            /** Format: uint64 */
+            /**
+             * Format: uint64
+             * @description The Parcours' position in the Anlage's list.
+             */
             parcoursOrdnung: number;
             /**
              * Format: uint64
              * @description 0-based position in that Parcours' route.
              */
             position: number;
-            /** @description Pflock label to metres, far to near. */
+            /** @description Pflock colour to metres, far to near. */
             "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
         };
         /**
          * Zuordnung
-         * @description Who a row belongs to. An anonymised row names no Benutzer (SPEC-datenschutz).
+         * @description Who a row belongs to.
+         *
+         *     A Benutzer deletion anonymises its rows: the identity is gone and only the anonymisation
+         *     time remains, so history survives without naming anyone.
          */
         Zuordnung: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The owning Benutzer; absent once the row is anonymised.
+             */
             benutzerId?: string;
+            /** @description When the row was anonymised, as an RFC 3339 timestamp; absent while it is owned. */
             anonymisiertAm?: string;
         };
     };

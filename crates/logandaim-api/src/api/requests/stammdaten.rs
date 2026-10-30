@@ -97,15 +97,18 @@ fn platzierung(wert: ZielplatzierungSchema) -> Result<Zielplatzierung, Report<St
 
 // ------------------------------------------------------------------ Anlage
 
-/// Create an Anlage (AC-1).
+/// Create an Anlage. Systemadministrator only.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnlageErstellungRequest {
+    /// Shown name of the new Anlage.
     pub name: String,
+    /// Its structured address; every address field is required.
     pub adresse: AnlageAdresseSchema,
+    /// Optional contact details.
     #[serde(default)]
     pub kontakt: AnlageKontaktSchema,
 }
@@ -120,15 +123,18 @@ impl AnlageErstellungRequest {
     }
 }
 
-/// Edit the Anlage's descriptive fields (AC-3).
+/// Rewrite the Anlage's descriptive fields.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnlageÄnderungRequest {
+    /// Shown name of the Anlage.
     pub name: String,
+    /// Its structured address; every address field is required.
     pub adresse: AnlageAdresseSchema,
+    /// Optional contact details.
     #[serde(default)]
     pub kontakt: AnlageKontaktSchema,
 }
@@ -147,14 +153,16 @@ impl AnlageÄnderungRequest {
     }
 }
 
-/// Grant or change one AnlageVerwaltung (AC-2).
+/// Grant or change one role in an Anlage.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnlageVerwaltungRequest {
+    /// The Benutzer that should hold the role.
     pub benutzer_id: Uuid,
+    /// The role to assert.
     pub rolle: RolleSchema,
 }
 
@@ -190,14 +198,16 @@ impl AnlageVerwaltungRequest {
 
 // ------------------------------------------------------------------ Ziel
 
-/// Add or edit a Ziel (AC-5).
+/// Add or edit a Ziel.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZielRequest {
+    /// Animal name shown to the shooter.
     pub tiername: String,
+    /// Target group, `1` to `4`.
     pub zielgruppe: u8,
 }
 
@@ -242,15 +252,18 @@ impl ZielRequest {
 
 // ------------------------------------------------------------------ Parcours
 
-/// Create a Parcours with its Pflock setup and route (AC-4, AC-6).
+/// Create a Parcours with its Pflock setup and its route.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ParcoursErstellungRequest {
+    /// Shown name of the new Parcours.
     pub name: String,
+    /// The Pflöcke, far to near.
     pub pflöcke: Vec<PflockSchema>,
+    /// The Ziele on the route, in walking order. May be empty.
     #[serde(default)]
     pub platzierungen: Vec<ZielplatzierungSchema>,
 }
@@ -277,14 +290,16 @@ impl ParcoursErstellungRequest {
     }
 }
 
-/// Replace a Parcours' whole shooting setup (AC-6, AC-7).
+/// Replace a Parcours' whole shooting setup.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ParcoursSetupRequest {
+    /// The Pflöcke, far to near.
     pub pflöcke: Vec<PflockSchema>,
+    /// The Ziele on the route, in walking order. May be empty.
     #[serde(default)]
     pub platzierungen: Vec<ZielplatzierungSchema>,
 }
@@ -312,13 +327,14 @@ impl ParcoursSetupRequest {
     }
 }
 
-/// Rename a Parcours (AC-9: existing snapshots keep the old name).
+/// Rename a Parcours. Existing snapshots keep the name they captured.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ParcoursUmbenennenRequest {
+    /// The new shown name.
     pub name: String,
 }
 
