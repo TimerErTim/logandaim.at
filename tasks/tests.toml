@@ -1,12 +1,21 @@
 ["test:unit"]
 description = "Run the isolated tests (nextest profile `unit`, no external service)"
-run = "cargo nextest run --workspace --profile unit"
+usage = """
+flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build with the release profile"
+"""
+run = "cargo nextest run --workspace --profile unit{% if usage.release %} --release{% endif %}"
 
 ["test:e2e"]
 description = "Run the end-to-end tests (nextest profile `e2e`) against a real Mailpit"
 daemons = ["mailpit"]
-run = "cargo nextest run --workspace --profile e2e"
+usage = """
+flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build with the release profile"
+"""
+run = "cargo nextest run --workspace --profile e2e{% if usage.release %} --release{% endif %}"
 
 ["test"]
 description = "Run every test: unit first, then e2e with its services"
-depends = ["test:unit", "test:e2e"]
+usage = """
+flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build with the release profile"
+"""
+depends = ["LOGANDAIM_BUILD_RELEASE={{ usage.release }} test:?*"]
