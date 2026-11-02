@@ -37723,7 +37723,7 @@
       "file_type": "code",
       "norm_label": ".benutzer_loschen()",
       "source_file": "crates/logandaim-api/src/api/mod.rs",
-      "source_location": "L788"
+      "source_location": "L771"
     },
     {
       "id": "crates_logandaim_api_src_api_mod_logandaimappapi_benutzer_nach_email_suchen",
@@ -75852,7 +75852,7 @@
       "confidence_score": 1.0,
       "context": "generic_arg",
       "source_file": "crates/logandaim-api/src/api/mod.rs",
-      "source_location": "L788",
+      "source_location": "L771",
       "weight": 1.0
     },
     {
@@ -111065,7 +111065,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "crates/logandaim-api/src/api/mod.rs",
-      "source_location": "L788",
+      "source_location": "L771",
       "weight": 1.0
     },
     {
@@ -111077,7 +111077,7 @@
       "confidence_score": 1.0,
       "context": "parameter_type",
       "source_file": "crates/logandaim-api/src/api/mod.rs",
-      "source_location": "L788",
+      "source_location": "L771",
       "weight": 1.0
     },
     {
@@ -123365,7 +123365,7 @@
       "confidence_score": 1.0,
       "context": "return_type",
       "source_file": "crates/logandaim-api/src/api/mod.rs",
-      "source_location": "L788",
+      "source_location": "L771",
       "weight": 1.0
     },
     {
@@ -159932,7 +159932,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "crates/logandaim-api/src/api/mod.rs",
-      "source_location": "L788",
+      "source_location": "L771",
       "weight": 1.0
     },
     {
@@ -175892,5 +175892,5 @@
       "source_file": ".cursor/AGENTS.md"
     }
   ],
-  "built_at_commit": "317727a56d625aae6c8e2aaefb21cc77d2835913"
+  "built_at_commit": "65c20428661268b8a594f548fa2ecdadde436d49"
 }

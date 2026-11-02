@@ -713,72 +713,55 @@ impl LogandaimAppApi {
                     .await
                     .change_context(StammdatenFehler::AnlageLaden)?;
 
-                let ergebnis = async {
-                    let benutzer = uow
-                        .benutzer()
-                        .find_by_id(benutzer_id)
-                        .await
-                        .map_err(error_stack::IntoReport::into_report)
-                        .change_context(StammdatenFehler::BenutzerLaden)?;
-                    let anlage = match uow.anlagen().find_by_id(anlage_id).await {
-                        Ok(anlage) => anlage,
-                        Err(fehler)
-                            if fehler
-                                .downcast_ref::<logandaim_core::ports::RepositoryError>()
-                                .is_some_and(|error| {
-                                    matches!(
-                                        error,
-                                        logandaim_core::ports::RepositoryError::NotFound
-                                    )
-                                }) =>
-                        {
-                            return Err(error_stack::Report::new(StammdatenFehler::NichtGefunden));
-                        }
-                        Err(fehler) => {
-                            return Err(fehler.change_context(StammdatenFehler::AnlageLaden));
-                        }
-                    };
-                    if !darf_anlage_verwalten(&benutzer, &anlage) {
-                        return Err(error_stack::Report::new(StammdatenFehler::NichtErlaubt));
-                    }
-                    if anlage.ist_archiviert() {
-                        return Err(error_stack::Report::new(StammdatenFehler::Archiviert));
-                    }
-
-                    let email = &e_mail_adresse;
-                    match uow.konten().find_by_email(email).await {
-                        Ok(konto) => {
-                            if anlage
-                                .verwaltungen()
-                                .iter()
-                                .any(|verwaltung| verwaltung.benutzer_id() == konto.benutzer_id())
-                            {
-                                return Ok(Vec::new());
+                let ergebnis =
+                    async {
+                        let benutzer = uow
+                            .benutzer()
+                            .find_by_id(benutzer_id)
+                            .await
+                            .map_err(error_stack::IntoReport::into_report)
+                            .change_context(StammdatenFehler::BenutzerLaden)?;
+                        let anlage = match uow.anlagen().find_by_id(anlage_id).await {
+                            Ok(anlage) => anlage,
+                            Err(fehler) => {
+                                return Err(match fehler.current_context() {
+                                    RepositoryError::NotFound => {
+                                        Report::new(StammdatenFehler::NichtGefunden)
+                                    }
+                                    _ => fehler.change_context(StammdatenFehler::AnlageLaden),
+                                });
                             }
-                            let benutzer = uow
-                                .benutzer()
-                                .find_by_id(konto.benutzer_id())
-                                .await
-                                .map_err(error_stack::IntoReport::into_report)
-                                .change_context(StammdatenFehler::BenutzerLaden)?;
-                            Ok(vec![(benutzer.into_data(), email.clone()).into()])
+                        };
+                        if !darf_anlage_verwalten(&benutzer, &anlage) {
+                            return Err(error_stack::Report::new(StammdatenFehler::NichtErlaubt));
                         }
-                        Err(fehler)
-                            if fehler
-                                .downcast_ref::<logandaim_core::ports::RepositoryError>()
-                                .is_some_and(|error| {
-                                    matches!(
-                                        error,
-                                        logandaim_core::ports::RepositoryError::NotFound
-                                    )
-                                }) =>
-                        {
-                            Ok(Vec::new())
+                        if anlage.ist_archiviert() {
+                            return Err(error_stack::Report::new(StammdatenFehler::Archiviert));
                         }
-                        Err(fehler) => Err(fehler.change_context(StammdatenFehler::BenutzerLaden)),
+
+                        let email = &e_mail_adresse;
+                        match uow.konten().find_by_email(email).await {
+                            Ok(konto) => {
+                                if anlage.verwaltungen().iter().any(|verwaltung| {
+                                    verwaltung.benutzer_id() == konto.benutzer_id()
+                                }) {
+                                    return Ok(Vec::new());
+                                }
+                                let benutzer = uow
+                                    .benutzer()
+                                    .find_by_id(konto.benutzer_id())
+                                    .await
+                                    .map_err(error_stack::IntoReport::into_report)
+                                    .change_context(StammdatenFehler::BenutzerLaden)?;
+                                Ok(vec![(benutzer.into_data(), email.clone()).into()])
+                            }
+                            Err(fehler) => match fehler.current_context() {
+                                RepositoryError::NotFound => Ok(Vec::new()),
+                                _ => Err(fehler.change_context(StammdatenFehler::BenutzerLaden)),
+                            },
+                        }
                     }
-                }
-                .await;
+                    .await;
 
                 uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await
             })
