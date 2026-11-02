@@ -18,4 +18,7 @@ description = "Run every test: unit first, then e2e with its services"
 usage = """
 flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build with the release profile"
 """
-depends = ["LOGANDAIM_BUILD_RELEASE={{ usage.release }} test:?*"]
+depends = [
+    "LOGANDAIM_BUILD_RELEASE={{ usage.release }} test:unit",
+    "LOGANDAIM_BUILD_RELEASE={{ usage.release }} test:e2e",
+]
