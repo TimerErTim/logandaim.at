@@ -151,7 +151,7 @@ impl From<domain::Zielwertung> for Zielwertung {
             erster_treffer: wertung.erster_treffer(),
             mehrschuss: wertung.mehrschuss(),
             erster_pfeil_getroffen: wertung.erster_pfeil_getroffen(),
-            anzahl_schüsse: wertung.anzahl_schüsse(),
+            anzahl_schüsse: wertung.anzahl_schüsse().get(),
         }
     }
 }

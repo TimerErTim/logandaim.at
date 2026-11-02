@@ -52,8 +52,11 @@ impl Wertungszone {
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("die Wertungszone ist unbekannt")]
-pub struct WertungszoneUnbekannt;
+#[error("die Wertungszone {eingabe:?} ist unbekannt")]
+pub struct WertungszoneUnbekannt {
+    /// The malformed stored value, so a log line names what was read.
+    pub eingabe: String,
+}
 
 impl std::str::FromStr for Wertungszone {
     type Err = WertungszoneUnbekannt;
@@ -64,7 +67,9 @@ impl std::str::FromStr for Wertungszone {
             "Kill" => Ok(Self::Kill),
             "Body" => Ok(Self::Body),
             "Miss" => Ok(Self::Miss),
-            _ => Err(WertungszoneUnbekannt),
+            _ => Err(WertungszoneUnbekannt {
+                eingabe: value.to_owned(),
+            }),
         }
     }
 }
@@ -244,12 +249,15 @@ impl Schuss {
 }
 
 /// The Wertung of every Schuss at one Ziel.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+///
+/// `anzahl_schüsse` is a `NonZeroUsize`: a Wertung over no Schuss cannot be built, so the
+/// invariant lives in the type instead of in an `Option` every reader has to unpack.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Zielwertung {
     erster_treffer: u32,
     mehrschuss: u32,
     erster_pfeil_getroffen: bool,
-    anzahl_schüsse: usize,
+    anzahl_schüsse: NonZeroUsize,
 }
 
 impl Zielwertung {
@@ -268,7 +276,7 @@ impl Zielwertung {
         self.erster_pfeil_getroffen
     }
 
-    pub fn anzahl_schüsse(self) -> usize {
+    pub fn anzahl_schüsse(self) -> NonZeroUsize {
         self.anzahl_schüsse
     }
 }
@@ -276,8 +284,8 @@ impl Zielwertung {
 /// Every Schuss at one Ziel, ordered by Pfeil.
 ///
 /// The collection is the aggregator: it knows the fold, so `Runde` never re-implements
-/// the scoring rule. An empty collection has no Wertung at all (AC-6), which is why the
-/// Wertung is an `Option` rather than a zeroed [`Zielwertung`].
+/// the scoring rule. An empty collection has no Wertung at all (AC-6), which is why
+/// [`ZielSchüsse::wertung`] answers `None`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZielSchüsse {
     ziel_id: ZielId,
@@ -315,9 +323,7 @@ impl ZielSchüsse {
 
     /// `None` for an empty Ziel: a Ziel with no Schuss has no Wertung yet.
     pub fn wertung(&self) -> Option<Zielwertung> {
-        if self.schüsse.is_empty() {
-            return None;
-        }
+        let anzahl_schüsse = NonZeroUsize::new(self.schüsse.len())?;
         let erster_treffer = self
             .schüsse
             .iter()
@@ -333,7 +339,7 @@ impl ZielSchüsse {
             erster_treffer,
             mehrschuss,
             erster_pfeil_getroffen,
-            anzahl_schüsse: self.schüsse.len(),
+            anzahl_schüsse,
         })
     }
 }
@@ -426,7 +432,7 @@ mod tests {
         assert_eq!(wertung.erster_treffer(), 0);
         assert_eq!(wertung.mehrschuss(), 0);
         // A Schuss at Pfeil 4 still counts in the hit statistics.
-        assert_eq!(wertung.anzahl_schüsse(), 4);
+        assert_eq!(wertung.anzahl_schüsse().get(), 4);
     }
 
     #[test_log::test]
@@ -438,7 +444,7 @@ mod tests {
                 .is_none()
         );
         let lang: Vec<_> = (1..=12).map(|nummer| (nummer, Miss)).collect();
-        assert_eq!(wertung(&lang).anzahl_schüsse(), 12);
+        assert_eq!(wertung(&lang).anzahl_schüsse().get(), 12);
     }
 
     #[test_log::test]
@@ -455,6 +461,18 @@ mod tests {
         assert_eq!(sortiert, unsortiert);
         assert_eq!(sortiert.erster_treffer(), 18);
         assert_eq!(sortiert.mehrschuss(), 38);
+    }
+
+    #[test_log::test]
+    fn eine_unbekannte_wertungszone_nennt_die_eingabe() {
+        // A malformed stored value must not vanish: the report names what was read.
+        let fehler = "Kopf".parse::<Wertungszone>().unwrap_err();
+        assert_eq!(fehler.eingabe, "Kopf");
+        assert_eq!(
+            fehler.to_string(),
+            "die Wertungszone \"Kopf\" ist unbekannt"
+        );
+        assert_eq!("Kill".parse::<Wertungszone>().unwrap(), Kill);
     }
 
     #[test_log::test]

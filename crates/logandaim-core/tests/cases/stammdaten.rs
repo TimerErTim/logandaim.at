@@ -9,9 +9,9 @@ use std::net::{IpAddr, Ipv4Addr};
 use logandaim_core::{
     application::AuthContext,
     domain::{
-        Abstand, Anlage, AnlageAdresse, AnlageKontakt, AnlageName, AnlageVerwaltungRolle,
-        EmailAdresse, Farbe, Ländercode, NeuerParkour, NonEmptyString, ParkourId, Pflock, PflockId,
-        Wertungszone, ZielId, Zielplatzierung,
+        Abstand, Anlage, AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, EmailAdresse, Farbe,
+        Ländercode, NeuerParkour, NonEmptyString, ParkourId, Pflock, PflockId, Wertungszone,
+        ZielId, Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
@@ -27,7 +27,7 @@ use logandaim_core::{
 
 use super::{
     super::base_app_builder,
-    helpers::{Harness, anlage_ansicht, jetzt, runde_ansicht},
+    helpers::{Harness, anlage_laden, jetzt, runde_laden},
 };
 
 const PASSWORT: &str = "korrekt-pferd-batterie";
@@ -35,7 +35,7 @@ const PASSWORT: &str = "korrekt-pferd-batterie";
 // The list read and the Anlage detail read are composed at the HTTP edge now, so their
 // assertions live in `e2e/stammdaten.rs` (`die_anlagenliste_zeigt_je_nach_rolle_die_eigenen_anlagen`,
 // `die_anlage_zeigt_wo_ihre_ziele_verwendet_werden`). A core case that only needs the
-// aggregate reads it through `anlage_ansicht`.
+// aggregate reads it through `anlage_laden`.
 
 fn client_key(ip: u8) -> ClientKey {
     ClientKey::new(IpAddr::V4(Ipv4Addr::new(10, 0, 0, ip)), "stammdaten-case")
@@ -45,8 +45,8 @@ fn adresse(wert: &str) -> EmailAdresse {
     EmailAdresse::normalisiert(wert).expect("Testadresse ist gültig")
 }
 
-fn anlage_name(wert: &str) -> AnlageName {
-    AnlageName::neu(wert).expect("Testname ist gültig")
+fn anlage_name(wert: &str) -> NonEmptyString {
+    NonEmptyString::neu(wert).expect("Testname ist gültig")
 }
 
 fn anlage_adresse() -> AnlageAdresse {
@@ -56,6 +56,10 @@ fn anlage_adresse() -> AnlageAdresse {
 
 fn tiername(wert: &str) -> NonEmptyString {
     NonEmptyString::neu(wert).expect("Testtiername ist gültig")
+}
+
+fn zielnummer(wert: u32) -> std::num::NonZeroU32 {
+    std::num::NonZeroU32::new(wert).expect("Testzielnummer ist 1-basiert")
 }
 
 fn abstand(meter: u32) -> Abstand {
@@ -376,9 +380,9 @@ async fn ac2_der_letzte_administrator_kann_nicht_entzogen_werden() {
         StammdatenFehler::UngültigeAnfrage
     ));
 
-    let danach = anlage_ansicht(&harness, anlage.id()).await;
+    let danach = anlage_laden(&harness, anlage.id()).await;
     assert_eq!(
-        danach.anlage.rolle_von(id_von(mitarbeiter)),
+        danach.rolle_von(id_von(mitarbeiter)),
         Some(AnlageVerwaltungRolle::Administrator),
         "AC-2: die Anlage behält einen Administrator"
     );
@@ -630,6 +634,7 @@ async fn ac5_aendern_erhaelt_die_identitaet() {
                 anlage_id: anlage.id(),
                 ziel_id,
                 tiername: tiername("Reh"),
+                zielnummer: zielnummer(1),
             },
         )
         .await
@@ -758,6 +763,7 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
                 anlage_id,
                 ziel_id,
                 tiername: tiername("Reh"),
+                zielnummer: zielnummer(1),
             },
         )
         .await
@@ -779,19 +785,20 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
         .expect("Parkour-Setup ändern");
 
     // AC-9: the existing Runde still displays L1 exactly.
-    let gelesen = runde_ansicht(&harness, runde.id()).await;
-    assert_eq!(gelesen.runde.snapshot(), &vorher);
-    assert_eq!(gelesen.ziele[0].tiername.as_str(), "Keiler");
-    assert_eq!(gelesen.ziele[0].zielnummer.get(), 1);
+    let (gelesen, _) = runde_laden(&harness, runde.id()).await;
+    assert_eq!(gelesen.snapshot(), &vorher);
+    let ziel = &gelesen.snapshot().ziele()[0];
+    assert_eq!(ziel.tiername().as_str(), "Keiler");
+    assert_eq!(ziel.zielnummer().get(), 1);
     assert_eq!(
-        gelesen.ziele[0].abstände,
-        vec![
+        ziel.abstände(),
+        &[
             (Farbe::neu("#1b4f9c").unwrap(), abstand(20)),
             (Farbe::neu("#c0392b").unwrap(), abstand(40)),
         ]
     );
     assert_eq!(
-        gelesen.runde.snapshot().parkour_name().as_str(),
+        gelesen.snapshot().parkour_name().as_str(),
         "Waldrunde",
         "AC-9: der Name ist Teil des Schnappschusses"
     );
@@ -889,16 +896,16 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
         .await
         .expect("AC-8: derselbe Ziel-Datensatz nimmt einen zweiten Schuss an");
 
-    let eine = runde_ansicht(&harness, erste.id()).await;
-    let andere = runde_ansicht(&harness, zweite.id()).await;
+    let (eine, eine_schüsse) = runde_laden(&harness, erste.id()).await;
+    let (andere, andere_schüsse) = runde_laden(&harness, zweite.id()).await;
 
-    assert_eq!(eine.ziele[0].ziel_id, ziel_id);
-    assert_eq!(andere.ziele[0].ziel_id, ziel_id);
-    assert_eq!(eine.gesamt_erster_treffer, 18);
-    assert_eq!(andere.gesamt_erster_treffer, 20);
+    assert_eq!(eine.snapshot().ziele()[0].ziel_id(), ziel_id);
+    assert_eq!(andere.snapshot().ziele()[0].ziel_id(), ziel_id);
+    assert_eq!(eine.wertung(eine_schüsse).erster_treffer(), 18);
+    assert_eq!(andere.wertung(andere_schüsse).erster_treffer(), 20);
     assert_eq!(
-        andere.ziele[0].abstände,
-        vec![
+        andere.snapshot().ziele()[0].abstände(),
+        &[
             (Farbe::neu("#1b4f9c").unwrap(), abstand(20)),
             (Farbe::neu("#c0392b").unwrap(), abstand(40)),
         ],
@@ -942,7 +949,7 @@ async fn ac10_deaktivieren_verhindert_neue_runden_und_haelt_alte_lesbar() {
         RundeStartenFehler::NichtGefunden | RundeStartenFehler::NichtAktiv
     ));
 
-    runde_ansicht(&harness, runde.id()).await;
+    runde_laden(&harness, runde.id()).await;
 }
 
 #[test_log::test(pollster::test)]
@@ -1038,6 +1045,7 @@ async fn ac11_ein_archiviertes_ziel_verweigert_jede_aenderung() {
                 anlage_id: anlage.id(),
                 ziel_id,
                 tiername: tiername("Reh"),
+                zielnummer: zielnummer(1),
             },
         )
         .await
@@ -1181,7 +1189,7 @@ async fn ac13_ein_mitarbeiter_liest_keine_fremde_runde() {
     // AC-13: the owner-or-Systemadministrator rule is a person rule, not an Anlage role, so
     // the Mitarbeiter's Verwaltung grants nothing. The HTTP suite pins the 403.
     assert!(matches!(
-        fremde_runde.erfasser(),
+        fremde_runde.erfasst_von(),
         logandaim_core::domain::Erfasser::Benutzer(eigner)
             if eigner != id_von(mitarbeiter)
     ));
@@ -1200,7 +1208,7 @@ async fn ac13_der_systemadministrator_handelt_anlagenuebergreifend() {
         .await
         .expect("Anna startet eine Runde");
 
-    runde_ansicht(&harness, runde.id()).await;
+    runde_laden(&harness, runde.id()).await;
 }
 
 // --------------------------------------------------------------------------- Listen
@@ -1215,13 +1223,17 @@ async fn die_anlage_zeigt_wo_ihre_ziele_verwendet_werden() {
     let admin = systemadministrator(&harness, "admin@muster.at").await;
     let (anlage, _, _) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
 
-    let ansicht = anlage_ansicht(&harness, anlage.id()).await;
-    assert_eq!(ansicht.anlage.id(), anlage.id());
-    assert_eq!(ansicht.zielverwendungen.len(), 1);
-    let verwendungen = &ansicht.zielverwendungen[0].1;
+    let geladen = anlage_laden(&harness, anlage.id()).await;
+    assert_eq!(geladen.id(), anlage.id());
+    let zielverwendungen: Vec<_> = geladen
+        .ziele()
+        .iter()
+        .map(|ziel| (ziel.id(), geladen.ziel_verwendungen(ziel.id())))
+        .collect();
+    assert_eq!(zielverwendungen.len(), 1);
+    let verwendungen = &zielverwendungen[0].1;
     assert_eq!(verwendungen.len(), 1);
-    let parkour = ansicht
-        .anlage
+    let parkour = geladen
         .parkour_mit_id(verwendungen[0].parkour_id)
         .expect("der Parkour der Verwendung existiert");
     assert_eq!(parkour.name().as_str(), "Waldrunde");
@@ -1313,15 +1325,15 @@ async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
         .await
         .expect("das Konto wird gelöscht");
 
-    let ansicht = runde_ansicht(&harness, runde.id()).await;
+    let (geladen, schüsse) = runde_laden(&harness, runde.id()).await;
     assert!(matches!(
-        ansicht.runde.erfasser(),
+        geladen.erfasst_von(),
         Erfasser::Anonymisiert { .. }
     ));
-    assert_eq!(ansicht.schüsse.len(), 1);
+    assert_eq!(schüsse.len(), 1);
     assert!(
-        matches!(ansicht.schüsse[0].erfasser(), Erfasser::Anonymisiert { .. }),
+        matches!(schüsse[0].erfasser(), Erfasser::Anonymisiert { .. }),
         "der Schuss überlebt, ohne den Benutzer zu nennen"
     );
-    assert_eq!(ansicht.gesamt_erster_treffer, 18);
+    assert_eq!(geladen.wertung(schüsse).erster_treffer(), 18);
 }

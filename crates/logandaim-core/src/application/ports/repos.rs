@@ -46,6 +46,13 @@ pub trait AnlageRepository: Send + Sync {
 
     async fn find_aktiv(&self) -> RepositoryResult<Vec<Versioned<Anlage>>>;
 
+    /// The Anlage that owns the given Parkour, in either lifecycle state, or `NotFound`.
+    ///
+    /// A Parkour has no lifecycle outside its Anlage, so this is the one question a caller
+    /// that only holds a `ParkourId` has to ask; walking `find_aktiv` would silently miss an
+    /// archived owner and read every aggregate to answer it.
+    async fn find_by_parkour_id(&self, id: ParkourId) -> RepositoryResult<Versioned<Anlage>>;
+
     async fn find_by_verwaltung(
         &self,
         benutzer_id: BenutzerId,

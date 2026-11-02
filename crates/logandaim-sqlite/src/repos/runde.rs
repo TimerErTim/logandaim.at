@@ -9,7 +9,6 @@ use std::sync::Arc;
 
 use async_lock::Mutex;
 use async_trait::async_trait;
-use error_stack::Report;
 use libsql::{Row, Transaction};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -19,7 +18,7 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Abstand, AnlageId, Erfasser, Farbe, NeueRunde, NonEmptyString, ParkourId, ParkourSnapshot,
-        PflockSnapshot, Runde, RundeId, RundeInBearbeitung, RundeZustand, ZielId, ZielSnapshot,
+        PflockSnapshot, Runde, RundeId, RundeInBearbeitung, ZielId, ZielSnapshot,
         konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
@@ -86,17 +85,17 @@ fn snapshot_to_json(snapshot: &ParkourSnapshot) -> RepositoryResult<String> {
             })
             .collect(),
     };
-    serde_json::to_string(&dto).map_err(|_| RepositoryError::Data.into())
+    serde_json::to_string(&dto).contextualize(RepositoryError::Data)
 }
 
 fn snapshot_from_json(json: &str) -> RepositoryResult<ParkourSnapshot> {
-    let dto: SnapshotDto = serde_json::from_str(json).map_err(|_| RepositoryError::Data)?;
+    let dto: SnapshotDto = serde_json::from_str(json).contextualize(RepositoryError::Data)?;
     let pflöcke = dto
         .pflöcke
         .into_iter()
         .map(|pflock| {
             Ok(PflockSnapshot::neu(
-                Farbe::neu(&pflock.farbe).map_err(|_| RepositoryError::Data)?,
+                (Farbe::neu(&pflock.farbe)).contextualize(RepositoryError::Data)?,
                 pflock.position,
             ))
         })
@@ -110,15 +109,15 @@ fn snapshot_from_json(json: &str) -> RepositoryResult<ParkourSnapshot> {
                 .into_iter()
                 .map(|(farbe, meter)| {
                     Ok((
-                        Farbe::neu(&farbe).map_err(|_| RepositoryError::Data)?,
-                        Abstand::neu(meter).map_err(|_| RepositoryError::Data)?,
+                        (Farbe::neu(&farbe)).contextualize(RepositoryError::Data)?,
+                        (Abstand::neu(meter)).contextualize(RepositoryError::Data)?,
                     ))
                 })
                 .collect::<RepositoryResult<Vec<_>>>()?;
             Ok(ZielSnapshot::neu(
                 ZielId(ziel.ziel_id),
                 std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?,
-                NonEmptyString::neu(&ziel.tiername).map_err(|_| RepositoryError::Data)?,
+                (NonEmptyString::neu(&ziel.tiername)).contextualize(RepositoryError::Data)?,
                 abstände,
             ))
         })
@@ -126,7 +125,7 @@ fn snapshot_from_json(json: &str) -> RepositoryResult<ParkourSnapshot> {
 
     Ok(ParkourSnapshot::from_parts(
         ParkourId(dto.parkour_id),
-        NonEmptyString::neu(&dto.parkour_name).map_err(|_| RepositoryError::Data)?,
+        (NonEmptyString::neu(&dto.parkour_name)).contextualize(RepositoryError::Data)?,
         pflöcke,
         ziele,
     ))
@@ -161,28 +160,19 @@ fn runde_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Runde>> {
     let snapshot_raw: String = row.get(3).contextualize(RepositoryError::Data)?;
     let benutzer_id: Option<String> = row.get(4).contextualize(RepositoryError::Data)?;
     let anonymisiert_am: Option<String> = row.get(5).contextualize(RepositoryError::Data)?;
-    let zustand_raw: String = row.get(6).contextualize(RepositoryError::Data)?;
     let begonnen_am_raw: String = row.get(7).contextualize(RepositoryError::Data)?;
     let abgeschlossen_am: Option<String> = row.get(8).contextualize(RepositoryError::Data)?;
 
     let runde = Runde::from_parts(
-        RundeId(parse_uuid(&id_raw).contextualize(RepositoryError::Data)?),
-        AnlageId(parse_uuid(&anlage_id_raw).contextualize(RepositoryError::Data)?),
+        RundeId(parse_uuid(&id_raw)?),
+        AnlageId(parse_uuid(&anlage_id_raw)?),
         zuordnung_aus_zeile(benutzer_id, anonymisiert_am)?,
         snapshot_from_json(&snapshot_raw)?,
-        zustand_raw
-            .parse::<RundeZustand>()
-            .map_err(|_| RepositoryError::Data)?,
-        parse_datetime(&begonnen_am_raw).contextualize(RepositoryError::Data)?,
-        abgeschlossen_am
-            .map(|am| parse_datetime(&am).contextualize(RepositoryError::Data))
-            .transpose()?,
+        parse_datetime(&begonnen_am_raw)?,
+        abgeschlossen_am.map(|am| parse_datetime(&am)).transpose()?,
     );
 
-    Ok(Versioned::new(
-        parse_version(row, 9)?,
-        runde.map_err(|_| RepositoryError::Data)?,
-    ))
+    Ok(Versioned::new(parse_version(row, 9)?, runde))
 }
 
 // ---------------------------------------------------------------------------------------
@@ -193,14 +183,14 @@ fn runde_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Runde>> {
 ///
 /// `art` names the kind of reference; the ids are the snapshot's own copies, which is exactly
 /// what "may this master data be deleted?" has to ask.
-async fn ersetze_referenzen(tx: &Transaction, runde: &Runde) -> Result<(), RepositoryError> {
+async fn ersetze_referenzen(tx: &Transaction, runde: &Runde) -> RepositoryResult<()> {
     let runde_id = runde.id().0.to_string();
     tx.execute(
         r#"DELETE FROM "runden_referenzen" WHERE runde_id = ?1"#,
         [runde_id.clone()],
     )
     .await
-    .map_err(|_| RepositoryError::OperationFailed)?;
+    .contextualize_with(libsql_error_to_persistence_error)?;
 
     let mut referenzen: Vec<(&'static str, String)> = vec![
         ("anlage", runde.anlage_id().0.to_string()),
@@ -217,7 +207,7 @@ async fn ersetze_referenzen(tx: &Transaction, runde: &Runde) -> Result<(), Repos
             (runde_id.clone(), art, ref_id),
         )
         .await
-        .map_err(|_| RepositoryError::OperationFailed)?;
+        .contextualize_with(libsql_error_to_persistence_error)?;
     }
     Ok(())
 }
@@ -238,7 +228,7 @@ impl SQLiteRundeRepository {
         runde: &Runde,
         erwartete_version: i64,
     ) -> RepositoryResult<()> {
-        let (benutzer_id, anonymisiert_am) = match runde.erfasser() {
+        let (benutzer_id, anonymisiert_am) = match runde.erfasst_von() {
             Erfasser::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
             Erfasser::Anonymisiert { am } => (None, Some(format_datetime(am))),
         };
@@ -253,14 +243,13 @@ impl SQLiteRundeRepository {
                 snapshot,
                 benutzer_id,
                 anonymisiert_am,
-                runde.zustand().as_str(),
+                runde.zustand(),
                 runde.abgeschlossen_am().map(format_datetime),
                 erwartete_version,
             ),
-            u64::try_from(erwartete_version).map_err(|_| RepositoryError::Data)?,
+            u64::try_from(erwartete_version).contextualize(RepositoryError::Data)?,
         )
         .await
-        .map_err(Report::new)
     }
 }
 
@@ -273,7 +262,7 @@ impl RundeRepository for SQLiteRundeRepository {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
-        let (benutzer_id, anonymisiert_am) = match domain.erfasser() {
+        let (benutzer_id, anonymisiert_am) = match domain.erfasst_von() {
             Erfasser::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
             Erfasser::Anonymisiert { am } => (None, Some(format_datetime(am))),
         };
@@ -290,14 +279,14 @@ impl RundeRepository for SQLiteRundeRepository {
                 snapshot_to_json(domain.snapshot())?,
                 benutzer_id,
                 anonymisiert_am,
-                domain.zustand().as_str(),
+                domain.zustand(),
                 format_datetime(domain.begonnen_am()),
             ),
         )
         .await
         .contextualize_with(libsql_error_to_persistence_error)?;
 
-        ersetze_referenzen(tx, &domain).await.map_err(Report::new)?;
+        ersetze_referenzen(tx, &domain).await?;
 
         Ok(Versioned::init(domain))
     }
@@ -353,7 +342,7 @@ impl RundeRepository for SQLiteRundeRepository {
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         Self::schreibe_zeile(tx, runde, runde.v() as i64).await?;
-        ersetze_referenzen(tx, runde).await.map_err(Report::new)?;
+        ersetze_referenzen(tx, runde).await?;
 
         runde.increment();
         Ok(())

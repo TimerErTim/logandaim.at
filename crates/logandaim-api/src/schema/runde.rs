@@ -7,10 +7,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use logandaim_core::{
-    domain,
-    service::{RundeAnsicht, Zielansicht},
-};
+use logandaim_core::domain;
 
 use crate::schema::{Erfasser, Farbe, Zielwertung};
 
@@ -89,7 +86,7 @@ pub struct Runde {
     /// The Parkour' name as captured at the start, not its current name.
     pub parkour_name: String,
     /// Who the Runde belongs to.
-    pub erfasser: Erfasser,
+    pub erfasst_von: Erfasser,
     /// Whether it is still open or already closed.
     pub zustand: RundeZustand,
     /// Start of the Runde.
@@ -136,60 +133,49 @@ pub struct RundeBasic {
 
 // ------------------------------------------------------------------ conversions
 
-impl From<domain::RundeZustand> for RundeZustand {
-    fn from(zustand: domain::RundeZustand) -> Self {
-        match zustand {
-            domain::RundeZustand::InBearbeitung => Self::InBearbeitung,
-            domain::RundeZustand::Abgeschlossen => Self::Abgeschlossen,
-        }
+/// The read model of a Runde with its Schüsse folded over the captured route.
+///
+/// The shape is the API's; the fold itself is the domain's ([`domain::Runde::ziel_wertungen`]
+/// and [`domain::Runde::wertung`]), so no Wertung is re-derived at the edge.
+impl Runde {
+    pub fn gelesen(runde: domain::Runde, schüsse: Vec<domain::Schuss>) -> Self {
+        let wertungen = runde.ziel_wertungen(schüsse.iter().cloned());
+        let ziele = runde
+            .snapshot()
+            .ziele()
+            .iter()
+            .zip(wertungen)
+            .map(|(ziel, wertung)| RundeZiel {
+                ziel_id: ziel.ziel_id().0,
+                tiername: ziel.tiername().to_string(),
+                zielnummer: ziel.zielnummer().get(),
+                abstände: ziel
+                    .abstände()
+                    .iter()
+                    .map(|(farbe, abstand)| Abstand {
+                        pflock: (*farbe).into(),
+                        meter: abstand.meter(),
+                    })
+                    .collect(),
+                wertung: wertung.map(Into::into),
+            })
+            .collect();
+
+        let gesamt = runde.wertung(schüsse);
+        let mut gerendert: Self = runde.into();
+        gerendert.ziele = ziele;
+        gerendert.gesamt_erster_treffer = gesamt.erster_treffer();
+        gerendert.gesamt_mehrschuss = gesamt.mehrschuss();
+        gerendert.ziele_mit_wertung = gesamt.ziele_mit_wertung();
+        gerendert
     }
 }
 
-impl From<Zielansicht> for RundeZiel {
-    fn from(ansicht: Zielansicht) -> Self {
-        Self {
-            ziel_id: ansicht.ziel_id.0,
-            tiername: ansicht.tiername.to_string(),
-            zielnummer: ansicht.zielnummer.get(),
-            abstände: ansicht
-                .abstände
-                .into_iter()
-                .map(|(farbe, abstand)| Abstand {
-                    pflock: farbe.into(),
-                    meter: abstand.meter(),
-                })
-                .collect(),
-            wertung: ansicht.wertung.map(Into::into),
-        }
-    }
-}
-
-impl From<RundeAnsicht> for Runde {
-    fn from(ansicht: RundeAnsicht) -> Self {
-        let runde = &ansicht.runde;
-        Self {
-            id: runde.id().0,
-            anlage_id: runde.anlage_id().0,
-            parkour_id: runde.parkour_id().0,
-            parkour_name: runde.snapshot().parkour_name().to_string(),
-            erfasser: runde.erfasser().into(),
-            zustand: runde.zustand().into(),
-            begonnen_am: runde.begonnen_am(),
-            abgeschlossen_am: runde.abgeschlossen_am(),
-            pflöcke: runde
-                .snapshot()
-                .pflöcke()
-                .iter()
-                .map(|pflock| RundePflock {
-                    farbe: pflock.farbe().into(),
-                    position: pflock.position(),
-                })
-                .collect(),
-            ziele: ansicht.ziele.into_iter().map(Into::into).collect(),
-            gesamt_erster_treffer: ansicht.gesamt_erster_treffer,
-            gesamt_mehrschuss: ansicht.gesamt_mehrschuss,
-            ziele_mit_wertung: ansicht.ziele_mit_wertung,
-        }
+fn zustand(runde: &domain::Runde) -> RundeZustand {
+    if runde.ist_in_bearbeitung() {
+        RundeZustand::InBearbeitung
+    } else {
+        RundeZustand::Abgeschlossen
     }
 }
 
@@ -223,8 +209,8 @@ impl From<domain::Runde> for Runde {
             anlage_id: runde.anlage_id().0,
             parkour_id: runde.parkour_id().0,
             parkour_name: runde.snapshot().parkour_name().to_string(),
-            erfasser: runde.erfasser().into(),
-            zustand: runde.zustand().into(),
+            erfasst_von: runde.erfasst_von().into(),
+            zustand: zustand(&runde),
             begonnen_am: runde.begonnen_am(),
             abgeschlossen_am: runde.abgeschlossen_am(),
             pflöcke: runde
@@ -251,7 +237,7 @@ impl From<domain::Runde> for RundeBasic {
             anlage_id: runde.anlage_id().0,
             parkour_id: runde.parkour_id().0,
             parkour_name: runde.snapshot().parkour_name().to_string(),
-            zustand: runde.zustand().into(),
+            zustand: zustand(&runde),
             begonnen_am: runde.begonnen_am(),
             abgeschlossen_am: runde.abgeschlossen_am(),
         }

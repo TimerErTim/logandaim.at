@@ -8,6 +8,8 @@
 //! A refused parse attaches what it was parsing, so a report names the field and the index
 //! that failed rather than only the top-level request.
 
+use std::num::NonZeroU32;
+
 use error_stack::{Report, ResultExt};
 use uuid::Uuid;
 
@@ -24,18 +26,16 @@ use logandaim_core::{
 };
 
 use crate::schema::{
-    AnlageAdresse as AnlageAdresseSchema, AnlageKontakt as AnlageKontaktSchema,
-    AnlageVerwaltungRolle as RolleSchema, Farbe as FarbeSchema, Ländercode, Pflock as PflockSchema,
-    Zielplatzierung as ZielplatzierungSchema,
+    AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, Farbe, Ländercode, Pflock, Zielplatzierung,
 };
 
-fn name(wert: String) -> Result<domain::AnlageName, Report<StammdatenFehler>> {
-    domain::AnlageName::neu(wert)
+fn name(wert: String) -> Result<NonEmptyString, Report<StammdatenFehler>> {
+    NonEmptyString::neu(wert)
         .change_context(StammdatenFehler::UngültigeAnfrage)
         .attach("Anlage: Name")
 }
 
-fn adresse(wert: AnlageAdresseSchema) -> Result<domain::AnlageAdresse, Report<StammdatenFehler>> {
+fn adresse(wert: AnlageAdresse) -> Result<domain::AnlageAdresse, Report<StammdatenFehler>> {
     let ländercode = match wert.ländercode {
         Ländercode::AT => domain::Ländercode::AT,
         Ländercode::DE => domain::Ländercode::DE,
@@ -46,7 +46,7 @@ fn adresse(wert: AnlageAdresseSchema) -> Result<domain::AnlageAdresse, Report<St
         .attach("Anlage: Adresse")
 }
 
-fn kontakt(wert: AnlageKontaktSchema) -> Result<domain::AnlageKontakt, Report<StammdatenFehler>> {
+fn kontakt(wert: AnlageKontakt) -> Result<domain::AnlageKontakt, Report<StammdatenFehler>> {
     let email = wert
         .email
         .map(TryInto::try_into)
@@ -82,19 +82,17 @@ fn parkour_name(wert: String) -> Result<NonEmptyString, Report<StammdatenFehler>
         .attach("Parkour: Name")
 }
 
-fn farbe(wert: FarbeSchema) -> Result<domain::Farbe, Report<StammdatenFehler>> {
+fn farbe(wert: Farbe) -> Result<domain::Farbe, Report<StammdatenFehler>> {
     wert.try_into()
         .change_context(StammdatenFehler::UngültigeAnfrage)
         .attach("Pflock: Farbe")
 }
 
-fn pflock(wert: PflockSchema) -> Result<domain::Pflock, Report<StammdatenFehler>> {
+fn pflock(wert: Pflock) -> Result<domain::Pflock, Report<StammdatenFehler>> {
     Ok(domain::Pflock::neu(PflockId(wert.id), farbe(wert.farbe)?))
 }
 
-fn platzierung(
-    wert: ZielplatzierungSchema,
-) -> Result<domain::Zielplatzierung, Report<StammdatenFehler>> {
+fn platzierung(wert: Zielplatzierung) -> Result<domain::Zielplatzierung, Report<StammdatenFehler>> {
     // An absent distance is simply not configured for that Pflock.
     let abstände = wert
         .abstände
@@ -118,7 +116,7 @@ fn anlage_kontext(anlage_id: AnlageId) -> String {
     format!("Anlage {:?}", anlage_id.0)
 }
 
-fn pflöcke(werte: Vec<PflockSchema>) -> Result<Vec<domain::Pflock>, Report<StammdatenFehler>> {
+fn pflöcke(werte: Vec<Pflock>) -> Result<Vec<domain::Pflock>, Report<StammdatenFehler>> {
     werte
         .into_iter()
         .enumerate()
@@ -127,7 +125,7 @@ fn pflöcke(werte: Vec<PflockSchema>) -> Result<Vec<domain::Pflock>, Report<Stam
 }
 
 fn platzierungen(
-    werte: Vec<ZielplatzierungSchema>,
+    werte: Vec<Zielplatzierung>,
 ) -> Result<Vec<domain::Zielplatzierung>, Report<StammdatenFehler>> {
     werte
         .into_iter()
@@ -148,10 +146,10 @@ pub struct AnlageErstellungRequest {
     /// Shown name of the new Anlage.
     pub name: String,
     /// Its structured address; every address field is required.
-    pub adresse: AnlageAdresseSchema,
+    pub adresse: AnlageAdresse,
     /// Optional contact details.
     #[serde(default)]
-    pub kontakt: AnlageKontaktSchema,
+    pub kontakt: AnlageKontakt,
 }
 
 impl AnlageErstellungRequest {
@@ -174,10 +172,10 @@ pub struct AnlageÄnderungRequest {
     /// Shown name of the Anlage.
     pub name: String,
     /// Its structured address; every address field is required.
-    pub adresse: AnlageAdresseSchema,
+    pub adresse: AnlageAdresse,
     /// Optional contact details.
     #[serde(default)]
-    pub kontakt: AnlageKontaktSchema,
+    pub kontakt: AnlageKontakt,
 }
 
 impl AnlageÄnderungRequest {
@@ -204,10 +202,12 @@ pub struct AnlageVerwaltungRequest {
     /// The Benutzer that should hold the role.
     pub benutzer_id: Uuid,
     /// The role to assert.
-    pub rolle: RolleSchema,
+    pub rolle: AnlageVerwaltungRolle,
 }
 
-fn rolle(wert: RolleSchema) -> Result<domain::AnlageVerwaltungRolle, Report<StammdatenFehler>> {
+fn rolle(
+    wert: AnlageVerwaltungRolle,
+) -> Result<domain::AnlageVerwaltungRolle, Report<StammdatenFehler>> {
     wert.try_into()
         .change_context(StammdatenFehler::UngültigeAnfrage)
         .attach("AnlageVerwaltung: Rolle")
@@ -250,6 +250,19 @@ impl AnlageVerwaltungRequest {
 pub struct ZielRequest {
     /// Animal name shown to the shooter.
     pub tiername: String,
+    /// 1-based ordinal that tells duplicate animal names apart ("Reh 1", "Reh 2").
+    ///
+    /// Omitted on creation, where the Anlage derives the next free ordinal from the
+    /// Tiername. Editing refuses a request without one, because correcting the ordinal is
+    /// the user's own act.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zielnummer: Option<u32>,
+}
+
+fn zielnummer(wert: Option<u32>) -> Result<NonZeroU32, Report<StammdatenFehler>> {
+    wert.and_then(NonZeroU32::new)
+        .ok_or_else(|| Report::new(StammdatenFehler::UngültigeAnfrage))
+        .attach("Ziel: Zielnummer muss 1-basiert sein")
 }
 
 impl ZielRequest {
@@ -272,6 +285,7 @@ impl ZielRequest {
             anlage_id,
             ziel_id,
             tiername: tiername(self.tiername)?,
+            zielnummer: zielnummer(self.zielnummer)?,
         })
     }
 
@@ -300,10 +314,10 @@ pub struct ParkourErstellungRequest {
     /// Shown name of the new Parkour.
     pub name: String,
     /// The Pflöcke, far to near.
-    pub pflöcke: Vec<PflockSchema>,
+    pub pflöcke: Vec<Pflock>,
     /// The Ziele on the route, in walking order. May be empty.
     #[serde(default)]
-    pub platzierungen: Vec<ZielplatzierungSchema>,
+    pub platzierungen: Vec<Zielplatzierung>,
 }
 
 impl ParkourErstellungRequest {
@@ -328,10 +342,10 @@ impl ParkourErstellungRequest {
 #[serde(rename_all = "camelCase")]
 pub struct ParkourSetupRequest {
     /// The Pflöcke, far to near.
-    pub pflöcke: Vec<PflockSchema>,
+    pub pflöcke: Vec<Pflock>,
     /// The Ziele on the route, in walking order. May be empty.
     #[serde(default)]
-    pub platzierungen: Vec<ZielplatzierungSchema>,
+    pub platzierungen: Vec<Zielplatzierung>,
 }
 
 impl ParkourSetupRequest {

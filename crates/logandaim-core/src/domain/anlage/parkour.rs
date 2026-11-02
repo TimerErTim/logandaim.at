@@ -7,7 +7,7 @@
 use uuid::Uuid;
 
 use super::ziel::{ZielId, Zustand};
-use crate::domain::common::{Farbe, NonEmptyString};
+use crate::domain::common::{Abstand, Farbe, NonEmptyString};
 
 /// Identity of one Parkour.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -68,13 +68,12 @@ pub struct Zielplatzierung {
     ziel_id: ZielId,
     /// Near to far, matching the Parkour's Pflock order. A missing entry is a missing
     /// distance, not a zero.
-    abstände: Vec<(PflockId, crate::domain::common::Abstand)>,
+    abstände: Vec<(PflockId, Abstand)>,
 }
 
 impl Zielplatzierung {
     pub fn neu(
-        ziel_id: ZielId,
-        abstände: Vec<(PflockId, crate::domain::common::Abstand)>,
+        ziel_id: ZielId, abstände: Vec<(PflockId, Abstand)>
     ) -> Result<Self, ParkourFehler> {
         Self::mit_pflöcken(ziel_id, abstände, &[])
     }
@@ -83,7 +82,7 @@ impl Zielplatzierung {
     /// Pflock of this Parkour, and the configured metres must strictly increase.
     fn mit_pflöcken(
         ziel_id: ZielId,
-        mut abstände: Vec<(PflockId, crate::domain::common::Abstand)>,
+        mut abstände: Vec<(PflockId, Abstand)>,
         pflöcke: &[Pflock],
     ) -> Result<Self, ParkourFehler> {
         if !pflöcke.is_empty() {
@@ -120,12 +119,12 @@ impl Zielplatzierung {
         self.ziel_id
     }
 
-    pub fn abstände(&self) -> &[(PflockId, crate::domain::common::Abstand)] {
+    pub fn abstände(&self) -> &[(PflockId, Abstand)] {
         &self.abstände
     }
 
     /// The configured distance for one Pflock, if any.
-    pub fn abstand_für(&self, pflock_id: PflockId) -> Option<crate::domain::common::Abstand> {
+    pub fn abstand_für(&self, pflock_id: PflockId) -> Option<Abstand> {
         self.abstände
             .iter()
             .find(|(id, _)| *id == pflock_id)
@@ -135,7 +134,7 @@ impl Zielplatzierung {
     /// Replace the distance map, re-validating against `pflöcke`.
     fn setze_abstände(
         &mut self,
-        abstände: Vec<(PflockId, crate::domain::common::Abstand)>,
+        abstände: Vec<(PflockId, Abstand)>,
         pflöcke: &[Pflock],
     ) -> Result<(), ParkourFehler> {
         let neu = Self::mit_pflöcken(self.ziel_id, abstände, pflöcke)?;
@@ -272,6 +271,12 @@ impl Parkour {
         &self.pflöcke
     }
 
+    /// One Pflock of this Parkour by identity, carrying its colour. `None` when the id does
+    /// not belong to this Parkour.
+    pub fn pflock(&self, pflock_id: PflockId) -> Option<&Pflock> {
+        self.pflöcke.iter().find(|pflock| pflock.id == pflock_id)
+    }
+
     pub fn platzierungen(&self) -> &[Zielplatzierung] {
         &self.platzierungen
     }
@@ -393,7 +398,7 @@ impl Parkour {
     pub fn abstände_setzen(
         &mut self,
         ziel_id: ZielId,
-        abstände: Vec<(PflockId, crate::domain::common::Abstand)>,
+        abstände: Vec<(PflockId, Abstand)>,
     ) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         let pflöcke = &self.pflöcke;
@@ -419,7 +424,7 @@ impl Parkour {
 mod tests {
     use super::*;
     use crate::domain::anlage::ziel::Zustand;
-    use crate::domain::common::Abstand;
+    use Abstand;
 
     fn name(wert: &str) -> NonEmptyString {
         NonEmptyString::neu(wert).unwrap()

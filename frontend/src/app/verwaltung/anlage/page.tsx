@@ -216,7 +216,7 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
 
 // --------------------------------------------------------------------------- Ziele
 
-const leeresZiel: ZielInput = { tiername: "" };
+const leeresZiel: ZielInput = { tiername: "", zielnummer: 1 };
 
 function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
   const { zielHinzufuegen, zielAendern, zielErsetzen, zielEntfernen } =
@@ -295,7 +295,10 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                           size="sm"
                           onClick={() => {
                             setBearbeitet(ziel.id);
-                            setForm({ tiername: ziel.tiername });
+                            setForm({
+                              tiername: ziel.tiername,
+                              zielnummer: ziel.zielnummer,
+                            });
                           }}
                         >
                           Bearbeiten
@@ -307,7 +310,14 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                           onClick={() => {
                             meldung.verwerfen();
                             zielErsetzen.mutate(
-                              [anlage.id, ziel.id, { tiername: ziel.tiername }],
+                              [
+                                anlage.id,
+                                ziel.id,
+                                {
+                                  tiername: ziel.tiername,
+                                  zielnummer: ziel.zielnummer,
+                                },
+                              ],
                               {
                                 onSuccess: () =>
                                   meldung.melden("Ziel ersetzt."),
@@ -387,7 +397,7 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
               }}
             >
               <FormRow
-                className="sm:grid-cols-3"
+                className="sm:grid-cols-4"
                 actions={
                   <>
                     <Button
@@ -421,6 +431,23 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                       setForm((bisher) => ({
                         ...bisher,
                         tiername: event.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </Field>
+                <Field
+                  label="Nummer"
+                  hint="1-basiert; unterscheidet gleichnamige Ziele."
+                >
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.zielnummer}
+                    onChange={(event) =>
+                      setForm((bisher) => ({
+                        ...bisher,
+                        zielnummer: Number(event.target.value),
                       }))
                     }
                     required

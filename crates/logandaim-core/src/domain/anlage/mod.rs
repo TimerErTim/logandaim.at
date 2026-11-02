@@ -37,32 +37,6 @@ use crate::domain::konto::{Benutzer, BenutzerId};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AnlageId(pub Uuid);
 
-/// Non-empty name of one Anlage. Names need not be unique (AC-1).
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct AnlageName(NonEmptyString);
-
-#[derive(Debug, thiserror::Error)]
-#[error("der Anlagename darf nicht leer sein")]
-pub struct AnlageNameLeer;
-
-impl AnlageName {
-    pub fn neu<S: AsRef<str>>(wert: S) -> Result<Self, AnlageNameLeer> {
-        NonEmptyString::neu(wert)
-            .map(Self)
-            .map_err(|_| AnlageNameLeer)
-    }
-
-    pub fn as_str(&self) -> &str {
-        self.0.as_str()
-    }
-}
-
-impl AsRef<str> for AnlageName {
-    fn as_ref(&self) -> &str {
-        self.0.as_str()
-    }
-}
-
 /// A Benutzer's role inside one Anlage (SPEC-stammdaten "Roles").
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AnlageVerwaltungRolle {
@@ -169,13 +143,13 @@ pub enum AnlageFehler {
 /// Creation input of an Anlage: everything except its identity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NeueAnlage {
-    name: AnlageName,
+    name: NonEmptyString,
     adresse: AnlageAdresse,
     kontakt: AnlageKontakt,
 }
 
 impl NeueAnlage {
-    pub fn neu(name: AnlageName, adresse: AnlageAdresse, kontakt: AnlageKontakt) -> Self {
+    pub fn neu(name: NonEmptyString, adresse: AnlageAdresse, kontakt: AnlageKontakt) -> Self {
         Self {
             name,
             adresse,
@@ -183,7 +157,7 @@ impl NeueAnlage {
         }
     }
 
-    pub fn name(&self) -> &AnlageName {
+    pub fn name(&self) -> &NonEmptyString {
         &self.name
     }
 
@@ -200,7 +174,7 @@ impl NeueAnlage {
 #[derive(Debug, Clone)]
 pub struct AnlageIn<S> {
     id: AnlageId,
-    name: AnlageName,
+    name: NonEmptyString,
     adresse: AnlageAdresse,
     kontakt: AnlageKontakt,
     verwaltungen: Vec<AnlageVerwaltung>,
@@ -223,7 +197,7 @@ impl<S> AnlageIn<S> {
         self.id
     }
 
-    pub fn name(&self) -> &AnlageName {
+    pub fn name(&self) -> &NonEmptyString {
         &self.name
     }
 
@@ -341,7 +315,7 @@ impl AnlageAktiv {
     /// Rebuild a persisted active Anlage.
     pub fn from_parts(
         id: AnlageId,
-        name: AnlageName,
+        name: NonEmptyString,
         adresse: AnlageAdresse,
         kontakt: AnlageKontakt,
         verwaltungen: Vec<AnlageVerwaltung>,
@@ -363,7 +337,7 @@ impl AnlageAktiv {
     /// Edit the descriptive fields (rule 2, FR-1).
     pub fn beschreibende_daten_ändern(
         &mut self,
-        name: AnlageName,
+        name: NonEmptyString,
         adresse: AnlageAdresse,
         kontakt: AnlageKontakt,
     ) {
@@ -460,17 +434,19 @@ impl AnlageAktiv {
         .unwrap_or(NonZeroU32::MIN)
     }
 
-    /// Edit a Ziel's animal name. Its identity and its ordinal do not change (AC-5).
+    /// Edit a Ziel's animal name and its ordinal. Its identity does not change (AC-5), and
+    /// archived Ziele refuse the edit.
     pub fn ziel_ändern(
         &mut self,
         ziel_id: ZielId,
         tiername: NonEmptyString,
+        zielnummer: NonZeroU32,
     ) -> Result<(), AnlageFehler> {
         self.ziele
             .iter_mut()
             .find(|ziel| ziel.id() == ziel_id)
             .ok_or(AnlageFehler::ZielNichtGefunden)?
-            .ändern(tiername)
+            .stammdaten_ändern(tiername, zielnummer)
             .map_err(|_| AnlageFehler::ZielArchiviert)
     }
 
@@ -622,7 +598,7 @@ impl AnlageArchiviert {
     #[allow(clippy::too_many_arguments)]
     pub fn from_parts(
         id: AnlageId,
-        name: AnlageName,
+        name: NonEmptyString,
         adresse: AnlageAdresse,
         kontakt: AnlageKontakt,
         verwaltungen: Vec<AnlageVerwaltung>,
@@ -687,7 +663,7 @@ impl Anlage {
         }
     }
 
-    pub fn name(&self) -> &AnlageName {
+    pub fn name(&self) -> &NonEmptyString {
         match self {
             Self::Aktiv(anlage) => anlage.name(),
             Self::Archiviert(anlage) => anlage.name(),
@@ -747,6 +723,14 @@ impl Anlage {
         match self {
             Self::Aktiv(anlage) => anlage.parkour_mit_id(parkour_id),
             Self::Archiviert(anlage) => anlage.parkour_mit_id(parkour_id),
+        }
+    }
+
+    /// A Parkour that is still in use, by identity. `None` when it is missing or archived.
+    pub fn aktiver_parkour(&self, parkour_id: ParkourId) -> Option<&Parkour> {
+        match self {
+            Self::Aktiv(anlage) => anlage.aktiver_parkour(parkour_id),
+            Self::Archiviert(anlage) => anlage.aktiver_parkour(parkour_id),
         }
     }
 
@@ -825,7 +809,7 @@ mod tests {
         AnlageAktiv::neu(
             AnlageId(Uuid::nil()),
             NeueAnlage::neu(
-                AnlageName::neu("Breitenstein").unwrap(),
+                NonEmptyString::neu("Breitenstein").unwrap(),
                 adresse(),
                 AnlageKontakt::leer(),
             ),
@@ -989,7 +973,9 @@ mod tests {
         assert_eq!(snapshot.ziele()[0].tiername().as_str(), "Keiler");
 
         // A later edit changes the aggregate, never the captured copy.
-        anlage.ziel_ändern(ziel_id(), name("Reh")).unwrap();
+        anlage
+            .ziel_ändern(ziel_id(), name("Reh"), NonZeroU32::new(1).unwrap())
+            .unwrap();
         assert_eq!(snapshot.ziele()[0].tiername().as_str(), "Keiler");
         assert_eq!(snapshot.ziele()[0].zielnummer().get(), 1);
 

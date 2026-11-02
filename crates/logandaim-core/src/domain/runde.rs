@@ -34,50 +34,26 @@ impl Abgeschlossen {
     }
 }
 
-/// The lifecycle of a Runde, as a plain enum for adapters and readers that do not know the
-/// state at compile time. Storing `Abgeschlossen` without a timestamp is refused by
-/// [`Runde::from_parts`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum RundeZustand {
-    InBearbeitung,
-    Abgeschlossen,
-}
-
-impl RundeZustand {
+// The typestate markers carry their own stored spelling: the two markers are the whole
+// lifecycle, so an adapter never needs a second, parallel enum that restates them.
+impl InBearbeitung {
     pub fn as_str(self) -> &'static str {
-        match self {
-            Self::InBearbeitung => "InBearbeitung",
-            Self::Abgeschlossen => "Abgeschlossen",
-        }
+        "InBearbeitung"
     }
 
     pub fn ist_in_bearbeitung(self) -> bool {
-        matches!(self, Self::InBearbeitung)
+        true
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-#[error("der Zustand der Runde ist unbekannt")]
-pub struct RundeZustandUnbekannt;
-
-impl std::str::FromStr for RundeZustand {
-    type Err = RundeZustandUnbekannt;
-
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value {
-            "InBearbeitung" => Ok(Self::InBearbeitung),
-            "Abgeschlossen" => Ok(Self::Abgeschlossen),
-            _ => Err(RundeZustandUnbekannt),
-        }
+impl Abgeschlossen {
+    pub fn as_str(self) -> &'static str {
+        "Abgeschlossen"
     }
-}
 
-#[derive(Debug, thiserror::Error)]
-pub enum RundeFehler {
-    #[error("die Runde ist bereits abgeschlossen")]
-    BereitsAbgeschlossen,
-    #[error("eine abgeschlossene Runde braucht einen Abschlusszeitpunkt")]
-    AbschlusszeitpunktFehlt,
+    pub fn ist_in_bearbeitung(self) -> bool {
+        false
+    }
 }
 
 /// Creation input of a Runde: everything except its identity and lifecycle state.
@@ -88,7 +64,7 @@ pub enum RundeFehler {
 pub struct NeueRunde {
     anlage_id: AnlageId,
     parkour_id: ParkourId,
-    erfasser: Erfasser,
+    erfasst_von: Erfasser,
     snapshot: ParkourSnapshot,
     begonnen_am: DateTime<Utc>,
 }
@@ -96,14 +72,14 @@ pub struct NeueRunde {
 impl NeueRunde {
     pub fn neu(
         anlage_id: AnlageId,
-        erfasser: Erfasser,
+        erfasst_von: Erfasser,
         snapshot: ParkourSnapshot,
         begonnen_am: DateTime<Utc>,
     ) -> Self {
         Self {
             anlage_id,
             parkour_id: snapshot.parkour_id(),
-            erfasser,
+            erfasst_von,
             snapshot,
             begonnen_am,
         }
@@ -117,8 +93,8 @@ impl NeueRunde {
         self.parkour_id
     }
 
-    pub fn erfasser(&self) -> Erfasser {
-        self.erfasser
+    pub fn erfasst_von(&self) -> Erfasser {
+        self.erfasst_von
     }
 
     pub fn snapshot(&self) -> &ParkourSnapshot {
@@ -136,7 +112,7 @@ pub struct RundeIn<S> {
     id: RundeId,
     anlage_id: AnlageId,
     parkour_id: ParkourId,
-    erfasser: Erfasser,
+    erfasst_von: Erfasser,
     snapshot: ParkourSnapshot,
     begonnen_am: DateTime<Utc>,
     state: S,
@@ -165,8 +141,8 @@ impl<S> RundeIn<S> {
         self.parkour_id
     }
 
-    pub fn erfasser(&self) -> Erfasser {
-        self.erfasser
+    pub fn erfasst_von(&self) -> Erfasser {
+        self.erfasst_von
     }
 
     pub fn snapshot(&self) -> &ParkourSnapshot {
@@ -178,18 +154,48 @@ impl<S> RundeIn<S> {
     }
 
     pub fn gehört_zu(&self, benutzer_id: BenutzerId) -> bool {
-        self.erfasser.benutzer() == Some(benutzer_id)
+        self.erfasst_von.benutzer() == Some(benutzer_id)
     }
 
     /// Whether the captured route contains this Ziel (the AC-9 contract a Schuss obeys).
-    pub fn enthält(&self, ziel_id: ZielId) -> bool {
-        self.snapshot.enthält(ziel_id)
+    pub fn enthält_ziel(&self, ziel_id: ZielId) -> bool {
+        self.snapshot.enthält_ziel(ziel_id)
     }
 
     /// Replace the owner with [`Erfasser::Anonymisiert`] (SPEC-datenschutz retention).
     /// The snapshot and every Schuss stay untouched (NFR-3).
     pub fn anonymisiere(&mut self, am: DateTime<Utc>) {
-        self.erfasser = Erfasser::Anonymisiert { am };
+        self.erfasst_von = Erfasser::Anonymisiert { am };
+    }
+
+    /// Fold the given Schüsse into one Wertung per captured Ziel, in route order.
+    ///
+    /// `None` marks a Ziel no Schuss was logged at (AC-6). The slice pairs with the
+    /// snapshot's own Ziel order, so a reader zips the two instead of re-deriving a fold.
+    pub fn ziel_wertungen(
+        &self,
+        schüsse: impl IntoIterator<Item = Schuss>,
+    ) -> Vec<Option<Zielwertung>> {
+        let eigene: Vec<Schuss> = schüsse
+            .into_iter()
+            .filter(|schuss| schuss.runde_id() == self.id)
+            .collect();
+        self.snapshot
+            .ziele()
+            .iter()
+            .map(|ziel| {
+                // The filter names exactly this Ziel, so the collection cannot refuse a row.
+                ZielSchüsse::für_ziel(
+                    ziel.ziel_id(),
+                    eigene
+                        .iter()
+                        .filter(|schuss| schuss.ziel_id() == ziel.ziel_id())
+                        .cloned(),
+                )
+                .ok()
+                .and_then(|menge| menge.wertung())
+            })
+            .collect()
     }
 
     /// Fold every Schuss of this Runde into its per-Ziel and Runde-wide Wertung.
@@ -219,7 +225,7 @@ impl RundeInBearbeitung {
             id,
             anlage_id: neu.anlage_id,
             parkour_id: neu.parkour_id,
-            erfasser: neu.erfasser,
+            erfasst_von: neu.erfasst_von,
             snapshot: neu.snapshot,
             begonnen_am: neu.begonnen_am,
             state: InBearbeitung,
@@ -230,7 +236,7 @@ impl RundeInBearbeitung {
     pub fn from_parts(
         id: RundeId,
         anlage_id: AnlageId,
-        erfasser: Erfasser,
+        erfasst_von: Erfasser,
         snapshot: ParkourSnapshot,
         begonnen_am: DateTime<Utc>,
     ) -> Self {
@@ -238,7 +244,7 @@ impl RundeInBearbeitung {
             id,
             anlage_id,
             parkour_id: snapshot.parkour_id(),
-            erfasser,
+            erfasst_von,
             snapshot,
             begonnen_am,
             state: InBearbeitung,
@@ -251,7 +257,7 @@ impl RundeInBearbeitung {
             id: self.id,
             anlage_id: self.anlage_id,
             parkour_id: self.parkour_id,
-            erfasser: self.erfasser,
+            erfasst_von: self.erfasst_von,
             snapshot: self.snapshot,
             begonnen_am: self.begonnen_am,
             state: Abgeschlossen {
@@ -267,7 +273,7 @@ impl RundeAbgeschlossen {
     pub fn from_parts(
         id: RundeId,
         anlage_id: AnlageId,
-        erfasser: Erfasser,
+        erfasst_von: Erfasser,
         snapshot: ParkourSnapshot,
         begonnen_am: DateTime<Utc>,
         abgeschlossen_am: DateTime<Utc>,
@@ -276,7 +282,7 @@ impl RundeAbgeschlossen {
             id,
             anlage_id,
             parkour_id: snapshot.parkour_id(),
-            erfasser,
+            erfasst_von,
             snapshot,
             begonnen_am,
             state: Abgeschlossen { abgeschlossen_am },
@@ -301,26 +307,35 @@ impl From<RundeAbgeschlossen> for Runde {
 }
 
 impl Runde {
-    /// Rebuild a persisted Runde in either state. A stored `Abgeschlossen` without a
-    /// timestamp is corrupt rather than merely old.
+    /// Rebuild a persisted Runde in either state.
+    ///
+    /// The closing timestamp *is* the state, so the adapter passes what it read and the
+    /// typestate follows: `None` is a running Runde, `Some` a closed one.
     #[allow(clippy::too_many_arguments)]
     pub fn from_parts(
         id: RundeId,
         anlage_id: AnlageId,
-        erfasser: Erfasser,
+        erfasst_von: Erfasser,
         snapshot: ParkourSnapshot,
-        zustand: RundeZustand,
         begonnen_am: DateTime<Utc>,
         abgeschlossen_am: Option<DateTime<Utc>>,
-    ) -> Result<Self, RundeFehler> {
-        match (zustand, abgeschlossen_am) {
-            (RundeZustand::InBearbeitung, _) => Ok(Self::InBearbeitung(
-                RundeInBearbeitung::from_parts(id, anlage_id, erfasser, snapshot, begonnen_am),
+    ) -> Self {
+        match abgeschlossen_am {
+            None => Self::InBearbeitung(RundeInBearbeitung::from_parts(
+                id,
+                anlage_id,
+                erfasst_von,
+                snapshot,
+                begonnen_am,
             )),
-            (RundeZustand::Abgeschlossen, Some(am)) => Ok(Self::Abgeschlossen(
-                RundeAbgeschlossen::from_parts(id, anlage_id, erfasser, snapshot, begonnen_am, am),
+            Some(am) => Self::Abgeschlossen(RundeAbgeschlossen::from_parts(
+                id,
+                anlage_id,
+                erfasst_von,
+                snapshot,
+                begonnen_am,
+                am,
             )),
-            (RundeZustand::Abgeschlossen, None) => Err(RundeFehler::AbschlusszeitpunktFehlt),
         }
     }
 
@@ -345,10 +360,10 @@ impl Runde {
         }
     }
 
-    pub fn erfasser(&self) -> Erfasser {
+    pub fn erfasst_von(&self) -> Erfasser {
         match self {
-            Self::InBearbeitung(runde) => runde.erfasser(),
-            Self::Abgeschlossen(runde) => runde.erfasser(),
+            Self::InBearbeitung(runde) => runde.erfasst_von(),
+            Self::Abgeschlossen(runde) => runde.erfasst_von(),
         }
     }
 
@@ -359,10 +374,11 @@ impl Runde {
         }
     }
 
-    pub fn zustand(&self) -> RundeZustand {
+    /// The stored lifecycle spelling, taken from the active variant itself.
+    pub fn zustand(&self) -> &'static str {
         match self {
-            Self::InBearbeitung(_) => RundeZustand::InBearbeitung,
-            Self::Abgeschlossen(_) => RundeZustand::Abgeschlossen,
+            Self::InBearbeitung(runde) => runde.state.as_str(),
+            Self::Abgeschlossen(runde) => runde.state.as_str(),
         }
     }
 
@@ -388,13 +404,13 @@ impl Runde {
     }
 
     pub fn ist_in_bearbeitung(&self) -> bool {
-        self.zustand().ist_in_bearbeitung()
+        matches!(self, Self::InBearbeitung(_))
     }
 
-    pub fn enthält(&self, ziel_id: ZielId) -> bool {
+    pub fn enthält_ziel(&self, ziel_id: ZielId) -> bool {
         match self {
-            Self::InBearbeitung(runde) => runde.enthält(ziel_id),
-            Self::Abgeschlossen(runde) => runde.enthält(ziel_id),
+            Self::InBearbeitung(runde) => runde.enthält_ziel(ziel_id),
+            Self::Abgeschlossen(runde) => runde.enthält_ziel(ziel_id),
         }
     }
 
@@ -413,6 +429,17 @@ impl Runde {
         match self {
             Self::InBearbeitung(runde) => runde.wertung(schüsse),
             Self::Abgeschlossen(runde) => runde.wertung(schüsse),
+        }
+    }
+
+    /// One Wertung per captured Ziel, in route order. Delegated like [`Runde::wertung`].
+    pub fn ziel_wertungen(
+        &self,
+        schüsse: impl IntoIterator<Item = Schuss>,
+    ) -> Vec<Option<Zielwertung>> {
+        match self {
+            Self::InBearbeitung(runde) => runde.ziel_wertungen(schüsse),
+            Self::Abgeschlossen(runde) => runde.ziel_wertungen(schüsse),
         }
     }
 }
@@ -457,7 +484,7 @@ impl Rundenwertung {
 mod tests {
     use super::*;
     use crate::domain::anlage::{PflockSnapshot, ZielSnapshot};
-    use crate::domain::common::{Abstand, Farbe, NonEmptyString};
+    use crate::domain::common::{Farbe, NonEmptyString};
     use crate::domain::schuss::{NeuerSchuss, SchussId, Wertungszone};
     use std::num::NonZeroU32;
     use uuid::Uuid;
@@ -590,7 +617,7 @@ mod tests {
             panic!("eine neue Runde ist in Bearbeitung");
         };
         let geschlossen: Runde = runde.abschliessen(jetzt()).into();
-        assert_eq!(geschlossen.zustand(), RundeZustand::Abgeschlossen);
+        assert_eq!(geschlossen.zustand(), "Abgeschlossen");
         assert_eq!(geschlossen.abgeschlossen_am(), Some(jetzt()));
         assert!(!geschlossen.ist_in_bearbeitung());
         // No `abschliessen` exists on the closed type: it is a compile error, not a refusal.
@@ -599,8 +626,8 @@ mod tests {
     #[test_log::test]
     fn ac9_der_snapshot_kennt_nur_die_platzierte_route() {
         let runde = runde(&[(10, "Keiler")]);
-        assert!(runde.enthält(ZielId(Uuid::from_u128(10))));
-        assert!(!runde.enthält(ZielId(Uuid::from_u128(11))));
+        assert!(runde.enthält_ziel(ZielId(Uuid::from_u128(10))));
+        assert!(!runde.enthält_ziel(ZielId(Uuid::from_u128(11))));
     }
 
     #[test_log::test]
@@ -608,15 +635,8 @@ mod tests {
         let mut runde = runde(&[(10, "Keiler")]);
         let vorher = runde.snapshot().clone();
         runde.anonymisiere(jetzt());
-        assert_eq!(runde.erfasser(), Erfasser::Anonymisiert { am: jetzt() });
+        assert_eq!(runde.erfasst_von(), Erfasser::Anonymisiert { am: jetzt() });
         assert_eq!(runde.snapshot(), &vorher);
-    }
-
-    #[test_log::test]
-    fn zustand_roundtrip() {
-        for zustand in [RundeZustand::InBearbeitung, RundeZustand::Abgeschlossen] {
-            assert_eq!(zustand.as_str().parse::<RundeZustand>().unwrap(), zustand);
-        }
     }
 
     #[test_log::test]
@@ -625,13 +645,11 @@ mod tests {
         let geladen = Runde::from_parts(
             offen.id(),
             offen.anlage_id(),
-            offen.erfasser(),
+            offen.erfasst_von(),
             offen.snapshot().clone(),
-            offen.zustand(),
             offen.begonnen_am(),
             offen.abgeschlossen_am(),
-        )
-        .unwrap();
+        );
         assert_eq!(offen, geladen);
 
         let Runde::InBearbeitung(aktiv) = offen else {
@@ -641,31 +659,27 @@ mod tests {
         let geladen = Runde::from_parts(
             geschlossen.id(),
             geschlossen.anlage_id(),
-            geschlossen.erfasser(),
+            geschlossen.erfasst_von(),
             geschlossen.snapshot().clone(),
-            geschlossen.zustand(),
             geschlossen.begonnen_am(),
             geschlossen.abgeschlossen_am(),
-        )
-        .unwrap();
+        );
         assert_eq!(geschlossen, geladen);
     }
 
     #[test_log::test]
-    fn abgeschlossen_ohne_zeitpunkt_ist_korrupt() {
-        let runde = runde(&[(10, "Keiler")]);
-        assert!(matches!(
-            Runde::from_parts(
-                runde.id(),
-                runde.anlage_id(),
-                runde.erfasser(),
-                runde.snapshot().clone(),
-                RundeZustand::Abgeschlossen,
-                runde.begonnen_am(),
-                None,
-            ),
-            Err(RundeFehler::AbschlusszeitpunktFehlt)
-        ));
-        let _ = Abstand::neu(1).unwrap();
+    fn ein_abschlusszeitpunkt_macht_die_geladene_runde_abgeschlossen() {
+        // The timestamp *is* the state: there is no second flag that could disagree with it.
+        let offen = runde(&[(10, "Keiler")]);
+        let geladen = Runde::from_parts(
+            offen.id(),
+            offen.anlage_id(),
+            offen.erfasst_von(),
+            offen.snapshot().clone(),
+            offen.begonnen_am(),
+            Some(jetzt()),
+        );
+        assert_eq!(geladen.zustand(), "Abgeschlossen");
+        assert_eq!(geladen.abgeschlossen_am(), Some(jetzt()));
     }
 }

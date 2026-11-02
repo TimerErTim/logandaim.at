@@ -18,7 +18,7 @@ use logandaim_core::{
     ErrorReportExt,
     application::uow::Versioned,
     domain::{
-        Anlage, AnlageAdresse, AnlageAktiv, AnlageArchiviert, AnlageId, AnlageKontakt, AnlageName,
+        Anlage, AnlageAdresse, AnlageAktiv, AnlageArchiviert, AnlageId, AnlageKontakt,
         AnlageVerwaltung, AnlageVerwaltungRolle, Farbe, Ländercode, NeueAnlage, NonEmptyString,
         Parkour, ParkourId, Pflock, PflockId, Ziel, ZielId, Zielplatzierung, Zustand,
     },
@@ -41,12 +41,12 @@ fn zustand_to_str(zustand: Zustand) -> &'static str {
     zustand.as_str()
 }
 
-fn zustand_from_str(value: &str) -> Result<Zustand, RepositoryError> {
-    value.parse().map_err(|_| RepositoryError::Data)
+fn zustand_from_str(value: &str) -> RepositoryResult<Zustand> {
+    value.parse().contextualize(RepositoryError::Data)
 }
 
-fn rolle_from_str(value: &str) -> Result<AnlageVerwaltungRolle, RepositoryError> {
-    value.parse().map_err(|_| RepositoryError::Data)
+fn rolle_from_str(value: &str) -> RepositoryResult<AnlageVerwaltungRolle> {
+    value.parse().contextualize(RepositoryError::Data)
 }
 
 /// Load the children of one Anlage. Each query is scoped by the root id, so the aggregate is
@@ -54,7 +54,7 @@ fn rolle_from_str(value: &str) -> Result<AnlageVerwaltungRolle, RepositoryError>
 async fn lade_verwaltungen(
     tx: &Transaction,
     anlage_id: AnlageId,
-) -> Result<Vec<AnlageVerwaltung>, RepositoryError> {
+) -> RepositoryResult<Vec<AnlageVerwaltung>> {
     let mut rows = tx
         .query(
             r#"SELECT benutzer_id, rolle FROM "anlage_verwaltungen" WHERE anlage_id = ?1
@@ -62,16 +62,16 @@ async fn lade_verwaltungen(
             [anlage_id.0.to_string()],
         )
         .await
-        .map_err(|_| RepositoryError::OperationFailed)?;
+        .contextualize_with(libsql_error_to_persistence_error)?;
 
     let mut verwaltungen = Vec::new();
     while let Some(row) = rows
         .next()
         .await
-        .map_err(|_| RepositoryError::OperationFailed)?
+        .contextualize_with(libsql_error_to_persistence_error)?
     {
-        let benutzer_id: String = row.get(0).map_err(|_| RepositoryError::Data)?;
-        let rolle: String = row.get(1).map_err(|_| RepositoryError::Data)?;
+        let benutzer_id: String = row.get(0).contextualize(RepositoryError::Data)?;
+        let rolle: String = row.get(1).contextualize(RepositoryError::Data)?;
         verwaltungen.push(AnlageVerwaltung::neu(
             logandaim_core::domain::konto::BenutzerId(parse_uuid(&benutzer_id)?),
             rolle_from_str(&rolle)?,
@@ -102,7 +102,7 @@ async fn lade_ziele(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult<V
         let zustand: String = row.get(3).contextualize(RepositoryError::Data)?;
         let zielnummer = u32::try_from(zielnummer).contextualize(RepositoryError::Data)?;
         ziele.push(Ziel::from_parts(
-            ZielId(parse_uuid(&id).contextualize(RepositoryError::Data)?),
+            ZielId(parse_uuid(&id)?),
             NonEmptyString::neu(&tiername).change_context(RepositoryError::Data)?,
             NonZeroU32::new(zielnummer).ok_or(RepositoryError::Data)?,
             zustand_from_str(&zustand)?,
@@ -129,7 +129,7 @@ async fn lade_parkour(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
         let name: String = row.get(1).contextualize(RepositoryError::Data)?;
         let zustand: String = row.get(2).contextualize(RepositoryError::Data)?;
-        let parkour_id = ParkourId(parse_uuid(&id).contextualize(RepositoryError::Data)?);
+        let parkour_id = ParkourId(parse_uuid(&id)?);
         let pflöcke = lade_pflöcke(tx, parkour_id).await?;
         let platzierungen = lade_platzierungen(tx, parkour_id).await?;
         parkour.push(
@@ -165,7 +165,7 @@ async fn lade_pflöcke(tx: &Transaction, parkour_id: ParkourId) -> RepositoryRes
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
         let farbe: String = row.get(1).contextualize(RepositoryError::Data)?;
         pflöcke.push(Pflock::neu(
-            PflockId(parse_uuid(&id).contextualize(RepositoryError::Data)?),
+            PflockId(parse_uuid(&id)?),
             Farbe::neu(&farbe).change_context(RepositoryError::Data)?,
         ));
     }
@@ -191,9 +191,7 @@ async fn lade_platzierungen(
         .contextualize_with(libsql_error_to_persistence_error)?
     {
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
-        ziel_ids.push(ZielId(
-            parse_uuid(&id).contextualize(RepositoryError::Data)?,
-        ));
+        ziel_ids.push(ZielId(parse_uuid(&id)?));
     }
 
     let mut platzierungen = Vec::with_capacity(ziel_ids.len());
@@ -216,7 +214,7 @@ async fn lade_platzierungen(
             let meter: i64 = row.get(1).contextualize(RepositoryError::Data)?;
             let meter = u32::try_from(meter).contextualize(RepositoryError::Data)?;
             abstände.push((
-                PflockId(parse_uuid(&pflock_id).contextualize(RepositoryError::Data)?),
+                PflockId(parse_uuid(&pflock_id)?),
                 logandaim_core::domain::Abstand::neu(meter)
                     .change_context(RepositoryError::Data)?,
             ));
@@ -241,8 +239,8 @@ async fn anlage_aus_zeile(tx: &Transaction, row: &Row) -> RepositoryResult<Versi
     let kontakt_website: Option<String> = row.get(10).contextualize(RepositoryError::Data)?;
     let deaktiviert_am: Option<String> = row.get(11).contextualize(RepositoryError::Data)?;
 
-    let id = AnlageId(parse_uuid(&id_raw).contextualize(RepositoryError::Data)?);
-    let name = AnlageName::neu(&name_raw).change_context(RepositoryError::Data)?;
+    let id = AnlageId(parse_uuid(&id_raw)?);
+    let name = NonEmptyString::neu(&name_raw).contextualize(RepositoryError::Data)?;
     let adresse = AnlageAdresse::neu(
         &strasse,
         &postleitzahl,
@@ -288,9 +286,7 @@ async fn anlage_aus_zeile(tx: &Transaction, row: &Row) -> RepositoryResult<Versi
             parkour,
         )),
         Zustand::Archiviert => {
-            let am = deaktiviert_am
-                .ok_or(RepositoryError::Data)
-                .and_then(|am| parse_datetime(&am))?;
+            let am = parse_datetime(&deaktiviert_am.ok_or(RepositoryError::Data)?)?;
             Anlage::Archiviert(AnlageArchiviert::from_parts(
                 id,
                 name,
@@ -308,7 +304,7 @@ async fn anlage_aus_zeile(tx: &Transaction, row: &Row) -> RepositoryResult<Versi
 
 /// Replace every child row of one Anlage. Called inside the root's transaction, after the
 /// root row itself was written successfully.
-async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), RepositoryError> {
+async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> RepositoryResult<()> {
     let anlage_id = anlage.id().0.to_string();
 
     tx.execute(
@@ -316,7 +312,7 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
         [anlage_id.clone()],
     )
     .await
-    .map_err(|_| RepositoryError::OperationFailed)?;
+    .contextualize_with(libsql_error_to_persistence_error)?;
     for verwaltung in anlage.verwaltungen() {
         tx.execute(
             r#"INSERT INTO "anlage_verwaltungen" (anlage_id, benutzer_id, rolle)
@@ -328,7 +324,7 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
             ),
         )
         .await
-        .map_err(|_| RepositoryError::OperationFailed)?;
+        .contextualize_with(libsql_error_to_persistence_error)?;
     }
 
     // Children are removed and reinserted wholesale. The foreign keys cascade the grandchildren
@@ -349,7 +345,7 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
         };
         tx.execute(sql, [anlage_id.clone()])
             .await
-            .map_err(|_| RepositoryError::OperationFailed)?;
+            .contextualize_with(libsql_error_to_persistence_error)?;
     }
 
     for (ordnung, ziel) in anlage.ziele().iter().enumerate() {
@@ -366,7 +362,7 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
             ),
         )
         .await
-        .map_err(|_| RepositoryError::OperationFailed)?;
+        .contextualize_with(libsql_error_to_persistence_error)?;
     }
 
     for (ordnung, parkour) in anlage.parkour().iter().enumerate() {
@@ -383,7 +379,7 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
             ),
         )
         .await
-        .map_err(|_| RepositoryError::OperationFailed)?;
+        .contextualize_with(libsql_error_to_persistence_error)?;
 
         for (pflock_ordnung, pflock) in parkour.pflöcke().iter().enumerate() {
             tx.execute(
@@ -397,7 +393,7 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
                 ),
             )
             .await
-            .map_err(|_| RepositoryError::OperationFailed)?;
+            .contextualize_with(libsql_error_to_persistence_error)?;
         }
 
         for (platzierung_ordnung, platzierung) in parkour.platzierungen().iter().enumerate() {
@@ -412,7 +408,7 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
                 ),
             )
             .await
-            .map_err(|_| RepositoryError::OperationFailed)?;
+            .contextualize_with(libsql_error_to_persistence_error)?;
 
             for (pflock_id, abstand) in platzierung.abstände() {
                 tx.execute(
@@ -426,7 +422,7 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> Result<(), Reposit
                     ),
                 )
                 .await
-                .map_err(|_| RepositoryError::OperationFailed)?;
+                .contextualize_with(libsql_error_to_persistence_error)?;
             }
         }
     }
@@ -568,6 +564,29 @@ impl AnlageRepository for SQLiteAnlageRepository {
             anlagen.push(anlage_aus_zeile(tx, &row).await?);
         }
         Ok(anlagen)
+    }
+
+    async fn find_by_parkour_id(&self, id: ParkourId) -> RepositoryResult<Versioned<Anlage>> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
+
+        let mut rows = tx
+            .query(
+                &format!(r#"{SELECT} WHERE id = (SELECT anlage_id FROM "parkour" WHERE id = ?1)"#),
+                [id.0.to_string()],
+            )
+            .await
+            .contextualize_with(libsql_error_to_persistence_error)?;
+
+        let Some(row) = rows
+            .next()
+            .await
+            .contextualize_with(libsql_error_to_persistence_error)?
+        else {
+            return Err(RepositoryError::NotFound.into());
+        };
+
+        anlage_aus_zeile(tx, &row).await
     }
 
     async fn update(&self, anlage: &mut Versioned<Anlage>) -> RepositoryResult<()> {

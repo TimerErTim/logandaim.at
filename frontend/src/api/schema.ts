@@ -2467,7 +2467,7 @@ export interface components {
             /** @description The Parkour' name as captured at the start, not its current name. */
             parkourName: string;
             /** @description Who the Runde belongs to. */
-            erfasser: components["schemas"]["Erfasser"] & unknown;
+            erfasstVon: components["schemas"]["Erfasser"] & unknown;
             /** @description Whether it is still open or already closed. */
             zustand: components["schemas"]["RundeZustand"] & unknown;
             /**
@@ -2708,6 +2708,15 @@ export interface components {
         ZielRequest: {
             /** @description Animal name shown to the shooter. */
             tiername: string;
+            /**
+             * Format: uint32
+             * @description 1-based ordinal that tells duplicate animal names apart ("Reh 1", "Reh 2").
+             *
+             *     Omitted on creation, where the Anlage derives the next free ordinal from the
+             *     Tiername. Editing refuses a request without one, because correcting the ordinal is
+             *     the user's own act.
+             */
+            zielnummer?: number;
         };
         /**
          * Zielplatzierung

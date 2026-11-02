@@ -19,23 +19,19 @@ use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
     domain::{AnlageId, EmailAdresse, ParkourId, RundeId, ZielId, konto::BenutzerId},
-    ports::{ClientKey, ThrottleAction},
+    ports::{ClientKey, RepositoryError, ThrottleAction},
     service::{
-        Abmeldung, AbmeldungFehler, AnlageAnsicht, AnlageBeschreibendeDatenÄndern,
-        AnlageDeaktivieren, AnlageVerwaltungEntziehen, AnlageVerwaltungGewähren,
-        AnlageVerwaltungÄndern, AnlageZugriff as AnlageZugriffAnsicht,
-        AnlageÖffentlich as AnlageÖffentlichAnsicht, Anmeldung, AnmeldungFehler, BenutzerLöschen,
-        BenutzerLöschenFehler, Erneuerung, ErneuerungFehler, ParkourEntfernen, ParkourHinzufügen,
-        ParkourKurz as ParkourKurzAnsicht, ParkourSetupÄndern, ParkourUmbenennen,
-        ParkourÖffentlich as ParkourÖffentlichAnsicht, PasswortVergessen, PasswortVergessenFehler,
-        PasswortWiederherstellen, PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler,
-        RegistrierungAbschließen, RegistrierungStarten, RegistrierungStartenFehler,
-        RundeAbschliessen, RundeAbschliessenFehler, RundeAnsicht, RundeAnzeigenFehler,
-        RundeStarten, RundeStartenFehler, RundenAnzeigenFehler, SchussRegistrieren,
-        SchussRegistrierenFehler, SessionAusgestellt, StammdatenFehler, ZielEntfernen,
-        ZielErsetzen, ZielHinzufügen, ZielÄndern, anlage_laden, anmeldung, benutzer_laden,
-        darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen, ist_nicht_gefunden,
-        runden_neueste_zuerst,
+        Abmeldung, AbmeldungFehler, AnlageBeschreibendeDatenÄndern, AnlageDeaktivieren,
+        AnlageVerwaltungEntziehen, AnlageVerwaltungGewähren, AnlageVerwaltungÄndern, Anmeldung,
+        AnmeldungFehler, BenutzerLöschen, BenutzerLöschenFehler, Erneuerung, ErneuerungFehler,
+        ParkourEntfernen, ParkourHinzufügen, ParkourSetupÄndern, ParkourUmbenennen,
+        PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen,
+        PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
+        RegistrierungStarten, RegistrierungStartenFehler, RundeAbschliessen,
+        RundeAbschliessenFehler, RundeAnzeigenFehler, RundeStarten, RundeStartenFehler,
+        RundenAnzeigenFehler, SchussRegistrieren, SchussRegistrierenFehler, SessionAusgestellt,
+        StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern,
+        darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
     },
 };
 use tracing::warn;
@@ -43,7 +39,8 @@ use tracing::warn;
 pub mod requests;
 
 use crate::schema::{
-    Anlage, AnlageZugriff, AnlageÖffentlich, Benutzer, ParkourÖffentlich, Runde, RundeBasic, Schuss,
+    Anlage, AnlageZugriff, AnlageÖffentlich, Benutzer, ParkourKurz, ParkourÖffentlich, Runde,
+    RundeBasic, Schuss,
 };
 
 #[derive(Clone)]
@@ -96,8 +93,16 @@ impl LogandaimAppApi {
                     .change_context(StammdatenFehler::AnlageLaden)?;
 
                 let ergebnis = async {
-                    let benutzer_id = anmeldung(&ctx)?;
-                    let benutzer = benutzer_laden(&uow, benutzer_id).await?;
+                    let benutzer_id = ctx
+                        .auth()
+                        .require_benutzer_id()
+                        .change_context(StammdatenFehler::NichtAngemeldet)?;
+                    let benutzer = uow
+                        .benutzer()
+                        .find_by_id(benutzer_id)
+                        .await
+                        .map_err(IntoReport::into_report)
+                        .change_context(StammdatenFehler::BenutzerLaden)?;
                     let ist_systemadministrator = benutzer.ist_systemadministrator();
 
                     let anlagen = if ist_systemadministrator {
@@ -119,12 +124,11 @@ impl LogandaimAppApi {
 
                     Ok(anlagen
                         .into_iter()
-                        .map(|anlage| AnlageZugriffAnsicht {
-                            rolle: anlage.rolle_von(benutzer_id),
+                        .map(|anlage| AnlageZugriff {
+                            rolle: anlage.rolle_von(benutzer_id).map(Into::into),
                             ist_systemadministrator,
-                            anlage: anlage.into_data(),
+                            anlage: anlage.into_data().into(),
                         })
-                        .map(Into::into)
                         .collect())
                 }
                 .await;
@@ -149,20 +153,38 @@ impl LogandaimAppApi {
                     .change_context(StammdatenFehler::AnlageLaden)?;
 
                 let ergebnis = async {
-                    let benutzer_id = anmeldung(&ctx)?;
-                    let benutzer = benutzer_laden(&uow, benutzer_id).await?;
-                    let anlage = anlage_laden(&uow, anlage_id).await?;
+                    let benutzer_id = ctx
+                        .auth()
+                        .require_benutzer_id()
+                        .change_context(StammdatenFehler::NichtAngemeldet)?;
+                    let benutzer = uow
+                        .benutzer()
+                        .find_by_id(benutzer_id)
+                        .await
+                        .map_err(IntoReport::into_report)
+                        .change_context(StammdatenFehler::BenutzerLaden)?;
+                    let anlage = match uow.anlagen().find_by_id(anlage_id).await {
+                        Ok(anlage) => anlage,
+                        Err(fehler) => {
+                            return Err(match fehler.current_context() {
+                                RepositoryError::NotFound => {
+                                    Report::new(StammdatenFehler::NichtGefunden)
+                                }
+                                _ => fehler.change_context(StammdatenFehler::AnlageLaden),
+                            });
+                        }
+                    };
                     if !darf_masterdaten_pflegen(&benutzer, &anlage)
                         || !darf_anlage_lesen(&benutzer, &anlage)
                     {
                         return Err(Report::new(StammdatenFehler::NichtErlaubt));
                     }
-                    Ok(AnlageAnsicht::neu(anlage.into_data()))
+                    Ok::<_, Report<StammdatenFehler>>(Anlage::from(anlage.into_data()))
                 }
                 .await;
 
                 let ansicht = uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await?;
-                Ok(ansicht.into())
+                Ok(ansicht)
             })
             .await
     }
@@ -359,19 +381,18 @@ impl LogandaimAppApi {
                             if parkour.ist_archiviert() {
                                 continue;
                             }
-                            offen.push(ParkourÖffentlichAnsicht {
-                                anlage_id: anlage.id(),
-                                anlage_name: anlage.name().clone(),
-                                parkour: parkour.clone(),
+                            offen.push(ParkourÖffentlich {
+                                anlage_id: anlage.id().0,
+                                anlage_name: anlage.name().to_string(),
+                                parkour: parkour.clone().into(),
                             });
                         }
                     }
-                    Ok(offen)
+                    Ok::<_, Report<StammdatenFehler>>(offen)
                 }
                 .await;
 
-                let offen = uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await?;
-                Ok(offen.into_iter().map(Into::into).collect())
+                uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await
             })
             .await
     }
@@ -398,30 +419,24 @@ impl LogandaimAppApi {
                         .map_err(IntoReport::into_report)
                         .change_context(StammdatenFehler::AnlageLaden)?;
 
-                    Ok(anlagen
-                        .into_iter()
-                        .map(|anlage| {
-                            let parkour = anlage
-                                .parkour()
-                                .iter()
-                                .filter(|parkour| !parkour.ist_archiviert())
-                                .map(|parkour| ParkourKurzAnsicht {
-                                    id: parkour.id(),
-                                    name: parkour.name().clone(),
-                                    anzahl_pflöcke: parkour.pflöcke().len(),
-                                    anzahl_ziele: parkour.platzierungen().len(),
-                                })
-                                .collect();
-                            AnlageÖffentlichAnsicht {
-                                anlage_id: anlage.id(),
-                                name: anlage.name().clone(),
+                    Ok::<_, Report<StammdatenFehler>>(
+                        anlagen
+                            .into_iter()
+                            .map(|anlage| AnlageÖffentlich {
+                                anlage_id: anlage.id().0,
+                                name: anlage.name().to_string(),
                                 ort: anlage.adresse().ort().to_owned(),
-                                ländercode: anlage.adresse().ländercode(),
-                                parkour,
-                            }
-                            .into()
-                        })
-                        .collect())
+                                ländercode: anlage.adresse().ländercode().into(),
+                                parkour: anlage
+                                    .parkour()
+                                    .iter()
+                                    .filter(|parkour| !parkour.ist_archiviert())
+                                    .cloned()
+                                    .map(ParkourKurz::from)
+                                    .collect(),
+                            })
+                            .collect(),
+                    )
                 }
                 .await;
 
@@ -463,11 +478,13 @@ impl LogandaimAppApi {
                 let ergebnis = async {
                     let runde = match uow.runden().find_by_id(runde_id).await {
                         Ok(runde) => runde,
-                        Err(fehler) if ist_nicht_gefunden(&fehler) => {
-                            return Err(Report::new(RundeAnzeigenFehler::NichtGefunden));
-                        }
                         Err(fehler) => {
-                            return Err(fehler).change_context(RundeAnzeigenFehler::RundeLaden);
+                            return Err(match fehler.current_context() {
+                                RepositoryError::NotFound => {
+                                    Report::new(RundeAnzeigenFehler::NichtGefunden)
+                                }
+                                _ => fehler.change_context(RundeAnzeigenFehler::RundeLaden),
+                            });
                         }
                     };
 
@@ -496,14 +513,11 @@ impl LogandaimAppApi {
                         .map(|schuss| schuss.into_data())
                         .collect();
 
-                    Ok(RundeAnsicht::neu(runde.into_data(), schüsse))
+                    Ok::<_, Report<RundeAnzeigenFehler>>(Runde::gelesen(runde.into_data(), schüsse))
                 }
                 .await;
 
-                let ansicht = uow
-                    .finish(ergebnis, RundeAnzeigenFehler::RundeLaden)
-                    .await?;
-                Ok(ansicht.into())
+                uow.finish(ergebnis, RundeAnzeigenFehler::RundeLaden).await
             })
             .await
     }
@@ -526,7 +540,7 @@ impl LogandaimAppApi {
                     .change_context(RundenAnzeigenFehler::Laden)?;
 
                 let ergebnis = async {
-                    let runden = uow
+                    let mut runden: Vec<_> = uow
                         .runden()
                         .find_by_benutzer(benutzer_id)
                         .await
@@ -535,7 +549,9 @@ impl LogandaimAppApi {
                         .into_iter()
                         .map(|runde| runde.into_data())
                         .collect();
-                    Ok(runden_neueste_zuerst(runden))
+                    // Newest first: the list a caller opens to find today's Runde.
+                    runden.sort_by_key(|runde| std::cmp::Reverse(runde.begonnen_am()));
+                    Ok::<_, Report<RundenAnzeigenFehler>>(runden)
                 }
                 .await;
 

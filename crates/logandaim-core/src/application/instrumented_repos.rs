@@ -81,6 +81,8 @@ impl_instrumented_repo!(
         fn find_by_id(&self, id: AnlageId) -> RepositoryResult<Versioned<Anlage>>;
         #[instrument(skip(self), level = "trace", err(Debug))]
         fn find_aktiv(&self) -> RepositoryResult<Vec<Versioned<Anlage>>>;
+        #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
+        fn find_by_parkour_id(&self, id: ParkourId) -> RepositoryResult<Versioned<Anlage>>;
         #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
         fn find_by_verwaltung(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Anlage>>>;
         #[instrument(skip(self, anlage), level = "debug", err(Debug))]

@@ -9,9 +9,8 @@ use std::net::{IpAddr, Ipv4Addr};
 use logandaim_core::{
     application::AuthContext,
     domain::{
-        Abstand, AnlageAdresse, AnlageId, AnlageKontakt, AnlageName, EmailAdresse, Erfasser, Farbe,
-        Ländercode, NonEmptyString, ParkourId, Pflock, PflockId, RundeZustand, Wertungszone,
-        ZielId, Zielplatzierung,
+        Abstand, AnlageAdresse, AnlageId, AnlageKontakt, EmailAdresse, Erfasser, Farbe, Ländercode,
+        NonEmptyString, ParkourId, Pflock, PflockId, Wertungszone, ZielId, Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
@@ -97,7 +96,7 @@ async fn parkour_mit_einem_ziel(
         .execute(
             auth,
             AnlageErstellen {
-                name: AnlageName::neu("Breitenstein").expect("gültig"),
+                name: NonEmptyString::neu("Breitenstein").expect("gültig"),
                 adresse: AnlageAdresse::neu("Waldweg 1", "3100", "St. Pölten", Ländercode::AT)
                     .expect("gültig"),
                 kontakt: AnlageKontakt::leer(),
@@ -444,7 +443,7 @@ async fn abschliessen_ist_einmalig_und_setzt_den_zustand() {
         )
         .await
         .expect("die Runde wird abgeschlossen");
-    assert_eq!(geschlossen.zustand(), RundeZustand::Abgeschlossen);
+    assert_eq!(geschlossen.zustand(), "Abgeschlossen");
     assert!(geschlossen.abgeschlossen_am().is_some());
 
     let fehler = harness

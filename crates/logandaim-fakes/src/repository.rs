@@ -226,11 +226,19 @@ impl AnlageRepository for FakeAnlageRepository {
             .collect())
     }
 
+    async fn find_by_parkour_id(&self, id: ParkourId) -> RepositoryResult<Versioned<Anlage>> {
+        self.datastore
+            .anlagen()
+            .values()
+            .find(|anlage| anlage.parkour_mit_id(id).is_some())
+            .cloned()
+            .ok_or_else(|| Report::new(RepositoryError::NotFound))
+    }
+
     async fn update(&self, anlage: &mut Versioned<Anlage>) -> RepositoryResult<()> {
         let mut map = self.datastore.anlagen();
         store_update(&mut map, anlage.id(), anlage)
     }
-
     async fn delete(&self, anlage: Versioned<Anlage>) -> RepositoryResult<()> {
         let mut map = self.datastore.anlagen();
         store_delete(&mut map, anlage.id(), &anlage)
@@ -308,7 +316,7 @@ impl RundeRepository for FakeRundeRepository {
             .datastore
             .runden()
             .values()
-            .any(|runde| runde.enthält(id)))
+            .any(|runde| runde.enthält_ziel(id)))
     }
 }
 

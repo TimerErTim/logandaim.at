@@ -15,11 +15,10 @@
 use error_stack::{IntoReport, Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
+    application::AuthContext,
     domain::{AnlageId, ParkourId, RundeId, ZielId, konto::BenutzerId},
     service::{
-        AbmeldungFehler, BenutzerLöschenFehler, PasswortWiederherstellenFehler,
-        RundeAbschliessenFehler, RundeAnzeigenFehler, RundeStartenFehler, RundenAnzeigenFehler,
-        SchussRegistrierenFehler, StammdatenFehler,
+        AbmeldungFehler, BenutzerLöschenFehler, PasswortWiederherstellenFehler, StammdatenFehler,
     },
 };
 use poem::web::RealIp;
@@ -116,10 +115,12 @@ impl LogandaimApiSpec {
         authorization: RequiredBearerAuthorization,
         body: Json<AnlageErstellungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => self.app_api.anlage_erstellen(auth, body.0).await,
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
-        };
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = self.app_api.anlage_erstellen(auth, body.0).await;
         ergebnis.into()
     }
 
@@ -132,10 +133,12 @@ impl LogandaimApiSpec {
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
     ) -> TypicalJsonResponse<Vec<AnlageZugriff>> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => self.app_api.anlagen_anzeigen(auth).await,
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
-        };
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = self.app_api.anlagen_anzeigen(auth).await;
         ergebnis.into()
     }
 
@@ -169,13 +172,15 @@ impl LogandaimApiSpec {
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .anlage_anzeigen(auth, AnlageId(anlage_id.0))
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .anlage_anzeigen(auth, AnlageId(anlage_id.0))
+                .await
         };
         ergebnis.into()
     }
@@ -191,13 +196,15 @@ impl LogandaimApiSpec {
         anlage_id: Path<Uuid>,
         body: Json<AnlageÄnderungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .anlage_ändern(auth, AnlageId(anlage_id.0), body.0)
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .anlage_ändern(auth, AnlageId(anlage_id.0), body.0)
+                .await
         };
         ergebnis.into()
     }
@@ -215,13 +222,15 @@ impl LogandaimApiSpec {
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .anlage_deaktivieren(auth, AnlageId(anlage_id.0))
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .anlage_deaktivieren(auth, AnlageId(anlage_id.0))
+                .await
         };
         ergebnis.into()
     }
@@ -240,13 +249,15 @@ impl LogandaimApiSpec {
         anlage_id: Path<Uuid>,
         body: Json<AnlageVerwaltungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .verwaltung_gewähren(auth, AnlageId(anlage_id.0), body.0)
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .verwaltung_gewähren(auth, AnlageId(anlage_id.0), body.0)
+                .await
         };
         ergebnis.into()
     }
@@ -266,13 +277,15 @@ impl LogandaimApiSpec {
         anlage_id: Path<Uuid>,
         e_mail_adresse: Query<String>,
     ) -> TypicalJsonResponse<Vec<Benutzer>> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .benutzer_nach_email_suchen(auth, AnlageId(anlage_id.0), e_mail_adresse.0)
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .benutzer_nach_email_suchen(auth, AnlageId(anlage_id.0), e_mail_adresse.0)
+                .await
         };
         ergebnis.into()
     }
@@ -292,18 +305,20 @@ impl LogandaimApiSpec {
         benutzer_id: Path<Uuid>,
         body: Json<AnlageVerwaltungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .verwaltung_ändern(
-                        auth,
-                        AnlageId(anlage_id.0),
-                        BenutzerId(benutzer_id.0),
-                        body.0,
-                    )
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .verwaltung_ändern(
+                    auth,
+                    AnlageId(anlage_id.0),
+                    BenutzerId(benutzer_id.0),
+                    body.0,
+                )
+                .await
         };
         ergebnis.into()
     }
@@ -322,13 +337,15 @@ impl LogandaimApiSpec {
         anlage_id: Path<Uuid>,
         benutzer_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .verwaltung_entziehen(auth, AnlageId(anlage_id.0), BenutzerId(benutzer_id.0))
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .verwaltung_entziehen(auth, AnlageId(anlage_id.0), BenutzerId(benutzer_id.0))
+                .await
         };
         ergebnis.into()
     }
@@ -347,13 +364,15 @@ impl LogandaimApiSpec {
         anlage_id: Path<Uuid>,
         body: Json<ZielRequest>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .ziel_hinzufügen(auth, AnlageId(anlage_id.0), body.0)
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .ziel_hinzufügen(auth, AnlageId(anlage_id.0), body.0)
+                .await
         };
         ergebnis.into()
     }
@@ -373,13 +392,15 @@ impl LogandaimApiSpec {
         ziel_id: Path<Uuid>,
         body: Json<ZielRequest>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .ziel_ändern(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0), body.0)
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .ziel_ändern(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0), body.0)
+                .await
         };
         ergebnis.into()
     }
@@ -399,13 +420,15 @@ impl LogandaimApiSpec {
         ziel_id: Path<Uuid>,
         body: Json<ZielRequest>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .ziel_ersetzen(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0), body.0)
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .ziel_ersetzen(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0), body.0)
+                .await
         };
         ergebnis.into()
     }
@@ -425,13 +448,15 @@ impl LogandaimApiSpec {
         anlage_id: Path<Uuid>,
         ziel_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .ziel_entfernen(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0))
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .ziel_entfernen(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0))
+                .await
         };
         ergebnis.into()
     }
@@ -450,13 +475,15 @@ impl LogandaimApiSpec {
         anlage_id: Path<Uuid>,
         body: Json<ParkourErstellungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .parkour_hinzufügen(auth, AnlageId(anlage_id.0), body.0)
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .parkour_hinzufügen(auth, AnlageId(anlage_id.0), body.0)
+                .await
         };
         ergebnis.into()
     }
@@ -476,18 +503,15 @@ impl LogandaimApiSpec {
         parkour_id: Path<Uuid>,
         body: Json<ParkourSetupRequest>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .parkour_setup_ändern(
-                        auth,
-                        AnlageId(anlage_id.0),
-                        ParkourId(parkour_id.0),
-                        body.0,
-                    )
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .parkour_setup_ändern(auth, AnlageId(anlage_id.0), ParkourId(parkour_id.0), body.0)
+                .await
         };
         ergebnis.into()
     }
@@ -507,18 +531,15 @@ impl LogandaimApiSpec {
         parkour_id: Path<Uuid>,
         body: Json<ParkourUmbenennenRequest>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .parkour_umbenennen(
-                        auth,
-                        AnlageId(anlage_id.0),
-                        ParkourId(parkour_id.0),
-                        body.0,
-                    )
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .parkour_umbenennen(auth, AnlageId(anlage_id.0), ParkourId(parkour_id.0), body.0)
+                .await
         };
         ergebnis.into()
     }
@@ -537,13 +558,15 @@ impl LogandaimApiSpec {
         anlage_id: Path<Uuid>,
         parkour_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Anlage> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .parkour_entfernen(auth, AnlageId(anlage_id.0), ParkourId(parkour_id.0))
-                    .await
-            }
-            Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .parkour_entfernen(auth, AnlageId(anlage_id.0), ParkourId(parkour_id.0))
+                .await
         };
         ergebnis.into()
     }
@@ -577,10 +600,12 @@ impl LogandaimApiSpec {
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         body: Json<RundeStartenRequest>,
     ) -> TypicalJsonResponse<Runde> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => self.app_api.runde_starten(auth, body.0).await,
-            Err(_) => Err(Report::new(RundeStartenFehler::NichtAngemeldet)),
-        };
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = self.app_api.runde_starten(auth, body.0).await;
         ergebnis.into()
     }
 
@@ -592,10 +617,12 @@ impl LogandaimApiSpec {
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
     ) -> TypicalJsonResponse<Vec<RundeBasic>> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => self.app_api.runden_anzeigen(auth).await,
-            Err(_) => Err(Report::new(RundenAnzeigenFehler::NichtAngemeldet)),
-        };
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = self.app_api.runden_anzeigen(auth).await;
         ergebnis.into()
     }
 
@@ -609,10 +636,12 @@ impl LogandaimApiSpec {
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         runde_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Runde> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => self.app_api.runde_anzeigen(auth, RundeId(runde_id.0)).await,
-            Err(_) => Err(Report::new(RundeAnzeigenFehler::NichtAngemeldet)),
-        };
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = self.app_api.runde_anzeigen(auth, RundeId(runde_id.0)).await;
         ergebnis.into()
     }
 
@@ -629,13 +658,15 @@ impl LogandaimApiSpec {
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         runde_id: Path<Uuid>,
     ) -> TypicalJsonResponse<Runde> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .runde_abschliessen(auth, RundeId(runde_id.0))
-                    .await
-            }
-            Err(_) => Err(Report::new(RundeAbschliessenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .runde_abschliessen(auth, RundeId(runde_id.0))
+                .await
         };
         ergebnis.into()
     }
@@ -654,13 +685,15 @@ impl LogandaimApiSpec {
         runde_id: Path<Uuid>,
         body: Json<SchussErstellungRequest>,
     ) -> TypicalJsonResponse<Schuss> {
-        let ergebnis = match self.auth_context(authorization.0.as_deref()).await {
-            Ok(auth) => {
-                self.app_api
-                    .schuss_registrieren(auth, RundeId(runde_id.0), body.0)
-                    .await
-            }
-            Err(_) => Err(Report::new(SchussRegistrierenFehler::NichtAngemeldet)),
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = {
+            self.app_api
+                .schuss_registrieren(auth, RundeId(runde_id.0), body.0)
+                .await
         };
         ergebnis.into()
     }
@@ -781,11 +814,12 @@ impl LogandaimApiSpec {
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
     ) -> EndSessionResponse<Ok> {
-        let ergebnis: ResultReport<(), AbmeldungFehler> =
-            match self.auth_context(authorization.0.as_deref()).await {
-                Ok(auth) => self.app_api.abmelden(auth).await,
-                Err(_) => Err(Report::new(AbmeldungFehler::NichtAngemeldet)),
-            };
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis: ResultReport<(), AbmeldungFehler> = self.app_api.abmelden(auth).await;
         EndSessionResponse::from(ergebnis.map(|()| Ok { ok: true }))
     }
 
@@ -839,48 +873,48 @@ impl LogandaimApiSpec {
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
     ) -> UncachedJsonResponse<AuthenticatedBenutzer> {
-        let ergebnis: ResultReport<AuthenticatedBenutzer, StammdatenFehler> =
-            match self.auth_context(authorization.0.as_deref()).await {
-                Ok(auth) => {
-                    self.app_api
-                        .inner_app()
-                        .execute_fn(auth, async |ctx| {
-                            let benutzer_id = ctx
-                                .auth()
-                                .require_benutzer_id()
-                                .change_context(StammdatenFehler::NichtAngemeldet)?;
-                            let uow = ctx
-                                .enter()
-                                .await
-                                .change_context(StammdatenFehler::BenutzerLaden)?;
-                            let ergebnis = async {
-                                let benutzer = uow
-                                    .benutzer()
-                                    .find_by_id(benutzer_id)
-                                    .await
-                                    .map_err(IntoReport::into_report)
-                                    .change_context(StammdatenFehler::BenutzerLaden)?;
-                                let konten = uow
-                                    .konten()
-                                    .find_by_benutzer(benutzer_id)
-                                    .await
-                                    .map_err(IntoReport::into_report)
-                                    .change_context(StammdatenFehler::BenutzerLaden)?;
-                                let Some(konto) = konten.into_iter().next() else {
-                                    return Err(Report::new(StammdatenFehler::BenutzerLaden));
-                                };
-                                Ok((benutzer.into_data(), konto.email().clone()))
-                            }
-                            .await;
-                            let (benutzer, email) = uow
-                                .finish(ergebnis, StammdatenFehler::BenutzerLaden)
-                                .await?;
-                            Ok((benutzer, email).into())
-                        })
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis: ResultReport<AuthenticatedBenutzer, StammdatenFehler> = self
+            .app_api
+            .inner_app()
+            .execute_fn(auth, async |ctx| {
+                let benutzer_id = ctx
+                    .auth()
+                    .require_benutzer_id()
+                    .change_context(StammdatenFehler::NichtAngemeldet)?;
+                let uow = ctx
+                    .enter()
+                    .await
+                    .change_context(StammdatenFehler::BenutzerLaden)?;
+                let ergebnis = async {
+                    let benutzer = uow
+                        .benutzer()
+                        .find_by_id(benutzer_id)
                         .await
+                        .map_err(IntoReport::into_report)
+                        .change_context(StammdatenFehler::BenutzerLaden)?;
+                    let konten = uow
+                        .konten()
+                        .find_by_benutzer(benutzer_id)
+                        .await
+                        .map_err(IntoReport::into_report)
+                        .change_context(StammdatenFehler::BenutzerLaden)?;
+                    let Some(konto) = konten.into_iter().next() else {
+                        return Err(Report::new(StammdatenFehler::BenutzerLaden));
+                    };
+                    Ok((benutzer.into_data(), konto.email().clone()))
                 }
-                Err(_) => Err(Report::new(StammdatenFehler::NichtAngemeldet)),
-            };
+                .await;
+                let (benutzer, email) = uow
+                    .finish(ergebnis, StammdatenFehler::BenutzerLaden)
+                    .await?;
+                Ok((benutzer, email).into())
+            })
+            .await;
         UncachedJsonResponse::from(ergebnis)
     }
 
@@ -894,11 +928,13 @@ impl LogandaimApiSpec {
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         body: Json<BenutzerLöschungRequest>,
     ) -> EndSessionResponse<Ok> {
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
         let ergebnis: ResultReport<(), BenutzerLöschenFehler> =
-            match self.auth_context(authorization.0.as_deref()).await {
-                Ok(auth) => self.app_api.benutzer_löschen(auth, body.0).await,
-                Err(_) => Err(Report::new(BenutzerLöschenFehler::NichtAngemeldet)),
-            };
+            self.app_api.benutzer_löschen(auth, body.0).await;
         EndSessionResponse::from(ergebnis.map(|()| Ok { ok: true }))
     }
 }
@@ -921,33 +957,7 @@ pub fn openapi_service_from_api(
         env!("CARGO_PKG_VERSION"),
     )
     .summary("Logbook for shooting ranges: master data, Runden, and the Wertungen.")
-    .description(concat!(
-        "## Sections\n",
-        "\n",
-        "`Anlagen` holds master data: an Anlage with its address, contact details, role\n",
-        "assignments, Ziele, and Parkour, plus the public directory. `Parkour` covers the\n",
-        "shooting setup itself: Pflöcke, their order, and the distances to the Ziele placed\n",
-        "among them. `Runden` covers shooting a Parkour and logging Schüsse. `Konto` covers\n",
-        "registration, sign-in, sessions, password recovery, and the caller's own Benutzer.\n",
-        "\n",
-        "## Authentication\n",
-        "\n",
-        "A protected route takes an access token as `Authorization: Bearer <token>`. Sign-in,\n",
-        "registration step 2, and session renewal hand that token back in the response body\n",
-        "and place the refresh token in the `__Host-logandaim_refresh` cookie. Every session\n",
-        "response is `Cache-Control: no-store`; the refresh token never appears in a body.\n",
-        "Routes that accept a token also work without one, as an anonymous caller, and then\n",
-        "usually answer `401`.\n",
-        "\n",
-        "## Errors\n",
-        "\n",
-        "Every failed request answers the same envelope: `message` says what failed,\n",
-        "`attachments` carries the free-text detail attached to it, and `sources` nests the\n",
-        "causes beneath it. A `500` answers a constant body and never reveals its cause. The\n",
-        "HTTP status carries the meaning: `400` for an invalid request, `401` for a missing or\n",
-        "unusable token, `403` for a caller that may not act, `404` for what is not there, and\n",
-        "`409` for a write an archived object refuses.\n",
-    ));
+    .description(include_str!("README.md"));
     for server_url in server_urls {
         service = service.server(server_url);
     }

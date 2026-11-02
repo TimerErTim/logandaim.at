@@ -35,14 +35,14 @@ fn konto_from_row(row: &Row) -> RepositoryResult<Versioned<Konto>> {
     let bestätigt_am_raw: String = row.get(4).contextualize(RepositoryError::Data)?;
     let created_at_raw: String = row.get(5).contextualize(RepositoryError::Data)?;
 
-    let id = parse_uuid(&id_raw).contextualize(RepositoryError::Data)?;
-    let benutzer_id = parse_uuid(&benutzer_id_raw).contextualize(RepositoryError::Data)?;
+    let id = parse_uuid(&id_raw)?;
+    let benutzer_id = parse_uuid(&benutzer_id_raw)?;
     // The one constructor: a stored address is normalised on the way in too.
     let email = EmailAdresse::normalisiert(email_raw).change_context(RepositoryError::Data)?;
     let password_hash =
         HashedPasswort::from_phc(password_hash_raw).change_context(RepositoryError::Data)?;
-    let bestätigt_am = parse_datetime(&bestätigt_am_raw).contextualize(RepositoryError::Data)?;
-    let created_at = parse_datetime(&created_at_raw).contextualize(RepositoryError::Data)?;
+    let bestätigt_am = parse_datetime(&bestätigt_am_raw)?;
+    let created_at = parse_datetime(&created_at_raw)?;
 
     Ok(Versioned::new(
         parse_version(row, 6)?,

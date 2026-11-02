@@ -76,15 +76,18 @@ impl Farbe {
         if hex.len() != 6 || !hex.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(FarbeFehler(wert.to_owned()));
         }
-        // Only ASCII hex digits reach here, so byte slicing is safe.
-        let kanal = |start: usize| {
-            u8::from_str_radix(&hex[start..start + 2], 16).expect("geprüfte Hex-Ziffern") as f32
-                / 255.0
+        // Only ASCII hex digits reach here, so byte slicing is safe. The parse cannot fail
+        // for those two digits; the error is propagated rather than asserted so a malformed
+        // caller value never panics the process.
+        let kanal = |start: usize| -> Result<f32, FarbeFehler> {
+            let byte = u8::from_str_radix(&hex[start..start + 2], 16)
+                .map_err(|_| FarbeFehler(wert.to_owned()))?;
+            Ok(f32::from(byte) / 255.0)
         };
         Ok(Self {
-            r: kanal(0),
-            g: kanal(2),
-            b: kanal(4),
+            r: kanal(0)?,
+            g: kanal(2)?,
+            b: kanal(4)?,
         })
     }
 
@@ -198,6 +201,14 @@ mod tests {
         for wert in ["", "Rot", "#c0392", "#c0392bb", "#c0392g"] {
             assert!(Farbe::neu(wert).is_err(), "{wert:?} ist keine Hex-Farbe");
         }
+    }
+
+    #[test_log::test]
+    fn farbe_meldet_die_abgelehnte_eingabe() {
+        // Malformed input is a value, never a panic: the error names what was refused.
+        let fehler = Farbe::neu("nope").unwrap_err();
+        assert_eq!(fehler.0, "nope");
+        assert!(fehler.to_string().contains("nope"));
     }
 
     #[test_log::test]

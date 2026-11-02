@@ -7,7 +7,7 @@
 use std::num::NonZeroU32;
 
 use super::Anlage;
-use super::parkour::{Parkour, ParkourId, PflockId};
+use super::parkour::{Parkour, ParkourId};
 use super::ziel::{Ziel, ZielId};
 use crate::domain::common::{Abstand, Farbe, NonEmptyString};
 
@@ -142,7 +142,7 @@ impl ParkourSnapshot {
     }
 
     /// Whether this identity was part of the captured route.
-    pub fn enthält(&self, ziel_id: ZielId) -> bool {
+    pub fn enthält_ziel(&self, ziel_id: ZielId) -> bool {
         self.ziel(ziel_id).is_some()
     }
 }
@@ -177,8 +177,12 @@ pub(crate) fn snapshot_aus_parkour<'a>(
                 .abstände()
                 .iter()
                 .map(|(pflock_id, abstand)| {
-                    let farbe = pflock_farbe(parkour, *pflock_id)
-                        .ok_or(SnapshotFehler::ZielNichtGefunden)?;
+                    // A placement's distances are validated against this Parkour's Pflöcke,
+                    // so an unknown id here is corruption, not a user error.
+                    let farbe = parkour
+                        .pflock(*pflock_id)
+                        .ok_or(SnapshotFehler::ZielNichtGefunden)?
+                        .farbe();
                     Ok((farbe, *abstand))
                 })
                 .collect::<Result<Vec<_>, SnapshotFehler>>()?;
@@ -199,21 +203,13 @@ pub(crate) fn snapshot_aus_parkour<'a>(
     ))
 }
 
-fn pflock_farbe(parkour: &super::parkour::Parkour, pflock_id: PflockId) -> Option<Farbe> {
-    parkour
-        .pflöcke()
-        .iter()
-        .find(|pflock| pflock.id() == pflock_id)
-        .map(|pflock| pflock.farbe())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::domain::Ländercode;
     use crate::domain::anlage::{
-        AnlageAdresse, AnlageAktiv, AnlageId, AnlageKontakt, AnlageName, NeueAnlage, NeuerParkour,
-        Pflock, Zielplatzierung, Zustand,
+        AnlageAdresse, AnlageAktiv, AnlageId, AnlageKontakt, NeueAnlage, NeuerParkour, Pflock,
+        PflockId, Zielplatzierung, Zustand,
     };
     use uuid::Uuid;
 
@@ -233,7 +229,7 @@ mod tests {
         let mut anlage = AnlageAktiv::neu(
             AnlageId(Uuid::nil()),
             NeueAnlage::neu(
-                AnlageName::neu("Breitenstein").unwrap(),
+                name("Breitenstein"),
                 AnlageAdresse::neu("Waldweg 1", "3100", "St. Pölten", Ländercode::AT).unwrap(),
                 AnlageKontakt::leer(),
             ),
@@ -289,8 +285,8 @@ mod tests {
     fn snapshot_enthaelt_nur_platzierte_ziele() {
         let (anlage, parkour_id) = anlage();
         let snapshot = snapshot(&anlage.into(), parkour_id).unwrap();
-        assert!(snapshot.enthält(ziel_id(10)));
-        assert!(!snapshot.enthält(ziel_id(11)));
+        assert!(snapshot.enthält_ziel(ziel_id(10)));
+        assert!(!snapshot.enthält_ziel(ziel_id(11)));
     }
 
     #[test_log::test]

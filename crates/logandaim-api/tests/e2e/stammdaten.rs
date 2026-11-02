@@ -624,6 +624,52 @@ async fn ac6_und_ac7_ein_parkour_setup_ersetzt_die_ganze_aufstellung() {
 // ------------------------------------------------------------------------- AC-5
 
 #[test_log::test(pollster::test)]
+async fn ac5_die_zielnummer_ist_aenderbar() {
+    let harness = E2eHarness::new().await;
+    let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
+    let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+    let ziel_id = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
+
+    let (status, body) = harness
+        .client
+        .put_json_auth(
+            &format!("/api/anlagen/{anlage_id}/ziele/{ziel_id}"),
+            json!({ "tiername": "Keiler", "zielnummer": 7 }),
+            &admin,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "AC-5: die Zielnummer ist änderbar: {body}"
+    );
+    assert_eq!(
+        body["ziele"][0]["zielnummer"], 7,
+        "AC-5: die neue Nummer steht im Body"
+    );
+    assert_eq!(
+        body["ziele"][0]["id"], ziel_id,
+        "AC-5: die Identität bleibt"
+    );
+
+    // A number is 1-based: zero is refused rather than stored.
+    let (status, _) = harness
+        .client
+        .put_json_auth(
+            &format!("/api/anlagen/{anlage_id}/ziele/{ziel_id}"),
+            json!({ "tiername": "Keiler", "zielnummer": 0 }),
+            &admin,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "AC-5: eine Zielnummer ist 1-basiert"
+    );
+}
+
+#[test_log::test(pollster::test)]
 async fn ac5_ein_ersatz_ziel_erbt_den_platz_nicht_die_historie() {
     let harness = E2eHarness::new().await;
     let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;

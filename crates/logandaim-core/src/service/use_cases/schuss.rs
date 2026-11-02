@@ -64,15 +64,13 @@ impl UseCase<Schuss> for SchussRegistrieren {
         let ergebnis = async {
             let runde = match uow.runden().find_by_id(self.runde_id).await {
                 Ok(runde) => runde,
-                Err(fehler)
-                    if fehler
-                        .downcast_ref::<RepositoryError>()
-                        .is_some_and(|error| matches!(error, RepositoryError::NotFound)) =>
-                {
-                    return Err(Report::new(SchussRegistrierenFehler::NichtGefunden));
-                }
                 Err(fehler) => {
-                    return Err(fehler).change_context(SchussRegistrierenFehler::RundeLaden);
+                    return Err(match fehler.current_context() {
+                        RepositoryError::NotFound => {
+                            Report::new(SchussRegistrierenFehler::NichtGefunden)
+                        }
+                        _ => fehler.change_context(SchussRegistrierenFehler::RundeLaden),
+                    });
                 }
             };
 
@@ -86,7 +84,7 @@ impl UseCase<Schuss> for SchussRegistrieren {
                 ));
             }
             // AC-9: a Schuss may only name a Ziel the Runde captured.
-            if !runde.enthält(self.ziel_id) {
+            if !runde.enthält_ziel(self.ziel_id) {
                 return Err(Report::new(SchussRegistrierenFehler::ZielNichtImSnapshot));
             }
 

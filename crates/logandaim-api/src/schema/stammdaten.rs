@@ -6,7 +6,7 @@
 
 use uuid::Uuid;
 
-use logandaim_core::{domain, service};
+use logandaim_core::domain;
 
 use crate::schema::EmailAdresse;
 
@@ -475,67 +475,32 @@ impl From<domain::Anlage> for Anlage {
                 .cloned()
                 .map(Into::into)
                 .collect(),
-            ziele: anlage.ziele().iter().cloned().map(Into::into).collect(),
+            ziele: anlage
+                .ziele()
+                .iter()
+                .map(|ziel| {
+                    // The admin page renders where each Ziel stands, so the read attaches it.
+                    let mut ziel: Ziel = ziel.clone().into();
+                    ziel.verwendungen = anlage
+                        .ziel_verwendungen(domain::ZielId(ziel.id))
+                        .into_iter()
+                        .map(Into::into)
+                        .collect();
+                    ziel
+                })
+                .collect(),
             parkour: anlage.parkour().iter().cloned().map(Into::into).collect(),
         }
     }
 }
 
-impl From<service::AnlageAnsicht> for Anlage {
-    fn from(ansicht: service::AnlageAnsicht) -> Self {
-        // The placement aggregation the admin page renders, attached to each Ziel.
-        let verwendungen: std::collections::HashMap<_, _> =
-            ansicht.zielverwendungen.into_iter().collect();
-        let mut anlage: Anlage = ansicht.anlage.into();
-        for ziel in &mut anlage.ziele {
-            ziel.verwendungen = verwendungen
-                .get(&domain::ZielId(ziel.id))
-                .map(|liste| liste.iter().cloned().map(Into::into).collect())
-                .unwrap_or_default();
-        }
-        anlage
-    }
-}
-
-impl From<service::AnlageZugriff> for AnlageZugriff {
-    fn from(zugriff: service::AnlageZugriff) -> Self {
+impl From<domain::Parkour> for ParkourKurz {
+    fn from(parkour: domain::Parkour) -> Self {
         Self {
-            anlage: zugriff.anlage.into(),
-            rolle: zugriff.rolle.map(Into::into),
-            ist_systemadministrator: zugriff.ist_systemadministrator,
-        }
-    }
-}
-
-impl From<service::ParkourÖffentlich> for ParkourÖffentlich {
-    fn from(parkour: service::ParkourÖffentlich) -> Self {
-        Self {
-            anlage_id: parkour.anlage_id.0,
-            anlage_name: parkour.anlage_name.as_str().to_owned(),
-            parkour: parkour.parkour.into(),
-        }
-    }
-}
-
-impl From<service::ParkourKurz> for ParkourKurz {
-    fn from(kurz: service::ParkourKurz) -> Self {
-        Self {
-            id: kurz.id.0,
-            name: kurz.name.as_str().to_owned(),
-            anzahl_pflöcke: kurz.anzahl_pflöcke,
-            anzahl_ziele: kurz.anzahl_ziele,
-        }
-    }
-}
-
-impl From<service::AnlageÖffentlich> for AnlageÖffentlich {
-    fn from(anlage: service::AnlageÖffentlich) -> Self {
-        Self {
-            anlage_id: anlage.anlage_id.0,
-            name: anlage.name.as_str().to_owned(),
-            ort: anlage.ort,
-            ländercode: anlage.ländercode.into(),
-            parkour: anlage.parkour.into_iter().map(Into::into).collect(),
+            id: parkour.id().0,
+            name: parkour.name().as_str().to_owned(),
+            anzahl_pflöcke: parkour.pflöcke().len(),
+            anzahl_ziele: parkour.platzierungen().len(),
         }
     }
 }

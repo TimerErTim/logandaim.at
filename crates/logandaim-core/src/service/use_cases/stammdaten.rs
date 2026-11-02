@@ -3,23 +3,26 @@
 //! Writes authorise themselves from the loaded `Benutzer` and `Anlage` (SPEC-konto rule 17);
 //! reads run inline in the API facade. Removal archives what history references and deletes
 //! the rest (AC-11/AC-12).
+//!
+//! Each write loads what it needs and keeps it: there is no loader helper to call, because a
+//! caller that already holds a `Benutzer` and an `Anlage` must not pay for a second read.
+//! Read models are the API's: the shape a page renders is defined where it is served.
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
+use std::num::NonZeroU32;
 use tracing::info;
 use uuid::Uuid;
 
 use crate::{
-    application::{ExecutionContext, uow::Versioned},
+    application::ExecutionContext,
     domain::{
-        Anlage, AnlageAdresse, AnlageAktiv, AnlageFehler, AnlageId, AnlageKontakt, AnlageName,
-        AnlageVerwaltungRolle, NeueAnlage, NeuerParkour, NonEmptyString, Parkour, ParkourFehler,
-        ParkourId, Pflock, ZielFehler, ZielId, Zielplatzierung, Zielverwendung, konto::BenutzerId,
+        Anlage, AnlageAdresse, AnlageFehler, AnlageId, AnlageKontakt, AnlageVerwaltungRolle,
+        NeueAnlage, NeuerParkour, NonEmptyString, ParkourFehler, ParkourId, Pflock, ZielFehler,
+        ZielId, Zielplatzierung, konto::BenutzerId,
     },
-    service::{
-        UseCase, anlage_laden, anmeldung, benutzer_laden, darf_anlage_verwalten,
-        darf_masterdaten_pflegen,
-    },
+    ports::RepositoryError,
+    service::{UseCase, darf_anlage_verwalten, darf_masterdaten_pflegen},
 };
 
 // ---------------------------------------------------------------------------------------
@@ -69,108 +72,6 @@ impl From<ZielFehler> for StammdatenFehler {
     }
 }
 
-/// Load an Anlage that must still be active, or `Archiviert`.
-async fn aktive_anlage(
-    uow: &crate::application::uow::UnitOfWork<'_>,
-    anlage_id: AnlageId,
-) -> Result<Versioned<Anlage>, Report<StammdatenFehler>> {
-    let anlage = anlage_laden(uow, anlage_id).await?;
-    if anlage.ist_archiviert() {
-        return Err(Report::new(StammdatenFehler::Archiviert));
-    }
-    Ok(anlage)
-}
-
-/// Run one mutation against the active typestate, then write the whole aggregate back.
-///
-/// Every child write goes through the root, guarded by the root `_version` (AC-11: child rows
-/// are replaced inside the root's transaction).
-async fn aktive_anlage_ändern<F>(
-    uow: &crate::application::uow::UnitOfWork<'_>,
-    anlage_id: AnlageId,
-    f: F,
-) -> Result<Anlage, Report<StammdatenFehler>>
-where
-    F: FnOnce(&mut AnlageAktiv) -> Result<(), Report<StammdatenFehler>>,
-{
-    let mut anlage = aktive_anlage(uow, anlage_id).await?;
-    let Anlage::Aktiv(aktiv) = &mut *anlage else {
-        return Err(Report::new(StammdatenFehler::Archiviert));
-    };
-    f(aktiv)?;
-    uow.anlagen()
-        .update(&mut anlage)
-        .await
-        .map_err(IntoReport::into_report)
-        .change_context(StammdatenFehler::AnlageSpeichern)?;
-    Ok(anlage.cloned_data())
-}
-
-/// The caller, authorised for master data at this active Anlage.
-async fn berechtigt_für_masterdaten(
-    ctx: &ExecutionContext<'_>,
-    uow: &crate::application::uow::UnitOfWork<'_>,
-    anlage_id: AnlageId,
-) -> Result<(BenutzerId, Versioned<Anlage>), Report<StammdatenFehler>> {
-    let benutzer_id = anmeldung(ctx)?;
-    let benutzer = benutzer_laden(uow, benutzer_id).await?;
-    let anlage = aktive_anlage(uow, anlage_id).await?;
-    if !darf_masterdaten_pflegen(&benutzer, &anlage) {
-        return Err(Report::new(StammdatenFehler::NichtErlaubt));
-    }
-    Ok((benutzer_id, anlage))
-}
-
-/// The caller, authorised to manage this active Anlage (fields, lifecycle, Verwaltungen).
-async fn berechtigt_für_anlage(
-    ctx: &ExecutionContext<'_>,
-    uow: &crate::application::uow::UnitOfWork<'_>,
-    anlage_id: AnlageId,
-) -> Result<BenutzerId, Report<StammdatenFehler>> {
-    let benutzer_id = anmeldung(ctx)?;
-    let benutzer = benutzer_laden(uow, benutzer_id).await?;
-    let anlage = aktive_anlage(uow, anlage_id).await?;
-    if !darf_anlage_verwalten(&benutzer, &anlage) {
-        return Err(Report::new(StammdatenFehler::NichtErlaubt));
-    }
-    Ok(benutzer_id)
-}
-
-// ---------------------------------------------------------------------------------------
-// Views
-// ---------------------------------------------------------------------------------------
-
-/// One Anlage with the placement aggregation its admin page renders.
-#[derive(Debug, Clone)]
-pub struct AnlageAnsicht {
-    pub anlage: Anlage,
-    /// One entry per Ziel, listing every Parkour that currently places it.
-    pub zielverwendungen: Vec<(ZielId, Vec<Zielverwendung>)>,
-}
-
-impl AnlageAnsicht {
-    /// Build the admin view: the Anlage plus its per-Ziel placement aggregation.
-    pub fn neu(anlage: Anlage) -> Self {
-        let zielverwendungen = anlage
-            .ziele()
-            .iter()
-            .map(|ziel| (ziel.id(), anlage.ziel_verwendungen(ziel.id())))
-            .collect();
-        Self {
-            anlage,
-            zielverwendungen,
-        }
-    }
-}
-
-/// One Anlage together with the caller's access to it, so a client can gate its controls.
-#[derive(Debug, Clone)]
-pub struct AnlageZugriff {
-    pub anlage: Anlage,
-    pub rolle: Option<AnlageVerwaltungRolle>,
-    pub ist_systemadministrator: bool,
-}
-
 // ---------------------------------------------------------------------------------------
 // Anlage
 // ---------------------------------------------------------------------------------------
@@ -178,7 +79,7 @@ pub struct AnlageZugriff {
 /// Create an Anlage. Only a `Systemadministrator` may (rule 2, AC-1).
 #[derive(Debug, Clone)]
 pub struct AnlageErstellen {
-    pub name: AnlageName,
+    pub name: NonEmptyString,
     pub adresse: AnlageAdresse,
     pub kontakt: AnlageKontakt,
 }
@@ -194,8 +95,16 @@ impl UseCase<Anlage> for AnlageErstellen {
             .change_context(StammdatenFehler::AnlageAnlegen)?;
 
         let ergebnis = async {
-            let benutzer_id = anmeldung(&ctx)?;
-            let benutzer = benutzer_laden(&uow, benutzer_id).await?;
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
             if !benutzer.ist_systemadministrator() {
                 return Err(Report::new(StammdatenFehler::NichtErlaubt));
             }
@@ -205,7 +114,7 @@ impl UseCase<Anlage> for AnlageErstellen {
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(StammdatenFehler::AnlageAnlegen)
-                .map(Versioned::into_data)
+                .map(|anlage| anlage.into_data())
         }
         .await;
 
@@ -221,7 +130,7 @@ impl UseCase<Anlage> for AnlageErstellen {
 #[derive(Debug, Clone)]
 pub struct AnlageBeschreibendeDatenÄndern {
     pub anlage_id: AnlageId,
-    pub name: AnlageName,
+    pub name: NonEmptyString,
     pub adresse: AnlageAdresse,
     pub kontakt: AnlageKontakt,
 }
@@ -237,13 +146,36 @@ impl UseCase<Anlage> for AnlageBeschreibendeDatenÄndern {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_anlage(&ctx, &uow, self.anlage_id).await?;
-            let (name, adresse, kontakt) = (self.name, self.adresse, self.kontakt);
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                aktiv.beschreibende_daten_ändern(name, adresse, kontakt);
-                Ok(())
-            })
-            .await
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_anlage_verwalten(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            aktiv.beschreibende_daten_ändern(self.name, self.adresse, self.kontakt);
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -269,13 +201,30 @@ impl UseCase<Anlage> for AnlageDeaktivieren {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_anlage(&ctx, &uow, self.anlage_id).await?;
-
-            let mut anlage = aktive_anlage(&uow, self.anlage_id).await?;
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_anlage_verwalten(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
             let Anlage::Aktiv(aktiv) = anlage.cloned_data() else {
                 return Err(Report::new(StammdatenFehler::Archiviert));
             };
             anlage.set_data(Anlage::Archiviert(aktiv.deaktiviere(jetzt)));
+
             uow.anlagen()
                 .update(&mut anlage)
                 .await
@@ -314,19 +263,47 @@ impl UseCase<Anlage> for AnlageVerwaltungGewähren {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_anlage(&ctx, &uow, self.anlage_id).await?;
-            // A Verwaltung for an identity that does not exist would be a dangling grant.
-            if benutzer_laden(&uow, self.benutzer_id).await.is_err() {
-                return Err(Report::new(StammdatenFehler::BenutzerNichtGefunden));
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_anlage_verwalten(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
             }
-            let (benutzer_id, rolle) = (self.benutzer_id, self.rolle);
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                aktiv
-                    .verwaltung_gewähren(benutzer_id, rolle)
-                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
-                Ok(())
-            })
-            .await
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            // A Verwaltung for an identity that does not exist would be a dangling grant.
+            if let Err(fehler) = uow.benutzer().find_by_id(self.benutzer_id).await {
+                return Err(match fehler.current_context() {
+                    RepositoryError::NotFound => {
+                        Report::new(StammdatenFehler::BenutzerNichtGefunden)
+                    }
+                    _ => fehler.change_context(StammdatenFehler::BenutzerLaden),
+                });
+            }
+            aktiv
+                .verwaltung_gewähren(self.benutzer_id, self.rolle)
+                .change_context(StammdatenFehler::UngültigeAnfrage)?;
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -353,15 +330,38 @@ impl UseCase<Anlage> for AnlageVerwaltungÄndern {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_anlage(&ctx, &uow, self.anlage_id).await?;
-            let (benutzer_id, rolle) = (self.benutzer_id, self.rolle);
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                aktiv
-                    .verwaltung_ändern(benutzer_id, rolle)
-                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
-                Ok(())
-            })
-            .await
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_anlage_verwalten(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            aktiv
+                .verwaltung_ändern(self.benutzer_id, self.rolle)
+                .change_context(StammdatenFehler::UngültigeAnfrage)?;
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -387,15 +387,38 @@ impl UseCase<Anlage> for AnlageVerwaltungEntziehen {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_anlage(&ctx, &uow, self.anlage_id).await?;
-            let benutzer_id = self.benutzer_id;
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                aktiv
-                    .verwaltung_entziehen(benutzer_id)
-                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
-                Ok(())
-            })
-            .await
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_anlage_verwalten(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            aktiv
+                .verwaltung_entziehen(self.benutzer_id)
+                .change_context(StammdatenFehler::UngültigeAnfrage)?;
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -425,13 +448,36 @@ impl UseCase<Anlage> for ZielHinzufügen {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let tiername = self.tiername;
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                aktiv.ziel_hinzufügen(ZielId(Uuid::new_v4()), tiername);
-                Ok(())
-            })
-            .await
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_masterdaten_pflegen(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            aktiv.ziel_hinzufügen(ZielId(Uuid::new_v4()), self.tiername);
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -439,12 +485,15 @@ impl UseCase<Anlage> for ZielHinzufügen {
     }
 }
 
-/// Edit a Ziel's animal name. Its identity and its ordinal do not change (AC-5).
+/// Edit a Ziel's master data: its animal name and its ordinal. The identity does not change
+/// (AC-5).
 #[derive(Debug, Clone)]
 pub struct ZielÄndern {
     pub anlage_id: AnlageId,
     pub ziel_id: ZielId,
     pub tiername: NonEmptyString,
+    /// 1-based ordinal; `NonZero` because "Ziel 0" cannot be printed or referred to.
+    pub zielnummer: NonZeroU32,
 }
 
 #[async_trait]
@@ -458,15 +507,38 @@ impl UseCase<Anlage> for ZielÄndern {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let (ziel_id, tiername) = (self.ziel_id, self.tiername);
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                aktiv
-                    .ziel_ändern(ziel_id, tiername)
-                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
-                Ok(())
-            })
-            .await
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_masterdaten_pflegen(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            aktiv
+                .ziel_ändern(self.ziel_id, self.tiername, self.zielnummer)
+                .change_context(StammdatenFehler::UngültigeAnfrage)?;
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -497,16 +569,38 @@ impl UseCase<Anlage> for ZielErsetzen {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let (ziel_id, tiername) = (self.ziel_id, self.tiername);
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                let neu = ZielId(Uuid::new_v4());
-                aktiv
-                    .ziel_ersetzen(ziel_id, neu, tiername)
-                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
-                Ok(())
-            })
-            .await
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_masterdaten_pflegen(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            aktiv
+                .ziel_ersetzen(self.ziel_id, ZielId(Uuid::new_v4()), self.tiername)
+                .change_context(StammdatenFehler::UngültigeAnfrage)?;
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -533,26 +627,52 @@ impl UseCase<Anlage> for ZielEntfernen {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_masterdaten_pflegen(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
+
             let referenziert = uow
                 .runden()
                 .exists_referencing_ziel(self.ziel_id)
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(StammdatenFehler::AnlageLaden)?;
-            let ziel_id = self.ziel_id;
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                if referenziert {
-                    aktiv
-                        .ziel_archivieren(ziel_id)
-                        .change_context(StammdatenFehler::UngültigeAnfrage)
-                } else {
-                    aktiv
-                        .ziel_entfernen(ziel_id)
-                        .change_context(StammdatenFehler::UngültigeAnfrage)
-                }
-            })
-            .await
+
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            if referenziert {
+                aktiv
+                    .ziel_archivieren(self.ziel_id)
+                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
+            } else {
+                aktiv
+                    .ziel_entfernen(self.ziel_id)
+                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
+            }
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -584,16 +704,40 @@ impl UseCase<Anlage> for ParkourHinzufügen {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_masterdaten_pflegen(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
             let neu = NeuerParkour::neu(self.name, self.pflöcke, self.platzierungen)
                 .change_context(StammdatenFehler::UngültigeAnfrage)?;
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                aktiv
-                    .parkour_hinzufügen(ParkourId(Uuid::new_v4()), neu)
-                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
-                Ok(())
-            })
-            .await
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            aktiv
+                .parkour_hinzufügen(ParkourId(Uuid::new_v4()), neu)
+                .change_context(StammdatenFehler::UngültigeAnfrage)?;
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -623,16 +767,38 @@ impl UseCase<Anlage> for ParkourSetupÄndern {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let (parkour_id, pflöcke, platzierungen) =
-                (self.parkour_id, self.pflöcke, self.platzierungen);
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                aktiv
-                    .parkour_setup_ändern(parkour_id, pflöcke, platzierungen)
-                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
-                Ok(())
-            })
-            .await
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_masterdaten_pflegen(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            aktiv
+                .parkour_setup_ändern(self.parkour_id, self.pflöcke, self.platzierungen)
+                .change_context(StammdatenFehler::UngültigeAnfrage)?;
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -659,15 +825,38 @@ impl UseCase<Anlage> for ParkourUmbenennen {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
-            let (parkour_id, name) = (self.parkour_id, self.name);
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                aktiv
-                    .parkour_umbenennen(parkour_id, name)
-                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
-                Ok(())
-            })
-            .await
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_masterdaten_pflegen(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            aktiv
+                .parkour_umbenennen(self.parkour_id, self.name)
+                .change_context(StammdatenFehler::UngültigeAnfrage)?;
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
@@ -693,59 +882,55 @@ impl UseCase<Anlage> for ParkourEntfernen {
             .change_context(StammdatenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            berechtigt_für_masterdaten(&ctx, &uow, self.anlage_id).await?;
+            let benutzer_id = ctx
+                .auth()
+                .require_benutzer_id()
+                .change_context(StammdatenFehler::NichtAngemeldet)?;
+            let benutzer = uow
+                .benutzer()
+                .find_by_id(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::BenutzerLaden)?;
+            let mut anlage = uow
+                .anlagen()
+                .find_by_id(self.anlage_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            if !darf_masterdaten_pflegen(&benutzer, &anlage) {
+                return Err(Report::new(StammdatenFehler::NichtErlaubt));
+            }
+
             let referenziert = uow
                 .runden()
                 .exists_referencing_parkour(self.parkour_id)
                 .await
                 .map_err(IntoReport::into_report)
                 .change_context(StammdatenFehler::AnlageLaden)?;
-            let parkour_id = self.parkour_id;
-            aktive_anlage_ändern(&uow, self.anlage_id, |aktiv| {
-                if referenziert {
-                    aktiv
-                        .parkour_archivieren(parkour_id)
-                        .change_context(StammdatenFehler::UngültigeAnfrage)
-                } else {
-                    aktiv
-                        .parkour_entfernen(parkour_id)
-                        .change_context(StammdatenFehler::UngültigeAnfrage)
-                }
-            })
-            .await
+
+            let Anlage::Aktiv(aktiv) = &mut *anlage else {
+                return Err(Report::new(StammdatenFehler::Archiviert));
+            };
+            if referenziert {
+                aktiv
+                    .parkour_archivieren(self.parkour_id)
+                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
+            } else {
+                aktiv
+                    .parkour_entfernen(self.parkour_id)
+                    .change_context(StammdatenFehler::UngültigeAnfrage)?;
+            }
+
+            uow.anlagen()
+                .update(&mut anlage)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageSpeichern)?;
+            Ok(anlage.into_data())
         }
         .await;
 
         uow.finish(ergebnis, StammdatenFehler::AnlageLaden).await
     }
-}
-
-/// Public read model: one active Parkour with its Anlage, for selecting a Runde.
-#[derive(Debug, Clone)]
-pub struct ParkourÖffentlich {
-    pub anlage_id: AnlageId,
-    pub anlage_name: AnlageName,
-    pub parkour: Parkour,
-}
-
-/// One active Parkour as the public Anlagen directory names it.
-#[derive(Debug, Clone)]
-pub struct ParkourKurz {
-    pub id: ParkourId,
-    pub name: NonEmptyString,
-    pub anzahl_pflöcke: usize,
-    pub anzahl_ziele: usize,
-}
-
-/// One active Anlage in the public directory: where it is, and which Parkour it offers.
-///
-/// Deliberately no contact data: email and phone are personal data, and no spec approved
-/// publishing them.
-#[derive(Debug, Clone)]
-pub struct AnlageÖffentlich {
-    pub anlage_id: AnlageId,
-    pub name: AnlageName,
-    pub ort: String,
-    pub ländercode: crate::domain::Ländercode,
-    pub parkour: Vec<ParkourKurz>,
 }

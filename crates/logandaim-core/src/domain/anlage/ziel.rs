@@ -151,11 +151,33 @@ impl Ziel {
         }
     }
 
-    /// Edit the descriptive fields. `Err(ZielFehler::Archiviert)` when archived (AC-11).
-    /// The Zielnummer is the identity of the slot and stays as it is.
-    pub fn ändern(&mut self, tiername: NonEmptyString) -> Result<(), ZielFehler> {
+    /// Edit the kind of target behind a Ziel: its Tiername and its Zielnummer. Archived
+    /// Ziele refuse the edit (AC-11); the identity is untouched.
+    ///
+    /// Both fields are part of how a Ziel is called out in a Runde ("Reh 2"), so staff must
+    /// be able to correct either without replacing the physical target (AC-5).
+    pub fn stammdaten_ändern(
+        &mut self,
+        tiername: NonEmptyString,
+        zielnummer: NonZeroU32,
+    ) -> Result<(), ZielFehler> {
         self.nur_aktiv()?;
         self.tiername = tiername;
+        self.zielnummer = zielnummer;
+        Ok(())
+    }
+
+    /// Change only the animal name, keeping the ordinal.
+    pub fn tiername_ändern(&mut self, tiername: NonEmptyString) -> Result<(), ZielFehler> {
+        self.nur_aktiv()?;
+        self.tiername = tiername;
+        Ok(())
+    }
+
+    /// Change only the ordinal, keeping the animal name.
+    pub fn zielnummer_ändern(&mut self, zielnummer: NonZeroU32) -> Result<(), ZielFehler> {
+        self.nur_aktiv()?;
+        self.zielnummer = zielnummer;
         Ok(())
     }
 
@@ -168,9 +190,11 @@ impl Ziel {
     }
 
     /// A new identity for the same physical slot; the old one stays archived (AC-5).
-    pub fn duplicate(&self) -> Result<NeuesZiel, ZielFehler> {
-        self.nur_aktiv()?;
-        Ok(NeuesZiel::neu(self.tiername.clone(), self.zielnummer))
+    ///
+    /// Duplication is a master-data read, not a mutation: an archived Ziel can be duplicated
+    /// just like an active one, so the copy is available while the original is retired.
+    pub fn duplicate(&self) -> NeuesZiel {
+        NeuesZiel::neu(self.tiername.clone(), self.zielnummer)
     }
 }
 
@@ -221,20 +245,43 @@ mod tests {
 
         assert!(matches!(ziel.archiviere(), Err(ZielFehler::Archiviert)));
         assert!(matches!(
-            ziel.ändern(name("Reh")),
+            ziel.tiername_ändern(name("Reh")),
             Err(ZielFehler::Archiviert)
         ));
-        assert!(matches!(ziel.duplicate(), Err(ZielFehler::Archiviert)));
+        assert!(matches!(
+            ziel.zielnummer_ändern(nummer(5)),
+            Err(ZielFehler::Archiviert)
+        ));
+        assert!(matches!(
+            ziel.stammdaten_ändern(name("Reh"), nummer(5)),
+            Err(ZielFehler::Archiviert)
+        ));
+        // Duplication is a read: an archived Ziel may be duplicated like any other.
+        assert_eq!(ziel.duplicate().tiername().as_str(), "Keiler");
     }
 
     #[test_log::test]
     fn aendern_haelt_identitaet_und_nummer() {
         let mut ziel = ziel();
         let id = ziel.id();
-        ziel.ändern(name("Reh")).unwrap();
+        ziel.tiername_ändern(name("Reh")).unwrap();
         assert_eq!(ziel.id(), id);
         assert_eq!(ziel.tiername().as_str(), "Reh");
         assert_eq!(ziel.zielnummer().get(), 2);
+    }
+
+    #[test_log::test]
+    fn die_zielnummer_ist_aenderbar() {
+        let mut ziel = ziel();
+        let id = ziel.id();
+        ziel.zielnummer_ändern(nummer(7)).unwrap();
+        assert_eq!(ziel.id(), id);
+        assert_eq!(ziel.zielnummer().get(), 7);
+        assert_eq!(ziel.tiername().as_str(), "Keiler");
+
+        ziel.stammdaten_ändern(name("Reh"), nummer(3)).unwrap();
+        assert_eq!(ziel.tiername().as_str(), "Reh");
+        assert_eq!(ziel.zielnummer().get(), 3);
     }
 
     #[test_log::test]

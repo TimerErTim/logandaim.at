@@ -33,8 +33,8 @@ const SELECT: &str = r#"SELECT id, runde_id, benutzer_id, anonymisiert_am, ziel_
             "wertungszone", _version
        FROM "schüsse""#;
 
-fn zone_from_str(value: &str) -> Result<Wertungszone, RepositoryError> {
-    value.parse().map_err(|_| RepositoryError::Data)
+fn zone_from_str(value: &str) -> RepositoryResult<Wertungszone> {
+    value.parse().contextualize(RepositoryError::Data)
 }
 
 fn schuss_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
@@ -47,11 +47,9 @@ fn schuss_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
     let zone: String = row.get(6).contextualize(RepositoryError::Data)?;
 
     let zuordnung = match (benutzer_id, anonymisiert_am) {
-        (Some(benutzer_id), None) => Erfasser::Benutzer(BenutzerId(
-            parse_uuid(&benutzer_id).contextualize(RepositoryError::Data)?,
-        )),
+        (Some(benutzer_id), None) => Erfasser::Benutzer(BenutzerId(parse_uuid(&benutzer_id)?)),
         (None, Some(am)) => Erfasser::Anonymisiert {
-            am: parse_datetime(&am).contextualize(RepositoryError::Data)?,
+            am: parse_datetime(&am)?,
         },
         _ => return Err(RepositoryError::Data.into()),
     };
@@ -59,10 +57,10 @@ fn schuss_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
     Ok(Versioned::new(
         parse_version(row, 7)?,
         Schuss::from_parts(
-            SchussId(parse_uuid(&id).contextualize(RepositoryError::Data)?),
-            RundeId(parse_uuid(&runde_id).contextualize(RepositoryError::Data)?),
+            SchussId(parse_uuid(&id)?),
+            RundeId(parse_uuid(&runde_id)?),
             zuordnung,
-            ZielId(parse_uuid(&ziel_id).contextualize(RepositoryError::Data)?),
+            ZielId(parse_uuid(&ziel_id)?),
             usize::try_from(pfeil).contextualize(RepositoryError::Data)?,
             zone_from_str(&zone)?,
         )
