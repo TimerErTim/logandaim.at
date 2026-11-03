@@ -12,15 +12,15 @@ use logandaim_core::{
     domain::{
         EmailAdresse,
         konto::{
-            ACCESS_TOKEN_LIFETIME, BenutzerId, KlartextPasswort, NeuerBenutzer, NeuesKonto, Rolle,
-            SecretToken, SessionId, TokenId, hash_password,
+            ACCESS_TOKEN_LIFETIME, BenutzerId, KlartextPasswort, NeuerBenutzer, Rolle, SecretToken,
+            SessionId, TokenId,
         },
     },
     ports::{ClientKey, RepositoryError},
     service::{
-        Abmeldung, Anmeldung, BenutzerAnzeigen, BenutzerAnzeigenFehler, BenutzerLöschen,
-        Erneuerung, PasswortVergessen, PasswortWiederherstellen, RegistrierungAbschliessenFehler,
-        RegistrierungAbschließen, RegistrierungStarten, SessionAusgestellt,
+        Abmeldung, Anmeldung, BenutzerLöschen, Erneuerung, PasswortVergessen,
+        PasswortWiederherstellen, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
+        RegistrierungStarten, SessionAusgestellt,
     },
 };
 
@@ -620,15 +620,6 @@ async fn ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei() {
         .await
         .expect("die Löschung gelingt");
 
-    let danach = harness
-        .app()
-        .execute(
-            auth_aus(&ausgestellt),
-            BenutzerAnzeigen { benutzer_id: None },
-        )
-        .await;
-    assert!(danach.is_err(), "der Benutzer ist weg");
-
     let anmeldung = harness
         .app()
         .execute(
@@ -684,31 +675,15 @@ async fn ac12_löschung_ohne_bestätigung_oder_mit_falschem_passwort_scheitert()
     harness
         .app()
         .execute(
-            auth_aus(&ausgestellt),
-            BenutzerAnzeigen { benutzer_id: None },
+            AuthContext::Anonymous,
+            Anmeldung {
+                email: adresse("anna@muster.at"),
+                passwort: passwort(),
+                client_key: client_key(24),
+            },
         )
         .await
         .expect("der Benutzer existiert weiterhin");
-}
-
-#[test_log::test(pollster::test)]
-async fn ac13_anonymer_zugriff_wird_verweigert() {
-    let harness = harness().await;
-
-    let anzeigen = harness
-        .app()
-        .execute(
-            AuthContext::Anonymous,
-            BenutzerAnzeigen { benutzer_id: None },
-        )
-        .await;
-    assert!(anzeigen.is_err());
-
-    let abmelden = harness
-        .app()
-        .execute(AuthContext::Anonymous, Abmeldung)
-        .await;
-    assert!(abmelden.is_err());
 }
 
 // ------------------------------------------------------------------------------- AC-17
@@ -794,91 +769,6 @@ async fn ac18_abgelaufenes_access_token_wird_abgelehnt() {
         )
         .await;
     assert!(danach.is_err(), "nach 24 Stunden ist das Token abgelaufen");
-}
-
-// ------------------------------------------------------------------------------ AC-14
-
-#[test_log::test(pollster::test)]
-async fn ac14_fremden_benutzer_liest_nur_ein_systemadministrator() {
-    let harness = harness().await;
-    let anna = registriere(&harness, "anna@muster.at").await;
-
-    let (anna_id, fremd_id) = harness
-        .app()
-        .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
-            let uow = ctx.enter().await?;
-            let anna_id = uow
-                .konten()
-                .find_by_email(&adresse("anna@muster.at"))
-                .await?
-                .cloned_data()
-                .benutzer_id();
-            // A Benutzer never exists without its Konto (rule 3), so the foreign identity
-            // is seeded as a complete pair — otherwise the fixture, not the use case,
-            // decides what a missing Konto means.
-            let fremd = uow
-                .benutzer()
-                .create(NeuerBenutzer::registrierung(ctx.clock().now()))
-                .await?;
-            let hash = hash_password(&passwort()).expect("Passwort wird gehasht");
-            uow.konten()
-                .create(NeuesKonto::neu(
-                    fremd.id(),
-                    adresse("fremd@muster.at"),
-                    hash,
-                    ctx.clock().now(),
-                ))
-                .await?;
-            uow.commit().await?;
-            Ok((anna_id, fremd.id()))
-        })
-        .await
-        .expect("Seed-Daten werden angelegt");
-
-    let fremd_als_benutzer = harness
-        .app()
-        .execute(
-            AuthContext::Authenticated {
-                benutzer_id: anna_id,
-                session_id: anna.session_id,
-            },
-            BenutzerAnzeigen {
-                benutzer_id: Some(fremd_id),
-            },
-        )
-        .await;
-    assert_eq!(
-        text(fremd_als_benutzer.unwrap_err()),
-        BenutzerAnzeigenFehler::NichtErlaubt.to_string()
-    );
-
-    // Promote Anna, then the same request succeeds. A plain domain mutation written back
-    // with `update`, so the repository stays a store and optimistic concurrency applies.
-    harness
-        .app()
-        .execute_fn::<_, _, RepositoryError>(AuthContext::Anonymous, async |ctx| {
-            let uow = ctx.enter().await?;
-            let mut benutzer = uow.benutzer().find_by_id(anna_id).await?;
-            benutzer.befördere_zu_systemadministrator();
-            uow.benutzer().update(&mut benutzer).await?;
-            uow.commit().await
-        })
-        .await
-        .expect("die Rolle wird gesetzt");
-
-    harness
-        .app()
-        .execute(
-            AuthContext::Authenticated {
-                benutzer_id: anna_id,
-                session_id: anna.session_id,
-            },
-            BenutzerAnzeigen {
-                benutzer_id: Some(fremd_id),
-            },
-        )
-        .await
-        .expect("ein Systemadministrator liest jeden Benutzer");
 }
 
 // ------------------------------------------------------------------------------ AC-19

@@ -27,11 +27,16 @@ fn refresh_cookie_config() -> CookieConfig {
     }
 }
 
+/// The access token of a session.
+///
+/// The matching refresh token is never in a body: it leaves as the `__Host-` cookie, and
+/// every session response is `Cache-Control: no-store`.
 #[derive(Debug, Clone, poem_openapi::Object)]
 #[oai(rename_all = "camelCase")]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionResponseContent {
+    /// The token to send as `Authorization: Bearer <token>`.
     pub access_token: String,
 }
 

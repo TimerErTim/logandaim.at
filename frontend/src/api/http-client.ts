@@ -2,13 +2,24 @@ import createClient from "openapi-fetch";
 
 import { ApiError } from "./errors";
 import type {
+  Anlage,
+  AnlageErstellungInput,
+  AnlageVerwaltungRolle,
+  AnlageZugriff,
+  AnlageÖffentlich,
+  AuthenticatedBenutzer,
   AuthPhase,
   AuthSession,
   Benutzer,
   LogandaimApi,
+  ParkourInput,
+  ParkourSetupInput,
+  ParkourÖffentlich,
+  Runde,
+  RundeBasic,
   Schuss,
   SchussErstellungInput,
-  Wertung,
+  ZielInput,
 } from "./logandaim-api";
 import type { paths } from "./schema";
 
@@ -157,19 +168,260 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     };
   }
 
-  async schussRegistrieren(erstellung: SchussErstellungInput): Promise<Schuss> {
+  // ---------------------------------------------------------------- master data
+
+  async anlagenAnzeigen(): Promise<AnlageZugriff[]> {
     return this.authenticated(() =>
-      this.client.POST("/schuss", {
-        body: erstellung,
+      this.client.GET("/anlagen", { headers: this.authorizationHeaders() }),
+    );
+  }
+
+  async anlageAnzeigen(id: string): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.GET("/anlagen/{anlage_id}", {
+        params: { path: { anlage_id: id } },
         headers: this.authorizationHeaders(),
       }),
     );
   }
 
-  async wertungBerechnen(schussIds: string[]): Promise<Wertung> {
+  async anlageErstellen(anlage: AnlageErstellungInput): Promise<Anlage> {
     return this.authenticated(() =>
-      this.client.POST("/wertung", {
-        body: { schussIds },
+      this.client.POST("/anlagen", {
+        body: anlage,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async anlageAendern(
+    id: string,
+    anlage: AnlageErstellungInput,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.PUT("/anlagen/{anlage_id}", {
+        params: { path: { anlage_id: id } },
+        body: anlage,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async anlageDeaktivieren(id: string): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.POST("/anlagen/{anlage_id}/deaktivierung", {
+        params: { path: { anlage_id: id } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async benutzerNachEmailSuchen(
+    anlageId: string,
+    eMailAdresse: string,
+  ): Promise<Benutzer[]> {
+    return this.authenticated(() =>
+      this.client.GET("/anlagen/{anlage_id}/benutzer-suche", {
+        params: {
+          path: { anlage_id: anlageId },
+          query: { e_mail_adresse: eMailAdresse },
+        },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async verwaltungGewaehren(
+    anlageId: string,
+    benutzerId: string,
+    rolle: AnlageVerwaltungRolle,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.POST("/anlagen/{anlage_id}/verwaltungen", {
+        params: { path: { anlage_id: anlageId } },
+        body: { benutzerId, rolle },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async verwaltungAendern(
+    anlageId: string,
+    benutzerId: string,
+    rolle: AnlageVerwaltungRolle,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.PUT("/anlagen/{anlage_id}/verwaltungen/{benutzer_id}", {
+        params: { path: { anlage_id: anlageId, benutzer_id: benutzerId } },
+        body: { benutzerId, rolle },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async verwaltungEntziehen(
+    anlageId: string,
+    benutzerId: string,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.DELETE("/anlagen/{anlage_id}/verwaltungen/{benutzer_id}", {
+        params: { path: { anlage_id: anlageId, benutzer_id: benutzerId } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async zielHinzufuegen(anlageId: string, ziel: ZielInput): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.POST("/anlagen/{anlage_id}/ziele", {
+        params: { path: { anlage_id: anlageId } },
+        body: ziel,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async zielAendern(
+    anlageId: string,
+    zielId: string,
+    ziel: ZielInput,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.PUT("/anlagen/{anlage_id}/ziele/{ziel_id}", {
+        params: { path: { anlage_id: anlageId, ziel_id: zielId } },
+        body: ziel,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async zielErsetzen(
+    anlageId: string,
+    zielId: string,
+    ziel: ZielInput,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.POST("/anlagen/{anlage_id}/ziele/{ziel_id}/ersatz", {
+        params: { path: { anlage_id: anlageId, ziel_id: zielId } },
+        body: ziel,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async zielEntfernen(anlageId: string, zielId: string): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.DELETE("/anlagen/{anlage_id}/ziele/{ziel_id}", {
+        params: { path: { anlage_id: anlageId, ziel_id: zielId } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async parkourHinzufuegen(
+    anlageId: string,
+    parkour: ParkourInput,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.POST("/anlagen/{anlage_id}/parkour", {
+        params: { path: { anlage_id: anlageId } },
+        body: parkour,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async parkourSetupAendern(
+    anlageId: string,
+    parkourId: string,
+    setup: ParkourSetupInput,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.PUT("/anlagen/{anlage_id}/parkour/{parkour_id}/setup", {
+        params: { path: { anlage_id: anlageId, parkour_id: parkourId } },
+        body: setup,
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async parkourUmbenennen(
+    anlageId: string,
+    parkourId: string,
+    name: string,
+  ): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.PUT("/anlagen/{anlage_id}/parkour/{parkour_id}", {
+        params: { path: { anlage_id: anlageId, parkour_id: parkourId } },
+        body: { name },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async parkourEntfernen(anlageId: string, parkourId: string): Promise<Anlage> {
+    return this.authenticated(() =>
+      this.client.DELETE("/anlagen/{anlage_id}/parkour/{parkour_id}", {
+        params: { path: { anlage_id: anlageId, parkour_id: parkourId } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async parkourAnzeigen(): Promise<ParkourÖffentlich[]> {
+    // Public by design (AC-13): never renew a session for it, and send no header at all.
+    return unwrap(await this.client.GET("/parkour"));
+  }
+
+  async anlagenVerzeichnis(): Promise<AnlageÖffentlich[]> {
+    // Public by design (Anlagen-Verzeichnis): a stale token is answered as anonymous, so
+    // this read neither sends a header nor renews a session.
+    return unwrap(await this.client.GET("/anlagen/oeffentlich"));
+  }
+
+  // ---------------------------------------------------------------- Runden
+
+  async rundenAnzeigen(): Promise<RundeBasic[]> {
+    return this.authenticated(() =>
+      this.client.GET("/runden", { headers: this.authorizationHeaders() }),
+    );
+  }
+
+  async rundeStarten(parkourId: string): Promise<Runde> {
+    return this.authenticated(() =>
+      this.client.POST("/runden", {
+        body: { parkourId },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async rundeAnzeigen(id: string): Promise<Runde> {
+    return this.authenticated(() =>
+      this.client.GET("/runden/{runde_id}", {
+        params: { path: { runde_id: id } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async rundeAbschliessen(id: string): Promise<Runde> {
+    return this.authenticated(() =>
+      this.client.POST("/runden/{runde_id}/abschluss", {
+        params: { path: { runde_id: id } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async schussRegistrieren(
+    rundeId: string,
+    schuss: SchussErstellungInput,
+  ): Promise<Schuss> {
+    return this.authenticated(() =>
+      this.client.POST("/runden/{runde_id}/schüsse", {
+        params: { path: { runde_id: rundeId } },
+        body: schuss,
         headers: this.authorizationHeaders(),
       }),
     );
@@ -222,7 +474,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     this.setAccessToken(null);
   }
 
-  async benutzerAbrufen(): Promise<Benutzer> {
+  async benutzerAbrufen(): Promise<AuthenticatedBenutzer> {
     return this.authenticated(() =>
       this.client.GET("/benutzer", {
         headers: this.authorizationHeaders(),

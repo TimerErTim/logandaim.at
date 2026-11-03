@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
+use error_stack::{Report, ResultExt};
 use logandaim_core::{
     App,
     adapters::{InMemorySigning, InMemoryThrottle},
     application::{AppBuilder, AuthContext, IdentityProviderConfiguration, SetUowProvider},
-    domain::konto::AccessTokenClaims,
+    domain::{Anlage, AnlageId, Runde, RundeId, Schuss, konto::AccessTokenClaims},
     ports::{Clock, Signing},
-    service::SessionPrüfen,
+    service::{RundeAnzeigenFehler, SessionPrüfen, StammdatenFehler},
 };
 use logandaim_fakes::{FakeMailSender, FixedClock};
 
@@ -119,7 +120,66 @@ pub fn jetzt() -> DateTime<Utc> {
     DateTime::from_timestamp(1_700_000_000, 0).expect("static timestamp is valid")
 }
 
-/// Anonymous caller, for cases that do not authenticate.
-pub fn anonym() -> AuthContext {
-    AuthContext::Anonymous
+/// Read one Anlage, straight from the repositories.
+///
+/// The read model is the API's job; a core case that only needs the aggregate reads it
+/// here and derives whatever it renders itself.
+pub async fn anlage_laden(harness: &Harness, anlage_id: AnlageId) -> Anlage {
+    harness
+        .app()
+        .execute_fn(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx
+                .enter()
+                .await
+                .change_context(StammdatenFehler::AnlageLaden)?;
+            let anlage = uow
+                .anlagen()
+                .find_by_id(anlage_id)
+                .await
+                .map_err(error_stack::IntoReport::into_report)
+                .change_context(StammdatenFehler::AnlageLaden)?
+                .into_data();
+            uow.finish(
+                Ok::<_, Report<StammdatenFehler>>(anlage),
+                StammdatenFehler::AnlageLaden,
+            )
+            .await
+        })
+        .await
+        .expect("die Anlage ist lesbar")
+}
+
+/// Read one Runde with its Schüsse, straight from the repositories.
+pub async fn runde_laden(harness: &Harness, runde_id: RundeId) -> (Runde, Vec<Schuss>) {
+    harness
+        .app()
+        .execute_fn(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx
+                .enter()
+                .await
+                .change_context(RundeAnzeigenFehler::RundeLaden)?;
+            let runde = uow
+                .runden()
+                .find_by_id(runde_id)
+                .await
+                .map_err(error_stack::IntoReport::into_report)
+                .change_context(RundeAnzeigenFehler::RundeLaden)?
+                .into_data();
+            let schüsse = uow
+                .schüsse()
+                .find_by_runde(runde_id)
+                .await
+                .map_err(error_stack::IntoReport::into_report)
+                .change_context(RundeAnzeigenFehler::SchüsseLaden)?
+                .into_iter()
+                .map(|schuss| schuss.into_data())
+                .collect();
+            uow.finish(
+                Ok::<_, Report<RundeAnzeigenFehler>>((runde, schüsse)),
+                RundeAnzeigenFehler::RundeLaden,
+            )
+            .await
+        })
+        .await
+        .expect("die Runde ist lesbar")
 }

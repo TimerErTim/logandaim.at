@@ -12,7 +12,7 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration};
-use logandaim_api::openapi_service;
+use logandaim_api::openapi_service_from_api;
 use logandaim_core::{
     App,
     adapters::{InMemorySigning, InMemoryThrottle},
@@ -28,7 +28,9 @@ use serde_json::Value;
 
 pub mod konto;
 pub mod mailpit;
-pub mod schuss;
+pub mod runde;
+pub mod spec;
+pub mod stammdaten;
 
 /// The frontend origin every e2e case's mailed links are spelled from, and the routes the
 /// adapter appends to it.
@@ -136,15 +138,31 @@ impl E2eHarness {
 
 pub struct LogandaimApiTestClient {
     client: TestClient<Route>,
+    app: Arc<App>,
 }
 
 impl LogandaimApiTestClient {
     pub fn new(app: App) -> Self {
-        let service = openapi_service(app, std::iter::empty::<String>());
+        Self::from_arc(Arc::new(app))
+    }
+
+    /// Keeps the `Arc<App>` beside the client, so a case can drive a use case the API does
+    /// not expose (a superuser promotion is deployment configuration, not a route).
+    pub fn from_arc(app: Arc<App>) -> Self {
+        let service = openapi_service_from_api(
+            logandaim_api::LogandaimAppApi::from_arc(Arc::clone(&app)),
+            std::iter::empty::<String>(),
+        );
         let route = Route::new().nest("/api", service);
         Self {
             client: TestClient::new(route),
+            app,
         }
+    }
+
+    /// The app behind this client, for the few use cases with no route.
+    pub fn app(&self) -> &App {
+        &self.app
     }
 
     pub fn client(&self) -> &TestClient<Route> {
@@ -252,6 +270,35 @@ impl LogandaimApiTestClient {
     pub async fn put_json(&self, path: &str, body: Value) -> (StatusCode, Value) {
         json_response(self.client.put(path).body_json(&body).send().await).await
     }
+
+    pub async fn put_json_auth(
+        &self,
+        path: &str,
+        body: Value,
+        bearer: &str,
+    ) -> (StatusCode, Value) {
+        json_response(
+            self.client
+                .put(path)
+                .header("Authorization", format!("Bearer {bearer}"))
+                .body_json(&body)
+                .send()
+                .await,
+        )
+        .await
+    }
+
+    /// A DELETE that carries the `Authorization` header.
+    pub async fn delete_auth(&self, path: &str, bearer: &str) -> (StatusCode, Value) {
+        json_response(
+            self.client
+                .delete(path)
+                .header("Authorization", format!("Bearer {bearer}"))
+                .send()
+                .await,
+        )
+        .await
+    }
 }
 
 async fn json_response(resp: poem::test::TestResponse) -> (StatusCode, Value) {
@@ -332,4 +379,62 @@ pub async fn base_app_builder() -> App {
 
 pub fn assert_status_ok(status: StatusCode) {
     assert_eq!(status, StatusCode::OK, "expected 200 OK, got {status}");
+}
+
+/// Register a Benutzer over HTTP and return `(access_token, benutzer_id)`.
+///
+/// The master-data suite needs an identity, not the konto assertions, so this is the short
+/// path: start, read the token out of the fake's mail, finish, read `/benutzer`.
+pub async fn neuer_benutzer(harness: &E2eHarness, email: &str) -> (String, String) {
+    let (status, _) = harness
+        .client
+        .post_json(
+            "/api/registrierung/start",
+            serde_json::json!({ "eMailAdresse": email }),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "registrierung startet");
+
+    let token = harness.letztes_token();
+    let (status, body, _) = harness
+        .client
+        .post_json_cookie(
+            "/api/registrierung/abschluss",
+            serde_json::json!({ "token": token, "passwort": PASSWORT }),
+            None,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "registrierung schließt ab: {body}");
+
+    let access = body["accessToken"]
+        .as_str()
+        .expect("accessToken im Body")
+        .to_owned();
+    let (status, benutzer) = harness.client.get_json_auth("/api/benutzer", &access).await;
+    assert_eq!(status, StatusCode::OK, "benutzer lesen: {benutzer}");
+    let benutzer_id = benutzer["id"].as_str().expect("id im Body").to_owned();
+    (access, benutzer_id)
+}
+
+/// Promote a registered Benutzer through the configured-superuser path, which has no route
+/// by design (SPEC-stammdaten rule 9). The harness keeps its `Arc<App>` for exactly this.
+pub async fn befördere_zum_systemadministrator(harness: &E2eHarness, email: &str) {
+    use logandaim_core::{
+        application::AuthContext,
+        domain::EmailAdresse,
+        service::{Beförderung, SystemadministratorBefördern},
+    };
+
+    let befund = harness
+        .client
+        .app()
+        .execute(
+            AuthContext::Anonymous,
+            SystemadministratorBefördern {
+                email: EmailAdresse::normalisiert(email).expect("Testadresse ist gültig"),
+            },
+        )
+        .await
+        .expect("die Beförderung läuft");
+    assert_eq!(befund, Beförderung::Befördert, "die Beförderung greift");
 }

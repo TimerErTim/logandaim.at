@@ -6,9 +6,9 @@ use libsql::Transaction;
 use logandaim_core::{
     ErrorReportExt, ResultReport,
     ports::{
-        BenutzerRepository, EmailBestätigungRepository, KontoRepository,
-        PasswortWiederherstellungRepository, RepositoryError, RepositoryResult, SchussRepository,
-        SessionRepository,
+        AnlageRepository, BenutzerRepository, EmailBestätigungRepository, KontoRepository,
+        PasswortWiederherstellungRepository, RepositoryError, RepositoryResult, RundeRepository,
+        SchussRepository, SessionRepository,
     },
     uow::{UnitOfWorkImpl, UnitOfWorkProvider},
 };
@@ -17,8 +17,9 @@ use crate::{
     SQLiteConnection, SQLiteInstance,
     errors::libsql_error_to_persistence_error,
     repos::{
-        SQLiteBenutzerRepository, SQLiteEmailBestätigungRepository, SQLiteKontoRepository,
-        SQLitePasswortWiederherstellungRepository, SQLiteSchussRepository, SQLiteSessionRepository,
+        SQLiteAnlageRepository, SQLiteBenutzerRepository, SQLiteEmailBestätigungRepository,
+        SQLiteKontoRepository, SQLitePasswortWiederherstellungRepository, SQLiteRundeRepository,
+        SQLiteSchussRepository, SQLiteSessionRepository,
     },
 };
 
@@ -28,6 +29,8 @@ pub struct SQLiteUnitOfWork {
     #[allow(dead_code)]
     connection: SQLiteConnection,
     pub(crate) tx: Arc<Mutex<Option<Transaction>>>,
+    anlage_repo: SQLiteAnlageRepository,
+    runde_repo: SQLiteRundeRepository,
     schuss_repo: SQLiteSchussRepository,
     benutzer_repo: SQLiteBenutzerRepository,
     konto_repo: SQLiteKontoRepository,
@@ -47,6 +50,8 @@ impl UnitOfWorkProvider for SQLiteInstance {
         let tx = Arc::new(Mutex::new(Some(tx)));
         Ok(Box::new(SQLiteUnitOfWork {
             connection,
+            anlage_repo: SQLiteAnlageRepository { tx: tx.clone() },
+            runde_repo: SQLiteRundeRepository { tx: tx.clone() },
             schuss_repo: SQLiteSchussRepository { tx: tx.clone() },
             benutzer_repo: SQLiteBenutzerRepository { tx: tx.clone() },
             konto_repo: SQLiteKontoRepository { tx: tx.clone() },
@@ -77,6 +82,14 @@ impl UnitOfWorkImpl for SQLiteUnitOfWork {
         tx.rollback()
             .await
             .contextualize_with(libsql_error_to_persistence_error)
+    }
+
+    fn anlagen(&self) -> &dyn AnlageRepository {
+        &self.anlage_repo
+    }
+
+    fn runden(&self) -> &dyn RundeRepository {
+        &self.runde_repo
     }
 
     fn schüsse(&self) -> &dyn SchussRepository {
