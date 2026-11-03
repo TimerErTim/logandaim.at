@@ -2,11 +2,12 @@ name: logandaim
 
 services:
   backend:
-    build:
-      # The release binary `pr/base` built, copied here by `deploy/backend`;
-      # `docker compose build` wraps it in the runtime image and compiles nothing.
-      context: .
-      dockerfile: deploy/Dockerfile
+    # `deploy:vps` exports the exact reference it was asked to deploy, and the
+    # required form fails to render if it is missing. A default would let a deploy
+    # silently run whatever a moving tag pointed at. For a local build, add
+    # `compose.build.yaml`:
+    #   docker compose -f compose.yaml -f compose.build.yaml up --build
+    image: ${LOGANDAIM_IMAGE:?Set LOGANDAIM_IMAGE to ghcr.io/<owner>/logandaim-server:sha-<commit>, or use compose.build.yaml}
     restart: unless-stopped
     env_file:
       - path: ./secrets/mail.env

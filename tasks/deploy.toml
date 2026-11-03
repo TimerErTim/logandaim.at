@@ -1,0 +1,18 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+
+# Deploying is a task like every other step: `main.yml` calls this, and an operator
+# calls the same command for a manual deploy or a rollback. The VPS never runs mise:
+# the task runs where the SSH credentials are and streams the remote half in.
+
+["deploy:vps"]
+description = "Deploy a published server image to the production VPS over SSH"
+usage = """
+arg "<image>" help="Image reference: ghcr.io/<owner>/logandaim-server:sha-<commit>"
+arg "<revision>" help="Full commit the image was built from"
+flag "--host <host>" env="VPS_HOST" help="VPS hostname"
+flag "--user <user>" env="VPS_USER" help="VPS deploy account"
+flag "--api-domain <domain>" env="API_DOMAIN" help="Public API hostname for the health check"
+flag "--dir <dir>" env="VPS_DEPLOY_DIR" help="Repository checkout on the VPS (default ~/logandaim.at)"
+flag "--identity <path>" env="VPS_SSH_IDENTITY" help="SSH private key (default ~/.ssh/id_ed25519)"
+"""
+run = "bash {{ vars.REPO_ROOT }}/tasks/scripts/deploy-vps.sh"

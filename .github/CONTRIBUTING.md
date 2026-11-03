@@ -129,9 +129,10 @@ history.
 | `pr/main` | Pull requests into `main` | Conventional title, `dev` or `hotfix/*` source, and a `## Release description` section. |
 | `release-check` | Pull requests into `main`, called by the push to `main` | Versions agree, version bumped past the last release tag, dated changelog section with entries, the release does not exist yet, and the release body can be assembled. |
 | `Test results` | A completed `CI` run on a pull request | Publishes the JUnit report `pr/base` uploads as a check run with per-suite counts and failure details. Informational: it never blocks a merge and is not a required check. |
+| `deploy/image` | Push to `main` | Wraps the tested server binary in the runtime image and pushes it to GHCR. |
+| `deploy/backend` | Push to `main` | Pulls the image `deploy/image` published and deploys it over SSH with `mise run deploy:vps`. |
 | `deploy/pages` | Push to `main` | Deploys the static export `pr/base` built. |
 | `deploy/release` | Push to `main` | Creates the source-only GitHub release. |
-| `deploy/backend` | Push to `main` | Deploys the server binary `pr/base` built, over SSH to the VPS. |
 
 `pr/dev` and `pr/main` both always run and pass when they do not apply, so their names exist on
 every pull request and can be required on either branch.
@@ -175,9 +176,10 @@ daemon.
 
 The Pages deployment reuses the export `pr/base` built, with `NEXT_PUBLIC_LOGANDAIM_API_URL` (repo
 variable `LOGANDAIM_API_URL`) and a base path taken from `actions/configure-pages` in that same job.
-Both deployments consume what the gate produced: the export and the server binary are uploaded as
-`pages-export` and `server` artefacts on a `main` push only, so a pull request that is still being
-reviewed stores nothing.
+The backend deployment reuses the binary from the same gate: `deploy/image` wraps it in the runtime
+image and pushes it to GHCR, and `deploy/backend` deploys that image by `sha-<commit>` tag with
+`mise run deploy:vps`. Both artefacts are uploaded on a `main` push only, so a pull request that is
+still being reviewed stores nothing.
 
 Useful tasks:
 
@@ -191,6 +193,7 @@ Useful tasks:
 | `mise run release:version <kind>` | Bump the workspace and frontend versions. |
 | `mise run release:notes <version> --pr <n>` | Preview the release body. |
 | `mise run release:publish` | Create the release for the current commit (the workflow runs it). |
+| `mise run deploy:vps <reference> <commit>` | Deploy a published `sha-<commit>` image to the VPS, or roll back by naming an older one. |
 | `mise daemons stop` | Stop the verify daemons after a local run. |
 
 ## Workflow

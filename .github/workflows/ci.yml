@@ -120,9 +120,11 @@ jobs:
           check_annotations: false
           include_skipped: true
 
-      # The two artefacts `main.yml` deploys. A `main` push is the only run whose
+      # The two artefacts `main.yml` ships. A `main` push is the only run whose
       # result is deployed, so pull requests and `dev` upload nothing and keep their
-      # storage. Retention is the deployment's window, not a debugging window.
+      # storage. Retention is the deployment's window, not a debugging window: the
+      # binary is wrapped into the runtime image and pushed to GHCR, the export goes
+      # to Pages.
       - name: Upload the server binary
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7
