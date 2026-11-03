@@ -34,14 +34,12 @@ fn wiederherstellung_from_row(row: &Row) -> RepositoryResult<Versioned<PasswortW
     let expires_at_raw: String = row.get(3).contextualize(RepositoryError::Data)?;
     let spent_at_raw: Option<String> = row.get(4).contextualize(RepositoryError::Data)?;
 
-    let id = parse_uuid(&id_raw).contextualize(RepositoryError::Data)?;
-    let konto_id = parse_uuid(&konto_id_raw).contextualize(RepositoryError::Data)?;
+    let id = parse_uuid(&id_raw)?;
+    let konto_id = parse_uuid(&konto_id_raw)?;
     let token_hash =
         SecretTokenHash::from_hex(token_hash_raw).change_context(RepositoryError::Data)?;
-    let expires_at = parse_datetime(&expires_at_raw).contextualize(RepositoryError::Data)?;
-    let spent_at = spent_at_raw
-        .map(|wert| parse_datetime(&wert).contextualize(RepositoryError::Data))
-        .transpose()?;
+    let expires_at = parse_datetime(&expires_at_raw)?;
+    let spent_at = spent_at_raw.map(|wert| parse_datetime(&wert)).transpose()?;
 
     Ok(Versioned::new(
         parse_version(row, 5)?,

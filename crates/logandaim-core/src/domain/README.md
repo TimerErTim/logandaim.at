@@ -9,7 +9,7 @@ Keep these domain-agnostic rules when replacing domain types. Examples use place
 ## Layout
 
 - One file per aggregate or value-object family, named after the German domain term
-  (`ziel.rs`, `wertung.rs`), never after a technical role (`model.rs`, `types.rs`).
+  (`schuss.rs`, `runde.rs`), never after a technical role (`model.rs`, `types.rs`).
 - `mod.rs` declares the modules and re-exports the public types (`pub use ziel::Ziel;`), so callers
   write `crate::domain::Ziel`.
 - The domain depends on nothing outside `crate` except value libraries (`uuid`, `chrono`,

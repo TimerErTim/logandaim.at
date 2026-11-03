@@ -27,8 +27,7 @@ const SELECT: &str = r#"SELECT id, benutzer_id, refresh_token_hash, public_key,
     created_at, expires_at, spent_at, revoked_at, _version FROM "sessions""#;
 
 fn option_datetime(raw: Option<String>) -> RepositoryResult<Option<chrono::DateTime<chrono::Utc>>> {
-    raw.map(|wert| parse_datetime(&wert).contextualize(RepositoryError::Data))
-        .transpose()
+    raw.map(|wert| parse_datetime(&wert)).transpose()
 }
 
 fn session_from_row(row: &Row) -> RepositoryResult<Versioned<Session>> {
@@ -41,12 +40,12 @@ fn session_from_row(row: &Row) -> RepositoryResult<Versioned<Session>> {
     let spent_at_raw: Option<String> = row.get(6).contextualize(RepositoryError::Data)?;
     let revoked_at_raw: Option<String> = row.get(7).contextualize(RepositoryError::Data)?;
 
-    let id = parse_uuid(&id_raw).contextualize(RepositoryError::Data)?;
-    let benutzer_id = parse_uuid(&benutzer_id_raw).contextualize(RepositoryError::Data)?;
+    let id = parse_uuid(&id_raw)?;
+    let benutzer_id = parse_uuid(&benutzer_id_raw)?;
     let refresh_token_hash =
         SecretTokenHash::from_hex(refresh_token_hash_raw).change_context(RepositoryError::Data)?;
-    let created_at = parse_datetime(&created_at_raw).contextualize(RepositoryError::Data)?;
-    let expires_at = parse_datetime(&expires_at_raw).contextualize(RepositoryError::Data)?;
+    let created_at = parse_datetime(&created_at_raw)?;
+    let expires_at = parse_datetime(&expires_at_raw)?;
 
     Ok(Versioned::new(
         parse_version(row, 8)?,
