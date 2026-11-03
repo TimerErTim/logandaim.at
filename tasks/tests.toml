@@ -1,11 +1,12 @@
 ["test:unit"]
 description = "Run the isolated tests (nextest profile `unit`, no external service)"
-run = "cargo nextest run --workspace --profile unit"
+# The profile is the one thing the product ships with, so the tests exercise it.
+run = "cargo nextest run --workspace --profile unit --release"
 
 ["test:e2e"]
 description = "Run the end-to-end tests (nextest profile `e2e`) against a real Mailpit"
 daemons = ["mailpit"]
-run = "cargo nextest run --workspace --profile e2e"
+run = "cargo nextest run --workspace --profile e2e --release"
 
 ["test"]
 description = "Run every test: unit first, then e2e with its services"

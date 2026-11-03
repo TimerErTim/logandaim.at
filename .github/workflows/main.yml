@@ -1,9 +1,13 @@
 name: Main
 
 # Push to `main` means a release pull request was merged: deploy the static
-# frontend, deploy the backend to the VPS, then cut a source-only GitHub release.
-# The tag is created by this workflow, never pushed by a human, so a failing
-# gate cannot leave a tag behind.
+# frontend and the backend, then cut a source-only GitHub release tagged `vX.Y.Z`.
+# The tag is created by this workflow, never pushed by a human, so a failing gate
+# cannot leave a tag behind.
+#
+# Nothing here builds the application. `pr/base` already compiled the release
+# profile for this revision and uploaded the server binary and the static export;
+# both deployments consume those artefacts, so what ships is what the gate tested.
 
 on:
   push:
@@ -15,16 +19,23 @@ permissions:
 
 concurrency:
   group: main-${{ github.ref }}
+  # A half-deployed site and a missing tag are worse than a queued run.
   cancel-in-progress: false
 
 jobs:
   ci:
     name: pr/base
+    # A called workflow cannot outrank its caller, so `checks: write` repeats here
+    # or the release gate's test report silently no-ops. `pages: read` repeats for
+    # the base path the export is built with.
     permissions:
       contents: read
       checks: write
+      pages: read
     uses: ./.github/workflows/ci.yml
 
+  # The same check a release pull request must pass, repeated here so a push that
+  # bypassed its pull request still fails before anything deploys and before the tag.
   release-check:
     name: release-check
     permissions:
@@ -45,42 +56,14 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
-
-      - name: Cache the npm downloads
-        uses: actions/cache@v4
+      # The export was built by `pr/base` with the same base path and API URL
+      # configured by `configure-pages` there. Deploying it as built is what makes
+      # the artifact under test the artifact that ships.
+      - name: Download the static export
+        uses: actions/download-artifact@v8
         with:
-          path: ~/.npm
-          key: npm-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: npm-${{ runner.os }}-
-
-      - name: Set up tooling
-        uses: ./.github/actions/setup
-
-      - name: Configure Pages
-        id: pages
-        uses: actions/configure-pages@v6
-
-      - name: Cache the Next.js build
-        uses: actions/cache@v4
-        with:
-          path: frontend/.next/cache
-          key: next-${{ runner.os }}-${{ steps.pages.outputs.base_path }}-${{ vars.LOGANDAIM_API_URL }}-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/src/**', 'frontend/public/**', 'frontend/next.config.ts') }}
-          restore-keys: |
-            next-${{ runner.os }}-${{ steps.pages.outputs.base_path }}-${{ vars.LOGANDAIM_API_URL }}-
-
-      - name: Build the static export
-        env:
-          NEXT_PUBLIC_LOGANDAIM_API_URL: ${{ vars.LOGANDAIM_API_URL }}
-          NEXT_PUBLIC_LOGANDAIM_BASE_PATH: ${{ steps.pages.outputs.base_path }}
-        run: |
-          set -eu
-          if [ -z "${NEXT_PUBLIC_LOGANDAIM_API_URL:-}" ]; then
-            echo "::error::Repository variable LOGANDAIM_API_URL is not set. The deployed frontend would call the API on its own origin."
-            exit 1
-          fi
-          mise run --force build:frontend
+          name: pages-export
+          path: frontend/out
 
       - name: Upload the export
         uses: actions/upload-pages-artifact@v5
@@ -93,7 +76,10 @@ jobs:
 
   deploy-backend:
     name: deploy/backend
-    needs: [ci, release-check, pages]
+    # Parallel with `deploy/pages`: the two deployments share no state, and neither
+    # may hold the other back. `deploy/release` waits for both, so a failed
+    # deployment still blocks the tag.
+    needs: [ci, release-check]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -101,9 +87,14 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v5
+      - name: Download the server binary
+        uses: actions/download-artifact@v8
+        with:
+          name: server
+          path: .deploy/incoming
 
+      # The workflow never builds the image. The VPS assembles the runtime image
+      # around this binary, so a deployment cannot ship a binary the gate did not run.
       - name: Prepare SSH credentials
         env:
           VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
@@ -118,6 +109,24 @@ jobs:
           printf '%s\n' "$VPS_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
 
+      # `scp` preserves no mode promises: the script makes the binary executable
+      # again before Docker copies it, and the runtime image sets its own mode.
+      - name: Copy the server binary to the VPS
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+        run: |
+          set -eu
+          test -n "$VPS_HOST" || { echo "::error::Set production variable VPS_HOST"; exit 1; }
+          test -n "$VPS_USER" || { echo "::error::Set production variable VPS_USER"; exit 1; }
+          [[ "$VPS_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "::error::VPS_HOST must be a DNS name or IPv4 address"; exit 1; }
+          [[ "$VPS_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo "::error::VPS_USER must be a valid Unix account name"; exit 1; }
+          ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes "$VPS_USER@$VPS_HOST" \
+            'mkdir -p ~/logandaim.at/.deploy/incoming'
+          scp -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes \
+            .deploy/incoming/logandaim-server \
+            "$VPS_USER@$VPS_HOST:~/logandaim.at/.deploy/incoming/logandaim-server"
+
       - name: Deploy requested revision on VPS
         env:
           VPS_HOST: ${{ vars.VPS_HOST }}
@@ -126,17 +135,14 @@ jobs:
           DEPLOY_REVISION: ${{ github.sha }}
         run: |
           set -eu
-          test -n "$VPS_HOST" || { echo "::error::Set production variable VPS_HOST"; exit 1; }
-          test -n "$VPS_USER" || { echo "::error::Set production variable VPS_USER"; exit 1; }
           test -n "$API_DOMAIN" || { echo "::error::Set production variable API_DOMAIN"; exit 1; }
-          [[ "$VPS_HOST" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "::error::VPS_HOST must be a DNS name or IPv4 address"; exit 1; }
-          [[ "$VPS_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo "::error::VPS_USER must be a valid Unix account name"; exit 1; }
           [[ "$API_DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "::error::API_DOMAIN must be a DNS hostname"; exit 1; }
           ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes "$VPS_USER@$VPS_HOST" \
-            "cd ~/logandaim.at && bash deploy/deploy-vps.sh '$DEPLOY_REVISION' '$API_DOMAIN'"
+            "cd ~/logandaim.at && bash deploy/deploy-vps.sh '$DEPLOY_REVISION' '$API_DOMAIN' .deploy/incoming/logandaim-server"
 
   release:
     name: deploy/release
+    # Both deployments must succeed: the release announces what is running.
     needs: [ci, release-check, pages, deploy-backend]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -144,6 +150,8 @@ jobs:
       contents: write
       pull-requests: read
     env:
+      # `release:publish` owns the tag and the body: the release check already
+      # verified that both can be produced.
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REPOSITORY: ${{ github.repository }}

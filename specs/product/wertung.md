@@ -12,7 +12,7 @@ superseded_by: null
 ## Problem
 
 Archers need the score of each Ziel and each Runde computed the same way every time, following the
-classic 3D 3-arrow table that Austrian parcours use. Archers also want to log every arrow they
+classic 3D 3-arrow table that Austrian parkour use. Archers also want to log every arrow they
 shoot, including extra misses and follow-up hits, for statistics.
 
 ## Outcome
@@ -94,7 +94,7 @@ Rules:
 
 ## Risks and open questions
 
-- [ ] Q-1: Do Austrian parcours use the same 3-arrow table everywhere? Assumed yes for MVP.
+- [ ] Q-1: Do Austrian parkour use the same 3-arrow table everywhere? Assumed yes for MVP.
 
 ## Verification
 

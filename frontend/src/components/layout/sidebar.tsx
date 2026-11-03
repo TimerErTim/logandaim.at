@@ -6,6 +6,7 @@ import type { NavCategory, NavItem } from "@/lib/navigation";
 import { isNavItemActive } from "@/lib/navigation";
 
 type SidebarProps = {
+  /** Already filtered for the current caller; the sidebar does not know roles. */
   categories: NavCategory[];
   homeItem: NavItem;
   pathname: string;
@@ -54,20 +55,26 @@ export function Sidebar({ categories, homeItem, pathname }: SidebarProps) {
           </Link>
         </div>
 
-        <div className="flex-1 space-y-8">
-          {categories.map((category) => (
-            <div key={category.label} className="space-y-2">
-              <h3 className="px-2 text-xs font-semibold tracking-wider text-secondary uppercase">
-                {category.label}
-              </h3>
-              <div className="space-y-1">
-                {category.items.map((item) => (
-                  <SidebarLink key={item.id} item={item} pathname={pathname} />
-                ))}
+        {categories.length > 0 ? (
+          <nav aria-label="Hauptnavigation" className="flex-1 space-y-8">
+            {categories.map((category) => (
+              <div key={category.label} className="space-y-2">
+                <h3 className="px-2 text-xs font-semibold tracking-wider text-secondary uppercase">
+                  {category.label}
+                </h3>
+                <div className="space-y-1">
+                  {category.items.map((item) => (
+                    <SidebarLink
+                      key={item.id}
+                      item={item}
+                      pathname={pathname}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </nav>
+        ) : null}
       </div>
     </aside>
   );
@@ -92,6 +99,7 @@ function SidebarLink({ item, pathname }: { item: NavItem; pathname: string }) {
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex min-h-11 w-full items-center gap-3 rounded-sm px-3 py-2 text-sm transition-colors",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
         active
           ? "bg-primary/10 font-semibold text-ink"
           : "text-ink hover:bg-surface-muted",

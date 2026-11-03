@@ -67,7 +67,7 @@ in the web UI, and the link in them is `frontendBasisUrl` plus `/registrierung` 
 
 ## Docker Compose deployment
 
-The VPS Compose deployment, environment template, Caddy configuration, and operator runbook are in [`docs/deployment.md`](../docs/deployment.md). Docker and Compose run on the VPS outside `mise`; the backend image installs and runs `mise` only during its build.
+The VPS Compose deployment, environment template, Caddy configuration, and operator runbook are in [`docs/deployment.md`](../docs/deployment.md). The deployed image contains the release binary CI built and tested; the VPS compiles nothing, so `mise` is not installed there.
 
 ## Spec Export
 

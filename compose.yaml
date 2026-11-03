@@ -3,8 +3,10 @@ name: logandaim
 services:
   backend:
     build:
+      # The release binary `pr/base` built, copied here by `deploy/backend`;
+      # `docker compose build` wraps it in the runtime image and compiles nothing.
       context: .
-      dockerfile: backend/server/Dockerfile
+      dockerfile: deploy/Dockerfile
     restart: unless-stopped
     env_file:
       - path: ./secrets/mail.env

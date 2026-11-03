@@ -1,14 +1,22 @@
 use error_stack::{AttachmentKind, Frame, FrameKind, Report};
 use logandaim_core::ThreadSafeError;
 
+/// The one error envelope every failed request answers with.
+///
+/// It is the error chain flattened, not a code enum: read `message` for what failed and
+/// `attachments` for the free-text detail attached to that failure. A `500` deliberately
+/// answers a constant body, so an internal failure never leaks its cause.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StructuredError {
+    /// What failed, as the error's own display text.
     pub message: String,
+    /// Free-text detail attached to that failure.
     pub attachments: Vec<String>,
+    /// The nested causes beneath it.
     pub sources: Vec<StructuredError>,
 }
 

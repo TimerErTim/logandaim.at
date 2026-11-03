@@ -14,16 +14,17 @@ run = 'exec serve out --listen tcp://{{ usage.host }}:{{ usage.port }} --no-clip
 ["run:server"]
 description = "Build and run the backend server with a throwaway database"
 usage = """
-flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build and run the release profile"
 flag "--host <host>" help="Address to bind to" default="127.0.0.1"
 flag "--port <port>" env="PORT" help="Port to bind to" default="{{ vars.API_PORT }}"
 flag "--database-url <url>" env="LOGANDAIM_DATABASE_URL" help="Database URL; :memory: keeps the run throwaway" default=":memory:"
 flag "--object-store-dir <dir>" env="LOGANDAIM_OBJECT_STORE_DIR" help="Object store directory, created when missing" default="target/smoke-server/storage"
 flag "--signing-key <path>" env="LOGANDAIM_SIGNING_KEY_PATH" help="Ed25519 signing key file"
 """
-depends = ["LOGANDAIM_BUILD_RELEASE={{ usage.release }} build:server"]
+# The release profile, like every other consumer of the binary: the `server` verify
+# daemon is what CI smoke-tests before `main.yml` deploys the same binary.
+depends = ["build:server"]
 run = """
-exec target/{% if usage.release %}release{% else %}debug{% endif %}/logandaim-server \
+exec target/release/logandaim-server \
   --bind-address '{{ usage.host }}' \
   --bind-port '{{ usage.port }}' \
   --database-url '{{ usage.database_url }}' \

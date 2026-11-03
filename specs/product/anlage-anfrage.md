@@ -12,13 +12,13 @@ superseded_by: null
 ## Problem
 
 Only a `Systemadministrator` creates an `Anlage` (see [`stammdaten.md`](stammdaten.md),
-[`konto.md`](konto.md) rule 15). A club that wants its parcours in the product therefore has no
+[`konto.md`](konto.md) rule 15). A club that wants its parkour in the product therefore has no
 way in unless someone already knows the operator. Manual seeding covers the 2–3 pilot Anlagen and
 nothing after them.
 
 ## Outcome
 
-A person with authority over a real 3D parcours can ask for it to be added, from inside the
+A person with authority over a real 3D parkour can ask for it to be added, from inside the
 product, and a `Systemadministrator` can accept or reject that request with a recorded reason. The
 requester never gains authority over an `Anlage` by asking.
 

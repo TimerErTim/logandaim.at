@@ -1,12 +1,13 @@
 #:schema https://mise.jdx.dev/schema/mise-task.json
 
-# PRs and local runs build the debug profile; CI release runs pass `--release`.
+# The release profile is the build, not a CI variant of it. CI, the verify daemons,
+# and the VPS all run the same binary this produces, so a defect that only appears
+# with optimisations on cannot hide behind a gate that compiled something else.
+# `mise run dev:server` still uses `cargo run` for a fast debug loop.
+
 ["build:server"]
-description = "Build the standalone backend server binary"
-usage = """
-flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Build with the release profile"
-"""
-run = 'cargo build -p logandaim-server{% if usage.release %} --release{% endif %}'
+description = "Build the standalone backend server binary (release profile)"
+run = "cargo build -p logandaim-server --release"
 
 ["build:frontend"]
 description = "Build the static Next.js frontend export"

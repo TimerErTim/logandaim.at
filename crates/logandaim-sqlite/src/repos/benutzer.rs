@@ -28,9 +28,9 @@ fn benutzer_from_row(row: &Row) -> RepositoryResult<Versioned<Benutzer>> {
     let rolle_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
     let created_at_raw: String = row.get(2).contextualize(RepositoryError::Data)?;
 
-    let id = parse_uuid(&id_raw).contextualize(RepositoryError::Data)?;
+    let id = parse_uuid(&id_raw)?;
     let rolle: Rolle = rolle_raw.parse().change_context(RepositoryError::Data)?;
-    let created_at = parse_datetime(&created_at_raw).contextualize(RepositoryError::Data)?;
+    let created_at = parse_datetime(&created_at_raw)?;
 
     Ok(Versioned::new(
         parse_version(row, 3)?,

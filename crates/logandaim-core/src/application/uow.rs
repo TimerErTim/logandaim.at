@@ -8,9 +8,9 @@ use std::fmt::Debug;
 
 use crate::application::ThreadSafeError;
 use crate::ports::{
-    BenutzerRepository, EmailBestätigungRepository, KontoRepository,
-    PasswortWiederherstellungRepository, RepositoryError, RepositoryResult, SchussRepository,
-    SessionRepository,
+    AnlageRepository, BenutzerRepository, EmailBestätigungRepository, KontoRepository,
+    PasswortWiederherstellungRepository, RepositoryError, RepositoryResult, RundeRepository,
+    SchussRepository, SessionRepository,
 };
 
 /// Active unit of work. `commit` / `rollback` consume it.
@@ -104,6 +104,14 @@ impl UnitOfWork<'_> {
         self.as_impl().schüsse()
     }
 
+    pub fn anlagen(&self) -> &dyn AnlageRepository {
+        self.as_impl().anlagen()
+    }
+
+    pub fn runden(&self) -> &dyn RundeRepository {
+        self.as_impl().runden()
+    }
+
     pub fn benutzer(&self) -> &dyn BenutzerRepository {
         self.as_impl().benutzer()
     }
@@ -157,6 +165,14 @@ impl UnitOfWorkImpl for LockedUnitOfWorkImpl<'_> {
         self.inner.schüsse()
     }
 
+    fn anlagen(&self) -> &dyn AnlageRepository {
+        self.inner.anlagen()
+    }
+
+    fn runden(&self) -> &dyn RundeRepository {
+        self.inner.runden()
+    }
+
     fn benutzer(&self) -> &dyn BenutzerRepository {
         self.inner.benutzer()
     }
@@ -186,6 +202,10 @@ pub trait UnitOfWorkImpl: Send + Sync {
 
     /// One accessor per repository. Each feature slice adds exactly one.
     fn schüsse(&self) -> &dyn SchussRepository;
+
+    fn anlagen(&self) -> &dyn AnlageRepository;
+
+    fn runden(&self) -> &dyn RundeRepository;
 
     fn benutzer(&self) -> &dyn BenutzerRepository;
 

@@ -129,9 +129,9 @@ history.
 | `pr/main` | Pull requests into `main` | Conventional title, `dev` or `hotfix/*` source, and a `## Release description` section. |
 | `release-check` | Pull requests into `main`, called by the push to `main` | Versions agree, version bumped past the last release tag, dated changelog section with entries, the release does not exist yet, and the release body can be assembled. |
 | `Test results` | A completed `CI` run on a pull request | Publishes the JUnit report `pr/base` uploads as a check run with per-suite counts and failure details. Informational: it never blocks a merge and is not a required check. |
-| `deploy/pages` | Push to `main` | Deploys `frontend/out` to GitHub Pages. |
+| `deploy/pages` | Push to `main` | Deploys the static export `pr/base` built. |
 | `deploy/release` | Push to `main` | Creates the source-only GitHub release. |
-| `deploy/backend` | Push to `main` | Reserved for #15 and #24. |
+| `deploy/backend` | Push to `main` | Deploys the server binary `pr/base` built, over SSH to the VPS. |
 
 `pr/dev` and `pr/main` both always run and pass when they do not apply, so their names exist on
 every pull request and can be required on either branch.
@@ -155,6 +155,12 @@ and backend). `build` precedes `test` so a compile error is reported by the buil
 failed test. CI runs the same task, so a green local run means a green pipeline unless the
 environment differs.
 
+The gate compiles the **release** profile — `build:server`, both nextest profiles, `export:openapi`,
+and the `server` verify daemon all use `--release`. That is the profile the deployment runs, so a
+defect that only appears with optimisations on cannot hide behind a gate that compiled something
+else. A debug build is still one command away (`cargo build`, `mise run dev:server`); it is simply
+not what the gate proves.
+
 `test` is a wrapper over two nextest profiles (`.config/nextest.toml`): `test:unit` runs everything
 that needs no external service, `test:e2e` runs the end-to-end binaries with the Mailpit daemon.
 Both write `target/nextest/<profile>/junit.xml`, on failure too, and CI publishes them as the
@@ -167,9 +173,11 @@ Tasks are defined in `tasks/*.toml`; the release and version checks delegate the
 with `LOGANDAIM_SERVER_ORIGIN` / `LOGANDAIM_FRONTEND_URL`), and `verify:*` connects the two under a
 daemon.
 
-The Pages deployment builds with `NEXT_PUBLIC_LOGANDAIM_API_URL` (repo variable
-`LOGANDAIM_API_URL`) and a base path taken from `actions/configure-pages`. The export is deployed
-as built; `pr/base` already smoke-tested the same code before the merge.
+The Pages deployment reuses the export `pr/base` built, with `NEXT_PUBLIC_LOGANDAIM_API_URL` (repo
+variable `LOGANDAIM_API_URL`) and a base path taken from `actions/configure-pages` in that same job.
+Both deployments consume what the gate produced: the export and the server binary are uploaded as
+`pages-export` and `server` artefacts on a `main` push only, so a pull request that is still being
+reviewed stores nothing.
 
 Useful tasks:
 

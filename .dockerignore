@@ -1,14 +1,15 @@
-.git
-.jj
-.cursor
-node_modules
-frontend/node_modules
-frontend/.next
-frontend/out
-target
-**/target
-.env
-.env.*
-!.env.example
-secrets
-data
+# Build context for the runtime image: the release binary alone. Nothing is
+# compiled on the VPS. `pr/base` built and tested this binary, `deploy/backend`
+# copied it to `.deploy/incoming/`, and this whitelist keeps the context a few
+# megabytes instead of the whole checkout.
+#
+# `*` first, then the exception. Docker applies the patterns in order and does not
+# descend into an excluded directory, so each parent of a wanted file is
+# re-included explicitly; a bare `!path/file` under an excluded directory is
+# silently ignored.
+*
+!deploy
+!deploy/Dockerfile
+!.deploy
+!.deploy/incoming
+!.deploy/incoming/logandaim-server

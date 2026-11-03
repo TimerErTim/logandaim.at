@@ -11,15 +11,19 @@
 mod login;
 mod password;
 mod registration;
+mod runde;
 mod schuss;
 mod session;
+mod stammdaten;
 mod user;
 
 pub use login::*;
 pub use password::*;
 pub use registration::*;
+pub use runde::*;
 pub use schuss::*;
 pub use session::*;
+pub use stammdaten::*;
 pub use user::*;
 
 use chrono::{DateTime, Utc};

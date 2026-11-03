@@ -138,7 +138,7 @@ further down and a delivery issue; nothing here is implementable until that sect
 7. **Delete `Benutzer`.** In settings the `Benutzer` re-enters the `Passwort` and confirms; the
    `Benutzer`, its `Konto`, its sessions, and its personal data are gone, its `Runden` stay
    anonymized for aggregate statistics, and the login ends.
-8. **Superuser.** The `Systemadministrator` logs in and creates an `Anlage`, its Parcours, Ziele, and
+8. **Superuser.** The `Systemadministrator` logs in and creates an `Anlage`, its Parkour, Ziele, and
    Pflöcke, and grants another `Benutzer` the `Administrator` `AnlageVerwaltung` (master-data spec).
 
 ## Domain terms and business rules
@@ -194,7 +194,7 @@ Rules:
    The `Runden` and `Schüsse` stay as `Anonymisierte Runde` records for aggregate statistics.
    Anonymization contract: kept are the sporting results, dates, and master-data references;
    stripped are the `Benutzer` reference and every personal attribute, so nobody can attribute a kept
-   `Runde` to a person. It is irreversible. Master data (Anlage, Parcours, Ziel, Pflock) is
+   `Runde` to a person. It is irreversible. Master data (Anlage, Parkour, Ziel, Pflock) is
    untouched. The freed `E-Mail-Adresse` can register again.
 9. Account-level authority never rises through self-service. A `Systemadministrator` is provisioned
    out of band (decision log, Q-2; tracked in issue #34). No API path promotes a `Benutzer`.
