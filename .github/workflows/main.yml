@@ -1,11 +1,13 @@
 name: Main
 
-# Push to `main`: deploy the frontend and backend, then cut the release. Nothing
-# here builds the application; `pr/base` compiled and tested what ships.
+# Push to `main`: deploy the frontend and backend, then cut the release.
+# `workflow_dispatch` deploys the same revision again without releasing: an operator
+# re-runs a rollout without cutting a second release for a version already shipped.
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,8 +19,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Everything below reuses `pr/base`'s artefacts and tags `:main`, which only exist
+  # for this ref. A dispatch from any other branch would deploy it to production.
+  precheck:
+    name: deploy/precheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require the main branch
+        run: |
+          set -eu
+          test "$GITHUB_REF" = "refs/heads/main" || {
+            echo "::error::Deployments run from main, not $GITHUB_REF. Dispatch this workflow from main."
+            exit 1
+          }
+
   ci:
     name: pr/base
+    needs: [precheck]
     # A called workflow cannot outrank its caller, so these repeat here.
     permissions:
       contents: read
@@ -28,6 +46,7 @@ jobs:
 
   release-check:
     name: release-check
+    needs: [precheck]
     permissions:
       contents: read
       pull-requests: read
@@ -35,7 +54,7 @@ jobs:
 
   pages:
     name: deploy/pages
-    needs: [ci]
+    needs: [ci, release-check]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -195,6 +214,9 @@ jobs:
 
   release:
     name: deploy/release
+    # Push only: a manual dispatch redeploys but never cuts a second release for a
+    # version that is already out.
+    if: github.event_name == 'push'
     needs: [ci, release-check, pages, deploy-backend]
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -38,6 +38,9 @@ const workspaceVersion = (manifest = readFileSync("Cargo.toml", "utf8")) => {
 const isCi = Boolean(process.env.GITHUB_ACTIONS || process.env.CI);
 const version = workspaceVersion();
 const pullRequestArg = process.env.usage_pr ?? "";
+// A manual dispatch re-deploys a revision whose release already exists; a push must
+// never publish a second release for a shipped version.
+const allowExistingRelease = Boolean(process.env.usage_allow_existing_release);
 
 if (!version) fail("no version in [workspace.package] of Cargo.toml");
 
@@ -109,6 +112,10 @@ try {
 }
 
 if (tryGh("release", "view", `v${version}`, "--repo", repo).ok) {
+  if (allowExistingRelease) {
+    console.log(`check:release: v${version} already released; redeploy only`);
+    process.exit(0);
+  }
   fail(`release v${version} already exists on ${repo}; bump the version`);
 }
 

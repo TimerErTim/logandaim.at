@@ -37,9 +37,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        # `--pr` exists only on a pull request event; the push to `main` derives
-        # the pull request from the merge commit instead.
+          PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+          # A push releases; a dispatch only redeploys, so the version is already out.
+          LOGANDAIM_ALLOW_EXISTING_RELEASE: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           set -eu
           if [ -n "${PR:-}" ]; then
