@@ -135,7 +135,7 @@ pub struct Cli {
     #[arg(long, env = "LOGANDAIM_SMTP_PORT")]
     pub smtp_port: Option<u16>,
 
-    /// SMTP transport: klar, starttls, or implizit
+    /// SMTP transport: klar, start-tls, or implizit
     #[arg(long, env = "LOGANDAIM_SMTP_VERSCHLUESSELUNG")]
     pub smtp_verschlüsselung: Option<SmtpVerschlüsselung>,
 
@@ -312,6 +312,30 @@ mod tests {
         assert_eq!(resolved.database_url, "from-env.db");
         assert_eq!(resolved.bind_port, 5000);
         assert_eq!(resolved.bind_address, "0.0.0.0");
+    }
+
+    /// The deployment sets this through Compose, where a rejected spelling stops the
+    /// container at startup. `clap` spells a `ValueEnum` kebab-case, so the environment
+    /// value must be `klar`, not the serialised `camelCase` name.
+    #[test_log::test]
+    fn smtp_verschlüsselung_wird_in_kebab_schreibweise_gelesen() {
+        let klar = Cli::try_parse_from(["logandaim-server"]).unwrap();
+        assert_eq!(klar.smtp_verschlüsselung, None);
+
+        let start =
+            Cli::try_parse_from(["logandaim-server", "--smtp-verschlüsselung", "start-tls"])
+                .expect("start-tls ist der von Compose erwartete Wert");
+        assert_eq!(
+            start.smtp_verschlüsselung,
+            Some(SmtpVerschlüsselung::StartTls)
+        );
+
+        // The serialised spelling is not an accepted CLI value, which is why compose must
+        // never carry it. Guarding it here keeps the two spellings from drifting back.
+        assert!(
+            Cli::try_parse_from(["logandaim-server", "--smtp-verschlüsselung", "startTls"])
+                .is_err()
+        );
     }
 
     #[test_log::test]

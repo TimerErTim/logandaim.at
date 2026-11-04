@@ -406,6 +406,10 @@ Open questions:
 - [ ] Q-6: Is the production mail channel a launch gate, or may the MVP launch against a
   self-hosted SMTP relay?
 
+Answered by the PO for the MVP: the deployment's own self-hosted relay sends transaction mail and
+starts with the stack, so mail is not an optional extra. Q-5 stays open for the sending domain and
+its SPF, DKIM and DMARC records.
+
 ### Email verification
 
 Issue: #28. Delivered as part of MVP registration, not as a separate feature.

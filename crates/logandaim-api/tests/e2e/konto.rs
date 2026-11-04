@@ -392,6 +392,57 @@ async fn ac7a_access_token_steht_nie_in_einem_cookie() {
     );
 }
 
+/// AC-17 across a restart: a second process with a *different* signing key reads the same
+/// database and must still accept the tokens the first one issued.
+///
+/// This is what makes a per-process key safe. Verification reads the public key on the
+/// session row, so a restart does not invalidate outstanding access tokens, and a renewal
+/// under the new key stamps the new key on the successor row. The second half is the part
+/// that used to be broken: a successor carrying the retired key would reject its own token.
+#[test_log::test(pollster::test)]
+async fn ac17_neustart_mit_neuem_schlüssel_lässt_sitzungen_intakt() {
+    let erste = E2eHarness::mit_datenbank().await;
+    let (access, cookie, _, _) = registriere(&erste, "anna@muster.at").await;
+
+    // The same database, but signed by a key the first process never saw — a restart with
+    // a freshly generated key.
+    let zweite = erste.neustart_mit_anderem_schlüssel().await;
+
+    let (status, body) = zweite.client.get_json_auth("/api/benutzer", &access).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "das alte Access-Token gilt weiter: {body}"
+    );
+
+    // Renewal under the new key: the successor row must carry the key that actually signs
+    // its access token, or the very next request would be a 401.
+    let (status, body, neuer_cookie) = zweite
+        .client
+        .post_cookie("/api/session/erneuern", Some(&cookie))
+        .await;
+    assert_eq!(status, StatusCode::OK, "Erneuerung nach Neustart: {body}");
+    let neuer_cookie = refresh_cookie(&neuer_cookie.expect("Set-Cookie bei Erneuerung"));
+
+    let neues_access = body["accessToken"].as_str().expect("accessToken im Body");
+    let (status, body) = zweite
+        .client
+        .get_json_auth("/api/benutzer", neues_access)
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "die Folgezeile verifiziert ihr eigenes Token: {body}"
+    );
+
+    // And that successor renews again, so the family survives more than one restart.
+    let (status, _, _) = zweite
+        .client
+        .post_cookie("/api/session/erneuern", Some(&neuer_cookie))
+        .await;
+    assert_eq!(status, StatusCode::OK);
+}
+
 // ------------------------------------------------------------------------------- AC-8
 
 #[test_log::test(pollster::test)]

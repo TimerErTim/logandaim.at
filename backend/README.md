@@ -40,15 +40,24 @@ mise sets environment variables for the server suitable for a dev environment au
 
 Notes on the account keys:
 
-- `signingKeyPath` is optional. Absent, the server generates a throwaway Ed25519 key per
-  process — convenient locally, and it invalidates every issued token on restart. A long-lived
-  deployment sets a PKCS#8 PEM path instead. There is no key id: each session row stores the
-  public key it was issued under, so verification needs no key table (AC-17).
+- `signingKeyPath` is optional, and production leaves it unset. Absent, the server generates an
+  Ed25519 key per process. That does **not** invalidate issued tokens on restart: each session row
+  stores the public key its access token was signed under, so verification reads the row and a new
+  process key only affects sessions it issues from then on (AC-17). Set a PKCS#8 PEM path only to
+  pin one key across processes; there is no key id and no key table either way.
+  The value matters in one place: a renewed session's successor row must carry the key that
+  actually signs its token, which is what `Session::erneuern` takes as its `public_key_hex` argument.
 - `tokenIssuer` and `tokenAudience` are the `iss` and `aud` claims, verified on every request.
 - `frontendBasisUrl` is where the browser app is served (`http://localhost:3001` by default). Mailed
   links are this origin plus the product's own route — `/registrierung` and `/passwort` — so a
   deployment never configures two full URLs that can drift apart from the routes they name.
 - `smtpHost` absent means "no relay": mails fail and are logged, never failing the request (NFR-5).
+- `smtpVerschlüsselung` accepts `klar`, `start-tls`, or `implizit` (kebab-case, as `clap` spells a
+  `ValueEnum`). `startTls` is rejected at startup, not silently ignored. Under `start-tls` or
+  `implizit` the certificate is verified against `smtpHost`, so that value must be the name the
+  certificate is issued for; there is no separate certified-name override.
+- The trust store is the compiled-in Mozilla root set. A public CA certificate verifies; a
+  self-signed or private-CA certificate cannot, and there is no configuration to add a root.
 - `LOGANDAIM_SUPERUSER_EMAIL` is the only way a `Systemadministrator` is created — there is no
   self-service elevation (rule 9). Promotion is idempotent and tolerates an address that has not
   registered yet; it is retried on the next start.
@@ -64,6 +73,10 @@ mise daemons start mailpit   # SMTP 127.0.0.1:1025, web UI http://127.0.0.1:8025
 
 The e2e suite does the same through the mise `mailpit` daemon. Confirmation and recovery mails open
 in the web UI, and the link in them is `frontendBasisUrl` plus `/registrierung` or `/passwort`.
+
+## Docker Compose deployment
+
+The VPS Compose deployment, environment template, Caddy configuration, and operator runbook are in [`docs/deployment.md`](../docs/deployment.md). The deployed image contains the release binary CI built and tested; the VPS compiles nothing, so `mise` is not installed there.
 
 ## Spec Export
 

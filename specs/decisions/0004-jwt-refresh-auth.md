@@ -59,12 +59,16 @@ on reuse.
    their refresh expiry. Deleting rows would make a replayed token indistinguishable from an unknown
    one and would lose the audit trail.
 5. **The public key travels on the session row.** Signing is Ed25519 behind a `Signing`
-   port; the private key comes from deployment configuration (or is generated per process when
-   none is configured) and never reaches the database. Each `sessions` row stores the hex public
-   key its access token was issued under, so verification loads the session and checks the
-   signature against that row's key. There is no key table and no join, which means a token whose
-   session row is gone is a 401 without a second lookup (AC-17). Rotating a key therefore means a
-   new session per client, and old sessions stop verifying once their rows are purged.
+   port; the private key is generated per process by default (a PKCS#8 path can pin it) and never
+   reaches the database. Each `sessions` row stores the hex public key its access token was
+   issued under, so verification loads the session and checks the signature against that row's
+   key. There is no key table and no join, which means a token whose session row is gone is a 401
+   without a second lookup (AC-17).
+   A per-process key is therefore safe across restarts: a restart does not invalidate outstanding
+   tokens, because each row keeps the key it was signed with. The requirement is on rotation —
+   a renewed session's successor row must carry the key that signs its new token, not the retired
+   row's key, or the successor would reject its own token. Old sessions stop verifying only once
+   their rows are purged.
 6. **Transport and storage.** `Authorization: Bearer` over HTTPS only; no token in a URL, no token in
    a query string, no token in a log line. The access token stays in frontend memory and is never
    written to `localStorage` or a cookie. The refresh token travels in a `__Host-` cookie scoped to
@@ -95,8 +99,9 @@ on reuse.
 - The long-lived credential is not visible to JavaScript, so XSS cannot exfiltrate a one-month
   token; it can still act as the user for the current access token's lifetime. The frontend stays a
   static bundle from one origin to keep that surface small.
-- Deployment gains key management: an Ed25519 private key in configuration, or a generated
-  per-process key for a throwaway run (decision 5).
+- Deployment gains no key management: the default is a generated per-process key, which keeps
+  sessions valid across restarts because the key travels on the row (decision 5). Pinning a key
+  file is optional, not required, and removes nothing a generated key lacks.
 - The database gains one `sessions` row per renewal, each carrying its own public key, plus
   cleanup for expired ones. Rows are never deleted before their refresh lifetime ends, because
   replay detection needs to find a spent token's row.

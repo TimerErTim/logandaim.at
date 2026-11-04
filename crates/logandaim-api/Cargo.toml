@@ -45,6 +45,9 @@ logandaim-filesystemstore = { path = "../logandaim-filesystemstore" }
 logandaim-smtp = { path = "../logandaim-smtp" }
 test-log = { workspace = true }
 tracing-subscriber = { workspace = true }
+# The restart case opens one database file from two apps, so it needs a directory that
+# outlives a single `SQLiteInstance::in_temp_dir`.
+tempdir = "0.3.7"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 # Only the AC-19 case needs a reactor: `lettre`'s async transport resolves the relay
 # through `tokio::net`, so it cannot run on `pollster`.

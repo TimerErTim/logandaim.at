@@ -108,7 +108,9 @@ impl UseCase<SessionAusgestellt> for Erneuerung {
 
             let folge_refresh =
                 RefreshToken::random().change_context(ErneuerungFehler::TokenErzeugen)?;
-            let (verbraucht, folge) = live.erneuern(folge_refresh.hash(), jetzt);
+            // The successor signs with the running key, so its row must carry that key.
+            let (verbraucht, folge) =
+                live.erneuern(folge_refresh.hash(), ctx.signing().public_key_hex(), jetzt);
 
             session.map_data(|_| verbraucht.into());
             uow.sessions()

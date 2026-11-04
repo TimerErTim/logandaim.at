@@ -100,8 +100,41 @@ fn lade_mail_sender(
         frontend_basis_url: config.frontend_basis_url.clone(),
     };
 
-    let sender = SmtpMailSender::neu(smtp).change_context(BackendServerError)?;
-    Ok(Arc::new(sender))
+    let sender = Arc::new(SmtpMailSender::neu(smtp).change_context(BackendServerError)?);
+    prüfe_mail_verbindung(Arc::clone(&sender));
+    Ok(sender)
+}
+
+/// Probe the relay without delaying startup: a bootstrapping relay must not stop the API
+/// from serving (NFR-5), and the verdict belongs in the log where a failed send would
+/// otherwise be the only evidence.
+fn prüfe_mail_verbindung(sender: Arc<SmtpMailSender>) {
+    tokio::spawn(async move {
+        // A first boot has to write its configuration and restart before it listens.
+        const VERSUCHE: u32 = 12;
+        let mut letzter_fehler = String::new();
+        for versuch in 1..=VERSUCHE {
+            match sender.prüfe_verbindung().await {
+                Ok(true) => {
+                    tracing::info!("SMTP-Relay erreichbar; Mailversand ist verfügbar");
+                    return;
+                }
+                Ok(false) => letzter_fehler = "Relay antwortet nicht auf NOOP".to_owned(),
+                Err(fehler) => letzter_fehler = format!("{fehler:?}"),
+            }
+            if versuch == VERSUCHE {
+                break;
+            }
+            tracing::debug!(
+                versuch,
+                "SMTP-Relay noch nicht erreichbar: {letzter_fehler}"
+            );
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        }
+        tracing::error!(
+            "SMTP-Relay nicht erreichbar; Transaktionsmails schlagen fehl: {letzter_fehler}"
+        );
+    });
 }
 
 /// Origin allowlist: the configured frontend plus the documented dev-server ports.
@@ -193,11 +226,33 @@ async fn bootstrap_superuser(app: &App) -> Result<(), Report<BackendServerError>
     Ok(())
 }
 
+/// Create the directory a configured database path lives in.
+///
+/// libsql creates the database file but not its parent, and the configured path is only
+/// resolved here, so this is where a missing directory has to be made. In-memory URLs and
+/// a bare file name have no parent to create.
+fn ensure_database_directory(database_url: &str) -> Result<(), Report<BackendServerError>> {
+    let Some(parent) = std::path::Path::new(database_url)
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    else {
+        return Ok(());
+    };
+    std::fs::create_dir_all(parent)
+        .change_context(BackendServerError)
+        .attach(format!(
+            "while creating the database directory `{}`",
+            parent.display()
+        ))?;
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Report<BackendServerError>> {
     let config = config::load().change_context(BackendServerError)?;
     init_tracing(config.log_dir.as_deref());
 
+    ensure_database_directory(&config.database_url)?;
     let sqlite = Arc::new(
         SQLiteInstance::local(&config.database_url)
             .await
@@ -275,4 +330,35 @@ async fn main() -> Result<(), Report<BackendServerError>> {
     .change_context(BackendServerError)?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Regression: a configured database path may name a directory that does not exist
+    /// yet. libsql creates the file but not its parent, so a first run with a nested path
+    /// failed with `Unable to open connection ... (14)`. Creating the parent is the
+    /// consumer's job, because the path is only known here.
+    #[test_log::test]
+    fn a_missing_database_directory_is_created() {
+        let root = tempdir::TempDir::new("logandaim-db-directory").unwrap();
+        let database = root.path().join("data.local").join("logandaim.db");
+        assert!(
+            !database.parent().unwrap().exists(),
+            "the test needs a parent that does not exist yet"
+        );
+
+        ensure_database_directory(database.to_str().unwrap()).expect("create the directory");
+
+        assert!(database.parent().unwrap().is_dir());
+    }
+
+    /// A bare file name has no directory to create, and an in-memory database has none
+    /// either; neither may fail.
+    #[test_log::test]
+    fn a_bare_file_name_needs_no_directory() {
+        ensure_database_directory("logandaim.db").expect("no directory to create");
+        ensure_database_directory(":memory:").expect("no directory to create");
+    }
 }

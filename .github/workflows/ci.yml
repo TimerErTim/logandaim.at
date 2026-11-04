@@ -1,7 +1,7 @@
 name: CI
 
-# The shared gate: pull requests, pushes to `dev`, and `main.yml`'s release gate.
-# Every step delegates to a mise task, so CI cannot drift from a developer machine.
+# Shared gate for pull requests, pushes to `dev`, and `main.yml`. It always uploads
+# both artefacts: a dispatch from a branch deploys the same build a push would.
 
 on:
   pull_request:
@@ -12,8 +12,8 @@ on:
 
 permissions:
   contents: read
-  # Publishes the test report as a check run.
   checks: write
+  pages: read
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -24,34 +24,78 @@ jobs:
   base:
     name: pr/base
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
+
+      # Before the gate: `next build` bakes the base path into the export.
+      - name: Configure Pages
+        id: configure-pages
+        continue-on-error: true
+        uses: actions/configure-pages@v6
+
+      - name: Check the deployment configuration
+        env:
+          NEXT_PUBLIC_LOGANDAIM_API_URL: ${{ vars.LOGANDAIM_API_URL }}
+          PAGES_OUTCOME: ${{ steps.configure-pages.outcome }}
+        run: |
+          set -eu
+          if [ -z "${NEXT_PUBLIC_LOGANDAIM_API_URL:-}" ]; then
+            echo "::error::Repository variable LOGANDAIM_API_URL is not set. The deployed frontend would call the API on its own origin."
+            exit 1
+          fi
+          if [ "$PAGES_OUTCOME" != "success" ]; then
+            echo "::error::Reading the Pages configuration failed, so the export has no verified base path."
+            exit 1
+          fi
+
+      # Must precede `setup`, which runs `mise deps install`.
+      - name: Cache the npm downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: npm-${{ runner.os }}-
 
       - name: Set up tooling
         uses: ./.github/actions/setup
 
       - name: Run the full gate
+        env:
+          NEXT_PUBLIC_LOGANDAIM_API_URL: ${{ vars.LOGANDAIM_API_URL }}
+          NEXT_PUBLIC_LOGANDAIM_BASE_PATH: ${{ steps.configure-pages.outputs.base_path }}
+          LOGANDAIM_BUILD_RELEASE: true
         run: mise run ci
 
-      # A missing file means `check` failed before the tests ran.
-      # `continue-on-error`: fork PRs have a read-only token, and the gate already
-      # decides the run.
       - name: Publish the test report
         if: always() && hashFiles('target/nextest/*/junit.xml') != ''
         continue-on-error: true
         uses: mikepenz/action-junit-report@v6
         with:
           report_paths: target/nextest/*/junit.xml
-          # The PR head, not the merge commit, so results attach to the PR.
+          # Attach to the PR head, not the merge commit.
           commit: ${{ github.event.pull_request.head.sha || github.sha }}
           check_name: Test results
-          # The gate already reports these failures.
           fail_on_failure: false
-          # nextest's JUnit has no file or line attributes to annotate inline.
           check_annotations: false
           include_skipped: true
+
+      - name: Upload the server binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: server
+          path: target/release/logandaim-server
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload the static export
+        uses: actions/upload-artifact@v7
+        with:
+          name: pages-export
+          path: frontend/out
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Stop verify daemons
         if: always()

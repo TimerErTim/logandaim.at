@@ -1,0 +1,15 @@
+# Build context for the runtime image: the release binary alone. Nothing is
+# compiled on the VPS or in the image job. `pr/base` built and tested this binary,
+# the `image` job downloaded it into `.deploy/incoming/`, and this whitelist keeps
+# the context a few megabytes instead of the whole checkout.
+#
+# `*` first, then the exception. Docker applies the patterns in order and does not
+# descend into an excluded directory, so each parent of a wanted file is
+# re-included explicitly; a bare `!path/file` under an excluded directory is
+# silently ignored.
+*
+!deploy
+!deploy/Dockerfile
+!.deploy
+!.deploy/incoming
+!.deploy/incoming/logandaim-server
