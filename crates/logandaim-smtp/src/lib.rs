@@ -43,9 +43,6 @@ pub struct SmtpKonfiguration {
     pub host: String,
     pub port: u16,
     pub verschlüsselung: Verschlüsselung,
-    /// Name the server certificate is verified against, when it differs from [`Self::host`].
-    /// `None` means the host is also the certified name.
-    pub tls_hostname: Option<String>,
     pub benutzername: Option<String>,
     pub passwort: Option<String>,
     pub absender: EmailAdresse,
@@ -64,7 +61,6 @@ impl SmtpKonfiguration {
             host: "127.0.0.1".to_owned(),
             port: 1025,
             verschlüsselung: Verschlüsselung::Klar,
-            tls_hostname: None,
             benutzername: None,
             passwort: None,
             absender,
@@ -74,15 +70,14 @@ impl SmtpKonfiguration {
     }
 }
 
-/// TLS parameters for the configured hop: verified against the certified name, not the
-/// host the connection is opened to.
+/// TLS parameters for the configured hop, verified against the configured host.
+///
+/// There is deliberately no separate certified-name override: the deployment submits over
+/// the Compose bridge in plain SMTP, where no certificate is involved, and a relay reached
+/// over TLS is addressed by the name its certificate is issued for. An override existed to
+/// reach a service name no CA certifies; that hop no longer uses TLS at all.
 fn tls_parameter(konfiguration: &SmtpKonfiguration) -> ResultReport<TlsParameters, MailError> {
-    let name = konfiguration
-        .tls_hostname
-        .as_deref()
-        .unwrap_or(&konfiguration.host)
-        .to_owned();
-    TlsParameters::new(name).change_context(MailError::NichtKonfiguriert)
+    TlsParameters::new(konfiguration.host.clone()).change_context(MailError::NichtKonfiguriert)
 }
 
 #[derive(Debug, Clone)]
@@ -100,10 +95,9 @@ impl SmtpMailSender {
                     .port(konfiguration.port)
             }
             Verschlüsselung::StartTls => {
-                // `starttls_relay` would verify the certificate against the host string,
-                // which is a container name on the Compose network and never what a CA
-                // issues for. Build the parameters from the certified name instead, and
-                // keep the connection pointed at the host that resolves.
+                // Built explicitly rather than with `starttls_relay` so the port stays
+                // caller-supplied; the certificate is verified against `host`, which for a
+                // TLS relay must therefore be the name the certificate is issued for.
                 let builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(
                     konfiguration.host.clone(),
                 )
@@ -199,25 +193,26 @@ mod tests {
         konfiguration
     }
 
-    /// The defect this exists for: a container name reaches the relay but is never what a
-    /// CA issues for. Verification has to follow `tls_hostname`, not `host`.
+    /// Verification follows the configured host, so a TLS relay must be named by the name
+    /// its certificate is issued for.
     #[test_log::test]
-    fn tls_wird_gegen_den_zertifizierten_namen_geprüft() {
-        let mut konfiguration = konfiguration();
-        konfiguration.tls_hostname = Some("mail.logandaim.at".to_owned());
-
-        let parameter = tls_parameter(&konfiguration).expect("TLS-Parameter bauen");
-
-        assert_eq!(parameter.domain(), "mail.logandaim.at");
-    }
-
-    /// Without an override the host is also the certified name, as before.
-    #[test_log::test]
-    fn ohne_überschreibung_ist_der_host_der_zertifizierte_name() {
+    fn tls_wird_gegen_den_host_geprüft() {
         let konfiguration = konfiguration();
 
         let parameter = tls_parameter(&konfiguration).expect("TLS-Parameter bauen");
 
         assert_eq!(parameter.domain(), "stalwart");
+    }
+
+    /// The names from a configuration address the same relay: a second host is a second
+    /// certificate, not an alias of the first.
+    #[test_log::test]
+    fn ein_anderer_host_wird_gegen_seinen_eigenen_namen_geprüft() {
+        let mut konfiguration = konfiguration();
+        konfiguration.host = "mail.logandaim.at".to_owned();
+
+        let parameter = tls_parameter(&konfiguration).expect("TLS-Parameter bauen");
+
+        assert_eq!(parameter.domain(), "mail.logandaim.at");
     }
 }

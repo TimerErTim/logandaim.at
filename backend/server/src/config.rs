@@ -37,8 +37,6 @@ pub struct ServerConfig {
     /// SMTP relay host. Absent means "no relay": every send fails and is logged.
     pub smtp_host: Option<String>,
     pub smtp_port: u16,
-    /// Name the relay's certificate is verified against when it differs from the host.
-    pub smtp_tls_hostname: Option<String>,
     pub smtp_verschlüsselung: SmtpVerschlüsselung,
     pub smtp_benutzername: Option<String>,
     pub smtp_passwort: Option<String>,
@@ -61,7 +59,6 @@ impl Default for ServerConfig {
             frontend_basis_url: "http://localhost:3001".into(),
             smtp_host: None,
             smtp_port: 1025,
-            smtp_tls_hostname: None,
             smtp_verschlüsselung: SmtpVerschlüsselung::Klar,
             smtp_benutzername: None,
             smtp_passwort: None,
@@ -138,11 +135,7 @@ pub struct Cli {
     #[arg(long, env = "LOGANDAIM_SMTP_PORT")]
     pub smtp_port: Option<u16>,
 
-    /// Name the relay certificate is verified against, when it differs from the host
-    #[arg(long, env = "LOGANDAIM_SMTP_TLS_HOSTNAME")]
-    pub smtp_tls_hostname: Option<String>,
-
-    /// SMTP transport: klar, starttls, or implizit
+    /// SMTP transport: klar, start-tls, or implizit
     #[arg(long, env = "LOGANDAIM_SMTP_VERSCHLUESSELUNG")]
     pub smtp_verschlüsselung: Option<SmtpVerschlüsselung>,
 
@@ -249,9 +242,6 @@ fn overlay(mut config: ServerConfig, cli: &Cli) -> ServerConfig {
     }
     if let Some(smtp_port) = cli.smtp_port {
         config.smtp_port = smtp_port;
-    }
-    if let Some(smtp_tls_hostname) = &cli.smtp_tls_hostname {
-        config.smtp_tls_hostname = Some(smtp_tls_hostname.clone());
     }
     if let Some(smtp_verschlüsselung) = cli.smtp_verschlüsselung {
         config.smtp_verschlüsselung = smtp_verschlüsselung;

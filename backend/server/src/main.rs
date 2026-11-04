@@ -88,7 +88,6 @@ fn lade_mail_sender(
     let smtp = SmtpKonfiguration {
         host: host.clone(),
         port: config.smtp_port,
-        tls_hostname: config.smtp_tls_hostname.clone(),
         verschlüsselung: match config.smtp_verschlüsselung {
             config::SmtpVerschlüsselung::Klar => Verschlüsselung::Klar,
             config::SmtpVerschlüsselung::StartTls => Verschlüsselung::StartTls,
