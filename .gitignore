@@ -16,8 +16,5 @@ target/
 
 .miserc.toml
 
-graphify-out/cost.json
-graphify-out/cache/
-graphify-out/*/
-frontend/graphify-out/
+graphify-out/
 *Zone.Identifier

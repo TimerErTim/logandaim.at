@@ -13,8 +13,7 @@
       "!.next",
       "!dist",
       "!build",
-      "!src/api/schema.ts",
-      "!**/graphify-out"
+      "!src/api/schema.ts"
     ]
   },
   "formatter": {
