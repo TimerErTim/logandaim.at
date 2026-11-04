@@ -75,6 +75,19 @@ impl SQLiteInstance {
         if path == Path::new(":memory:") {
             return Self::in_memory().await;
         }
+        // libsql creates the file but not the directory holding it, and a configured
+        // `data.local/…` path assumes a parent that a first run has not made yet.
+        if let Some(parent) = path
+            .parent()
+            .filter(|parent| !parent.as_os_str().is_empty())
+        {
+            std::fs::create_dir_all(parent)
+                .contextualize(RepositoryError::Connection)
+                .attach(format!(
+                    "while creating database directory: {}",
+                    parent.display()
+                ))?;
+        }
         tracing::info!(path = %path.display(), "intializing local database instance");
         let this = Self {
             variant: InstanceType::Local(

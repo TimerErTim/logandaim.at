@@ -14,13 +14,6 @@ secrets/
 
 target/
 
-# A bare server run in the repo root writes its default SQLite file here. That is
-# throwaway state, never source: the real database lives under `/opt/logandaim/data`
-# on the VPS and `data.local/` for a local stack.
-/logandaim.db
-/logandaim.db-shm
-/logandaim.db-wal
-
 .miserc.toml
 
 graphify-out/

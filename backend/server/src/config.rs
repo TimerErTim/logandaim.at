@@ -50,8 +50,10 @@ impl Default for ServerConfig {
             bind_address: "127.0.0.1".into(),
             bind_port: 3000,
             subpath: "/".into(),
-            database_url: "logandaim.db".into(),
-            object_store_dir: PathBuf::from("storage/"),
+            // A bare run writes throwaway state, so it lands in one directory that
+            // `.gitignore` already covers instead of scattering files into the repo root.
+            database_url: "data.local/logandaim.db".into(),
+            object_store_dir: PathBuf::from("data.local/storage"),
             log_dir: None,
             signing_key_path: None,
             token_issuer: "logandaim.at".into(),
