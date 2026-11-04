@@ -14,7 +14,10 @@ use error_stack::{IntoReport, ResultExt};
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     message::{Mailbox, header::ContentType},
-    transport::smtp::authentication::Credentials,
+    transport::smtp::{
+        authentication::Credentials,
+        client::{Tls, TlsParameters},
+    },
 };
 use logandaim_core::{
     ResultReport,
@@ -36,9 +39,15 @@ pub enum Verschlüsselung {
 /// Where mail goes and who it comes from.
 #[derive(Debug, Clone)]
 pub struct SmtpKonfiguration {
+    /// Host the TCP connection is opened to.
     pub host: String,
     pub port: u16,
     pub verschlüsselung: Verschlüsselung,
+    /// Name the server certificate is verified against, when it differs from [`Self::host`].
+    ///
+    /// A container name reaches the relay but is never what a CA issues for, so the two
+    /// have to be separable. `None` means the host is also the certified name.
+    pub tls_hostname: Option<String>,
     pub benutzername: Option<String>,
     pub passwort: Option<String>,
     pub absender: EmailAdresse,
@@ -57,6 +66,7 @@ impl SmtpKonfiguration {
             host: "127.0.0.1".to_owned(),
             port: 1025,
             verschlüsselung: Verschlüsselung::Klar,
+            tls_hostname: None,
             benutzername: None,
             passwort: None,
             absender,
@@ -66,6 +76,18 @@ impl SmtpKonfiguration {
     }
 }
 
+/// TLS parameters for the configured hop: verified against the certified name, not the
+/// host the connection is opened to.
+fn tls_parameter(konfiguration: &SmtpKonfiguration) -> ResultReport<TlsParameters, MailError> {
+    let name = konfiguration
+        .tls_hostname
+        .as_deref()
+        .unwrap_or(&konfiguration.host)
+        .to_owned();
+    TlsParameters::new(name).change_context(MailError::NichtKonfiguriert)
+}
+
+#[derive(Debug, Clone)]
 pub struct SmtpMailSender {
     konfiguration: SmtpKonfiguration,
     transport: AsyncSmtpTransport<Tokio1Executor>,
@@ -80,14 +102,21 @@ impl SmtpMailSender {
                     .port(konfiguration.port)
             }
             Verschlüsselung::StartTls => {
-                let builder =
-                    AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&konfiguration.host)
-                        .change_context(MailError::NichtKonfiguriert)?;
+                // `starttls_relay` would verify the certificate against the host string,
+                // which is a container name on the Compose network and never what a CA
+                // issues for. Build the parameters from the certified name instead, and
+                // keep the connection pointed at the host that resolves.
+                let builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(
+                    konfiguration.host.clone(),
+                )
+                .tls(Tls::Required(tls_parameter(&konfiguration)?));
                 builder.port(konfiguration.port)
             }
             Verschlüsselung::Implizit => {
-                let builder = AsyncSmtpTransport::<Tokio1Executor>::relay(&konfiguration.host)
-                    .change_context(MailError::NichtKonfiguriert)?;
+                let builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(
+                    konfiguration.host.clone(),
+                )
+                .tls(Tls::Wrapper(tls_parameter(&konfiguration)?));
                 builder.port(konfiguration.port)
             }
         };
@@ -103,6 +132,18 @@ impl SmtpMailSender {
             transport: builder.build(),
             konfiguration,
         })
+    }
+
+    /// Open one connection, complete the TLS upgrade and authentication, then close it.
+    ///
+    /// A send would prove the same hop but deliver a message; NOOP proves it without a
+    /// recipient, so a deployment can report whether mail works before anyone registers.
+    pub async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError> {
+        self.transport
+            .test_connection()
+            .await
+            .map_err(IntoReport::into_report)
+            .change_context(MailError::Zustellung)
     }
 
     /// Build the wire message. Separate from sending so a unit test can assert recipient,
@@ -144,5 +185,41 @@ impl MailSender for SmtpMailSender {
             .map_err(IntoReport::into_report)
             .change_context(MailError::Zustellung)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn konfiguration() -> SmtpKonfiguration {
+        let mut konfiguration =
+            SmtpKonfiguration::mailpit(EmailAdresse::normalisiert("noreply@logandaim.at").unwrap());
+        konfiguration.host = "stalwart".to_owned();
+        konfiguration.port = 587;
+        konfiguration.verschlüsselung = Verschlüsselung::StartTls;
+        konfiguration
+    }
+
+    /// The defect this exists for: a container name reaches the relay but is never what a
+    /// CA issues for. Verification has to follow `tls_hostname`, not `host`.
+    #[test_log::test]
+    fn tls_wird_gegen_den_zertifizierten_namen_geprüft() {
+        let mut konfiguration = konfiguration();
+        konfiguration.tls_hostname = Some("mail.logandaim.at".to_owned());
+
+        let parameter = tls_parameter(&konfiguration).expect("TLS-Parameter bauen");
+
+        assert_eq!(parameter.domain(), "mail.logandaim.at");
+    }
+
+    /// Without an override the host is also the certified name, as before.
+    #[test_log::test]
+    fn ohne_überschreibung_ist_der_host_der_zertifizierte_name() {
+        let konfiguration = konfiguration();
+
+        let parameter = tls_parameter(&konfiguration).expect("TLS-Parameter bauen");
+
+        assert_eq!(parameter.domain(), "stalwart");
     }
 }

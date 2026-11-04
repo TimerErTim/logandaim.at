@@ -88,6 +88,7 @@ fn lade_mail_sender(
     let smtp = SmtpKonfiguration {
         host: host.clone(),
         port: config.smtp_port,
+        tls_hostname: config.smtp_tls_hostname.clone(),
         verschlüsselung: match config.smtp_verschlüsselung {
             config::SmtpVerschlüsselung::Klar => Verschlüsselung::Klar,
             config::SmtpVerschlüsselung::StartTls => Verschlüsselung::StartTls,
@@ -100,8 +101,43 @@ fn lade_mail_sender(
         frontend_basis_url: config.frontend_basis_url.clone(),
     };
 
-    let sender = SmtpMailSender::neu(smtp).change_context(BackendServerError)?;
-    Ok(Arc::new(sender))
+    let sender = Arc::new(SmtpMailSender::neu(smtp).change_context(BackendServerError)?);
+    prüfe_mail_verbindung(Arc::clone(&sender));
+    Ok(sender)
+}
+
+/// Report whether the mail hop actually works, without delaying startup.
+///
+/// Mail is part of the MVP, but a relay that is still bootstrapping must not stop the API
+/// from serving requests (NFR-5). The retries are for exactly that window: a first boot
+/// has to write its configuration and restart before it listens on 587. The verdict lands
+/// in the log, which is where a failed send would otherwise be the only evidence.
+fn prüfe_mail_verbindung(sender: Arc<SmtpMailSender>) {
+    tokio::spawn(async move {
+        const VERSUCHE: u32 = 12;
+        let mut letzter_fehler = String::new();
+        for versuch in 1..=VERSUCHE {
+            match sender.prüfe_verbindung().await {
+                Ok(true) => {
+                    tracing::info!("SMTP-Relay erreichbar; Mailversand ist verfügbar");
+                    return;
+                }
+                Ok(false) => letzter_fehler = "Relay antwortet nicht auf NOOP".to_owned(),
+                Err(fehler) => letzter_fehler = format!("{fehler:?}"),
+            }
+            if versuch == VERSUCHE {
+                break;
+            }
+            tracing::debug!(
+                versuch,
+                "SMTP-Relay noch nicht erreichbar: {letzter_fehler}"
+            );
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        }
+        tracing::error!(
+            "SMTP-Relay nicht erreichbar; Transaktionsmails schlagen fehl: {letzter_fehler}"
+        );
+    });
 }
 
 /// Origin allowlist: the configured frontend plus the documented dev-server ports.

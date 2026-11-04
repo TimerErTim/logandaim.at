@@ -9,6 +9,9 @@ services:
     #   docker compose -f compose.yaml -f compose.build.yaml up --build
     image: ${LOGANDAIM_IMAGE:?Set LOGANDAIM_IMAGE to ghcr.io/<owner>/logandaim-server:sha-<commit>, or use compose.build.yaml}
     restart: unless-stopped
+    # Credentials only. The topology of the mail hop is fixed here: a relay host or a
+    # TLS mode left to the operator drifts from the service it talks to and only fails
+    # at send time, after the request that triggered the mail has already answered.
     env_file:
       - path: ./secrets/mail.env
         required: false
@@ -23,6 +26,14 @@ services:
       LOGANDAIM_FRONTEND_BASIS_URL: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
       LOGANDAIM_CORS_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
       LOGANDAIM_SUPERUSER_EMAIL: ${SUPERUSER_EMAIL:-}
+      # The mail hop is part of the composition, not an operator setting: a relay host
+      # that disagrees with the service started below only fails at send time. What an
+      # operator supplies is the credential, never the topology or the TLS mode.
+      LOGANDAIM_SMTP_HOST: stalwart
+      LOGANDAIM_SMTP_PORT: "587"
+      LOGANDAIM_SMTP_TLS_HOSTNAME: ${MAIL_HOSTNAME:?Set MAIL_HOSTNAME in .env}
+      LOGANDAIM_SMTP_VERSCHLUESSELUNG: startTls
+      LOGANDAIM_SMTP_ABSENDER: ${MAIL_ABSENDER:?Set MAIL_ABSENDER in .env}
     volumes:
       - ./data/sqlite:/data/sqlite
       - ./data/objects:/data/objects
@@ -35,6 +46,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    depends_on:
+      # Starting order only: the relay has no readiness signal of its own, and the API
+      # must not wait for mail to serve requests (NFR-5).
+      stalwart:
+        condition: service_started
     networks:
       - app
 
@@ -57,10 +73,11 @@ services:
     networks:
       - app
 
-  # Mail remains opt-in until the ACME metadata and persistent DNS record gate is passed.
+  # Mandatory: the MVP sends registration and recovery mail, so a stack without a relay
+  # is not a working stack. Bootstrap is still private: the only host-published port is
+  # the setup UI on loopback, and SMTP stays inside the Compose network.
   stalwart:
     image: stalwartlabs/stalwart:v1
-    profiles: [mail]
     init: true
     restart: unless-stopped
     volumes:
@@ -80,3 +97,5 @@ networks:
 volumes:
   caddy_data:
   caddy_config:
+  stalwart_etc:
+  stalwart_data:

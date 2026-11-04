@@ -45,6 +45,16 @@ has_previous=false
 # the operator-owned state is checked before the trap can fire.
 test -f .env || { echo "Missing .env: copy .env.example and fill it in." >&2; exit 2; }
 grep -Eq '^FRONTEND_ORIGIN=.+' .env || { echo "Missing FRONTEND_ORIGIN in .env." >&2; exit 2; }
+grep -Eq '^MAIL_HOSTNAME=.+' .env || { echo "Missing MAIL_HOSTNAME in .env." >&2; exit 2; }
+grep -Eq '^MAIL_ABSENDER=.+' .env || { echo "Missing MAIL_ABSENDER in .env." >&2; exit 2; }
+# Mail is part of the MVP, so a stack that cannot authenticate to its relay is not a
+# deployable stack. Checked here rather than discovered when the first registration
+# silently fails to send.
+test -f secrets/mail.env || { echo "Missing secrets/mail.env with the SMTP credentials." >&2; exit 2; }
+grep -Eq '^LOGANDAIM_SMTP_BENUTZERNAME=.+' secrets/mail.env ||
+  { echo "Missing LOGANDAIM_SMTP_BENUTZERNAME in secrets/mail.env." >&2; exit 2; }
+grep -Eq '^LOGANDAIM_SMTP_PASSWORT=.+' secrets/mail.env ||
+  { echo "Missing LOGANDAIM_SMTP_PASSWORT in secrets/mail.env." >&2; exit 2; }
 test -s secrets/signing-key.pem || { echo "Missing secrets/signing-key.pem." >&2; exit 2; }
 test -d data/sqlite || { echo "Missing data/sqlite." >&2; exit 2; }
 test -d data/objects || { echo "Missing data/objects." >&2; exit 2; }
@@ -71,6 +81,34 @@ health_check() {
 apply() {
   docker compose pull backend
   docker compose up -d --remove-orphans
+}
+
+# Mail is part of the MVP, so the deployment reports whether the hop actually works. It
+# does not gate the image rollout: a relay that is still bootstrapping is an operator task,
+# while a broken image is a rollback. The backend logs the verdict; this reads it from
+# outside the container, where an operator sees it in the deploy output.
+#
+# `--since` is the container's own start time, not the last N lines: a verdict from an
+# earlier boot would otherwise satisfy the check for a container that never reached the
+# relay. The probe retries for about a minute while the relay boots, so poll that long.
+mail_check() {
+  local container="" started_at="" _
+  local seit=()
+  container="$(docker compose ps -q backend 2>/dev/null || true)"
+  if [[ -n "$container" ]]; then
+    started_at="$(docker inspect --format '{{.State.StartedAt}}' "$container" 2>/dev/null || true)"
+  fi
+  [[ -n "$started_at" ]] && seit=(--since "$started_at")
+  for _ in $(seq 1 20); do
+    if docker compose logs --no-color "${seit[@]}" backend 2>/dev/null |
+      grep -q "Mailversand ist verfügbar"; then
+      echo "Mailversand verfügbar (SMTP-Relay erreichbar)."
+      return 0
+    fi
+    sleep 5
+  done
+  echo "WARNUNG: Mailversand nicht bestätigt; siehe 'docker compose logs backend'." >&2
+  return 1
 }
 
 # The digest the registry served for this tag. It is recorded beside the tag so a
@@ -130,6 +168,7 @@ apply
 health_check
 record_known_good
 echo "Deployed healthy revision ${revision} (${image})."
+mail_check || true
 
 # Old images accumulate on a small disk: every deploy pulls a new immutable tag.
 # `-a` also removes tags that no container runs any more, so an old image is not

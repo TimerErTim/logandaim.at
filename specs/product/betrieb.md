@@ -149,9 +149,11 @@ for support content.
 | Date | Decision | By |
 |------|----------|----|
 | 2026-10-23 | Deferred operational requirements are specified here rather than in the deployment issues. | Agent (Cursor) |
+| 2026-11-04 | Transaction mail is an MVP requirement, so Stalwart starts with the stack instead of behind an opt-in profile, and Compose fixes the relay host, port and TLS mode rather than leaving them to the operator. Verification follows `MAIL_HOSTNAME`, not the Compose service name. | Agent (Cursor) |
 
 ## Revision history
 
 | Date | Change | By |
 |------|--------|----|
 | 2026-10-23 | Initial draft from the deferred-requirement tickets #44–#47. | Agent (Cursor) |
+| 2026-11-04 | Recorded that Stalwart runs unconditionally for the MVP and that the mail hop's host, port and TLS mode are composition, not operator configuration. | Agent (Cursor) |

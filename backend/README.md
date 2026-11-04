@@ -32,8 +32,8 @@ mise sets environment variables for the server suitable for a dev environment au
 
 | Source | Keys |
 |--------|------|
-| File (camelCase JSON) | `bindAddress`, `bindPort`, `subpath`, `databaseUrl`, `objectStoreDir`, `logDir`, `signingKeyPath`, `tokenIssuer`, `tokenAudience`, `frontendBasisUrl`, `smtpHost`, `smtpPort`, `smtpVerschlüsselung`, `smtpBenutzername`, `smtpPasswort`, `smtpAbsender` |
-| Env / CLI | `LOGANDAIM_BIND_ADDRESS` / `--bind-address`, `LOGANDAIM_BIND_PORT` / `--bind-port`, `SUBPATH` / `--subpath`, `LOGANDAIM_DATABASE_URL` / `--database-url`, `LOGANDAIM_OBJECT_STORE_DIR` / `--object-store-dir`, `LOGANDAIM_LOG_DIR` / `--log-dir`, `LOGANDAIM_SIGNING_KEY_PATH` / `--signing-key-path`, `LOGANDAIM_TOKEN_ISSUER` / `--token-issuer`, `LOGANDAIM_TOKEN_AUDIENCE` / `--token-audience`, `LOGANDAIM_FRONTEND_BASIS_URL` / `--frontend-basis-url`, `LOGANDAIM_SMTP_HOST` / `--smtp-host`, `LOGANDAIM_SMTP_PORT` / `--smtp-port`, `LOGANDAIM_SMTP_VERSCHLUESSELUNG` / `--smtp-verschlüsselung`, `LOGANDAIM_SMTP_BENUTZERNAME` / `--smtp-benutzername`, `LOGANDAIM_SMTP_PASSWORT` / `--smtp-passwort`, `LOGANDAIM_SMTP_ABSENDER` / `--smtp-absender` |
+| File (camelCase JSON) | `bindAddress`, `bindPort`, `subpath`, `databaseUrl`, `objectStoreDir`, `logDir`, `signingKeyPath`, `tokenIssuer`, `tokenAudience`, `frontendBasisUrl`, `smtpHost`, `smtpPort`, `smtpTlsHostname`, `smtpVerschlüsselung`, `smtpBenutzername`, `smtpPasswort`, `smtpAbsender` |
+| Env / CLI | `LOGANDAIM_BIND_ADDRESS` / `--bind-address`, `LOGANDAIM_BIND_PORT` / `--bind-port`, `SUBPATH` / `--subpath`, `LOGANDAIM_DATABASE_URL` / `--database-url`, `LOGANDAIM_OBJECT_STORE_DIR` / `--object-store-dir`, `LOGANDAIM_LOG_DIR` / `--log-dir`, `LOGANDAIM_SIGNING_KEY_PATH` / `--signing-key-path`, `LOGANDAIM_TOKEN_ISSUER` / `--token-issuer`, `LOGANDAIM_TOKEN_AUDIENCE` / `--token-audience`, `LOGANDAIM_FRONTEND_BASIS_URL` / `--frontend-basis-url`, `LOGANDAIM_SMTP_HOST` / `--smtp-host`, `LOGANDAIM_SMTP_PORT` / `--smtp-port`, `LOGANDAIM_SMTP_TLS_HOSTNAME` / `--smtp-tls-hostname`, `LOGANDAIM_SMTP_VERSCHLUESSELUNG` / `--smtp-verschlüsselung`, `LOGANDAIM_SMTP_BENUTZERNAME` / `--smtp-benutzername`, `LOGANDAIM_SMTP_PASSWORT` / `--smtp-passwort`, `LOGANDAIM_SMTP_ABSENDER` / `--smtp-absender` |
 | Accounts (env only) | `LOGANDAIM_SUPERUSER_EMAIL` — the address promoted to `Systemadministrator` at startup |
 | CORS (env only) | `LOGANDAIM_CORS_ORIGIN` — optional comma-separated extra allowed origins; the configured frontend origin and documented loopback dev origins are allowed by default |
 | Tracing | `LOGANDAIM_LOG_LEVEL` (default `info`) |
@@ -49,6 +49,11 @@ Notes on the account keys:
   links are this origin plus the product's own route — `/registrierung` and `/passwort` — so a
   deployment never configures two full URLs that can drift apart from the routes they name.
 - `smtpHost` absent means "no relay": mails fail and are logged, never failing the request (NFR-5).
+- `smtpTlsHostname` is the name the relay certificate is verified against when the connection is
+  opened to a different name. A Compose service name reaches the relay but is never what a CA issues
+  for, so production sets this to the mail hostname. Absent, the host is verified as-is.
+- The trust store is the compiled-in Mozilla root set. A public CA certificate verifies; a
+  self-signed or private-CA certificate cannot, and there is no configuration to add a root.
 - `LOGANDAIM_SUPERUSER_EMAIL` is the only way a `Systemadministrator` is created — there is no
   self-service elevation (rule 9). Promotion is idempotent and tolerates an address that has not
   registered yet; it is retried on the next start.
