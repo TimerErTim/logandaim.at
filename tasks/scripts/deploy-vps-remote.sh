@@ -143,14 +143,16 @@ rollback() {
 }
 trap rollback ERR
 
-# The revision must belong to `main`. The workflow can only ask for one it built,
-# but an operator can call this task too and must not deploy a stray commit.
-git fetch --no-tags origin main
-git cat-file -e "${revision}^{commit}"
-if ! git merge-base --is-ancestor "$revision" origin/main; then
-  echo "Requested deployment revision is not reachable from origin/main." >&2
+# Any published revision is deployable, including one from a branch, so a pull request
+# can be tried before it merges. Fetch all refs first: the deploy account's checkout may
+# not have the branch yet. The reference itself is the authority — an unknown commit
+# fails here rather than as a confusing compose error later.
+git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*' ||
+  { echo "Cannot fetch from origin." >&2; exit 2; }
+git cat-file -e "${revision}^{commit}" 2>/dev/null || {
+  echo "Deployment revision ${revision} is not a commit known to this checkout." >&2
   exit 2
-fi
+}
 
 # The composition comes from the revision being deployed: check out before the
 # image is pulled, so `compose.yaml` and the Caddyfile match the image being started.

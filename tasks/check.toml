@@ -37,7 +37,6 @@ depends = ["check:version"]
 tools.gh = "latest"
 usage = """
 flag "--pr <pr>" help="Release pull request number; derived from HEAD when omitted"
-flag "--allow-existing-release" env="LOGANDAIM_ALLOW_EXISTING_RELEASE" help="Accept a version whose release is already published (manual redeploy)"
 """
 run = "node {{ vars.REPO_ROOT }}/tasks/scripts/check-release.mjs"
 
