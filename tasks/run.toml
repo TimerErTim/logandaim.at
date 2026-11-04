@@ -12,7 +12,7 @@ flag "--port <port>" env="PORT" help="Port to listen on" default="{{ vars.FRONTE
 run = 'exec serve out --listen tcp://{{ usage.host }}:{{ usage.port }} --no-clipboard --no-port-switching'
 
 ["run:server"]
-description = "Build and run the backend server with a throwaway database"
+description = "Build and run the backend production server"
 usage = """
 flag "--host <host>" help="Address to bind to" default="127.0.0.1"
 flag "--port <port>" env="PORT" help="Port to bind to" default="{{ vars.API_PORT }}"

@@ -1762,6 +1762,7 @@ dependencies = [
  "poem-openapi",
  "serde",
  "serde_json",
+ "tempdir",
  "test-log",
  "thiserror 2.0.20",
  "tokio",
