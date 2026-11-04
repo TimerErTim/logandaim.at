@@ -84,12 +84,13 @@ services:
     init: true
     restart: unless-stopped
     environment:
-      STALWART_PUBLIC_URL: ${STALWART_PUBLIC_URL:?Set STALWART_PUBLIC_URL in .env}
+      STALWART_PUBLIC_URL: ${STALWART_PUBLIC_URL:-https://localhost:8088}
     volumes:
       - stalwart_etc:/etc/stalwart
       - stalwart_data:/var/lib/stalwart
     ports:
       - "127.0.0.1:8080:8080"
+      - "127.0.0.1:8088:443"
     expose:
       - "587"
     networks:
