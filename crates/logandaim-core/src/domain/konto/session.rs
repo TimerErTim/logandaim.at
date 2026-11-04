@@ -200,16 +200,23 @@ impl RenewableSession {
     ///
     /// Consumes the live state, so spending twice cannot compile. Returns the row to write
     /// back (`Refreshed`) and the row to create for the successor.
+    ///
+    /// `public_key_hex` is the key that signs the successor's access token. The caller must
+    /// pass the key that is actually signing — not the retired row's key — because the row
+    /// it writes is verified against this value on every later request. A deployment that
+    /// generates its key per process would otherwise issue a token its own row cannot
+    /// verify, and the next renewal after a restart would answer 401.
     pub fn erneuern(
         self,
         new_refresh_token_hash: SecretTokenHash,
+        public_key_hex: impl Into<String>,
         jetzt: DateTime<Utc>,
     ) -> (RefreshedSession, NeueSession) {
         let expires_at = self.expires_at();
         let folge = NeueSession::neu(
             self.benutzer_id,
             new_refresh_token_hash,
-            self.public_key.clone(),
+            public_key_hex,
             jetzt,
         );
         let verbraucht = SessionIn {
@@ -467,12 +474,17 @@ mod tests {
         SecretTokenHash::from_hex("a".repeat(64)).unwrap()
     }
 
+    /// The public half a rotation stamps on its successor row.
+    fn public_key() -> String {
+        "ab".repeat(32)
+    }
+
     fn session() -> SessionIn<state::Renewable> {
         SessionIn::neu(
             SessionId(Uuid::nil()),
             BenutzerId(Uuid::nil()),
             hash(),
-            "ab".repeat(32),
+            public_key(),
             jetzt(),
         )
     }
@@ -494,19 +506,31 @@ mod tests {
     #[test_log::test]
     fn erneuerung_macht_ok_zu_refreshed_und_legt_die_folge_an() {
         let session = session();
-        let (verbraucht, folge) = session.erneuern(hash(), jetzt());
+        let (verbraucht, folge) = session.erneuern(hash(), public_key(), jetzt());
 
         assert_eq!(verbraucht.spent_at(), jetzt());
         assert_eq!(folge.benutzer_id(), BenutzerId(Uuid::nil()));
-        assert_eq!(folge.public_key_hex(), "ab".repeat(32));
+        assert_eq!(folge.public_key_hex(), public_key());
         assert_eq!(folge.expires_at(), jetzt() + Duration::days(30));
+    }
+
+    #[test_log::test]
+    fn erneuerung_stempelt_den_schlüssel_der_tatsächlich_signiert() {
+        // A per-process key means the successor's access token is signed by the running
+        // process, not by the retired row's key. Stamping the retired key would make the
+        // successor row reject its own token on the next request after a restart.
+        let neuer_schlüssel = "cd".repeat(32);
+        let (_, folge) = session().erneuern(hash(), neuer_schlüssel.clone(), jetzt());
+
+        assert_eq!(folge.public_key_hex(), neuer_schlüssel);
+        assert_ne!(folge.public_key_hex(), public_key());
     }
 
     #[test_log::test]
     fn verbrauchte_session_lässt_das_alte_access_token_weiterleben() {
         // AC-7: rotating the refresh token must not invalidate the access token that was
         // issued with it; only revocation or expiry does (AC-9, AC-17).
-        let (verbraucht, _) = session().erneuern(hash(), jetzt());
+        let (verbraucht, _) = session().erneuern(hash(), public_key(), jetzt());
         // Reaching a renewal is what the type state forbids; validity (its window) is
         // still open, but only `Ok` can answer that question.
         assert_eq!(
@@ -534,7 +558,7 @@ mod tests {
 
     #[test_log::test]
     fn eine_verbrauchte_session_kann_nicht_erneut_erneuert_werden() {
-        let (verbraucht, _) = session().erneuern(hash(), jetzt());
+        let (verbraucht, _) = session().erneuern(hash(), public_key(), jetzt());
         let geladen = Session::Refreshed(verbraucht);
         assert_eq!(
             RenewableSession::try_from(geladen),
@@ -557,7 +581,7 @@ mod tests {
             ("ok", Session::Renewable(session())),
             (
                 "refreshed",
-                Session::Refreshed(session().erneuern(hash(), jetzt()).0),
+                Session::Refreshed(session().erneuern(hash(), public_key(), jetzt()).0),
             ),
             ("revoked", Session::Revoked(session().widerrufen(jetzt()))),
         ] {

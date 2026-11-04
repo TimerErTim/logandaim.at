@@ -6,9 +6,9 @@ This runbook covers the Compose-managed API, Caddy HTTPS, Stalwart outbound mail
 
 - A VPS with Docker Engine and Docker Compose plugin v2.24 or newer, Git, `curl`, and outbound access to GitHub and `ghcr.io`. The account used for deployment must be able to access the checked-out repository and run Docker Compose. No distro-specific commands are required. The VPS runs no `mise` and no compiler; the deploy task runs on the machine that holds the SSH key.
 - The `logandaim-server` package on GHCR must be set to public once, after the first `image` job publishes it. Public is what lets the VPS pull anonymously with no stored registry credentials.
-- A full (not shallow) deploy checkout at `~/logandaim.at` on the VPS. It must have an `origin` remote the deploy account can fetch from and an initial known-good revision deployed before automatic deployments are enabled.
+- A full (not shallow) deploy checkout at `/opt/logandaim/repo` on the VPS, with `data/` and `secrets/` beside it at `/opt/logandaim`. It must have an `origin` remote the deploy account can fetch from and an initial known-good revision deployed before automatic deployments are enabled.
 - Public DNS for the API hostname pointing to the VPS; inbound TCP 80/443 (and optional UDP 443 for HTTP/3) for Caddy. This is not an nginx deployment.
-- The Pages origin, API hostname, superuser email if applicable, a stable backend signing key, and authoritative DNS console access. These production values are operator-supplied and do not belong in Git.
+- The Pages origin, API hostname, superuser email if applicable, and authoritative DNS console access. These production values are operator-supplied and do not belong in Git. There is no signing key to manage: the server generates one per process.
 - Configure the GitHub `production` environment with variables `VPS_HOST`, `VPS_USER`, and `API_DOMAIN`, plus secrets `VPS_SSH_PRIVATE_KEY` and `VPS_SSH_KNOWN_HOSTS`. The custom SSH private key must be restricted to the deployment account; the known-host entry must be obtained and verified out of band, not populated with `ssh-keyscan` during a workflow. Ensure the VPS deploy account can read the repository. Protect the environment with the desired approval gate before enabling the workflow.
 - GitHub Actions must also have the existing `LOGANDAIM_API_URL` repository variable for Pages. Pull requests never deploy; a `main` push after `pr/base` and `release-check` succeed deploys, and Pages deploys that same export. Release publication depends on deployment success. `workflow_dispatch` runs the identical pipeline from any branch, deploys the same artefacts and skips only release validation and publication, so a pull request can be deployed and tried before it merges; `:main` is not moved by such a run.
 
@@ -16,10 +16,10 @@ This runbook covers the Compose-managed API, Caddy HTTPS, Stalwart outbound mail
 
 From the repository checkout on the VPS:
 
-1. Copy `.env.example` to `.env` and set `API_DOMAIN` to the public API hostname, `FRONTEND_ORIGIN` to the exact Pages/custom-domain origin (scheme included, no path), `MAIL_HOSTNAME` to the name the relay certificate is issued for, and `MAIL_ABSENDER` to the envelope sender. Optionally set `SUPERUSER_EMAIL`. `.env` is ignored by Git.
-2. Create `secrets/signing-key.pem` as a PKCS#8 Ed25519 private key, readable by container UID 10001, and restrict it to the operator and the container runtime. Never commit it. Reusing this file preserves token verification across restarts and redeployments. Regenerating it per deployment is not equivalent to the local throwaway key: it invalidates every issued access token and refresh token, so all users are logged out on each deploy. Keep the mounted file.
-3. Create `data/sqlite` and `data/objects` and ensure both are writable by container UID 10001. These bind mounts persist independently of container/image replacement. Create `secrets/` with the signing key, and `secrets/mail.env` with the relay credentials. Stalwart configuration and state persist in the named `stalwart_etc` and `stalwart_data` volumes. Caddy's ACME account/certificates persist in the named `caddy_data` volume; keep both named Caddy volumes when operating the stack.
-4. Start the stack from a published image. The image is public, so the VPS pulls anonymously and stores no registry credentials. From a checkout with `VPS_HOST`, `VPS_USER`, and `API_DOMAIN` set, run `mise run deploy:vps ghcr.io/<owner>/logandaim-server:sha-<commit> <commit>`; that is the same path an automated deployment takes, and it records `.deploy/known-good-image`, `.deploy/known-good-digest`, and `.deploy/known-good-revision` once the health check passes. For a first bootstrap without the task, export `LOGANDAIM_IMAGE` on the VPS and run `docker compose pull backend`, `docker compose up -d`, then `curl --fail https://$API_DOMAIN/api/health`, and record the rollback target by hand from that reference and `git rev-parse HEAD`. Caddy obtains and renews the API certificate automatically through HTTP/TLS validation; keep ports 80 and 443 available to Caddy.
+1. Copy `.env.example` to `.env` and set `API_DOMAIN` to the public API hostname, `FRONTEND_ORIGIN` to the exact Pages/custom-domain origin (scheme included, no path), and `MAIL_ABSENDER` to the envelope sender. Optionally set `SUPERUSER_EMAIL`. `.env` is ignored by Git. It belongs at `/opt/logandaim/.env`, beside the checkout.
+2. **No signing key is provisioned.** The server generates a fresh Ed25519 key per process and stores each session's public half on its own row, so verification never needs a configured key. Existing sessions keep verifying across a restart: each token is checked against the key its row carries. Nothing logs users out when the process restarts, and there is no key file to mount, rotate, or back up. The one consequence is that a session row's key no longer verifies after its row is deleted — a deleted row is already a 401 by design (AC-17).
+3. Create `data/sqlite` and `data/objects` and ensure both are writable by container UID 10001. These bind mounts persist independently of container/image replacement. Create `secrets/mail.env` with the relay credentials. The expected layout is `/opt/logandaim/{data,secrets,repo}`: `data/` and `secrets/` sit beside the checkout, not inside it, and `deploy:vps` exports `LOGANDAIM_HOST_ROOT` so Compose resolves them. Stalwart configuration and state persist in the named `stalwart_etc` and `stalwart_data` volumes. Caddy's ACME account/certificates persist in the named `caddy_data` volume; keep both named Caddy volumes when operating the stack.
+4. Start the stack from a published image. The image is public, so the VPS pulls anonymously and stores no registry credentials. From a checkout with `VPS_HOST`, `VPS_USER`, and `API_DOMAIN` set, run `mise run deploy:vps ghcr.io/<owner>/logandaim-server:sha-<commit> <commit>`; that is the same path an automated deployment takes, and it records `.deploy/known-good-image`, `.deploy/known-good-digest`, and `.deploy/known-good-revision` once the health check passes. For a first bootstrap without the task, on the VPS `export LOGANDAIM_IMAGE` to that reference and `export LOGANDAIM_HOST_ROOT=/opt/logandaim`, then from `/opt/logandaim/repo` run `docker compose --env-file /opt/logandaim/.env pull backend` and `docker compose --env-file /opt/logandaim/.env up -d`, then `curl --fail https://$API_DOMAIN/api/health`, and record the rollback target by hand from that reference and `git rev-parse HEAD`. Both flags matter for a manual run: without `LOGANDAIM_HOST_ROOT` Compose looks for `data/` and `secrets/` inside the checkout, and without `--env-file` it reads `.env` from the checkout rather than from `/opt/logandaim`. `deploy:vps` supplies both. Caddy obtains and renews the API certificate automatically through HTTP/TLS validation; keep ports 80 and 443 available to Caddy.
 
 The API listens on the Compose network at `0.0.0.0:3000`; it is not published directly to the host. Caddy is the only public HTTP(S) entry point and forwards API traffic to the backend. CORS and mailed links use `FRONTEND_ORIGIN`; token issuer uses `API_DOMAIN`.
 
@@ -30,8 +30,17 @@ Hetzner-managed daily VPS backups are the selected backup mechanism (AC-3). Conf
 Stalwart is part of the stack, not an optional profile: the MVP sends registration and password
 recovery mail, so a deployment without a working relay is not a working deployment. `compose.yaml`
 starts it unconditionally and fixes the topology of the hop — `LOGANDAIM_SMTP_HOST=stalwart`,
-port `587`, `startTls`, verified against `MAIL_HOSTNAME` — because a relay host or TLS mode left to
-the operator drifts from the service it talks to and only fails at send time.
+port `587`, plain SMTP — because a relay host or TLS mode left to the operator drifts from the
+service it talks to and only fails at send time.
+
+**Why the hop is plain SMTP.** The backend-to-Stalwart leg never leaves the Compose bridge network.
+The submission listener is published on loopback only (`127.0.0.1:587`, reached through an SSH
+tunnel), and the backend addresses the service as `stalwart`, a name no CA issues a certificate
+for. STARTTLS on that leg would therefore require either a private CA installed in the image or
+hostname verification turned off — both more work than the hop is worth. The credentials travel
+only over a bridge that no host outside the stack can join. Dropping TLS here does **not** affect
+Stalwart's outbound delivery to public mail servers: that TLS is Stalwart's own, configured in
+Stalwart's MTA settings, and is unrelated to how the backend submits.
 
 It is still not a public web or SMTP entry point. The only host-published port is its setup UI bound
 to `127.0.0.1:8080` for an SSH-tunneled bootstrap; SMTP stays inside the Compose network. A relay
@@ -41,7 +50,7 @@ than silently delivered over plaintext.
 Before mail can be relied on, complete all steps below:
 
 1. Select a CA and inspect its live ACME directory JSON from the VPS/network that will use it. For each CA directory you intend to use (staging and production are separate checks), run `curl --fail --silent "$ACME_DIRECTORY" | jq -e '.meta.accountHashPrefix != null and .meta.issuerDomainNames != null and (.meta.accountHashPrefix | length > 0) and (.meta.issuerDomainNames | length > 0)'`; confirm both properties are present and non-empty. Record the directory URL and observed metadata with the deployment evidence. Do not assume the Let’s Encrypt directory has these fields and do not claim certificate issuance is verified. If either is missing, the relay cannot obtain a certificate and mail delivery must be resolved with the PO before launch.
-2. Bootstrap Stalwart privately: `docker compose up -d stalwart`, then tunnel the setup UI (`ssh -L 8080:127.0.0.1:8080`) and complete the wizard with `MAIL_HOSTNAME` as the server hostname. Persist `/etc/stalwart` and `/var/lib/stalwart` as configured in Compose.
+2. Bootstrap Stalwart privately: `docker compose up -d stalwart`, then tunnel the setup UI (`ssh -L 8080:127.0.0.1:8080`) and complete the wizard. The hostname you enter there is Stalwart's own name for outbound mail; it is not read by the backend and needs no public certificate for the bridge hop. Persist `/etc/stalwart` and `/var/lib/stalwart` as configured in Compose.
 3. Configure Stalwart for outbound relay/transactional mail and ACME DNS-Persist-01. Create the ACME account, then use Stalwart to generate the `_validation-persist` TXT value. Manually add the exact value to the authoritative DNS provider console; do not calculate it or automate DNS provider credentials. Verify the authoritative record before requesting a certificate, and leave the static record in DNS for renewals. It delegates issuance to that ACME account; changing ACME accounts requires publishing the value generated for the new account before relying on renewal.
 4. Create the submission account for the backend and put only its credentials in the ignored `secrets/mail.env`:
 
@@ -50,10 +59,19 @@ Before mail can be relied on, complete all steps below:
    LOGANDAIM_SMTP_PASSWORT=<submission password>
    ```
 
-   `MAIL_HOSTNAME` and `MAIL_ABSENDER` belong in `.env` beside `API_DOMAIN`. Do not set `LOGANDAIM_SMTP_HOST`, `LOGANDAIM_SMTP_PORT`, or `LOGANDAIM_SMTP_VERSCHLUESSELUNG` anywhere: Compose fixes them, and a stray value only makes the backend disagree with the service beside it.
-5. Verify certificate issuance and SMTP submission end to end. `docker compose logs backend` reports `SMTP-Relay erreichbar; Mailversand ist verfügbar` once the STARTTLS handshake and authentication succeed, and `deploy:vps` prints the same verdict after the health check. An error line there names the failing step (certificate name, credentials, or reachability) and must be resolved before launch.
+   `MAIL_ABSENDER` belongs in `.env` beside `API_DOMAIN`. Do not set `LOGANDAIM_SMTP_HOST`, `LOGANDAIM_SMTP_PORT`, or `LOGANDAIM_SMTP_VERSCHLUESSELUNG` anywhere: Compose fixes them, and a stray value only makes the backend disagree with the service beside it. The accepted values are `klar`, `start-tls`, and `implizit`; Compose sets `klar`.
+5. Verify SMTP submission end to end. `docker compose logs backend` reports `SMTP-Relay erreichbar; Mailversand ist verfügbar` once authentication on the bridge succeeds, and `deploy:vps` prints the same verdict after the health check. An error line there names the failing step (credentials or reachability) and must be resolved before launch.
 
-**Why `MAIL_HOSTNAME` exists.** The backend reaches the relay at `stalwart`, a Compose service name that no CA issues a certificate for. Verification therefore follows `MAIL_HOSTNAME`, the name the certificate was actually issued for, while the socket still goes to `stalwart`. Without that split the STARTTLS handshake always fails hostname verification. The trust store is the compiled-in Mozilla root set, so a public CA certificate works and a self-signed one cannot.
+**Outbound delivery is separate from submission.** A healthy backend verdict only proves the
+backend reached Stalwart. Whether Stalwart can deliver to a public mailbox is a different hop and
+shows up only in Stalwart's own logs. Two failures are common on a fresh VPS:
+
+- `Network is unreachable (os error 101)` on an IPv6 target: the host has no working IPv6 route
+  while the MX lookup returned an AAAA record. Either fix IPv6 on the host or make Stalwart prefer
+  IPv4.
+- A connect timeout on port 25 to a large provider's MX: many VPS providers block outbound TCP 25
+  by default to limit spam. Ask the provider to unblock it, or relay outbound mail through a
+  smarthost the provider allows. The backend's own submission port is unaffected.
 
 **Stalwart is mandatory as of the MVP.** Reverting to a private pilot without mail means the relay stops being started, and Compose must then also stop declaring the SMTP variables, because the backend would otherwise point at a service that does not exist.
 

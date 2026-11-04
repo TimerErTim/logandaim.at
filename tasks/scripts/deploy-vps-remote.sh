@@ -8,8 +8,9 @@ set -Eeuo pipefail
 # `.deploy/known-good-image` records the reference that last passed a health check;
 # a failed deployment re-applies it and verifies health before returning failure.
 #
-# The signing key, `.env`, and the data directories must already exist: the server
-# needs them to start, and a deployment must not invent production secrets.
+# `.env`, the mail credentials, and the data directories must already exist: the server
+# needs them to start, and a deployment must not invent production secrets. There is no
+# signing key file to check: the server generates its Ed25519 key per process.
 #
 # Arguments arrive as `bash -s --` words, never interpolated into a command:
 #   1 image reference   2 revision   3 api domain   4 repository directory
@@ -41,22 +42,40 @@ known_good_revision=.deploy/known-good-revision
 has_previous=false
 [[ -s "$known_good_image" ]] && has_previous=true
 
-# Compose reads `.env` on every invocation, including the one inside `rollback`, so
-# the operator-owned state is checked before the trap can fire.
-test -f .env || { echo "Missing .env: copy .env.example and fill it in." >&2; exit 2; }
-grep -Eq '^FRONTEND_ORIGIN=.+' .env || { echo "Missing FRONTEND_ORIGIN in .env." >&2; exit 2; }
-grep -Eq '^MAIL_HOSTNAME=.+' .env || { echo "Missing MAIL_HOSTNAME in .env." >&2; exit 2; }
-grep -Eq '^MAIL_ABSENDER=.+' .env || { echo "Missing MAIL_ABSENDER in .env." >&2; exit 2; }
+# Persistent state and operator secrets sit beside the checkout, not inside it:
+# `/opt/logandaim/data`, `/opt/logandaim/secrets`, checkout at `/opt/logandaim/repo`.
+# Compose resolves relative bind mounts against the compose file's directory (the repo),
+# so the sources are addressed through this explicit host root instead.
+host_root="$(cd "$deploy_dir/.." && pwd)"
+
+# Compose reads `.env` from the directory it runs in — the checkout — on every
+# invocation, including the one inside `rollback`, so the operator-owned state is checked
+# before the trap can fire. The VPS keeps its secrets beside the checkout, so prefer
+# `$host_root/.env`; a checkout that still carries its own `.env` keeps working.
+if [[ -f "$host_root/.env" ]]; then
+  env_file="$host_root/.env"
+else
+  env_file=.env
+fi
+test -f "$env_file" || { echo "Missing .env: copy .env.example and fill it in." >&2; exit 2; }
+grep -Eq '^FRONTEND_ORIGIN=.+' "$env_file" ||
+  { echo "Missing FRONTEND_ORIGIN in $env_file." >&2; exit 2; }
+# MAIL_ABSENDER stays required: every transactional mail carries it. MAIL_HOSTNAME is no
+# longer read by compose — the backend reaches Stalwart over the bridge in plain SMTP — so
+# requiring it here would demand a value nothing uses.
+grep -Eq '^MAIL_ABSENDER=.+' "$env_file" ||
+  { echo "Missing MAIL_ABSENDER in $env_file." >&2; exit 2; }
 # Mail is part of the MVP: a stack without working relay credentials is not deployable,
 # so this fails here rather than at the first registration that never sends.
-test -f secrets/mail.env || { echo "Missing secrets/mail.env with the SMTP credentials." >&2; exit 2; }
-grep -Eq '^LOGANDAIM_SMTP_BENUTZERNAME=.+' secrets/mail.env ||
-  { echo "Missing LOGANDAIM_SMTP_BENUTZERNAME in secrets/mail.env." >&2; exit 2; }
-grep -Eq '^LOGANDAIM_SMTP_PASSWORT=.+' secrets/mail.env ||
-  { echo "Missing LOGANDAIM_SMTP_PASSWORT in secrets/mail.env." >&2; exit 2; }
-test -s secrets/signing-key.pem || { echo "Missing secrets/signing-key.pem." >&2; exit 2; }
-test -d data/sqlite || { echo "Missing data/sqlite." >&2; exit 2; }
-test -d data/objects || { echo "Missing data/objects." >&2; exit 2; }
+mail_env="$host_root/secrets/mail.env"
+test -f "$mail_env" || { echo "Missing $mail_env with the SMTP credentials." >&2; exit 2; }
+grep -Eq '^LOGANDAIM_SMTP_BENUTZERNAME=.+' "$mail_env" ||
+  { echo "Missing LOGANDAIM_SMTP_BENUTZERNAME in $mail_env." >&2; exit 2; }
+grep -Eq '^LOGANDAIM_SMTP_PASSWORT=.+' "$mail_env" ||
+  { echo "Missing LOGANDAIM_SMTP_PASSWORT in $mail_env." >&2; exit 2; }
+test -d "$host_root/data/sqlite" || { echo "Missing $host_root/data/sqlite." >&2; exit 2; }
+test -d "$host_root/data/objects" || { echo "Missing $host_root/data/objects." >&2; exit 2; }
+export LOGANDAIM_HOST_ROOT="$host_root"
 export API_DOMAIN="$api_domain"
 # Exported rather than written to `.env`: the requested reference must win over any
 # value an operator left behind, and compose reads the environment first.
@@ -76,9 +95,13 @@ health_check() {
 }
 
 # `up` never builds: this checkout has no binary in `.deploy/incoming`.
+#
+# `--env-file` is explicit rather than left to Compose's default lookup: when `.env` lives
+# beside the checkout, Compose would not see it and every required variable would render
+# as unset. It reads the same file the checks above validated.
 apply() {
-  docker compose pull backend
-  docker compose up -d --remove-orphans
+  docker compose --env-file "$env_file" pull backend
+  docker compose --env-file "$env_file" up -d --remove-orphans
 }
 
 # `--since` scopes the read to this boot: a verdict from an earlier one would satisfy

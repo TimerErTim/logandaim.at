@@ -15,7 +15,9 @@ host="${usage_host:?set --host or VPS_HOST}"
 user="${usage_user:?set --user or VPS_USER}"
 api_domain="${usage_api_domain:?set --api-domain or API_DOMAIN}"
 # `~` is expanded by the remote shell, not here: the runner's home is not the VPS's.
-deploy_dir="${usage_dir:-~/logandaim.at}"
+# The VPS layout keeps the checkout at `/opt/logandaim/repo` with `data/` and `secrets/`
+# beside it, so the checkout and the host root are two different directories.
+deploy_dir="${usage_dir:-/opt/logandaim/repo}"
 identity="${usage_identity:-$HOME/.ssh/id_ed25519}"
 
 fail() {

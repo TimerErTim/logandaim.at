@@ -25,6 +25,7 @@ use logandaim_smtp::{SmtpKonfiguration, SmtpMailSender};
 use logandaim_sqlite::SQLiteInstance;
 use poem::{Route, http::StatusCode, test::TestClient};
 use serde_json::Value;
+use tempdir::TempDir;
 
 pub mod konto;
 pub mod mailpit;
@@ -56,11 +57,38 @@ pub struct E2eHarness {
     pub client: LogandaimApiTestClient,
     pub mail: Arc<FakeMailSender>,
     pub clock: Arc<FixedClock>,
+    /// The database this process is running on, so a second process can reuse it.
+    database: Arc<TempDir>,
 }
 
 impl E2eHarness {
     pub async fn new() -> Self {
-        let sqlite = SQLiteInstance::in_temp_dir().await.unwrap();
+        let database = Arc::new(TempDir::new("logandaim-e2e").unwrap());
+        Self::mit_datenbank_in(Arc::clone(&database), Arc::new(test_signing_key())).await
+    }
+
+    /// A harness whose database survives this process, so `neustart_mit_anderem_schlüssel`
+    /// can open the same file under another key.
+    pub async fn mit_datenbank() -> Self {
+        Self::new().await
+    }
+
+    /// A second process: same database, same clock, a different signing key.
+    ///
+    /// `SigningKeypair::from_secret_bytes` with a fixed seed is the deliberate key every
+    /// other case uses; a random key would be non-reproducible, so a different fixed seed
+    /// stands in for "generated on this boot".
+    pub async fn neustart_mit_anderem_schlüssel(&self) -> Self {
+        Self::mit_datenbank_in(
+            Arc::clone(&self.database),
+            Arc::new(InMemorySigning::from_secret_bytes(&[9u8; 32])),
+        )
+        .await
+    }
+
+    async fn mit_datenbank_in(database: Arc<TempDir>, signing: Arc<InMemorySigning>) -> Self {
+        let path = database.path().join("logandaim.db");
+        let sqlite = SQLiteInstance::local(&path).await.unwrap();
         sqlite.migrate_repos_to_latest().await.unwrap();
 
         let clock = Arc::new(FixedClock::new(
@@ -71,7 +99,7 @@ impl E2eHarness {
         let app = App::builder()
             .uow_provider(Box::new(sqlite))
             .object_store(Arc::new(FileSystemObjectStore::in_temp_dir().unwrap()))
-            .signing(Arc::new(test_signing_key()))
+            .signing(signing)
             .throttle(Arc::new(InMemoryThrottle::new()))
             .mail_sender(Arc::clone(&mail) as Arc<dyn logandaim_core::ports::MailSender>)
             .konto(test_konfiguration())
@@ -82,6 +110,7 @@ impl E2eHarness {
             client: LogandaimApiTestClient::new(app),
             mail,
             clock,
+            database,
         }
     }
 
@@ -93,6 +122,7 @@ impl E2eHarness {
     pub async fn mit_smtp() -> Self {
         mailpit::verlange_mailpit().await;
 
+        let database = Arc::new(TempDir::new("logandaim-e2e").unwrap());
         let sqlite = SQLiteInstance::in_temp_dir().await.unwrap();
         sqlite.migrate_repos_to_latest().await.unwrap();
 
@@ -121,6 +151,7 @@ impl E2eHarness {
             client: LogandaimApiTestClient::new(app),
             mail,
             clock,
+            database,
         }
     }
 

@@ -108,7 +108,11 @@ impl UseCase<SessionAusgestellt> for Erneuerung {
 
             let folge_refresh =
                 RefreshToken::random().change_context(ErneuerungFehler::TokenErzeugen)?;
-            let (verbraucht, folge) = live.erneuern(folge_refresh.hash(), jetzt);
+            // The successor row must carry the key that signs its access token, not the key
+            // the retired row carried: after a restart with a per-process key the two differ,
+            // and a row stamped with the old key would reject its own token.
+            let (verbraucht, folge) =
+                live.erneuern(folge_refresh.hash(), ctx.signing().public_key_hex(), jetzt);
 
             session.map_data(|_| verbraucht.into());
             uow.sessions()

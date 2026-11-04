@@ -324,6 +324,30 @@ mod tests {
         assert_eq!(resolved.bind_address, "0.0.0.0");
     }
 
+    /// The deployment sets this through Compose, where a rejected spelling stops the
+    /// container at startup. `clap` spells a `ValueEnum` kebab-case, so the environment
+    /// value must be `klar`, not the serialised `camelCase` name.
+    #[test_log::test]
+    fn smtp_verschlüsselung_wird_in_kebab_schreibweise_gelesen() {
+        let klar = Cli::try_parse_from(["logandaim-server"]).unwrap();
+        assert_eq!(klar.smtp_verschlüsselung, None);
+
+        let start =
+            Cli::try_parse_from(["logandaim-server", "--smtp-verschlüsselung", "start-tls"])
+                .expect("start-tls ist der von Compose erwartete Wert");
+        assert_eq!(
+            start.smtp_verschlüsselung,
+            Some(SmtpVerschlüsselung::StartTls)
+        );
+
+        // The serialised spelling is not an accepted CLI value, which is why compose must
+        // never carry it. Guarding it here keeps the two spellings from drifting back.
+        assert!(
+            Cli::try_parse_from(["logandaim-server", "--smtp-verschlüsselung", "startTls"])
+                .is_err()
+        );
+    }
+
     #[test_log::test]
     fn overlays_log_dir() {
         let cli = Cli {
