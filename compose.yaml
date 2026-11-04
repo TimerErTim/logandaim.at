@@ -74,6 +74,8 @@ services:
     image: stalwartlabs/stalwart:v1
     init: true
     restart: unless-stopped
+    environment:
+      STALWART_PUBLIC_URL: ${STALWART_PUBLIC_URL:?Set STALWART_PUBLIC_URL in .env}
     volumes:
       - stalwart_etc:/etc/stalwart
       - stalwart_data:/var/lib/stalwart
