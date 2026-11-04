@@ -47,9 +47,8 @@ test -f .env || { echo "Missing .env: copy .env.example and fill it in." >&2; ex
 grep -Eq '^FRONTEND_ORIGIN=.+' .env || { echo "Missing FRONTEND_ORIGIN in .env." >&2; exit 2; }
 grep -Eq '^MAIL_HOSTNAME=.+' .env || { echo "Missing MAIL_HOSTNAME in .env." >&2; exit 2; }
 grep -Eq '^MAIL_ABSENDER=.+' .env || { echo "Missing MAIL_ABSENDER in .env." >&2; exit 2; }
-# Mail is part of the MVP, so a stack that cannot authenticate to its relay is not a
-# deployable stack. Checked here rather than discovered when the first registration
-# silently fails to send.
+# Mail is part of the MVP: a stack without working relay credentials is not deployable,
+# so this fails here rather than at the first registration that never sends.
 test -f secrets/mail.env || { echo "Missing secrets/mail.env with the SMTP credentials." >&2; exit 2; }
 grep -Eq '^LOGANDAIM_SMTP_BENUTZERNAME=.+' secrets/mail.env ||
   { echo "Missing LOGANDAIM_SMTP_BENUTZERNAME in secrets/mail.env." >&2; exit 2; }
@@ -76,21 +75,14 @@ health_check() {
   return 1
 }
 
-# Pull the requested reference and apply it. `up` never builds: this checkout has no
-# binary in `.deploy/incoming`, and `compose.build.yaml` is never passed.
+# `up` never builds: this checkout has no binary in `.deploy/incoming`.
 apply() {
   docker compose pull backend
   docker compose up -d --remove-orphans
 }
 
-# Mail is part of the MVP, so the deployment reports whether the hop actually works. It
-# does not gate the image rollout: a relay that is still bootstrapping is an operator task,
-# while a broken image is a rollback. The backend logs the verdict; this reads it from
-# outside the container, where an operator sees it in the deploy output.
-#
-# `--since` is the container's own start time, not the last N lines: a verdict from an
-# earlier boot would otherwise satisfy the check for a container that never reached the
-# relay. The probe retries for about a minute while the relay boots, so poll that long.
+# `--since` scopes the read to this boot: a verdict from an earlier one would satisfy
+# the check for a container that never reached the relay.
 mail_check() {
   local container="" started_at="" _
   local seit=()

@@ -106,14 +106,12 @@ fn lade_mail_sender(
     Ok(sender)
 }
 
-/// Report whether the mail hop actually works, without delaying startup.
-///
-/// Mail is part of the MVP, but a relay that is still bootstrapping must not stop the API
-/// from serving requests (NFR-5). The retries are for exactly that window: a first boot
-/// has to write its configuration and restart before it listens on 587. The verdict lands
-/// in the log, which is where a failed send would otherwise be the only evidence.
+/// Probe the relay without delaying startup: a bootstrapping relay must not stop the API
+/// from serving (NFR-5), and the verdict belongs in the log where a failed send would
+/// otherwise be the only evidence.
 fn prüfe_mail_verbindung(sender: Arc<SmtpMailSender>) {
     tokio::spawn(async move {
+        // A first boot has to write its configuration and restart before it listens.
         const VERSUCHE: u32 = 12;
         let mut letzter_fehler = String::new();
         for versuch in 1..=VERSUCHE {

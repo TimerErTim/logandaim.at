@@ -9,9 +9,6 @@ services:
     #   docker compose -f compose.yaml -f compose.build.yaml up --build
     image: ${LOGANDAIM_IMAGE:?Set LOGANDAIM_IMAGE to ghcr.io/<owner>/logandaim-server:sha-<commit>, or use compose.build.yaml}
     restart: unless-stopped
-    # Credentials only. The topology of the mail hop is fixed here: a relay host or a
-    # TLS mode left to the operator drifts from the service it talks to and only fails
-    # at send time, after the request that triggered the mail has already answered.
     env_file:
       - path: ./secrets/mail.env
         required: false
@@ -26,9 +23,8 @@ services:
       LOGANDAIM_FRONTEND_BASIS_URL: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
       LOGANDAIM_CORS_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
       LOGANDAIM_SUPERUSER_EMAIL: ${SUPERUSER_EMAIL:-}
-      # The mail hop is part of the composition, not an operator setting: a relay host
-      # that disagrees with the service started below only fails at send time. What an
-      # operator supplies is the credential, never the topology or the TLS mode.
+      # Composition, not operator configuration: a value here that disagrees with the
+      # service below only fails at send time.
       LOGANDAIM_SMTP_HOST: stalwart
       LOGANDAIM_SMTP_PORT: "587"
       LOGANDAIM_SMTP_TLS_HOSTNAME: ${MAIL_HOSTNAME:?Set MAIL_HOSTNAME in .env}
@@ -47,8 +43,7 @@ services:
       retries: 5
       start_period: 30s
     depends_on:
-      # Starting order only: the relay has no readiness signal of its own, and the API
-      # must not wait for mail to serve requests (NFR-5).
+      # Order only: the API must not wait for mail to serve requests (NFR-5).
       stalwart:
         condition: service_started
     networks:
@@ -73,9 +68,8 @@ services:
     networks:
       - app
 
-  # Mandatory: the MVP sends registration and recovery mail, so a stack without a relay
-  # is not a working stack. Bootstrap is still private: the only host-published port is
-  # the setup UI on loopback, and SMTP stays inside the Compose network.
+  # Mandatory for the MVP. Only the setup UI is published, on loopback; SMTP stays
+  # inside the Compose network.
   stalwart:
     image: stalwartlabs/stalwart:v1
     init: true

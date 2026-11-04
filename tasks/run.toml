@@ -19,12 +19,13 @@ flag "--port <port>" env="PORT" help="Port to bind to" default="{{ vars.API_PORT
 flag "--database-url <url>" env="LOGANDAIM_DATABASE_URL" help="Database URL; :memory: keeps the run throwaway" default=":memory:"
 flag "--object-store-dir <dir>" env="LOGANDAIM_OBJECT_STORE_DIR" help="Object store directory, created when missing" default="target/smoke-server/storage"
 flag "--signing-key <path>" env="LOGANDAIM_SIGNING_KEY_PATH" help="Ed25519 signing key file"
+flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Compile with the release profile"
 """
-# The release profile, like every other consumer of the binary: the `server` verify
-# daemon is what CI smoke-tests before `main.yml` deploys the same binary.
-depends = ["build:server"]
+# Follows `build:server`'s profile, so the daemon runs the binary CI built rather than
+# a second one from a different profile.
+depends = ["LOGANDAIM_BUILD_RELEASE={{ usage.release }} build:server"]
 run = """
-exec target/release/logandaim-server \
+exec {{ vars.REPO_ROOT }}/target/{% if usage.release %}release{% else %}debug{% endif %}/logandaim-server \
   --bind-address '{{ usage.host }}' \
   --bind-port '{{ usage.port }}' \
   --database-url '{{ usage.database_url }}' \

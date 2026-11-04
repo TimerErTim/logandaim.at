@@ -1,11 +1,6 @@
 name: CI
 
-# The shared gate: pull requests, pushes to `dev`, and `main.yml`'s release gate.
-# Every step delegates to a mise task, so CI cannot drift from a developer machine.
-#
-# The gate compiles the release profile, which is what the deployment runs. The
-# binary and the static export built here are uploaded on a `main` push and reused
-# by `main.yml` instead of being built a second time there.
+# Shared gate for pull requests, pushes to `dev`, and `main.yml`.
 
 on:
   pull_request:
@@ -16,11 +11,7 @@ on:
 
 permissions:
   contents: read
-  # Publishes the test report as a check run.
   checks: write
-  # `configure-pages` reads the site's base path, so the export is built here with
-  # the path it will be served under. Reading only: a fork pull request gets a
-  # read-only token and is still allowed to read it.
   pages: read
 
 concurrency:
@@ -32,34 +23,22 @@ jobs:
   base:
     name: pr/base
     runs-on: ubuntu-latest
-    # The release profile links with LTO and one codegen unit, which is slower than
-    # the debug profile it replaces.
     timeout-minutes: 60
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      # Must precede the gate: `next build` bakes the base path into the export, and
-      # `main.yml` deploys this export as built. `configure-pages` reports the real
-      # path: `/logandaim.at` for a project site, `""` once a custom domain serves at
-      # the root. Never hardcode it.
-      #
-      # `continue-on-error`: a fork's read-only token, or a repository whose Pages
-      # settings are unreadable, must not turn the gate red. The artefacts are only
-      # consumed on a `main` push, and `Check the deployment configuration` below
-      # refuses to upload an export whose base path was not read.
+      # Before the gate: `next build` bakes the base path into the export.
       - name: Configure Pages
-        id: pages
+        id: configure-pages
         continue-on-error: true
         uses: actions/configure-pages@v6
 
-      # Fails before the long gate runs, not after it, so a missing deployment value
-      # costs a minute instead of an hour.
       - name: Check the deployment configuration
         if: github.ref == 'refs/heads/main'
         env:
           NEXT_PUBLIC_LOGANDAIM_API_URL: ${{ vars.LOGANDAIM_API_URL }}
-          PAGES_OUTCOME: ${{ steps.pages.outcome }}
+          PAGES_OUTCOME: ${{ steps.configure-pages.outcome }}
         run: |
           set -eu
           if [ -z "${NEXT_PUBLIC_LOGANDAIM_API_URL:-}" ]; then
@@ -82,49 +61,26 @@ jobs:
       - name: Set up tooling
         uses: ./.github/actions/setup
 
-      # Keyed on both deployment values because `next build` bakes `NEXT_PUBLIC_*`
-      # into the chunks: the cache never crosses a deployment configuration.
-      - name: Cache the Next.js build
-        uses: actions/cache@v4
-        with:
-          path: frontend/.next/cache
-          key: next-${{ runner.os }}-${{ steps.pages.outputs.base_path }}-${{ vars.LOGANDAIM_API_URL }}-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/src/**', 'frontend/public/**', 'frontend/next.config.ts') }}
-          restore-keys: |
-            next-${{ runner.os }}-${{ steps.pages.outputs.base_path }}-${{ vars.LOGANDAIM_API_URL }}-
-
       - name: Run the full gate
         env:
-          # Baked into the export the deployment reuses, so the export is the
-          # deployment's build and not a second, differently configured one. The
-          # gate compiles the release profile by task definition, not by an
-          # environment switch here.
           NEXT_PUBLIC_LOGANDAIM_API_URL: ${{ vars.LOGANDAIM_API_URL }}
-          NEXT_PUBLIC_LOGANDAIM_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          NEXT_PUBLIC_LOGANDAIM_BASE_PATH: ${{ steps.configure-pages.outputs.base_path }}
+          LOGANDAIM_BUILD_RELEASE: true
         run: mise run ci
 
-      # A missing file means `check` failed before the tests ran.
-      # `continue-on-error`: fork PRs have a read-only token, and the gate already
-      # decides the run.
       - name: Publish the test report
         if: always() && hashFiles('target/nextest/*/junit.xml') != ''
         continue-on-error: true
         uses: mikepenz/action-junit-report@v6
         with:
           report_paths: target/nextest/*/junit.xml
-          # The PR head, not the merge commit, so results attach to the PR.
+          # Attach to the PR head, not the merge commit.
           commit: ${{ github.event.pull_request.head.sha || github.sha }}
           check_name: Test results
-          # The gate already reports these failures.
           fail_on_failure: false
-          # nextest's JUnit has no file or line attributes to annotate inline.
           check_annotations: false
           include_skipped: true
 
-      # The two artefacts `main.yml` ships. A `main` push is the only run whose
-      # result is deployed, so pull requests and `dev` upload nothing and keep their
-      # storage. Retention is the deployment's window, not a debugging window: the
-      # binary is wrapped into the runtime image and pushed to GHCR, the export goes
-      # to Pages.
       - name: Upload the server binary
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v7

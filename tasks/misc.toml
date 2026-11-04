@@ -2,10 +2,15 @@
 ["export:openapi"]
 description = "Export OpenAPI spec to stdout"
 raw = true
-# Same profile as the server: the spec is a product of the code that ships.
-run = "cargo run -p logandaim-api --bin export_spec --features openapi --release"
+usage = """
+flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Compile with the release profile"
+"""
+run = "cargo run -p logandaim-api --bin export_spec --features openapi{% if usage.release %} --release{% endif %}"
 
 ["sync:openapi"]
 description = "Sync OpenAPI spec from backend to frontend"
 dir = "{{ vars.REPO_ROOT }}/frontend"
-run = 'mise run --no-deps export:openapi | npx openapi-typescript -o src/api/schema.ts --enum-values --empty-objects-unknown --enum --dedupe-enums'
+usage = """
+flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Compile with the release profile"
+"""
+run = 'mise run --no-deps export:openapi{% if usage.release %} --release{% endif %} | npx openapi-typescript -o src/api/schema.ts --enum-values --empty-objects-unknown --enum --dedupe-enums'

@@ -1,15 +1,7 @@
 name: Main
 
-# Push to `main` means a release pull request was merged: deploy the static
-# frontend and the backend, then cut a source-only GitHub release tagged `vX.Y.Z`.
-# The tag is created by this workflow, never pushed by a human, so a failing gate
-# cannot leave a tag behind.
-#
-# Nothing here builds the application. `pr/base` already compiled the release
-# profile for this revision and uploaded the server binary and the static export.
-# The image job wraps that binary in the runtime image and pushes it, `deploy:vps`
-# pulls it by commit tag, and Pages deploys the export as built, so what ships is
-# what the gate tested.
+# Push to `main`: deploy the frontend and backend, then cut the release. Nothing
+# here builds the application; `pr/base` compiled and tested what ships.
 
 on:
   push:
@@ -27,17 +19,13 @@ concurrency:
 jobs:
   ci:
     name: pr/base
-    # A called workflow cannot outrank its caller, so `checks: write` repeats here
-    # or the release gate's test report silently no-ops. `pages: read` repeats for
-    # the base path the export is built with.
+    # A called workflow cannot outrank its caller, so these repeat here.
     permissions:
       contents: read
       checks: write
       pages: read
     uses: ./.github/workflows/ci.yml
 
-  # The same check a release pull request must pass, repeated here so a push that
-  # bypassed its pull request still fails before anything deploys and before the tag.
   release-check:
     name: release-check
     permissions:
@@ -47,7 +35,7 @@ jobs:
 
   pages:
     name: deploy/pages
-    needs: [ci, release-check]
+    needs: [ci]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -58,9 +46,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # The export was built by `pr/base` with the same base path and API URL
-      # configured by `configure-pages` there. Deploying it as built is what makes
-      # the artifact under test the artifact that ships.
+      # Deployed as built, so the artefact under test is the artefact that ships.
       - name: Download the static export
         uses: actions/download-artifact@v8
         with:
@@ -78,19 +64,15 @@ jobs:
 
   image:
     name: deploy/image
-    # Builds the runtime image around the binary `pr/base` tested and pushes it. A
-    # deployment can therefore only ship a binary the gate ran, and the VPS never
-    # compiles. `deploy/backend` consumes this job's image reference, not an artefact.
+    # Wraps the binary `pr/base` tested, so the VPS never compiles.
     needs: [ci, release-check]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
       packages: write
     outputs:
-      # The only reference any consumer may use: one immutable tag per commit.
-      # `:main` is pushed for humans browsing the registry and is never passed on.
+      # One immutable tag per commit; `:main` is for humans and is never passed on.
       reference: ${{ steps.reference.outputs.reference }}
     steps:
       - name: Check out repository
@@ -102,12 +84,10 @@ jobs:
           name: server
           path: .deploy/incoming
 
-      # An artefact archive preserves no executable bit, and the image copy reads the
-      # mode from the file. Restore it rather than trusting the transport.
+      # An artefact archive preserves no executable bit.
       - name: Make the binary executable
         run: chmod 0755 .deploy/incoming/logandaim-server
 
-      # GHCR rejects an uppercase owner, and the repository is `TimerErTim/...`.
       - name: Compose the image references
         id: reference
         env:
@@ -128,9 +108,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # The context is the binary alone. `.dockerignore` whitelists it, so the image
-      # cannot pick up a file the gate never saw. `:main` is a convenience tag for
-      # the registry UI; the `sha-<commit>` tag is what everything pulls.
+      # `.dockerignore` whitelists the binary, so the image cannot pick up a file
+      # the gate never saw.
       - name: Build and push the runtime image
         uses: docker/build-push-action@v6
         with:
@@ -144,9 +123,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
-      # The digest is not an input to anything: it is printed so an operator can
-      # compare a rollout against the pullable image without inspecting the package.
-      # A summary that cannot read it must not fail a push that already succeeded.
+      # Printed for operators; a summary failure must not fail a push that worked.
       - name: Summarise the push
         env:
           REFERENCE: ${{ steps.reference.outputs.reference }}
@@ -166,11 +143,8 @@ jobs:
 
   deploy-backend:
     name: deploy/backend
-    # Parallel with `deploy/pages`: the two deployments share no state, and neither
-    # may hold the other back. `deploy/release` waits for both, so a failed
-    # deployment still blocks the tag.
+    # Runs beside `deploy/pages`; only `deploy/release` waits for both.
     needs: [ci, release-check, image]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
@@ -180,9 +154,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      # Only mise itself is needed: the deployment is a task and the tools it runs
-      # are on the runner already. `install: false` skips downloading the project's
-      # language toolchain, which this job never uses.
+      # `install: false` skips the language toolchain, which this job never uses.
       - name: Install mise
         uses: jdx/mise-action@v5
         with:
@@ -203,10 +175,7 @@ jobs:
           printf '%s\n' "$VPS_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
 
-      # The same task an operator runs for a manual deploy or a rollback. It
-      # validates the reference and revision, then streams the remote half over SSH,
-      # which pulls the image, applies compose, health-checks, and rolls back on
-      # failure.
+      # The same task an operator runs for a manual deploy or rollback.
       - name: Deploy the image on the VPS
         env:
           VPS_HOST: ${{ vars.VPS_HOST }}
@@ -226,7 +195,6 @@ jobs:
 
   release:
     name: deploy/release
-    # Both deployments must succeed: the release announces what is running.
     needs: [ci, release-check, pages, deploy-backend]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -234,8 +202,6 @@ jobs:
       contents: write
       pull-requests: read
     env:
-      # `release:publish` owns the tag and the body: the release check already
-      # verified that both can be produced.
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_SHA: ${{ github.sha }}
       GITHUB_REPOSITORY: ${{ github.repository }}

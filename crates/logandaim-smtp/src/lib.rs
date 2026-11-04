@@ -44,9 +44,7 @@ pub struct SmtpKonfiguration {
     pub port: u16,
     pub verschlüsselung: Verschlüsselung,
     /// Name the server certificate is verified against, when it differs from [`Self::host`].
-    ///
-    /// A container name reaches the relay but is never what a CA issues for, so the two
-    /// have to be separable. `None` means the host is also the certified name.
+    /// `None` means the host is also the certified name.
     pub tls_hostname: Option<String>,
     pub benutzername: Option<String>,
     pub passwort: Option<String>,
