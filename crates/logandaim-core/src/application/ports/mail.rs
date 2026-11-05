@@ -106,6 +106,8 @@ pub enum MailError {
     NichtKonfiguriert,
     #[error("der Mailversand antwortet nicht auf NOOP")]
     AntwortetNichtAufNoop,
+    #[error("für den verschlüsselten Mailversand fehlen Benutzername oder Passwort")]
+    OhneZugangsdaten,
 }
 
 /// Outbound transaction mail. One adapter per deployment; Mailpit in development and

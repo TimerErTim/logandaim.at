@@ -44,7 +44,10 @@ password="$(read_value LOGANDAIM_SMTP_PASSWORT "$mail_env")"
 [[ -n "$password" ]] || { echo "Missing LOGANDAIM_SMTP_PASSWORT in $mail_env" >&2; exit 2; }
 
 cd "$deploy_dir"
-compose=(docker compose --env-file "$env_file" --env-file "$mail_env")
+# `--env-file` only feeds interpolation; the backend reads `mail.env` through its own
+# `env_file`, which resolves against the host root.
+export LOGANDAIM_HOST_ROOT="$host_root"
+compose=(docker compose --env-file "$env_file")
 
 echo "== Hostnames"
 echo "   mail server FQDN : ${api_domain}"

@@ -81,6 +81,18 @@ fn tls_parameter(konfiguration: &SmtpKonfiguration) -> ResultReport<TlsParameter
     TlsParameters::new(konfiguration.host.clone()).change_context(MailError::NichtKonfiguriert)
 }
 
+/// A TLS relay is a submission relay, and submission always authenticates. Without
+/// credentials `test_connection` never sends `AUTH`, so the probe would pass while every
+/// send is refused.
+fn prüfe_zugangsdaten(konfiguration: &SmtpKonfiguration) -> ResultReport<(), MailError> {
+    let verschlüsselt = konfiguration.verschlüsselung != Verschlüsselung::Klar;
+    let zugangsdaten = konfiguration.benutzername.is_some() && konfiguration.passwort.is_some();
+    if verschlüsselt && !zugangsdaten {
+        return Err(error_stack::Report::new(MailError::OhneZugangsdaten));
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone)]
 pub struct SmtpMailSender {
     konfiguration: SmtpKonfiguration,
@@ -173,6 +185,7 @@ impl MailSender for SmtpMailSender {
     /// A send would prove the same hop but deliver a message; NOOP proves it without a
     /// recipient, so a deployment can report whether mail works before anyone registers.
     async fn prüfe_verbindung(&self) -> ResultReport<(), MailError> {
+        prüfe_zugangsdaten(&self.konfiguration)?;
         self.transport
             .test_connection()
             .await
@@ -224,5 +237,35 @@ mod tests {
         let parameter = tls_parameter(&konfiguration).expect("TLS-Parameter bauen");
 
         assert_eq!(parameter.domain(), "mail.logandaim.at");
+    }
+
+    #[test_log::test]
+    fn ein_tls_relay_ohne_zugangsdaten_besteht_die_prüfung_nicht() {
+        let konfiguration = konfiguration();
+
+        let fehler = prüfe_zugangsdaten(&konfiguration).expect_err("ohne Zugangsdaten");
+
+        assert!(matches!(
+            fehler.current_context(),
+            MailError::OhneZugangsdaten
+        ));
+    }
+
+    #[test_log::test]
+    fn ein_tls_relay_mit_zugangsdaten_besteht_die_prüfung() {
+        let mut konfiguration = konfiguration();
+        konfiguration.benutzername = Some("noreply@logandaim.at".to_owned());
+        konfiguration.passwort = Some("geheim".to_owned());
+
+        assert!(prüfe_zugangsdaten(&konfiguration).is_ok());
+    }
+
+    /// Mailpit takes plain SMTP without a login; development must stay green.
+    #[test_log::test]
+    fn klares_smtp_braucht_keine_zugangsdaten() {
+        let konfiguration =
+            SmtpKonfiguration::mailpit(EmailAdresse::normalisiert("noreply@logandaim.at").unwrap());
+
+        assert!(prüfe_zugangsdaten(&konfiguration).is_ok());
     }
 }

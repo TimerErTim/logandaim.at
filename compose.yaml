@@ -10,12 +10,10 @@ services:
     image: ${LOGANDAIM_IMAGE:?Set LOGANDAIM_IMAGE to ghcr.io/<owner>/logandaim-server:sha-<commit>, or use compose.build.yaml}
     restart: unless-stopped
     # State and secrets live beside the checkout (`/opt/logandaim`), not inside it, so a
-    # deploy can check out another revision without touching them. Compose resolves
-    # relative paths against this file's directory (the checkout), so the host root is
-    # named explicitly; `deploy:vps` exports it, a manual run can set it.
+    # deploy can check out another revision without touching them. No default: falling
+    # back to the checkout would start on an empty database and without SMTP credentials.
     env_file:
-      - path: ${LOGANDAIM_HOST_ROOT:-.}/secrets/mail.env
-        required: false
+      - ${LOGANDAIM_HOST_ROOT:?Set LOGANDAIM_HOST_ROOT in .env}/secrets/mail.env
     environment:
       LOGANDAIM_BIND_ADDRESS: 0.0.0.0
       LOGANDAIM_BIND_PORT: "3000"
@@ -37,8 +35,8 @@ services:
       LOGANDAIM_SMTP_VERSCHLUESSELUNG: start-tls
       LOGANDAIM_SMTP_ABSENDER: ${MAIL_ABSENDER:?Set MAIL_ABSENDER in .env}
     volumes:
-      - ${LOGANDAIM_HOST_ROOT:-.}/data/sqlite:/data/sqlite
-      - ${LOGANDAIM_HOST_ROOT:-.}/data/objects:/data/objects
+      - ${LOGANDAIM_HOST_ROOT:?Set LOGANDAIM_HOST_ROOT in .env}/data/sqlite:/data/sqlite
+      - ${LOGANDAIM_HOST_ROOT:?Set LOGANDAIM_HOST_ROOT in .env}/data/objects:/data/objects
     expose:
       - "3000"
     healthcheck:
@@ -152,9 +150,9 @@ services:
     volumes:
       # Mail state lives beside the checkout so provider snapshots cover it, the same way
       # the SQLite database and object store do.
-      - ${LOGANDAIM_HOST_ROOT:-.}/data/mail/mail-data:/var/mail
-      - ${LOGANDAIM_HOST_ROOT:-.}/data/mail/mail-state:/var/mail-state
-      - ${LOGANDAIM_HOST_ROOT:-.}/data/mail/mail-config:/tmp/docker-mailserver
+      - ${LOGANDAIM_HOST_ROOT:?Set LOGANDAIM_HOST_ROOT in .env}/data/mail/mail-data:/var/mail
+      - ${LOGANDAIM_HOST_ROOT:?Set LOGANDAIM_HOST_ROOT in .env}/data/mail/mail-state:/var/mail-state
+      - ${LOGANDAIM_HOST_ROOT:?Set LOGANDAIM_HOST_ROOT in .env}/data/mail/mail-config:/tmp/docker-mailserver
       # The certificate pair `certsync` publishes above.
       - mail_certs:/certs:ro
     cap_add:
