@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Publishes Caddy's current certificate for the API hostname at a stable path the mail
 # server can read.
 #

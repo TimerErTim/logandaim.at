@@ -77,8 +77,8 @@ test -d "$host_root/data/sqlite" || { echo "Missing $host_root/data/sqlite." >&2
 test -d "$host_root/data/objects" || { echo "Missing $host_root/data/objects." >&2; exit 2; }
 export LOGANDAIM_HOST_ROOT="$host_root"
 export API_DOMAIN="$api_domain"
-# Exported rather than written to `.env`: the requested reference must win over any
-# value an operator left behind, and compose reads the environment first.
+# Exported so the requested reference wins over the value `.env` holds from the last
+# deployment; `persist_env` writes it back once it is running.
 export LOGANDAIM_IMAGE="$image"
 curl --version >/dev/null
 
@@ -102,6 +102,22 @@ health_check() {
 apply() {
   docker compose --env-file "$env_file" pull backend
   docker compose --env-file "$env_file" up -d --remove-orphans
+  persist_env
+}
+
+# A plain `docker compose up -d` in the checkout must start what is running now. Compose
+# reads `.env` from the project directory, so the checkout's `.env` links to the operator's
+# file, and that file records the started image and the host root. Rollback calls `apply`
+# too, so the record always names the image that was started last.
+persist_env() {
+  local tmp="$env_file.tmp"
+  grep -Ev '^(LOGANDAIM_IMAGE|LOGANDAIM_HOST_ROOT)=' "$env_file" > "$tmp" || true
+  printf 'LOGANDAIM_IMAGE=%s\nLOGANDAIM_HOST_ROOT=%s\n' "$LOGANDAIM_IMAGE" "$host_root" >> "$tmp"
+  chmod --reference="$env_file" "$tmp"
+  mv "$tmp" "$env_file"
+  if [[ "$env_file" != .env ]]; then
+    ln -sfn "$env_file" .env
+  fi
 }
 
 # Ask the API for its mail verdict, the one the container healthcheck reads. The probe logs

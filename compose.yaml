@@ -78,7 +78,7 @@ services:
       - app
 
   # Copies Caddy's certificate for the API hostname to a stable path for the mail server.
-  # Reuses `caddy:2` for `bash`, `find`, and `cmp`.
+  # Reuses `caddy:2` (Alpine, no bash) for BusyBox `sh`, `find`, and `cmp`.
   certsync:
     image: caddy:2
     restart: unless-stopped
@@ -90,7 +90,7 @@ services:
       - ./deploy/cert-sync.sh:/usr/local/bin/cert-sync.sh:ro
       - caddy_data:/caddy-data:ro
       - mail_certs:/certs
-    entrypoint: ["/bin/bash", "/usr/local/bin/cert-sync.sh"]
+    entrypoint: ["/bin/sh", "/usr/local/bin/cert-sync.sh"]
     healthcheck:
       # Healthy once the pair exists. The mail server waits for this: started with
       # `SSL_TYPE=manual` and no certificate it aborts, and `restart: unless-stopped`
