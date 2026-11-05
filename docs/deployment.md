@@ -51,10 +51,20 @@ record matters. Do not expose `8080`: that was Stalwart's admin UI and has no su
 
 ### Certificate renewal
 
-Caddy renews on its own. `certsync` re-reads the certificate every five minutes, writes the pair
-when it changed, and docker-mailserver notices the changed `SSL_CERT_PATH`/`SSL_KEY_PATH` and
-reloads Postfix and Dovecot by itself. No cron job, restart hook, or operator action is needed; a
-renewal reaches the listeners without either container being recreated.
+Caddy renews on its own. `certsync` re-reads the certificate every five minutes and republishes the
+pair only when its content changed. docker-mailserver runs its own changedetector, which polls
+`SSL_CERT_PATH` and `SSL_KEY_PATH` (every 2 s by default, `DMS_CONFIG_POLL`) and — when either hash
+differs — re-copies the pair to its internal `/etc/dms/tls/`, then reloads Postfix and Dovecot. No
+cron job, restart hook, or operator action is needed; a renewal reaches the listeners without either
+container being recreated.
+
+Two details make that reliable, and both are load-bearing:
+
+- The pair is published by writing `*.tmp` and renaming into `/certs`, which is mounted as a whole
+  directory. A single-file bind mount of `active.crt` would keep pointing at the old inode after a
+  rename, so the mail server would never see the new certificate.
+- The reload happens inside the mail server, not in `certsync`. Nothing needs to signal the
+  container; changing the file is the signal.
 
 If the mail server logs a certificate error, check in this order:
 

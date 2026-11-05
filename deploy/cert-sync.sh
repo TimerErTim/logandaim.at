@@ -9,9 +9,14 @@
 # hardcoding it, and writes a copy to a fixed path.
 #
 # The copy is what lets the mail server's TLS setup stay indifferent to Caddy's storage
-# layout. docker-mailserver watches `SSL_CERT_PATH` and `SSL_KEY_PATH` for content changes
-# and restarts Postfix and Dovecot when they change, so a renewal reaches the listeners
-# without either container being restarted.
+# layout. docker-mailserver's changedetector polls `SSL_CERT_PATH` and `SSL_KEY_PATH`
+# (2 s by default), re-copies them to its internal `/etc/dms/tls/`, and reloads Postfix
+# and Dovecot. So a renewal reaches the listeners without either container being
+# restarted, and no hook or restart is needed here.
+#
+# Publishing is a rename into a directory that is mounted as a whole, never a write to a
+# file that is bind-mounted on its own: a single-file bind mount would keep pointing at
+# the old inode after the rename, and the mail server would never see the new pair.
 set -eu
 
 caddy_data="${CADDY_DATA_DIR:-/caddy-data}"
