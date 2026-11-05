@@ -104,11 +104,11 @@ apply() {
   docker compose --env-file "$env_file" up -d --remove-orphans
 }
 
-# Ask the API what its own probe loop last found. This is the same verdict the container
-# healthcheck reads, and it exercises the credential path only indirectly: the probe logs
+# Ask the API for its mail verdict, the one the container healthcheck reads. The probe logs
 # in on the submission listener, so a wrong password or a broken certificate shows up here.
 #
-# `unknown` is not success: it means the first probe has not reported yet, so this waits.
+# Only `Ok` passes. `Unknown` and `Failed` are polled again: each read of a non-`Ok` verdict
+# starts a fresh probe, so a relay that is still starting gets the whole window.
 mail_check() {
   local body="" _
   for _ in $(seq 1 30); do
@@ -121,14 +121,9 @@ mail_check() {
       echo "Mailversand verfügbar (SMTP-Relay erreichbar)."
       return 0
     fi
-    # A verdict of `Failed` is final for this boot: waiting cannot fix bad credentials.
-    if printf '%s' "$body" | grep -q '"status":"Failed"'; then
-      echo "Mailversand fehlgeschlagen: ${body}" >&2
-      return 1
-    fi
     sleep 5
   done
-  echo "Mailversand nicht bestätigt (kein Prüfergebnis): ${body:-keine Antwort}" >&2
+  echo "Mailversand nicht bestätigt: ${body:-keine Antwort}" >&2
   return 1
 }
 # tag that was re-pushed out of band is visible in the recorded state, and so a

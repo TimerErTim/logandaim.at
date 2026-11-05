@@ -128,18 +128,20 @@ not in the DNS zone, and without it large providers reject or heavily penalise t
 
 ### Verify submission
 
-`GET /api/health/mail` reports the verdict of a background probe that logs in to the submission
-listener, hangs up, and repeats every minute. `docker compose logs backend` reports
-`SMTP-Relay erreichbar; Mailversand ist verfügbar` when it first succeeds.
-`deploy:vps` now **fails** when this verdict is not `ok` before the revision is recorded as
-known-good, so an unverified relay cannot become a rollback target. To check by hand:
+`GET /api/health/mail` reports the verdict of a probe that logs in to the submission listener and
+hangs up. Each read that finds no verdict, a failed one, or an `Ok` older than a minute starts a
+fresh probe in the background, so the container healthcheck keeps it current.
+`docker compose logs backend` reports `SMTP-Relay erreichbar; Mailversand ist verfügbar` when it
+first succeeds. `deploy:vps` now **fails** when this verdict has not turned `Ok` within about two
+minutes, before the revision is recorded as known-good, so an unverified relay cannot become a
+rollback target. To check by hand:
 
 ```sh
 curl --fail "https://$API_DOMAIN/api/health/mail"
 ```
 
 A `status` of `Failed` carries a `detail` naming the failing step (credentials or reachability).
-`Unknown` means the first probe has not reported yet.
+`Unknown` means the first probe has not reported yet; ask again.
 
 `GET /api/health` still answers the bare string `OK` and does not depend on mail at all: a broken
 relay must never stop the API from serving (NFR-5). The container healthcheck, however, requires

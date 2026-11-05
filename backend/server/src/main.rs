@@ -4,9 +4,7 @@ mod tracing_setup;
 use std::sync::Arc;
 
 use error_stack::{Report, ResultExt};
-use logandaim_api::{
-    errors::InternalServerError, health::MailProbe, openapi_service_with_mail_health,
-};
+use logandaim_api::{errors::InternalServerError, openapi_service};
 use logandaim_core::{
     App,
     adapters::{InMemorySigning, InMemoryThrottle, NullMailSender},
@@ -70,20 +68,14 @@ fn catch_panic() -> CatchPanic<impl poem::middleware::PanicHandler> {
 }
 
 /// Build the mail port. No relay is not an error: mail fails and is logged (NFR-5).
-///
-/// The sender is returned together with the probe the health loop uses, so the SMTP
-/// transport is built once and both roles share it.
 fn lade_mail_sender(
     config: &config::ServerConfig,
-) -> Result<Mailversand, Report<BackendServerError>> {
+) -> Result<Arc<dyn MailSender>, Report<BackendServerError>> {
     let Some(host) = &config.smtp_host else {
         tracing::warn!(
             "kein SMTP-Relay konfiguriert; Transaktionsmails schlagen fehl und werden geloggt"
         );
-        return Ok(Mailversand {
-            sender: Arc::new(NullMailSender),
-            probe: None,
-        });
+        return Ok(Arc::new(NullMailSender));
     };
 
     let absender = EmailAdresse::normalisiert(&config.smtp_absender).map_err(|_| {
@@ -109,34 +101,40 @@ fn lade_mail_sender(
     };
 
     let sender = Arc::new(SmtpMailSender::neu(smtp).change_context(BackendServerError)?);
-    Ok(Mailversand {
-        sender: sender.clone(),
-        probe: Some(Arc::new(SmtpProbe(sender))),
-    })
+    prüfe_mail_verbindung(Arc::clone(&sender));
+    Ok(sender)
 }
 
-/// The two roles one SMTP configuration serves: sending, and being probed for health.
-struct Mailversand {
-    sender: Arc<dyn MailSender>,
-    /// Absent when no relay is configured: there is nothing to probe, and the endpoint
-    /// reports `unknown` rather than a verdict nobody produced.
-    probe: Option<Arc<SmtpProbe>>,
-}
-
-/// The SMTP transport as a health probe.
-///
-/// A local newtype because `MailProbe` and `SmtpMailSender` both live in other crates, and
-/// the error is rendered here into the sentence the endpoint serves.
-struct SmtpProbe(Arc<SmtpMailSender>);
-
-#[async_trait::async_trait]
-impl MailProbe for SmtpProbe {
-    async fn check_connection(&self) -> Result<bool, String> {
-        match self.0.prüfe_verbindung().await {
-            Ok(erreichbar) => Ok(erreichbar),
-            Err(fehler) => Err(format!("{fehler:?}")),
+/// Probe the relay without delaying startup: a bootstrapping relay must not stop the API
+/// from serving (NFR-5), and the verdict belongs in the log where a failed send would
+/// otherwise be the only evidence.
+fn prüfe_mail_verbindung(sender: Arc<SmtpMailSender>) {
+    tokio::spawn(async move {
+        // A first boot has to write its configuration and restart before it listens.
+        const VERSUCHE: u32 = 12;
+        let mut letzter_fehler = String::new();
+        for versuch in 1..=VERSUCHE {
+            match sender.prüfe_verbindung().await {
+                Ok(true) => {
+                    tracing::info!("SMTP-Relay erreichbar; Mailversand ist verfügbar");
+                    return;
+                }
+                Ok(false) => letzter_fehler = "Relay antwortet nicht auf NOOP".to_owned(),
+                Err(fehler) => letzter_fehler = format!("{fehler:?}"),
+            }
+            if versuch == VERSUCHE {
+                break;
+            }
+            tracing::debug!(
+                versuch,
+                "SMTP-Relay noch nicht erreichbar: {letzter_fehler}"
+            );
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         }
-    }
+        tracing::error!(
+            "SMTP-Relay nicht erreichbar; Transaktionsmails schlagen fehl: {letzter_fehler}"
+        );
+    });
 }
 
 /// Origin allowlist: the configured frontend plus the documented dev-server ports.
@@ -269,7 +267,7 @@ async fn main() -> Result<(), Report<BackendServerError>> {
         .change_context(BackendServerError)?;
 
     let signing_key = build_signing_key(&config)?;
-    let mail = lade_mail_sender(&config)?;
+    let mail_sender = lade_mail_sender(&config)?;
     let konto = IdentityProviderConfiguration::neu(
         config.token_issuer.clone(),
         config.token_audience.clone(),
@@ -280,23 +278,11 @@ async fn main() -> Result<(), Report<BackendServerError>> {
         .object_store(Arc::new(object_store))
         .signing(Arc::new(signing_key))
         .throttle(Arc::new(InMemoryThrottle::new()))
-        .mail_sender(mail.sender)
+        .mail_sender(mail_sender)
         .konto(konto)
         .build();
 
     bootstrap_superuser(&app).await?;
-
-    // The mail verdict lives beside the app, not inside it: the route reads it, and no use
-    // case may, so a request can never wait on or branch on the relay (NFR-5).
-    let mail_health = logandaim_api::health::MailHealthState::new();
-    if let Some(probe) = mail.probe {
-        tokio::spawn(logandaim_api::health::monitor_mail(
-            probe,
-            mail_health.clone(),
-        ));
-    } else {
-        tracing::warn!("kein SMTP-Relay konfiguriert; der Mailversand bleibt ohne Prüfergebnis");
-    }
 
     let base_path = config.subpath.trim_matches('/');
     let subpath = if base_path.is_empty() {
@@ -311,7 +297,7 @@ async fn main() -> Result<(), Report<BackendServerError>> {
     );
 
     // TODO: add dynamic version loading
-    let api_service = openapi_service_with_mail_health(app, mail_health, [api_url.clone()]);
+    let api_service = openapi_service(app, [api_url.clone()]);
 
     let tracing = Tracing.combine(RequestId::new().reuse_id(ReuseId::Use));
 

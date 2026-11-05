@@ -773,4 +773,8 @@ impl MailSender for FakeMailSender {
         self.gesendet.lock().unwrap().push(mail);
         Ok(())
     }
+
+    async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError> {
+        Ok(true)
+    }
 }

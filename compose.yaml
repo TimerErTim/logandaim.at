@@ -30,15 +30,8 @@ services:
       LOGANDAIM_FRONTEND_BASIS_URL: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
       LOGANDAIM_CORS_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
       LOGANDAIM_SUPERUSER_EMAIL: ${SUPERUSER_EMAIL:-}
-      # Composition, not operator configuration: a value here that disagrees with the
-      # service below only fails at send time.
-      #
-      # The mail server's submission listener requires STARTTLS before it accepts a login
-      # (`smtpd_tls_security_level=encrypt` in its Postfix master.cf), so this hop is a TLS
-      # hop and the certificate is verified. It is verified against the public FQDN, because
-      # that is the only name the Let's Encrypt certificate carries; the mail server answers
-      # to that FQDN inside the bridge network as a network alias, so the connection never
-      # leaves the Compose network even though the name is public.
+      # STARTTLS to the public FQDN, the only name on the certificate. A network alias keeps
+      # the hop inside the bridge.
       LOGANDAIM_SMTP_HOST: ${API_DOMAIN:?Set API_DOMAIN in .env}
       LOGANDAIM_SMTP_PORT: "587"
       LOGANDAIM_SMTP_VERSCHLUESSELUNG: start-tls
@@ -49,9 +42,7 @@ services:
     expose:
       - "3000"
     healthcheck:
-      # Both answers matter and neither is implied by the other: the API may serve with a
-      # broken relay, and mail may work while the API is down. `mail_check` in the deploy
-      # script reads the same verdict, so a deployment cannot pass on an unverified relay.
+      # API up and relay verified. Each poll also refreshes the mail verdict.
       test:
         - "CMD-SHELL"
         - "curl -fsS http://127.0.0.1:3000/api/health | grep -qx '\"OK\"' && curl -fsS http://127.0.0.1:3000/api/health/mail | grep -q '\"status\":\"Ok\"'"
@@ -80,20 +71,14 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      # Order only, not health. Gating Caddy on `service_healthy` would deadlock a first
-      # boot: this service is healthy only once mail works, mail needs the certificate, and
-      # the certificate comes from Caddy. It also keeps a broken relay from taking the whole
-      # site down — the API still serves (NFR-5), Caddy answers `502` until it is healthy.
+      # Not `service_healthy`: backend health needs mail, mail needs Caddy's certificate.
       backend:
         condition: service_started
     networks:
       - app
 
-  # Copies Caddy's certificate for the API hostname to a stable path the mail server reads.
-  #
-  # `caddy:2` is reused rather than introducing a second image: it is already in the stack
-  # and carries what this needs (`bash`, `find`, `cmp`). The script discovers the
-  # certificate by hostname, so Caddy's internal storage layout is not baked in.
+  # Copies Caddy's certificate for the API hostname to a stable path for the mail server.
+  # Reuses `caddy:2` for `bash`, `find`, and `cmp`.
   certsync:
     image: caddy:2
     restart: unless-stopped

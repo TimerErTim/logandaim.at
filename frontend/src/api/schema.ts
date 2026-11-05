@@ -52,9 +52,9 @@ export interface paths {
         };
         /**
          * Report whether the mail relay's last probe succeeded.
-         * @description Reads a recorded verdict; it never contacts the relay, so a broken relay cannot
-         *     make this route slow (NFR-5). `status` is `ok`, `failed`, or `unknown` before the
-         *     first probe reports.
+         * @description Answers from the last verdict and never waits on the relay (NFR-5); a stale or
+         *     failed verdict starts a fresh probe in the background. `Unknown` until the first
+         *     probe reports.
          */
         get: {
             parameters: {
@@ -2306,28 +2306,86 @@ export interface components {
          */
         "L\u00E4ndercode": LNdercode;
         /**
-         * MailHealth
-         * @description The mail relay's last probe verdict.
+         * @description The mail relay's last probe verdict, tagged by `status`.
+         *
+         *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
+         *     action.
          */
-        MailHealth: {
-            /** @description The verdict. Only `ok` means a send would work right now. */
-            status: components["schemas"]["MailHealthStatus"] & unknown;
+        MailHealth: components["schemas"]["MailHealth_MailHealthUnknown"] | components["schemas"]["MailHealth_MailHealthOk"] | components["schemas"]["MailHealth_MailHealthFailed"];
+        /**
+         * MailHealthFailed
+         * @description The last probe failed. Sending will fail too.
+         */
+        MailHealthFailed: {
             /**
              * Format: date-time
-             * @description When the probe last reported, in UTC. Absent until one has.
+             * @description When the probe reported, in UTC.
              */
-            checkedAt?: string;
-            /** @description One German sentence naming what failed; empty while `status` is `ok`. */
+            checkedAt: string;
+            /** @description What failed: credentials, TLS, or reachability. */
             detail: string;
         };
         /**
-         * @description What the last probe of the mail relay found.
-         *
-         *     `Unknown` is the honest answer before any probe has finished, and it is why this is not
-         *     a boolean: "not probed yet" and "probed and broken" call for different operator action.
-         * @enum {string}
+         * MailHealthOk
+         * @description The relay accepted the connection, the TLS upgrade, and the login.
          */
-        MailHealthStatus: MailHealthStatus;
+        MailHealthOk: {
+            /**
+             * Format: date-time
+             * @description When the probe reported, in UTC.
+             */
+            checkedAt: string;
+        };
+        /**
+         * MailHealthUnknown
+         * @description No probe has reported yet.
+         */
+        MailHealthUnknown: {
+            /**
+             * Format: date-time
+             * @description When a probe last reported, in UTC, if one ever has.
+             */
+            checkedAt?: string;
+        };
+        /**
+         * @description The mail relay's last probe verdict, tagged by `status`.
+         *
+         *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
+         *     action.
+         */
+        MailHealth_MailHealthFailed: {
+            /**
+             * @example Failed
+             * @enum {string}
+             */
+            status: MailHealth_MailHealthFailedStatus;
+        } & components["schemas"]["MailHealthFailed"];
+        /**
+         * @description The mail relay's last probe verdict, tagged by `status`.
+         *
+         *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
+         *     action.
+         */
+        MailHealth_MailHealthOk: {
+            /**
+             * @example Ok
+             * @enum {string}
+             */
+            status: MailHealth_MailHealthOkStatus;
+        } & components["schemas"]["MailHealthOk"];
+        /**
+         * @description The mail relay's last probe verdict, tagged by `status`.
+         *
+         *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
+         *     action.
+         */
+        MailHealth_MailHealthUnknown: {
+            /**
+             * @example Unknown
+             * @enum {string}
+             */
+            status: MailHealth_MailHealthUnknownStatus;
+        } & components["schemas"]["MailHealthUnknown"];
         /**
          * Ok
          * @description Acknowledgement of a request that has nothing to return.
@@ -2860,10 +2918,14 @@ export enum LNdercode {
     DE = "DE",
     CH = "CH"
 }
-export enum MailHealthStatus {
-    Unknown = "Unknown",
-    Ok = "Ok",
+export enum MailHealth_MailHealthFailedStatus {
     Failed = "Failed"
+}
+export enum MailHealth_MailHealthOkStatus {
+    Ok = "Ok"
+}
+export enum MailHealth_MailHealthUnknownStatus {
+    Unknown = "Unknown"
 }
 export enum RundeZustand {
     InBearbeitung = "InBearbeitung",

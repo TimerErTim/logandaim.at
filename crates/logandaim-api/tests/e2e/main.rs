@@ -12,6 +12,7 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration};
+use logandaim_api::openapi_service_from_api;
 use logandaim_core::{
     App,
     adapters::{InMemorySigning, InMemoryThrottle},
@@ -180,25 +181,11 @@ impl LogandaimApiTestClient {
     /// Keeps the `Arc<App>` beside the client, so a case can drive a use case the API does
     /// not expose (a superuser promotion is deployment configuration, not a route).
     pub fn from_arc(app: Arc<App>) -> Self {
-        Self::from_arc_with_mail_health(app, logandaim_api::health::MailHealthState::new())
-    }
-
-    /// The same client, reading a mail verdict the case controls.
-    ///
-    /// A health case drives the state directly: spinning a real relay to test a status word
-    /// would test the relay, not the route.
-    pub fn from_arc_with_mail_health(
-        app: Arc<App>,
-        mail_health: Arc<logandaim_api::health::MailHealthState>,
-    ) -> Self {
-        let spec = logandaim_api::LogandaimApiSpec::new(logandaim_api::LogandaimAppApi::from_arc(
-            Arc::clone(&app),
-        ))
-        .with_mail_health(mail_health);
-        let route = Route::new().nest(
-            "/api",
-            logandaim_api::openapi_service_for_spec(spec, std::iter::empty::<String>()),
+        let service = openapi_service_from_api(
+            logandaim_api::LogandaimAppApi::from_arc(Arc::clone(&app)),
+            std::iter::empty::<String>(),
         );
+        let route = Route::new().nest("/api", service);
         Self {
             client: TestClient::new(route),
             app,

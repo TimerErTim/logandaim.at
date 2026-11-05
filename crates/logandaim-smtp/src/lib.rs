@@ -127,18 +127,6 @@ impl SmtpMailSender {
         })
     }
 
-    /// Open one connection, complete the TLS upgrade and authentication, then close it.
-    ///
-    /// A send would prove the same hop but deliver a message; NOOP proves it without a
-    /// recipient, so a deployment can report whether mail works before anyone registers.
-    pub async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError> {
-        self.transport
-            .test_connection()
-            .await
-            .map_err(IntoReport::into_report)
-            .change_context(MailError::Zustellung)
-    }
-
     /// Build the wire message. Separate from sending so a unit test can assert recipient,
     /// subject, and body without a relay. This is where a token becomes a link: the
     /// use case does not know the frontend origin and must not know the route table.
@@ -178,6 +166,18 @@ impl MailSender for SmtpMailSender {
             .map_err(IntoReport::into_report)
             .change_context(MailError::Zustellung)?;
         Ok(())
+    }
+
+    /// Open one connection, complete the TLS upgrade and authentication, then close it.
+    ///
+    /// A send would prove the same hop but deliver a message; NOOP proves it without a
+    /// recipient, so a deployment can report whether mail works before anyone registers.
+    async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError> {
+        self.transport
+            .test_connection()
+            .await
+            .map_err(IntoReport::into_report)
+            .change_context(MailError::Zustellung)
     }
 }
 

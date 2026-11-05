@@ -114,6 +114,9 @@ pub enum MailError {
 #[async_trait::async_trait]
 pub trait MailSender: Send + Sync {
     async fn send(&self, mail: Mail) -> ResultReport<(), MailError>;
+
+    /// Whether a send would reach the relay right now, proven without delivering a message.
+    async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError>;
 }
 
 #[cfg(test)]

@@ -27,12 +27,15 @@ use poem_openapi::{
     param::{Cookie, Header, Path, Query},
     payload::Json,
 };
-use std::sync::Arc;
+use std::sync::{Arc, RwLock, atomic::AtomicBool};
 use uuid::Uuid;
 
 mod auth;
 mod cookie;
 mod extractors;
+mod health {
+    mod mail;
+}
 pub mod jwt;
 mod responses;
 use extractors::*;
@@ -73,26 +76,18 @@ pub enum ApiTag {
 
 pub struct LogandaimApiSpec {
     app_api: LogandaimAppApi,
-    /// The mail relay's last probe verdict, read by `/health/mail`.
-    ///
-    /// Carried here rather than on `App`: it is process state about a dependency, not
-    /// domain state, and the use cases must not be able to read it (a request must never
-    /// branch on the relay — NFR-5).
-    mail_health: Arc<crate::health::MailHealthState>,
+    /// Kept out of `App` so no use case can branch on the relay (NFR-5).
+    mail_health: Arc<RwLock<MailHealth>>,
+    mail_probe_running: Arc<AtomicBool>,
 }
 
 impl LogandaimApiSpec {
     pub fn new(app_api: LogandaimAppApi) -> Self {
         Self {
             app_api,
-            mail_health: crate::health::MailHealthState::new(),
+            mail_health: Arc::default(),
+            mail_probe_running: Arc::default(),
         }
-    }
-
-    /// The same spec, reading a mail verdict the caller's probe loop writes.
-    pub fn with_mail_health(mut self, mail_health: Arc<crate::health::MailHealthState>) -> Self {
-        self.mail_health = mail_health;
-        self
     }
 }
 
@@ -121,12 +116,12 @@ impl LogandaimApiSpec {
 
     /// Report whether the mail relay's last probe succeeded.
     ///
-    /// Reads a recorded verdict; it never contacts the relay, so a broken relay cannot
-    /// make this route slow (NFR-5). `status` is `ok`, `failed`, or `unknown` before the
-    /// first probe reports.
+    /// Answers from the last verdict and never waits on the relay (NFR-5); a stale or
+    /// failed verdict starts a fresh probe in the background. `Unknown` until the first
+    /// probe reports.
     #[oai(path = "/health/mail", method = "get", tag = "ApiTag::Betrieb")]
     async fn health_mail(&self) -> Json<MailHealth> {
-        Json(self.mail_health.read())
+        Json(self.mail_health())
     }
 
     // ------------------------------------------------------------------ master data
@@ -972,39 +967,18 @@ pub fn openapi_service(
     openapi_service_from_api(LogandaimAppApi::new(app), server_urls)
 }
 
-/// The service wired to a mail verdict the caller's probe loop writes.
-///
-/// Separate from [`openapi_service`] rather than a parameter on it: a spec built for
-/// rendering (the exported `spec.json`, the scratch apps in tests) has no probe loop, and
-/// giving it a state nobody writes would imply a verdict it does not have.
-pub fn openapi_service_with_mail_health(
-    app: App,
-    mail_health: Arc<crate::health::MailHealthState>,
-    server_urls: impl IntoIterator<Item = impl Into<ServerObject>>,
-) -> OpenApiService<LogandaimApiSpec, ()> {
-    let spec = LogandaimApiSpec::new(LogandaimAppApi::new(app)).with_mail_health(mail_health);
-    openapi_service_for_spec(spec, server_urls)
-}
-
 /// The service: the spec, its servers, and a description of how to call it.
 pub fn openapi_service_from_api(
     app_api: LogandaimAppApi,
     server_urls: impl IntoIterator<Item = impl Into<ServerObject>>,
 ) -> OpenApiService<LogandaimApiSpec, ()> {
-    openapi_service_for_spec(LogandaimApiSpec::from(app_api), server_urls)
-}
-
-/// Assemble a service from an already-built spec, so the state a spec carries survives.
-///
-/// For callers that must wire extra process state into the routes — the server's mail
-/// probe, a test's fixed verdict — without rebuilding the description by hand.
-pub fn openapi_service_for_spec(
-    spec: LogandaimApiSpec,
-    server_urls: impl IntoIterator<Item = impl Into<ServerObject>>,
-) -> OpenApiService<LogandaimApiSpec, ()> {
-    let mut service = OpenApiService::new(spec, "logandaim.at API", env!("CARGO_PKG_VERSION"))
-        .summary("Logbook for shooting ranges: master data, Runden, and the Wertungen.")
-        .description(include_str!("README.md"));
+    let mut service = OpenApiService::new(
+        LogandaimApiSpec::from(app_api),
+        "logandaim.at API",
+        env!("CARGO_PKG_VERSION"),
+    )
+    .summary("Logbook for shooting ranges: master data, Runden, and the Wertungen.")
+    .description(include_str!("README.md"));
     for server_url in server_urls {
         service = service.server(server_url);
     }

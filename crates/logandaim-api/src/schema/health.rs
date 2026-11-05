@@ -1,50 +1,75 @@
-//! The verdict of the background probe that watches the mail relay.
+//! What the last probe of the mail relay found.
 //!
-//! Mail is part of the MVP, so a deployment wants to know whether the relay works without
-//! sending a message. That answer lives here: one small object, produced by a probe loop
-//! and read by a route. It deliberately describes the *last* probe rather than a live
-//! connection — a request must never wait on the relay (NFR-5).
+//! It describes the *last* probe rather than a live connection: a request must never wait
+//! on the relay (NFR-5).
 
 use chrono::{DateTime, Utc};
 
-/// What the last probe of the mail relay found.
+/// The mail relay's last probe verdict, tagged by `status`.
 ///
-/// `Unknown` is the honest answer before any probe has finished, and it is why this is not
-/// a boolean: "not probed yet" and "probed and broken" call for different operator action.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
+/// Not a boolean: "not probed yet" and "probed and broken" call for different operator
+/// action.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Union))]
+#[cfg_attr(feature = "openapi", oai(discriminator_name = "status"))]
 #[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum MailHealthStatus {
-    /// No probe has reported yet: the first one is still running, or none is configured.
-    Unknown,
-    /// The relay accepted the connection, the TLS upgrade, and the login.
-    Ok,
-    /// The last probe failed. Sending will fail too.
-    Failed,
+#[serde(tag = "status")]
+pub enum MailHealth {
+    #[cfg_attr(feature = "openapi", oai(mapping = "Unknown"))]
+    Unknown(MailHealthUnknown),
+    #[cfg_attr(feature = "openapi", oai(mapping = "Ok"))]
+    Ok(MailHealthOk),
+    #[cfg_attr(feature = "openapi", oai(mapping = "Failed"))]
+    Failed(MailHealthFailed),
 }
 
-/// The mail relay's last probe verdict.
-#[derive(Debug, Clone)]
+/// No probe has reported yet.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MailHealth {
-    /// The verdict. Only `ok` means a send would work right now.
-    pub status: MailHealthStatus,
-    /// When the probe last reported, in UTC. Absent until one has.
+pub struct MailHealthUnknown {
+    /// When a probe last reported, in UTC, if one ever has.
     pub checked_at: Option<DateTime<Utc>>,
-    /// One German sentence naming what failed; empty while `status` is `ok`.
+}
+
+/// The relay accepted the connection, the TLS upgrade, and the login.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MailHealthOk {
+    /// When the probe reported, in UTC.
+    pub checked_at: DateTime<Utc>,
+}
+
+/// The last probe failed. Sending will fail too.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MailHealthFailed {
+    /// When the probe reported, in UTC.
+    pub checked_at: DateTime<Utc>,
+    /// What failed: credentials, TLS, or reachability.
     pub detail: String,
 }
 
 impl Default for MailHealth {
     fn default() -> Self {
-        Self {
-            status: MailHealthStatus::Unknown,
-            checked_at: None,
-            detail: "Noch kein Prüfergebnis".to_owned(),
+        Self::Unknown(MailHealthUnknown::default())
+    }
+}
+
+impl MailHealth {
+    pub fn checked_at(&self) -> Option<DateTime<Utc>> {
+        match self {
+            Self::Unknown(unknown) => unknown.checked_at,
+            Self::Ok(ok) => Some(ok.checked_at),
+            Self::Failed(failed) => Some(failed.checked_at),
         }
     }
 }

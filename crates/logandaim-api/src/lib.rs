@@ -1,5 +1,4 @@
 pub mod api;
-pub mod health;
 pub mod schema;
 
 #[cfg(feature = "openapi")]
