@@ -113,7 +113,7 @@ services:
   mailserver:
     # Pinned like every other image here: `latest` would make a redeploy an unannounced
     # version jump on the service that carries resets and verifications.
-    image: ghcr.io/docker-mailserver/docker-mailserver:v16.0.1
+    image: ghcr.io/docker-mailserver/docker-mailserver:16.0.1
     # The FQDN is the mail server's own name: it appears in HELO/EHLO and must match the
     # certificate and the PTR record. DMS refuses to start without it. The mail domain is
     # derived from it (the first label is dropped), so a single `API_DOMAIN` is the only
