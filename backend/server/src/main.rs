@@ -295,7 +295,7 @@ async fn main() -> Result<(), Report<BackendServerError>> {
             mail_health.clone(),
         ));
     } else {
-        tracing::warn!("kein SMTP-Relay konfiguriert; Mailgesundheit bleibt unbeantwortet");
+        tracing::warn!("kein SMTP-Relay konfiguriert; der Mailversand bleibt ohne Prüfergebnis");
     }
 
     let base_path = config.subpath.trim_matches('/');
