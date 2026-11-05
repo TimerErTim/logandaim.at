@@ -52,9 +52,9 @@ export interface paths {
         };
         /**
          * Report whether the mail relay's last probe succeeded.
-         * @description Answers from the last verdict and never waits on the relay (NFR-5); a stale or
-         *     failed verdict starts a fresh probe in the background. `Unknown` until the first
-         *     probe reports.
+         * @description Answers from the last verdict and never waits on the relay; a stale or failed
+         *     verdict starts a fresh probe in the background. `Unknown` until the first probe
+         *     reports.
          */
         get: {
             parameters: {

@@ -172,12 +172,19 @@ impl MailSender for SmtpMailSender {
     ///
     /// A send would prove the same hop but deliver a message; NOOP proves it without a
     /// recipient, so a deployment can report whether mail works before anyone registers.
-    async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError> {
+    async fn prüfe_verbindung(&self) -> ResultReport<(), MailError> {
         self.transport
             .test_connection()
             .await
             .map_err(IntoReport::into_report)
             .change_context(MailError::Zustellung)
+            .and_then(|res| {
+                if !res {
+                    Err(error_stack::Report::new(MailError::AntwortetNichtAufNoop))
+                } else {
+                    Ok(())
+                }
+            })
     }
 }
 

@@ -136,7 +136,7 @@ impl MailSender for InstrumentedMailSender {
     }
 
     #[instrument(skip(self), level = "debug", err(Debug))]
-    async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError> {
+    async fn prüfe_verbindung(&self) -> ResultReport<(), MailError> {
         self.inner.prüfe_verbindung().await
     }
 }

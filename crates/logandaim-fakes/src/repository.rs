@@ -774,7 +774,7 @@ impl MailSender for FakeMailSender {
         Ok(())
     }
 
-    async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError> {
-        Ok(true)
+    async fn prüfe_verbindung(&self) -> ResultReport<(), MailError> {
+        Ok(())
     }
 }

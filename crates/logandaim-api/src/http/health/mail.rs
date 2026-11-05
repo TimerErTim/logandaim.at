@@ -48,11 +48,7 @@ impl LogandaimApiSpec {
 async fn probe(sender: &dyn MailSender) -> MailHealth {
     let checked_at = Utc::now();
     match sender.prüfe_verbindung().await {
-        Ok(true) => MailHealth::Ok(MailHealthOk { checked_at }),
-        Ok(false) => MailHealth::Failed(MailHealthFailed {
-            checked_at,
-            detail: "Relay antwortet nicht auf NOOP".to_owned(),
-        }),
+        Ok(()) => MailHealth::Ok(MailHealthOk { checked_at }),
         Err(fehler) => MailHealth::Failed(MailHealthFailed {
             checked_at,
             detail: format!("{fehler:#}"),

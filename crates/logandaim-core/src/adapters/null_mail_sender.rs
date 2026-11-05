@@ -15,7 +15,7 @@ impl MailSender for NullMailSender {
         Err(error_stack::Report::new(MailError::NichtKonfiguriert))
     }
 
-    async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError> {
+    async fn prüfe_verbindung(&self) -> ResultReport<(), MailError> {
         Err(error_stack::Report::new(MailError::NichtKonfiguriert))
     }
 }

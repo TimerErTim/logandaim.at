@@ -33,9 +33,7 @@ use uuid::Uuid;
 mod auth;
 mod cookie;
 mod extractors;
-mod health {
-    mod mail;
-}
+mod health;
 pub mod jwt;
 mod responses;
 use extractors::*;
@@ -116,9 +114,9 @@ impl LogandaimApiSpec {
 
     /// Report whether the mail relay's last probe succeeded.
     ///
-    /// Answers from the last verdict and never waits on the relay (NFR-5); a stale or
-    /// failed verdict starts a fresh probe in the background. `Unknown` until the first
-    /// probe reports.
+    /// Answers from the last verdict and never waits on the relay; a stale or failed
+    /// verdict starts a fresh probe in the background. `Unknown` until the first probe
+    /// reports.
     #[oai(path = "/health/mail", method = "get", tag = "ApiTag::Betrieb")]
     async fn health_mail(&self) -> Json<MailHealth> {
         Json(self.mail_health())

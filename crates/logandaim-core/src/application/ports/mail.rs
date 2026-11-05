@@ -104,6 +104,8 @@ pub enum MailError {
     Zustellung,
     #[error("der Mailversand ist nicht konfiguriert")]
     NichtKonfiguriert,
+    #[error("der Mailversand antwortet nicht auf NOOP")]
+    AntwortetNichtAufNoop,
 }
 
 /// Outbound transaction mail. One adapter per deployment; Mailpit in development and
@@ -116,7 +118,7 @@ pub trait MailSender: Send + Sync {
     async fn send(&self, mail: Mail) -> ResultReport<(), MailError>;
 
     /// Whether a send would reach the relay right now, proven without delivering a message.
-    async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError>;
+    async fn prüfe_verbindung(&self) -> ResultReport<(), MailError>;
 }
 
 #[cfg(test)]
