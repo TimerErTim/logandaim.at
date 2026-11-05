@@ -2,12 +2,14 @@
 //! not by the increment that happened to introduce them: later schemas about the same
 //! concept belong in the same file.
 
+mod health;
 mod kontakt;
 mod konto;
 mod runde;
 mod schuss;
 mod stammdaten;
 
+pub use health::*;
 pub use kontakt::*;
 pub use konto::*;
 pub use runde::*;

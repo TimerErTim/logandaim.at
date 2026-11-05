@@ -43,6 +43,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Report whether the mail relay's last probe succeeded.
+         * @description Reads a recorded verdict; it never contacts the relay, so a broken relay cannot
+         *     make this route slow (NFR-5). `status` is `ok`, `failed`, or `unknown` before the
+         *     first probe reports.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["MailHealth"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/anlagen": {
         parameters: {
             query?: never;
@@ -2266,6 +2306,29 @@ export interface components {
          */
         "L\u00E4ndercode": LNdercode;
         /**
+         * MailHealth
+         * @description The mail relay's last probe verdict.
+         */
+        MailHealth: {
+            /** @description The verdict. Only `ok` means a send would work right now. */
+            status: components["schemas"]["MailHealthStatus"] & unknown;
+            /**
+             * Format: date-time
+             * @description When the probe last reported, in UTC. Absent until one has.
+             */
+            checkedAt?: string;
+            /** @description One German sentence naming what failed; empty while `status` is `ok`. */
+            detail: string;
+        };
+        /**
+         * @description What the last probe of the mail relay found.
+         *
+         *     `Unknown` is the honest answer before any probe has finished, and it is why this is not
+         *     a boolean: "not probed yet" and "probed and broken" call for different operator action.
+         * @enum {string}
+         */
+        MailHealthStatus: MailHealthStatus;
+        /**
          * Ok
          * @description Acknowledgement of a request that has nothing to return.
          *
@@ -2796,6 +2859,11 @@ export enum LNdercode {
     AT = "AT",
     DE = "DE",
     CH = "CH"
+}
+export enum MailHealthStatus {
+    Unknown = "Unknown",
+    Ok = "Ok",
+    Failed = "Failed"
 }
 export enum RundeZustand {
     InBearbeitung = "InBearbeitung",

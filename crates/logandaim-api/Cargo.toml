@@ -17,6 +17,9 @@ tracing = { workspace = true }
 async-trait = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
+# The mail probe loop sleeps between attempts; the crate owns no runtime, it only needs
+# `sleep`, so this feature set stays narrow.
+tokio = { workspace = true, features = ["time"] }
 
 uuid = { workspace = true }
 chrono = { workspace = true }

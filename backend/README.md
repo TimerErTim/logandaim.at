@@ -58,6 +58,10 @@ Notes on the account keys:
   certificate is issued for; there is no separate certified-name override.
 - The trust store is the compiled-in Mozilla root set. A public CA certificate verifies; a
   self-signed or private-CA certificate cannot, and there is no configuration to add a root.
+- `GET /api/health/mail` reports the last verdict of a probe loop that logs in to the relay once a
+  minute and records the result in process state. The route only reads that state, so a broken
+  relay never slows or fails a request (NFR-5). `GET /api/health` stays the literal `OK` and does
+  not depend on mail; the Compose healthcheck requires both.
 - `LOGANDAIM_SUPERUSER_EMAIL` is the only way a `Systemadministrator` is created — there is no
   self-service elevation (rule 9). Promotion is idempotent and tolerates an address that has not
   registered yet; it is retried on the next start.

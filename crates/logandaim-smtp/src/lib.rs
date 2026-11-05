@@ -75,7 +75,8 @@ impl SmtpKonfiguration {
 /// There is deliberately no separate certified-name override: the deployment submits over
 /// the Compose bridge in plain SMTP, where no certificate is involved, and a relay reached
 /// over TLS is addressed by the name its certificate is issued for. An override existed to
-/// reach a service name no CA certifies; that hop no longer uses TLS at all.
+/// reach a service name no CA certifies; the deployed hop now dials the public FQDN, which
+/// the mail server answers to inside the bridge, so no override is needed.
 fn tls_parameter(konfiguration: &SmtpKonfiguration) -> ResultReport<TlsParameters, MailError> {
     TlsParameters::new(konfiguration.host.clone()).change_context(MailError::NichtKonfiguriert)
 }
@@ -187,7 +188,9 @@ mod tests {
     fn konfiguration() -> SmtpKonfiguration {
         let mut konfiguration =
             SmtpKonfiguration::mailpit(EmailAdresse::normalisiert("noreply@logandaim.at").unwrap());
-        konfiguration.host = "stalwart".to_owned();
+        // The real deployment dials the public FQDN, so that is what the fixture names:
+        // it is the only name the Let's Encrypt certificate carries.
+        konfiguration.host = "api.logandaim.at".to_owned();
         konfiguration.port = 587;
         konfiguration.verschlüsselung = Verschlüsselung::StartTls;
         konfiguration
@@ -201,7 +204,7 @@ mod tests {
 
         let parameter = tls_parameter(&konfiguration).expect("TLS-Parameter bauen");
 
-        assert_eq!(parameter.domain(), "stalwart");
+        assert_eq!(parameter.domain(), "api.logandaim.at");
     }
 
     /// The names from a configuration address the same relay: a second host is a second
