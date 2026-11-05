@@ -43,6 +43,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Report whether the mail relay's last probe succeeded.
+         * @description Answers from the last verdict and never waits on the relay; a stale or failed
+         *     verdict starts a fresh probe in the background. `Unknown` until the first probe
+         *     reports.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["MailHealth"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/anlagen": {
         parameters: {
             query?: never;
@@ -2266,6 +2306,87 @@ export interface components {
          */
         "L\u00E4ndercode": LNdercode;
         /**
+         * @description The mail relay's last probe verdict, tagged by `status`.
+         *
+         *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
+         *     action.
+         */
+        MailHealth: components["schemas"]["MailHealth_MailHealthUnknown"] | components["schemas"]["MailHealth_MailHealthOk"] | components["schemas"]["MailHealth_MailHealthFailed"];
+        /**
+         * MailHealthFailed
+         * @description The last probe failed. Sending will fail too.
+         */
+        MailHealthFailed: {
+            /**
+             * Format: date-time
+             * @description When the probe reported, in UTC.
+             */
+            checkedAt: string;
+            /** @description What failed: credentials, TLS, or reachability. */
+            detail: string;
+        };
+        /**
+         * MailHealthOk
+         * @description The relay accepted the connection, the TLS upgrade, and the login.
+         */
+        MailHealthOk: {
+            /**
+             * Format: date-time
+             * @description When the probe reported, in UTC.
+             */
+            checkedAt: string;
+        };
+        /**
+         * MailHealthUnknown
+         * @description No probe has reported yet.
+         */
+        MailHealthUnknown: {
+            /**
+             * Format: date-time
+             * @description When a probe last reported, in UTC, if one ever has.
+             */
+            checkedAt?: string;
+        };
+        /**
+         * @description The mail relay's last probe verdict, tagged by `status`.
+         *
+         *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
+         *     action.
+         */
+        MailHealth_MailHealthFailed: {
+            /**
+             * @example Failed
+             * @enum {string}
+             */
+            status: MailHealth_MailHealthFailedStatus;
+        } & components["schemas"]["MailHealthFailed"];
+        /**
+         * @description The mail relay's last probe verdict, tagged by `status`.
+         *
+         *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
+         *     action.
+         */
+        MailHealth_MailHealthOk: {
+            /**
+             * @example Ok
+             * @enum {string}
+             */
+            status: MailHealth_MailHealthOkStatus;
+        } & components["schemas"]["MailHealthOk"];
+        /**
+         * @description The mail relay's last probe verdict, tagged by `status`.
+         *
+         *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
+         *     action.
+         */
+        MailHealth_MailHealthUnknown: {
+            /**
+             * @example Unknown
+             * @enum {string}
+             */
+            status: MailHealth_MailHealthUnknownStatus;
+        } & components["schemas"]["MailHealthUnknown"];
+        /**
          * Ok
          * @description Acknowledgement of a request that has nothing to return.
          *
@@ -2796,6 +2917,15 @@ export enum LNdercode {
     AT = "AT",
     DE = "DE",
     CH = "CH"
+}
+export enum MailHealth_MailHealthFailedStatus {
+    Failed = "Failed"
+}
+export enum MailHealth_MailHealthOkStatus {
+    Ok = "Ok"
+}
+export enum MailHealth_MailHealthUnknownStatus {
+    Unknown = "Unknown"
 }
 export enum RundeZustand {
     InBearbeitung = "InBearbeitung",

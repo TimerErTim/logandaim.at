@@ -27,11 +27,13 @@ use poem_openapi::{
     param::{Cookie, Header, Path, Query},
     payload::Json,
 };
+use std::sync::{Arc, RwLock, atomic::AtomicBool};
 use uuid::Uuid;
 
 mod auth;
 mod cookie;
 mod extractors;
+mod health;
 pub mod jwt;
 mod responses;
 use extractors::*;
@@ -49,7 +51,7 @@ use crate::{
         },
     },
     schema::{
-        Anlage, AnlageZugriff, AnlageÖffentlich, AuthenticatedBenutzer, Benutzer, Ok,
+        Anlage, AnlageZugriff, AnlageÖffentlich, AuthenticatedBenutzer, Benutzer, MailHealth, Ok,
         ParkourÖffentlich, Runde, RundeBasic, Schuss,
     },
 };
@@ -72,11 +74,18 @@ pub enum ApiTag {
 
 pub struct LogandaimApiSpec {
     app_api: LogandaimAppApi,
+    /// Kept out of `App` so no use case can branch on the relay (NFR-5).
+    mail_health: Arc<RwLock<MailHealth>>,
+    mail_probe_running: Arc<AtomicBool>,
 }
 
 impl LogandaimApiSpec {
     pub fn new(app_api: LogandaimAppApi) -> Self {
-        Self { app_api }
+        Self {
+            app_api,
+            mail_health: Arc::default(),
+            mail_probe_running: Arc::default(),
+        }
     }
 }
 
@@ -101,6 +110,16 @@ impl LogandaimApiSpec {
     #[oai(path = "/health", method = "get", tag = "ApiTag::Betrieb")]
     async fn health(&self) -> Json<String> {
         Json("OK".to_string())
+    }
+
+    /// Report whether the mail relay's last probe succeeded.
+    ///
+    /// Answers from the last verdict and never waits on the relay; a stale or failed
+    /// verdict starts a fresh probe in the background. `Unknown` until the first probe
+    /// reports.
+    #[oai(path = "/health/mail", method = "get", tag = "ApiTag::Betrieb")]
+    async fn health_mail(&self) -> Json<MailHealth> {
+        Json(self.mail_health())
     }
 
     // ------------------------------------------------------------------ master data

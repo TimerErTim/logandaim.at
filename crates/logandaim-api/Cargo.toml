@@ -28,11 +28,12 @@ serde_json = { workspace = true }
 poem-openapi = { workspace = true, features = ["uuid", "chrono", "rust_decimal", "swagger-ui", "redoc", "cookie"], optional = true }
 poem = { workspace = true, optional = true }
 futures = { workspace = true, optional = true }
+tokio = { workspace = true, features = ["rt"], optional = true }
 serde = { workspace = true, features = ["derive"] }
 
 [features]
 default = ["openapi"]
-openapi = ["dep:poem-openapi", "dep:poem", "dep:futures"]
+openapi = ["dep:poem-openapi", "dep:poem", "dep:futures", "dep:tokio"]
 
 [dev-dependencies]
 pollster = { version = "0.4.0", features = ["macro"] }

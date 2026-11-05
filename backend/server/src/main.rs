@@ -115,11 +115,10 @@ fn prüfe_mail_verbindung(sender: Arc<SmtpMailSender>) {
         let mut letzter_fehler = String::new();
         for versuch in 1..=VERSUCHE {
             match sender.prüfe_verbindung().await {
-                Ok(true) => {
+                Ok(()) => {
                     tracing::info!("SMTP-Relay erreichbar; Mailversand ist verfügbar");
                     return;
                 }
-                Ok(false) => letzter_fehler = "Relay antwortet nicht auf NOOP".to_owned(),
                 Err(fehler) => letzter_fehler = format!("{fehler:?}"),
             }
             if versuch == VERSUCHE {

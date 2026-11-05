@@ -103,8 +103,9 @@ fn bearer_schema_ist_veröffentlicht() {
         "a reader has to learn what the header carries"
     );
 
-    const OHNE_TOKEN: [(&str, &str); 7] = [
+    const OHNE_TOKEN: [(&str, &str); 8] = [
         ("/health", "get"),
+        ("/health/mail", "get"),
         ("/registrierung/start", "post"),
         ("/registrierung/abschluss", "post"),
         ("/anmeldung", "post"),

@@ -60,9 +60,9 @@ fi
 test -f "$env_file" || { echo "Missing .env: copy .env.example and fill it in." >&2; exit 2; }
 grep -Eq '^FRONTEND_ORIGIN=.+' "$env_file" ||
   { echo "Missing FRONTEND_ORIGIN in $env_file." >&2; exit 2; }
-# MAIL_ABSENDER stays required: every transactional mail carries it. MAIL_HOSTNAME is no
-# longer read by compose — the backend reaches Stalwart over the bridge in plain SMTP — so
-# requiring it here would demand a value nothing uses.
+# MAIL_ABSENDER stays required: every transactional mail carries it. There is no
+# MAIL_HOSTNAME: the mail server's own name is API_DOMAIN, so a second hostname in `.env`
+# would be one more value that can disagree with the certificate.
 grep -Eq '^MAIL_ABSENDER=.+' "$env_file" ||
   { echo "Missing MAIL_ABSENDER in $env_file." >&2; exit 2; }
 # Mail is part of the MVP: a stack without working relay credentials is not deployable,
@@ -104,29 +104,28 @@ apply() {
   docker compose --env-file "$env_file" up -d --remove-orphans
 }
 
-# `--since` scopes the read to this boot: a verdict from an earlier one would satisfy
-# the check for a container that never reached the relay.
+# Ask the API for its mail verdict, the one the container healthcheck reads. The probe logs
+# in on the submission listener, so a wrong password or a broken certificate shows up here.
+#
+# Only `Ok` passes. `Unknown` and `Failed` are polled again: each read of a non-`Ok` verdict
+# starts a fresh probe, so a relay that is still starting gets the whole window.
 mail_check() {
-  local container="" started_at="" _
-  local seit=()
-  container="$(docker compose ps -q backend 2>/dev/null || true)"
-  if [[ -n "$container" ]]; then
-    started_at="$(docker inspect --format '{{.State.StartedAt}}' "$container" 2>/dev/null || true)"
-  fi
-  [[ -n "$started_at" ]] && seit=(--since "$started_at")
-  for _ in $(seq 1 20); do
-    if docker compose logs --no-color "${seit[@]}" backend 2>/dev/null |
-      grep -q "Mailversand ist verfügbar"; then
+  local body="" _
+  for _ in $(seq 1 30); do
+    if ! body="$(curl --fail --silent --show-error --connect-timeout 3 \
+      --resolve "${api_domain}:443:127.0.0.1" "https://${api_domain}/api/health/mail" 2>/dev/null)"; then
+      sleep 5
+      continue
+    fi
+    if printf '%s' "$body" | grep -q '"status":"Ok"'; then
       echo "Mailversand verfügbar (SMTP-Relay erreichbar)."
       return 0
     fi
     sleep 5
   done
-  echo "WARNUNG: Mailversand nicht bestätigt; siehe 'docker compose logs backend'." >&2
+  echo "Mailversand nicht bestätigt: ${body:-keine Antwort}" >&2
   return 1
 }
-
-# The digest the registry served for this tag. It is recorded beside the tag so a
 # tag that was re-pushed out of band is visible in the recorded state, and so a
 # rollback reference can be compared against the local image store.
 pulled_digest() {
@@ -183,9 +182,12 @@ git checkout --detach "$revision"
 
 apply
 health_check
+# Before recording: an unverified relay must not be written down as known-good, because
+# the rollback target would then be a revision whose mail never worked. The `ERR` trap
+# turns a failure here into the normal rollback path.
+mail_check
 record_known_good
 echo "Deployed healthy revision ${revision} (${image})."
-mail_check || true
 
 # Old images accumulate on a small disk: every deploy pulls a new immutable tag.
 # `-a` also removes tags that no container runs any more, so an old image is not

@@ -27,6 +27,7 @@ use poem::{Route, http::StatusCode, test::TestClient};
 use serde_json::Value;
 use tempdir::TempDir;
 
+pub mod health;
 pub mod konto;
 pub mod mailpit;
 pub mod runde;

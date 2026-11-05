@@ -134,6 +134,11 @@ impl MailSender for InstrumentedMailSender {
     async fn send(&self, mail: Mail) -> ResultReport<(), MailError> {
         self.inner.send(mail).await
     }
+
+    #[instrument(skip(self), level = "debug", err(Debug))]
+    async fn prüfe_verbindung(&self) -> ResultReport<(), MailError> {
+        self.inner.prüfe_verbindung().await
+    }
 }
 
 pub struct InstrumentedUnitOfWork {

@@ -149,12 +149,16 @@ for support content.
 | Date | Decision | By |
 |------|----------|----|
 | 2026-10-23 | Deferred operational requirements are specified here rather than in the deployment issues. | Agent (Cursor) |
-| 2026-11-04 | Transaction mail is an MVP requirement, so Stalwart starts with the stack instead of behind an opt-in profile, and Compose fixes the relay host, port and TLS mode rather than leaving them to the operator. | Agent (Cursor) |
-| 2026-11-04 | The backend-to-Stalwart hop is plain SMTP over the Compose bridge: it never leaves the bridge network, the submission listener is published on loopback only, and the service name `stalwart` is not a name any CA certifies. STARTTLS there would need a private CA or disabled hostname verification for no reachability gain. Outbound TLS to public mail servers remains Stalwart's own configuration and is unaffected. | Agent (Cursor) |
+| 2026-11-04 | Transaction mail is an MVP requirement, so the relay starts with the stack instead of behind an opt-in profile, and Compose fixes the relay host, port and TLS mode rather than leaving them to the operator. | Agent (Cursor) |
+| 2026-11-05 | The relay is docker-mailserver, replacing Stalwart. Stalwart's admin UI, its declarative setup and its own ACME handling are more surface than a relay that only sends the product's own transactional mail needs; docker-mailserver ships that with Postfix and Dovecot and no web UI. Accounts and the DKIM key are created once by `tasks/scripts/mail-bootstrap.sh`, not by CI, because both are one-time decisions and re-running must not rotate a key already in DNS. | Agent (Cursor) |
+| 2026-11-05 | Stalwart's plaintext bridge hop is gone. The submission listener requires STARTTLS before accepting a login, so the backend now dials `API_DOMAIN` on 587 with `start-tls`; that name is answered inside the bridge by a network alias, and it is the name the Let's Encrypt certificate carries, so hostname verification succeeds without a private CA or a verification override. | Agent (Cursor) |
+| 2026-11-05 | The mail server reuses Caddy's certificate for the single hostname: `certsync` copies the pair from `caddy_data` to `/certs`, and `SSL_TYPE=manual` points at it. `docker-mailserver` watches those paths and reloads Postfix and Dovecot when they change, so a renewal needs no cron job or restart hook. One hostname means one certificate and no second value to keep in step; the mail domain is derived by dropping the first label. | Agent (Cursor) |
+| 2026-11-05 | Mail health is mandatory at runtime without breaking NFR-5. `GET /api/health` keeps answering the literal `OK`, because three consumers parse it exactly; `GET /api/health/mail` answers from the last verdict and starts a background probe when that verdict is missing, failed, or an `Ok` older than a minute; the route never waits on it. The container healthcheck requires both, and `deploy:vps` fails on a verdict that is not `ok` before recording the revision as known-good, so a broken relay cannot become the rollback target. Ports 25, 587 and 465 are published, which is what makes fail2ban and the PTR record part of the runbook. | Agent (Cursor) |
 
 ## Revision history
 
 | Date | Change | By |
 |------|--------|----|
 | 2026-10-23 | Initial draft from the deferred-requirement tickets #44–#47. | Agent (Cursor) |
-| 2026-11-04 | Recorded that Stalwart runs unconditionally for the MVP and that the mail hop's host, port and TLS mode are composition, not operator configuration; and that the bridge hop is plain SMTP with no certificate to verify. | Agent (Cursor) |
+| 2026-11-04 | Recorded that the relay runs unconditionally for the MVP and that the mail hop's host, port and TLS mode are composition, not operator configuration. | Agent (Cursor) |
+| 2026-11-05 | Replaced the Stalwart decision rows with docker-mailserver, the shared-certificate hop, and the mandatory-but-not-blocking mail verdict. | Agent (Cursor) |

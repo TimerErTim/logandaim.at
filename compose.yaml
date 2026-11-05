@@ -30,14 +30,11 @@ services:
       LOGANDAIM_FRONTEND_BASIS_URL: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
       LOGANDAIM_CORS_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
       LOGANDAIM_SUPERUSER_EMAIL: ${SUPERUSER_EMAIL:-}
-      # Composition, not operator configuration: a value here that disagrees with the
-      # service below only fails at send time. The hop stays inside the Compose bridge
-      # network, so it is plain SMTP: a STARTTLS handshake would need a certificate for the
-      # service name `stalwart`, which no CA issues, and the submission listener is never
-      # published to the host. Outbound TLS to the public internet is Stalwart's concern.
-      LOGANDAIM_SMTP_HOST: stalwart
+      # STARTTLS to the public FQDN, the only name on the certificate. A network alias keeps
+      # the hop inside the bridge.
+      LOGANDAIM_SMTP_HOST: ${API_DOMAIN:?Set API_DOMAIN in .env}
       LOGANDAIM_SMTP_PORT: "587"
-      LOGANDAIM_SMTP_VERSCHLUESSELUNG: klar
+      LOGANDAIM_SMTP_VERSCHLUESSELUNG: start-tls
       LOGANDAIM_SMTP_ABSENDER: ${MAIL_ABSENDER:?Set MAIL_ABSENDER in .env}
     volumes:
       - ${LOGANDAIM_HOST_ROOT:-.}/data/sqlite:/data/sqlite
@@ -45,15 +42,17 @@ services:
     expose:
       - "3000"
     healthcheck:
-      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:3000/api/health"]
+      # API up and relay verified. Each poll also refreshes the mail verdict.
+      test:
+        - "CMD-SHELL"
+        - "curl -fsS http://127.0.0.1:3000/api/health | grep -qx '\"OK\"' && curl -fsS http://127.0.0.1:3000/api/health/mail | grep -q '\"status\":\"Ok\"'"
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
-    depends_on:
-      # Order only: the API must not wait for mail to serve requests (NFR-5).
-      stalwart:
-        condition: service_started
+    # Deliberately no `depends_on` for the mail server: the API must not wait for mail
+    # (NFR-5). Sends fail and are logged until the relay is up; the healthcheck above is
+    # what makes that state visible.
     networks:
       - app
 
@@ -72,29 +71,106 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
+      # Not `service_healthy`: backend health needs mail, mail needs Caddy's certificate.
       backend:
-        condition: service_healthy
+        condition: service_started
     networks:
       - app
 
-  # Mandatory for the MVP. Only the setup UI is published, on loopback; SMTP stays
-  # inside the Compose network.
-  stalwart:
-    image: stalwartlabs/stalwart:v1
-    init: true
+  # Copies Caddy's certificate for the API hostname to a stable path for the mail server.
+  # Reuses `caddy:2` for `bash`, `find`, and `cmp`.
+  certsync:
+    image: caddy:2
     restart: unless-stopped
     environment:
-      STALWART_PUBLIC_URL: ${STALWART_PUBLIC_URL:-https://localhost:8088}
+      API_DOMAIN: ${API_DOMAIN:?Set API_DOMAIN in .env}
+      CADDY_DATA_DIR: /caddy-data
+      CERT_TARGET_DIR: /certs
     volumes:
-      - stalwart_etc:/etc/stalwart
-      - stalwart_data:/var/lib/stalwart
-    ports:
-      - "127.0.0.1:8080:8080"
-      - "127.0.0.1:8088:443"
-    expose:
-      - "587"
+      - ./deploy/cert-sync.sh:/usr/local/bin/cert-sync.sh:ro
+      - caddy_data:/caddy-data:ro
+      - mail_certs:/certs
+    entrypoint: ["/bin/bash", "/usr/local/bin/cert-sync.sh"]
+    healthcheck:
+      # Healthy once the pair exists. The mail server waits for this: started with
+      # `SSL_TYPE=manual` and no certificate it aborts, and `restart: unless-stopped`
+      # would turn that into a crash loop until Caddy had issued one.
+      test: ["CMD-SHELL", "test -s /certs/active.crt && test -s /certs/active.key"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    # No `depends_on`: the script waits for the certificate itself, so a missing one delays
+    # publication instead of failing the container.
     networks:
       - app
+
+  # Mandatory for the MVP: registration and password recovery mail depend on it.
+  #
+  # This is the public submission surface, not a private relay behind a tunnel: port 25
+  # receives inbound mail for the domain, 587 and 465 accept authenticated submissions.
+  # The TLS certificate is the one Caddy already obtained for the API hostname, so the
+  # mail server presents the same name the service is reached by.
+  mailserver:
+    # Pinned like every other image here: `latest` would make a redeploy an unannounced
+    # version jump on the service that carries resets and verifications.
+    image: ghcr.io/docker-mailserver/docker-mailserver:v16.0.1
+    # The FQDN is the mail server's own name: it appears in HELO/EHLO and must match the
+    # certificate and the PTR record. DMS refuses to start without it. The mail domain is
+    # derived from it (the first label is dropped), so a single `API_DOMAIN` is the only
+    # operator value — there is no second domain to keep in step.
+    hostname: ${API_DOMAIN:?Set API_DOMAIN in .env}
+    restart: unless-stopped
+    ports:
+      - "25:25"
+      - "587:587"
+      - "465:465"
+    environment:
+      # DISABLE_DNS_CHECK: the container's own name resolves through Docker, not public
+      # DNS, so the startup self-check would fail on every boot.
+      DISABLE_DNS_CHECK: 1
+      # Deliberately NOT `SMTP_ONLY=1`: that also skips Dovecot, and Dovecot is the SASL
+      # backend Postfix delegates submission logins to — every authenticated send would be
+      # rejected. Dovecot runs, but its mail protocols are switched off below, so it only
+      # serves authentication.
+      ENABLE_IMAP: 0
+      ENABLE_POP3: 0
+      # No content scanning: this relay only carries the product's own transactional mail.
+      ENABLE_SPAMASSASSIN: 0
+      ENABLE_CLAMAV: 0
+      ENABLE_AMAVIS: 0
+      # 587 is publicly reachable now, so brute-force attempts are expected.
+      ENABLE_FAIL2BAN: 1
+      # The certificate comes from Caddy, mounted below. `letsencrypt` mode expects
+      # certbot's directory layout; `manual` takes an explicit cert and key.
+      SSL_TYPE: manual
+      SSL_CERT_PATH: /certs/active.crt
+      SSL_KEY_PATH: /certs/active.key
+      # IPv4 only: Docker's bridge here has no IPv6 route, so an AAAA attempt would only
+      # add a reachability failure to the mail server's own SMTP client.
+      POSTFIX_INET_PROTOCOLS: ipv4
+      TZ: Europe/Vienna
+    volumes:
+      # Mail state lives beside the checkout so provider snapshots cover it, the same way
+      # the SQLite database and object store do.
+      - ${LOGANDAIM_HOST_ROOT:-.}/data/mail/mail-data:/var/mail
+      - ${LOGANDAIM_HOST_ROOT:-.}/data/mail/mail-state:/var/mail-state
+      - ${LOGANDAIM_HOST_ROOT:-.}/data/mail/mail-config:/tmp/docker-mailserver
+      # The certificate pair `certsync` publishes above.
+      - mail_certs:/certs:ro
+    cap_add:
+      # Required by fail2ban's nftables backend.
+      - NET_ADMIN
+    depends_on:
+      # The pair must exist first: started without one, the mail server aborts (its
+      # `manual` TLS setup panics on a missing file) and would crash-loop.
+      certsync:
+        condition: service_healthy
+    networks:
+      app:
+        aliases:
+          # The backend dials the public FQDN so certificate verification passes, and this
+          # alias resolves that name inside the bridge instead of through public DNS.
+          - ${API_DOMAIN:?Set API_DOMAIN in .env}
 
 networks:
   app:
@@ -103,5 +179,4 @@ networks:
 volumes:
   caddy_data:
   caddy_config:
-  stalwart_etc:
-  stalwart_data:
+  mail_certs:

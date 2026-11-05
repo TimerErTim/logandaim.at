@@ -75,7 +75,8 @@ impl SmtpKonfiguration {
 /// There is deliberately no separate certified-name override: the deployment submits over
 /// the Compose bridge in plain SMTP, where no certificate is involved, and a relay reached
 /// over TLS is addressed by the name its certificate is issued for. An override existed to
-/// reach a service name no CA certifies; that hop no longer uses TLS at all.
+/// reach a service name no CA certifies; the deployed hop now dials the public FQDN, which
+/// the mail server answers to inside the bridge, so no override is needed.
 fn tls_parameter(konfiguration: &SmtpKonfiguration) -> ResultReport<TlsParameters, MailError> {
     TlsParameters::new(konfiguration.host.clone()).change_context(MailError::NichtKonfiguriert)
 }
@@ -126,18 +127,6 @@ impl SmtpMailSender {
         })
     }
 
-    /// Open one connection, complete the TLS upgrade and authentication, then close it.
-    ///
-    /// A send would prove the same hop but deliver a message; NOOP proves it without a
-    /// recipient, so a deployment can report whether mail works before anyone registers.
-    pub async fn prüfe_verbindung(&self) -> ResultReport<bool, MailError> {
-        self.transport
-            .test_connection()
-            .await
-            .map_err(IntoReport::into_report)
-            .change_context(MailError::Zustellung)
-    }
-
     /// Build the wire message. Separate from sending so a unit test can assert recipient,
     /// subject, and body without a relay. This is where a token becomes a link: the
     /// use case does not know the frontend origin and must not know the route table.
@@ -178,6 +167,25 @@ impl MailSender for SmtpMailSender {
             .change_context(MailError::Zustellung)?;
         Ok(())
     }
+
+    /// Open one connection, complete the TLS upgrade and authentication, then close it.
+    ///
+    /// A send would prove the same hop but deliver a message; NOOP proves it without a
+    /// recipient, so a deployment can report whether mail works before anyone registers.
+    async fn prüfe_verbindung(&self) -> ResultReport<(), MailError> {
+        self.transport
+            .test_connection()
+            .await
+            .map_err(IntoReport::into_report)
+            .change_context(MailError::Zustellung)
+            .and_then(|res| {
+                if !res {
+                    Err(error_stack::Report::new(MailError::AntwortetNichtAufNoop))
+                } else {
+                    Ok(())
+                }
+            })
+    }
 }
 
 #[cfg(test)]
@@ -187,7 +195,9 @@ mod tests {
     fn konfiguration() -> SmtpKonfiguration {
         let mut konfiguration =
             SmtpKonfiguration::mailpit(EmailAdresse::normalisiert("noreply@logandaim.at").unwrap());
-        konfiguration.host = "stalwart".to_owned();
+        // The real deployment dials the public FQDN, so that is what the fixture names:
+        // it is the only name the Let's Encrypt certificate carries.
+        konfiguration.host = "api.logandaim.at".to_owned();
         konfiguration.port = 587;
         konfiguration.verschlüsselung = Verschlüsselung::StartTls;
         konfiguration
@@ -201,7 +211,7 @@ mod tests {
 
         let parameter = tls_parameter(&konfiguration).expect("TLS-Parameter bauen");
 
-        assert_eq!(parameter.domain(), "stalwart");
+        assert_eq!(parameter.domain(), "api.logandaim.at");
     }
 
     /// The names from a configuration address the same relay: a second host is a second
