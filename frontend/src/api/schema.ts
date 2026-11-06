@@ -1308,10 +1308,98 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * Delete the caller's Runde and every Schuss that belongs to it.
+         * @description This removes the Runde from history and clears its per-Ziel shot records.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Change the calendar date of one of the caller's Runden.
+         * @description The immutable Parkour snapshot and its shots remain unchanged.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["RundeDatumRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/runden/{runde_id}/abschluss": {
@@ -1429,6 +1517,112 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}/sch\u00FCsse/{schuss_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace the scoring zone and position of one of the caller's shots.
+         * @description Sending `position: null` clears the saved position.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                    schuss_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["Schuss\u00C4nderungRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Schuss"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Delete one of the caller's shots and renumber later shots at the same Ziel.
+         * @description The scoring total is recomputed from the remaining shots.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                    schuss_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Ok"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -2276,6 +2470,28 @@ export interface components {
          */
         BenutzerRolle: BenutzerRolle;
         /**
+         * DistanzPosition
+         * @description One logged position expressed as a whole-metre distance.
+         */
+        DistanzPosition: {
+            /**
+             * Format: uint32
+             * @description Positive whole metres from the Ziel.
+             */
+            meter: number;
+        };
+        /**
+         * DistanzPositionRequest
+         * @description A typed distance position request, in whole metres.
+         */
+        DistanzPositionRequest: {
+            /**
+             * Format: uint32
+             * @description Positive whole metres from the Ziel.
+             */
+            meter: number;
+        };
+        /**
          * @description Who a row belongs to.
          *
          *     A Benutzer deletion anonymises its rows: the identity is gone and only the anonymisation
@@ -2544,6 +2760,28 @@ export interface components {
             meter?: number;
         };
         /**
+         * PflockPosition
+         * @description One logged position expressed as a configured Pflock colour.
+         */
+        PflockPosition: {
+            /**
+             * A Pflock colour as validated `#rrggbb`.
+             * @description The configured Pflock's colour.
+             */
+            farbe: string;
+        };
+        /**
+         * PflockPositionRequest
+         * @description A position request naming one configured Pflock.
+         */
+        PflockPositionRequest: {
+            /**
+             * A Pflock colour as validated `#rrggbb`.
+             * @description The configured Pflock's colour.
+             */
+            farbe: string;
+        };
+        /**
          * RegistrierungAbschlussRequest
          * @description Registration step 2: the mailed token and the chosen password.
          */
@@ -2589,6 +2827,11 @@ export interface components {
             parkourName: string;
             /** @description Who the Runde belongs to. */
             erfasstVon: components["schemas"]["Erfasser"] & unknown;
+            /**
+             * Format: naive-date
+             * @description Calendar date of the Runde.
+             */
+            datum: string;
             /** @description Whether it is still open or already closed. */
             zustand: components["schemas"]["RundeZustand"] & unknown;
             /**
@@ -2646,6 +2889,21 @@ export interface components {
             parkourId: string;
             /** @description The Parkour' name as captured at the start. */
             parkourName: string;
+            /**
+             * Format: naive-date
+             * @description Calendar date of the Runde.
+             */
+            datum: string;
+            /**
+             * Format: uint64
+             * @description Number of Ziele in the captured route.
+             */
+            anzahlZiele: number;
+            /**
+             * Format: uint64
+             * @description Number of Ziele with a recorded shot.
+             */
+            anzahlErfassteZiele: number;
             /** @description Whether it is still open or already closed. */
             zustand: components["schemas"]["RundeZustand"] & unknown;
             /**
@@ -2658,6 +2916,17 @@ export interface components {
              * @description End of the Runde; absent while it is open.
              */
             abgeschlossenAm?: string;
+        };
+        /**
+         * RundeDatumRequest
+         * @description Set a Runde's calendar date without changing its captured route or shots.
+         */
+        RundeDatumRequest: {
+            /**
+             * Format: naive-date
+             * @description Calendar date of the Runde.
+             */
+            datum: string;
         };
         /**
          * RundePflock
@@ -2688,6 +2957,11 @@ export interface components {
              * @description The Parkour to shoot. It must be active.
              */
             parkourId: string;
+            /**
+             * Format: naive-date
+             * @description Optional calendar date; defaults to the current date.
+             */
+            datum?: string;
         };
         /**
          * RundeZiel
@@ -2710,6 +2984,8 @@ export interface components {
             "abst\u00E4nde": components["schemas"]["Abstand"][];
             /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
             wertung?: components["schemas"]["Zielwertung"] & unknown;
+            /** @description The logged arrows at this Ziel, in Pfeil order. */
+            "sch\u00FCsse": components["schemas"]["Schuss"][];
         };
         /**
          * @description `InBearbeitung` or `Abgeschlossen`.
@@ -2721,6 +2997,8 @@ export interface components {
         /**
          * Schuss
          * @description One logged arrow.
+         *
+         *     Its position is either a whole-metre distance or a configured Pflock colour.
          */
         Schuss: {
             /**
@@ -2747,6 +3025,7 @@ export interface components {
             pfeil: number;
             /** @description Where on the Ziel it landed. */
             wertungszone: components["schemas"]["Wertungszone"] & unknown;
+            position?: components["schemas"]["Schussposition"];
         };
         /**
          * SchussErstellungRequest
@@ -2758,13 +3037,40 @@ export interface components {
              * @description The Ziel that was aimed at; it must be part of the Runde's snapshot.
              */
             zielId: string;
-            /**
-             * Format: uint64
-             * @description 1-based position of the arrow at its Ziel; `0` is rejected.
-             */
-            pfeil: number;
             /** @description Where on the Ziel the arrow landed. */
             wertungszone: components["schemas"]["Wertungszone"] & unknown;
+            position?: components["schemas"]["SchusspositionRequest"];
+        };
+        /** @description One logged arrow. */
+        Schussposition: components["schemas"]["Schussposition_DistanzPosition"] | components["schemas"]["Schussposition_PflockPosition"];
+        /** @description Position supplied for a logged arrow. */
+        SchusspositionRequest: components["schemas"]["SchusspositionRequest_DistanzPositionRequest"] | components["schemas"]["SchusspositionRequest_PflockPositionRequest"];
+        /** @description Position supplied for a logged arrow. */
+        SchusspositionRequest_DistanzPositionRequest: {
+            Distanz: components["schemas"]["DistanzPositionRequest"];
+        };
+        /** @description Position supplied for a logged arrow. */
+        SchusspositionRequest_PflockPositionRequest: {
+            Pflock: components["schemas"]["PflockPositionRequest"];
+        };
+        /** @description One logged arrow. */
+        Schussposition_DistanzPosition: {
+            Distanz: components["schemas"]["DistanzPosition"];
+        };
+        /** @description One logged arrow. */
+        Schussposition_PflockPosition: {
+            Pflock: components["schemas"]["PflockPosition"];
+        };
+        /**
+         * SchussÄnderungRequest
+         * @description Replace a Schuss's scoring zone and optional position.
+         *     Replace a Schuss's scoring zone and optional position.
+         */
+        "Schuss\u00C4nderungRequest": {
+            /** @description Where on the Ziel the arrow landed. */
+            wertungszone: components["schemas"]["Wertungszone"] & unknown;
+            /** @description Optional shot position; null clears the stored position. */
+            position?: components["schemas"]["SchusspositionRequest"] & unknown;
         };
         /**
          * SessionResponseContent

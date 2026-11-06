@@ -127,7 +127,12 @@ function RundeSkeleton() {
 }
 
 function RundeInhalt({ runde }: { runde: Runde }) {
-  const { rundeAbschliessen, schussRegistrieren } = useStammdatenMutations();
+  const {
+    rundeAbschliessen,
+    schussRegistrieren,
+    rundeDatumAendern,
+    rundeLoeschen,
+  } = useStammdatenMutations();
   const schussMeldung = useErfolgsmeldung();
   const abschlussMeldung = useErfolgsmeldung();
   const [abschliessenOffen, setAbschliessenOffen] = useState(false);
@@ -152,9 +157,7 @@ function RundeInhalt({ runde }: { runde: Runde }) {
                 {offen ? "In Bearbeitung" : "Abgeschlossen"}
               </Badge>
               {offen ? null : <StampMark>Abgeschlossen</StampMark>}
-              <SheetNumber>
-                Begonnen {new Date(runde.begonnenAm).toLocaleString("de-AT")}
-              </SheetNumber>
+              <SheetNumber>Datum {runde.datum}</SheetNumber>
             </>
           }
         />
@@ -271,15 +274,15 @@ function RundeInhalt({ runde }: { runde: Runde }) {
                   reihenfolge={index + 1}
                   offen={offen}
                   ausstehend={schussRegistrieren.isPending}
-                  onErfassen={(wertungszone, pfeil) => {
+                  onErfassen={(wertungszone) => {
                     schussMeldung.verwerfen();
                     schussRegistrieren.mutate(
                       {
                         rundeId: runde.id,
                         schuss: {
                           zielId: ziel.zielId,
-                          pfeil,
                           wertungszone,
+                          position: null,
                         },
                       },
                       {
@@ -327,6 +330,31 @@ function RundeInhalt({ runde }: { runde: Runde }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-secondary">
+              Datum
+              <input
+                aria-label="Rundendatum ändern"
+                type="date"
+                value={runde.datum}
+                onChange={(event) =>
+                  rundeDatumAendern.mutate({
+                    id: runde.id,
+                    datum: event.target.value,
+                  })
+                }
+                className="h-11 rounded-sm border border-control bg-elevated px-3 text-ink"
+              />
+            </label>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                rundeLoeschen.mutate(runde.id, {
+                  onSuccess: () => window.location.assign(paths.runden),
+                })
+              }
+            >
+              Runde löschen
+            </Button>
             {offen ? (
               <Button
                 variant="destructive"

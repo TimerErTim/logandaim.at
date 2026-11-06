@@ -103,6 +103,8 @@ impl_instrumented_repo!(
         fn find_by_id(&self, id: RundeId) -> RepositoryResult<Versioned<Runde>>;
         #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
         fn find_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Runde>>>;
+        #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
+        fn find_offen_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Option<Versioned<Runde>>>;
         #[instrument(skip(self, runde), level = "debug", err(Debug))]
         fn update(&self, runde: &mut Versioned<Runde>) -> RepositoryResult<()>;
         #[instrument(skip(self, runde), level = "debug", err(Debug))]

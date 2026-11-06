@@ -32,6 +32,16 @@ function useAnlageMutation<TVariables>(
   });
 }
 
+function invalidateRunde(
+  queryClient: ReturnType<typeof useQueryClient>,
+  rundeId: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: logandaimKeys.runden.detail(rundeId),
+  });
+  void queryClient.invalidateQueries({ queryKey: logandaimKeys.runden.all() });
+}
+
 export function useStammdatenMutations() {
   const { api } = useLogandaimApi();
   const queryClient = useQueryClient();
@@ -93,7 +103,21 @@ export function useStammdatenMutations() {
     ),
     /** Starting a Runde changes the caller's own list and consumes the public one. */
     rundeStarten: useMutation({
-      mutationFn: (parkourId: string) => api.rundeStarten(parkourId),
+      mutationFn: (variables: { parkourId: string; datum?: string }) =>
+        api.rundeStarten(variables.parkourId, variables.datum),
+      onSuccess: () => {
+        void queryClient.invalidateQueries({
+          queryKey: logandaimKeys.runden.all(),
+        });
+      },
+    }),
+    rundeDatumAendern: useMutation({
+      mutationFn: (variables: { id: string; datum: string }) =>
+        api.rundeDatumAendern(variables.id, variables.datum),
+      onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
+    }),
+    rundeLoeschen: useMutation({
+      mutationFn: (id: string) => api.rundeLoeschen(id),
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: logandaimKeys.runden.all(),
@@ -102,14 +126,7 @@ export function useStammdatenMutations() {
     }),
     rundeAbschliessen: useMutation({
       mutationFn: (rundeId: string) => api.rundeAbschliessen(rundeId),
-      onSuccess: (runde) => {
-        void queryClient.invalidateQueries({
-          queryKey: logandaimKeys.runden.all(),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: logandaimKeys.runden.detail(runde.id),
-        });
-      },
+      onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
     }),
     /** One arrow can change the per-Ziel and the whole-Runde Wertung. */
     schussRegistrieren: useMutation({
@@ -117,14 +134,20 @@ export function useStammdatenMutations() {
         rundeId: string;
         schuss: Parameters<typeof api.schussRegistrieren>[1];
       }) => api.schussRegistrieren(vars.rundeId, vars.schuss),
-      onSuccess: (_schuss, vars) => {
-        void queryClient.invalidateQueries({
-          queryKey: logandaimKeys.runden.detail(vars.rundeId),
-        });
-        void queryClient.invalidateQueries({
-          queryKey: logandaimKeys.runden.all(),
-        });
-      },
+      onSuccess: (_schuss, vars) => invalidateRunde(queryClient, vars.rundeId),
+    }),
+    schussAendern: useMutation({
+      mutationFn: (vars: {
+        rundeId: string;
+        schussId: string;
+        schuss: Parameters<typeof api.schussAendern>[2];
+      }) => api.schussAendern(vars.rundeId, vars.schussId, vars.schuss),
+      onSuccess: (_schuss, vars) => invalidateRunde(queryClient, vars.rundeId),
+    }),
+    schussLoeschen: useMutation({
+      mutationFn: (vars: { rundeId: string; schussId: string }) =>
+        api.schussLoeschen(vars.rundeId, vars.schussId),
+      onSuccess: (_result, vars) => invalidateRunde(queryClient, vars.rundeId),
     }),
   };
 }

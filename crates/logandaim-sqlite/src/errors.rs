@@ -4,6 +4,11 @@ use molting::MigrationError;
 pub fn libsql_error_to_persistence_error(e: &libsql::Error) -> RepositoryError {
     match e {
         libsql::Error::ConnectionFailed(_msg) => RepositoryError::Connection,
+        libsql::Error::SqliteFailure(code, _msg)
+            if *code & 0xff == libsql::ffi::SQLITE_CONSTRAINT =>
+        {
+            RepositoryError::Conflict
+        }
         libsql::Error::SqliteFailure(_code, _msg) => RepositoryError::OperationFailed,
         libsql::Error::NullValue => RepositoryError::Data,
         libsql::Error::Misuse(_msg) => RepositoryError::Unknown,

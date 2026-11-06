@@ -6,6 +6,7 @@
 //! the domain's `ZielSchüsse`/`Runde::wertung`, and defines the shape it answers.
 
 use async_trait::async_trait;
+use chrono::NaiveDate;
 use error_stack::{IntoReport, Report, ResultExt};
 use tracing::info;
 
@@ -28,6 +29,8 @@ pub enum RundeStartenFehler {
     NichtGefunden,
     #[error("der Parkour oder seine Anlage ist nicht mehr aktiv")]
     NichtAktiv,
+    #[error("für diesen Benutzer läuft bereits eine Runde")]
+    RundeLaeuft,
     #[error("die Anlage konnte nicht geladen werden")]
     AnlageLaden,
     #[error("die Runde konnte nicht gestartet werden")]
@@ -38,6 +41,7 @@ pub enum RundeStartenFehler {
 #[derive(Debug, Clone)]
 pub struct RundeStarten {
     pub parkour_id: crate::domain::ParkourId,
+    pub datum: Option<NaiveDate>,
 }
 
 #[async_trait]
@@ -83,17 +87,31 @@ impl UseCase<Runde> for RundeStarten {
                 return Err(Report::new(RundeStartenFehler::NichtGefunden));
             };
             let anlage_id = anlage.id();
+            if uow
+                .runden()
+                .find_offen_by_benutzer(benutzer_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeStartenFehler::AnlageLaden)?
+                .is_some()
+            {
+                return Err(Report::new(RundeStartenFehler::RundeLaeuft));
+            }
 
             uow.runden()
                 .create(NeueRunde::neu(
                     anlage_id,
                     Erfasser::Benutzer(benutzer_id),
                     snapshot,
+                    self.datum.unwrap_or_else(|| jetzt.date_naive()),
                     jetzt,
                 ))
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(RundeStartenFehler::Starten)
+                .map_err(|fehler| match fehler.current_context() {
+                    RepositoryError::Conflict => Report::new(RundeStartenFehler::RundeLaeuft),
+                    _ => fehler.change_context(RundeStartenFehler::Starten),
+                })
                 .map(|runde| runde.into_data())
         }
         .await;
@@ -105,6 +123,140 @@ impl UseCase<Runde> for RundeStarten {
             "runde gestartet"
         );
         Ok(runde)
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// RundeDatumÄndern and RundeLöschen
+// ---------------------------------------------------------------------------------------
+
+#[derive(Debug, thiserror::Error)]
+pub enum RundeDatumÄndernFehler {
+    #[error("für diese Aktion ist eine Anmeldung erforderlich")]
+    NichtAngemeldet,
+    #[error("diese Runde gehört nicht zu diesem Benutzer")]
+    NichtErlaubt,
+    #[error("die Runde wurde nicht gefunden")]
+    NichtGefunden,
+    #[error("die Runde konnte nicht geladen werden")]
+    Laden,
+    #[error("die Runde konnte nicht gespeichert werden")]
+    Speichern,
+}
+
+#[derive(Debug, Clone)]
+pub struct RundeDatumÄndern {
+    pub runde_id: RundeId,
+    pub datum: NaiveDate,
+}
+
+#[async_trait]
+impl UseCase<Runde> for RundeDatumÄndern {
+    type Error = Report<RundeDatumÄndernFehler>;
+
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
+        let benutzer_id = ctx
+            .auth()
+            .require_benutzer_id()
+            .change_context(RundeDatumÄndernFehler::NichtAngemeldet)?;
+        let uow = ctx
+            .enter()
+            .await
+            .change_context(RundeDatumÄndernFehler::Laden)?;
+        let ergebnis = async {
+            let mut runde = match uow.runden().find_by_id(self.runde_id).await {
+                Ok(runde) => runde,
+                Err(error) => {
+                    return Err(match error.current_context() {
+                        RepositoryError::NotFound => {
+                            Report::new(RundeDatumÄndernFehler::NichtGefunden)
+                        }
+                        _ => error.change_context(RundeDatumÄndernFehler::Laden),
+                    });
+                }
+            };
+            if !runde.gehört_zu(benutzer_id) {
+                return Err(Report::new(RundeDatumÄndernFehler::NichtErlaubt));
+            }
+            runde.set_data(runde.cloned_data().mit_datum(self.datum));
+            uow.runden()
+                .update(&mut runde)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeDatumÄndernFehler::Speichern)?;
+            Ok(runde.into_data())
+        }
+        .await;
+        uow.finish(ergebnis, RundeDatumÄndernFehler::Laden).await
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RundeLöschenFehler {
+    #[error("für diese Aktion ist eine Anmeldung erforderlich")]
+    NichtAngemeldet,
+    #[error("diese Runde gehört nicht zu diesem Benutzer")]
+    NichtErlaubt,
+    #[error("die Runde wurde nicht gefunden")]
+    NichtGefunden,
+    #[error("die Runde konnte nicht geladen werden")]
+    Laden,
+    #[error("die Runde konnte nicht gelöscht werden")]
+    Löschen,
+}
+
+#[derive(Debug, Clone)]
+pub struct RundeLöschen {
+    pub runde_id: RundeId,
+}
+
+#[async_trait]
+impl UseCase<()> for RundeLöschen {
+    type Error = Report<RundeLöschenFehler>;
+
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
+        let benutzer_id = ctx
+            .auth()
+            .require_benutzer_id()
+            .change_context(RundeLöschenFehler::NichtAngemeldet)?;
+        let uow = ctx
+            .enter()
+            .await
+            .change_context(RundeLöschenFehler::Laden)?;
+        let ergebnis = async {
+            let runde = match uow.runden().find_by_id(self.runde_id).await {
+                Ok(runde) => runde,
+                Err(error) => {
+                    return Err(match error.current_context() {
+                        RepositoryError::NotFound => Report::new(RundeLöschenFehler::NichtGefunden),
+                        _ => error.change_context(RundeLöschenFehler::Laden),
+                    });
+                }
+            };
+            if !runde.gehört_zu(benutzer_id) {
+                return Err(Report::new(RundeLöschenFehler::NichtErlaubt));
+            }
+            for schuss in uow
+                .schüsse()
+                .find_by_runde(self.runde_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeLöschenFehler::Löschen)?
+            {
+                uow.schüsse()
+                    .delete(schuss)
+                    .await
+                    .map_err(IntoReport::into_report)
+                    .change_context(RundeLöschenFehler::Löschen)?;
+            }
+            uow.runden()
+                .delete(runde)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeLöschenFehler::Löschen)
+        }
+        .await;
+        uow.finish(ergebnis, RundeLöschenFehler::Laden).await
     }
 }
 

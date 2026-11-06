@@ -7,9 +7,9 @@ use logandaim_core::ports::{ObjectStoreError, RepositoryError};
 use logandaim_core::service::{
     AbmeldungFehler, AnmeldungFehler, BenutzerLöschenFehler, ErneuerungFehler,
     PasswortVergessenFehler, PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler,
-    RegistrierungStartenFehler, RundeAbschliessenFehler, RundeStartenFehler,
-    SchussRegistrierenFehler, SessionPrüfenFehler, StammdatenFehler,
-    SystemadministratorBefördernFehler,
+    RegistrierungStartenFehler, RundeAbschliessenFehler, RundeDatumÄndernFehler,
+    RundeLöschenFehler, RundeStartenFehler, SchussLöschenFehler, SchussRegistrierenFehler,
+    SchussÄndernFehler, SessionPrüfenFehler, StammdatenFehler, SystemadministratorBefördernFehler,
 };
 
 use crate::api::errors::{RundeAnzeigenFehler, RundenAnzeigenFehler};
@@ -48,9 +48,13 @@ fn nested_http_status<C: ThreadSafeError>(error: &Report<C>) -> Option<StatusCod
     mapped::<C, SchussFehler>(error)
         .or_else(|| mapped::<C, StammdatenFehler>(error))
         .or_else(|| mapped::<C, SchussRegistrierenFehler>(error))
+        .or_else(|| mapped::<C, SchussÄndernFehler>(error))
+        .or_else(|| mapped::<C, SchussLöschenFehler>(error))
         .or_else(|| mapped::<C, RundeStartenFehler>(error))
         .or_else(|| mapped::<C, RundeAnzeigenFehler>(error))
         .or_else(|| mapped::<C, RundeAbschliessenFehler>(error))
+        .or_else(|| mapped::<C, RundeDatumÄndernFehler>(error))
+        .or_else(|| mapped::<C, RundeLöschenFehler>(error))
         .or_else(|| mapped::<C, RundenAnzeigenFehler>(error))
         .or_else(|| mapped::<C, ZeitraumFehler>(error))
         .or_else(|| mapped::<C, AnmeldungFehler>(error))
@@ -124,6 +128,25 @@ impl HttpStatusMapping for SchussFehler {
     }
 }
 
+http_status!(SchussÄndernFehler {
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    UngültigeAnfrage => StatusCode::BAD_REQUEST,
+    PflockNichtImSnapshot => StatusCode::CONFLICT,
+    Laden => StatusCode::INTERNAL_SERVER_ERROR,
+    Speichern => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
+http_status!(SchussLöschenFehler {
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    Laden => StatusCode::INTERNAL_SERVER_ERROR,
+    Löschen => StatusCode::INTERNAL_SERVER_ERROR,
+    Speichern => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
 http_status!(SchussRegistrierenFehler {
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     NichtErlaubt => StatusCode::FORBIDDEN,
@@ -131,6 +154,8 @@ http_status!(SchussRegistrierenFehler {
     NichtGefunden => StatusCode::NOT_FOUND,
     RundeNichtInBearbeitung => StatusCode::CONFLICT,
     ZielNichtImSnapshot => StatusCode::CONFLICT,
+    PflockNichtImSnapshot => StatusCode::CONFLICT,
+    PfeilKonflikt => StatusCode::CONFLICT,
     Speichern => StatusCode::INTERNAL_SERVER_ERROR,
     RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
 });
@@ -153,6 +178,7 @@ http_status!(RundeStartenFehler {
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     NichtGefunden => StatusCode::NOT_FOUND,
     NichtAktiv => StatusCode::CONFLICT,
+    RundeLaeuft => StatusCode::CONFLICT,
     AnlageLaden => StatusCode::INTERNAL_SERVER_ERROR,
     Starten => StatusCode::INTERNAL_SERVER_ERROR,
 });
@@ -164,6 +190,22 @@ http_status!(RundeAnzeigenFehler {
     RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
     SchüsseLaden => StatusCode::INTERNAL_SERVER_ERROR,
     BenutzerLaden => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
+http_status!(RundeDatumÄndernFehler {
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    Laden => StatusCode::INTERNAL_SERVER_ERROR,
+    Speichern => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
+http_status!(RundeLöschenFehler {
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    Laden => StatusCode::INTERNAL_SERVER_ERROR,
+    Löschen => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
 http_status!(RundeAbschliessenFehler {

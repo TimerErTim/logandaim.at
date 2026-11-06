@@ -18,6 +18,7 @@ import type {
   Runde,
   RundeBasic,
   Schuss,
+  SchussAenderungInput,
   SchussErstellungInput,
   ZielInput,
 } from "./logandaim-api";
@@ -387,10 +388,29 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     );
   }
 
-  async rundeStarten(parkourId: string): Promise<Runde> {
+  async rundeStarten(parkourId: string, datum?: string): Promise<Runde> {
     return this.authenticated(() =>
       this.client.POST("/runden", {
-        body: { parkourId },
+        body: { parkourId, datum },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async rundeDatumAendern(id: string, datum: string): Promise<Runde> {
+    return this.authenticated(() =>
+      this.client.PATCH("/runden/{runde_id}", {
+        params: { path: { runde_id: id } },
+        body: { datum },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async rundeLoeschen(id: string): Promise<void> {
+    await this.authenticated(() =>
+      this.client.DELETE("/runden/{runde_id}", {
+        params: { path: { runde_id: id } },
         headers: this.authorizationHeaders(),
       }),
     );
@@ -421,7 +441,30 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     return this.authenticated(() =>
       this.client.POST("/runden/{runde_id}/schüsse", {
         params: { path: { runde_id: rundeId } },
-        body: schuss,
+        body: { ...schuss, position: schuss.position ?? undefined },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async schussAendern(
+    rundeId: string,
+    schussId: string,
+    schuss: SchussAenderungInput,
+  ): Promise<Schuss> {
+    return this.authenticated(() =>
+      this.client.PUT("/runden/{runde_id}/schüsse/{schuss_id}", {
+        params: { path: { runde_id: rundeId, schuss_id: schussId } },
+        body: { ...schuss, position: schuss.position ?? undefined },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async schussLoeschen(rundeId: string, schussId: string): Promise<void> {
+    await this.authenticated(() =>
+      this.client.DELETE("/runden/{runde_id}/schüsse/{schuss_id}", {
+        params: { path: { runde_id: rundeId, schuss_id: schussId } },
         headers: this.authorizationHeaders(),
       }),
     );

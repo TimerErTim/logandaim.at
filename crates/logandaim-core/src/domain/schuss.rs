@@ -4,12 +4,13 @@
 //! summary of one Ziel's `Schuss` rows, and those rows belong to `Schuss`. The Runde-wide
 //! total belongs to `Runde`, which owns the ordered Ziel list (SPEC-wertung rule 6, AC-8).
 
-use std::num::NonZeroUsize;
+use std::num::{NonZeroU32, NonZeroUsize};
 
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::konto::BenutzerId;
+use crate::domain::common::Farbe;
 
 /// Identity of one physical Ziel.
 ///
@@ -102,6 +103,29 @@ impl Erfasser {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Schussdistanz(NonZeroU32);
+
+#[derive(Debug, thiserror::Error)]
+#[error("der Schussabstand muss positiv sein, war aber 0 m")]
+pub struct SchussdistanzFehler;
+
+impl Schussdistanz {
+    pub fn neu(meter: u32) -> Result<Self, SchussdistanzFehler> {
+        NonZeroU32::new(meter).map(Self).ok_or(SchussdistanzFehler)
+    }
+
+    pub fn meter(self) -> u32 {
+        self.0.get()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Schussposition {
+    Distanz(Schussdistanz),
+    Pflock(Farbe),
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum SchussFehler {
     #[error("der Pfeil ist 1-basiert, war aber 0")]
@@ -116,6 +140,7 @@ pub struct NeuerSchuss {
     ziel_id: ZielId,
     pfeil: NonZeroUsize,
     wertungszone: Wertungszone,
+    position: Option<Schussposition>,
 }
 
 impl NeuerSchuss {
@@ -126,6 +151,7 @@ impl NeuerSchuss {
         ziel_id: ZielId,
         pfeil: usize,
         wertungszone: Wertungszone,
+        position: Option<Schussposition>,
     ) -> Result<Self, SchussFehler> {
         let pfeil = NonZeroUsize::new(pfeil).ok_or(SchussFehler::PfeilNull)?;
         Ok(Self {
@@ -134,6 +160,7 @@ impl NeuerSchuss {
             ziel_id,
             pfeil,
             wertungszone,
+            position,
         })
     }
 
@@ -156,6 +183,10 @@ impl NeuerSchuss {
     pub fn wertungszone(&self) -> Wertungszone {
         self.wertungszone
     }
+
+    pub fn position(&self) -> Option<Schussposition> {
+        self.position
+    }
 }
 
 /// One arrow shot at one Ziel.
@@ -171,6 +202,7 @@ pub struct Schuss {
     ziel_id: ZielId,
     pfeil: NonZeroUsize,
     wertungszone: Wertungszone,
+    position: Option<Schussposition>,
 }
 
 impl Schuss {
@@ -183,6 +215,7 @@ impl Schuss {
             ziel_id: neu.ziel_id,
             pfeil: neu.pfeil,
             wertungszone: neu.wertungszone,
+            position: neu.position,
         }
     }
 
@@ -195,8 +228,9 @@ impl Schuss {
         ziel_id: ZielId,
         pfeil: usize,
         wertungszone: Wertungszone,
+        position: Option<Schussposition>,
     ) -> Result<Self, SchussFehler> {
-        let neu = NeuerSchuss::neu(runde_id, erfasser, ziel_id, pfeil, wertungszone)?;
+        let neu = NeuerSchuss::neu(runde_id, erfasser, ziel_id, pfeil, wertungszone, position)?;
         Ok(Self::neu(id, neu))
     }
 
@@ -223,6 +257,25 @@ impl Schuss {
 
     pub fn wertungszone(&self) -> Wertungszone {
         self.wertungszone
+    }
+
+    pub fn position(&self) -> Option<Schussposition> {
+        self.position
+    }
+
+    pub fn mit_pfeil(mut self, pfeil: usize) -> Result<Self, SchussFehler> {
+        self.pfeil = NonZeroUsize::new(pfeil).ok_or(SchussFehler::PfeilNull)?;
+        Ok(self)
+    }
+
+    pub fn geändert(
+        mut self,
+        wertungszone: Wertungszone,
+        position: Option<Schussposition>,
+    ) -> Self {
+        self.wertungszone = wertungszone;
+        self.position = position;
+        self
     }
 
     /// Classic 3-arrow table. Pfeil 4 and later score 0.
@@ -321,6 +374,30 @@ impl ZielSchüsse {
         &self.schüsse
     }
 
+    pub fn naechster_pfeil(&self) -> NonZeroUsize {
+        self.schüsse.last().map_or_else(
+            || NonZeroUsize::new(1).expect("one is nonzero"),
+            |schuss| {
+                NonZeroUsize::new(schuss.pfeil().get() + 1)
+                    .expect("a stored Pfeil plus one is nonzero")
+            },
+        )
+    }
+
+    pub fn ohne(&self, schuss_id: SchussId) -> Vec<Schuss> {
+        self.schüsse
+            .iter()
+            .filter(|schuss| schuss.id() != schuss_id)
+            .cloned()
+            .enumerate()
+            .map(|(index, schuss)| {
+                schuss
+                    .mit_pfeil(index + 1)
+                    .expect("enumeration assigns positive Pfeil values")
+            })
+            .collect()
+    }
+
     /// `None` for an empty Ziel: a Ziel with no Schuss has no Wertung yet.
     pub fn wertung(&self) -> Option<Zielwertung> {
         let anzahl_schüsse = NonZeroUsize::new(self.schüsse.len())?;
@@ -364,6 +441,7 @@ mod tests {
             ziel(),
             pfeil,
             zone,
+            None,
         )
         .unwrap();
         Schuss::neu(SchussId(Uuid::from_u128(pfeil as u128)), neu)
@@ -485,6 +563,7 @@ mod tests {
                 ZielId(Uuid::from_u128(99)),
                 1,
                 Kill,
+                None,
             )
             .unwrap(),
         );
@@ -495,6 +574,27 @@ mod tests {
     }
 
     #[test_log::test]
+    fn schussdistanz_ist_positiv_und_ganzzahlig() {
+        assert_eq!(Schussdistanz::neu(35).unwrap().meter(), 35);
+        assert!(Schussdistanz::neu(0).is_err());
+    }
+
+    #[test_log::test]
+    fn pfeil_luecke_wird_beim_loeschen_geschlossen() {
+        let menge = mengen(&[(1, Spot), (2, Kill), (3, Body), (4, Miss)]);
+        let verbleibend = menge.ohne(SchussId(Uuid::from_u128(2)));
+        assert_eq!(
+            verbleibend
+                .iter()
+                .map(|schuss| schuss.pfeil().get())
+                .collect::<Vec<_>>(),
+            [1, 2, 3]
+        );
+        assert_eq!(verbleibend[1].punkte(), 10);
+        assert_eq!(menge.naechster_pfeil().get(), 5);
+    }
+
+    #[test_log::test]
     fn pfeil_null_wird_abgelehnt() {
         let ergebnis = NeuerSchuss::neu(
             RundeId(Uuid::nil()),
@@ -502,6 +602,7 @@ mod tests {
             ziel(),
             0,
             Spot,
+            None,
         );
         assert!(matches!(ergebnis, Err(SchussFehler::PfeilNull)));
     }
@@ -514,6 +615,7 @@ mod tests {
             ziel(),
             2,
             Body,
+            None,
         )
         .unwrap();
         let original = Schuss::neu(SchussId(Uuid::nil()), neu);
@@ -524,6 +626,58 @@ mod tests {
             original.ziel_id(),
             2,
             Body,
+            original.position(),
+        )
+        .unwrap();
+        assert_eq!(original, geladen);
+    }
+
+    #[test_log::test]
+    fn schussposition_hat_exklusiv_eine_der_beiden_formen() {
+        let distanz = Schussposition::Distanz(Schussdistanz::neu(35).unwrap());
+        let pflock = Schussposition::Pflock(Farbe::neu("#c0392b").unwrap());
+        assert_ne!(distanz, pflock);
+
+        let schuss = Schuss::neu(
+            SchussId(Uuid::nil()),
+            NeuerSchuss::neu(
+                RundeId(Uuid::nil()),
+                Erfasser::Anonymisiert { am: Utc::now() },
+                ziel(),
+                1,
+                Spot,
+                Some(distanz),
+            )
+            .unwrap(),
+        );
+        let ersetzt = schuss.clone().geändert(Spot, Some(pflock));
+        assert_eq!(ersetzt.position(), Some(pflock));
+        assert_eq!(ersetzt.geändert(Spot, None).position(), None);
+    }
+
+    #[test_log::test]
+    fn position_wird_beim_roundtrip_erhalten() {
+        let position = Some(Schussposition::Distanz(Schussdistanz::neu(35).unwrap()));
+        let original = Schuss::neu(
+            SchussId(Uuid::nil()),
+            NeuerSchuss::neu(
+                RundeId(Uuid::nil()),
+                Erfasser::Benutzer(BenutzerId(Uuid::nil())),
+                ziel(),
+                1,
+                Spot,
+                position,
+            )
+            .unwrap(),
+        );
+        let geladen = Schuss::from_parts(
+            original.id(),
+            original.runde_id(),
+            original.erfasser(),
+            original.ziel_id(),
+            1,
+            Spot,
+            original.position(),
         )
         .unwrap();
         assert_eq!(original, geladen);
@@ -539,6 +693,7 @@ mod tests {
                 ziel(),
                 1,
                 Kill,
+                None,
             )
             .unwrap(),
         );

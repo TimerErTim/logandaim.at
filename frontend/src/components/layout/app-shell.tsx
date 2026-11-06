@@ -17,6 +17,7 @@ import {
   useBenutzerQuery,
 } from "@/api/hooks";
 import { usePageChrome } from "@/components/layout/page-chrome";
+import { RundenBand } from "@/components/layout/runden-band";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -193,6 +194,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : null}
           {children}
         </main>
+        <RundenBand />
       </div>
     </div>
   );

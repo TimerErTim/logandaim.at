@@ -38,6 +38,8 @@ export const paths = {
   /** Redirect source only; the archer journey starts at `anlagen`. */
   parkour: "/parkour",
   runden: "/runden",
+  rundenErfassen: "/runden/erfassen",
+  rundenAbschluss: "/runden/abschluss",
   verwaltung: "/verwaltung",
   verwaltungAnlage: "/verwaltung/anlage",
   verwaltungAnlageNeu: "/verwaltung/anlage/neu",

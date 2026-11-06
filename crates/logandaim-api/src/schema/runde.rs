@@ -4,12 +4,12 @@
 //! (SPEC-wertung rule 6). The snapshot fields are copied verbatim from what was captured,
 //! never re-read from master data (AC-7, AC-9).
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use uuid::Uuid;
 
 use logandaim_core::domain;
 
-use crate::schema::{Erfasser, Farbe, Zielwertung};
+use crate::schema::{Erfasser, Farbe, Schuss, Zielwertung};
 
 /// One Pflock of this Runde' captured route, in near-to-far order.
 ///
@@ -57,6 +57,8 @@ pub struct RundeZiel {
     pub abstände: Vec<Abstand>,
     /// The Wertung of this Ziel; absent while no Schuss has been logged at it.
     pub wertung: Option<Zielwertung>,
+    /// The logged arrows at this Ziel, in Pfeil order.
+    pub schüsse: Vec<Schuss>,
 }
 
 /// `InBearbeitung` or `Abgeschlossen`.
@@ -87,6 +89,8 @@ pub struct Runde {
     pub parkour_name: String,
     /// Who the Runde belongs to.
     pub erfasst_von: Erfasser,
+    /// Calendar date of the Runde.
+    pub datum: NaiveDate,
     /// Whether it is still open or already closed.
     pub zustand: RundeZustand,
     /// Start of the Runde.
@@ -123,6 +127,12 @@ pub struct RundeBasic {
     pub parkour_id: Uuid,
     /// The Parkour' name as captured at the start.
     pub parkour_name: String,
+    /// Calendar date of the Runde.
+    pub datum: NaiveDate,
+    /// Number of Ziele in the captured route.
+    pub anzahl_ziele: usize,
+    /// Number of Ziele with a recorded shot.
+    pub anzahl_erfasste_ziele: usize,
     /// Whether it is still open or already closed.
     pub zustand: RundeZustand,
     /// Start of the Runde.
@@ -158,12 +168,19 @@ impl Runde {
                     })
                     .collect(),
                 wertung: wertung.map(Into::into),
+                schüsse: schüsse
+                    .iter()
+                    .filter(|schuss| schuss.ziel_id().0 == ziel.ziel_id().0)
+                    .cloned()
+                    .map(Into::into)
+                    .collect(),
             })
             .collect();
 
         let gesamt = runde.wertung(schüsse);
         let mut gerendert: Self = runde.into();
         gerendert.ziele = ziele;
+        gerendert.ziele_mit_wertung = gesamt.ziele_mit_wertung();
         gerendert.gesamt_erster_treffer = gesamt.erster_treffer();
         gerendert.gesamt_mehrschuss = gesamt.mehrschuss();
         gerendert.ziele_mit_wertung = gesamt.ziele_mit_wertung();
@@ -202,6 +219,7 @@ impl From<domain::Runde> for Runde {
                     })
                     .collect(),
                 wertung: None,
+                schüsse: Vec::new(),
             })
             .collect();
         Self {
@@ -209,6 +227,7 @@ impl From<domain::Runde> for Runde {
             anlage_id: runde.anlage_id().0,
             parkour_id: runde.parkour_id().0,
             parkour_name: runde.snapshot().parkour_name().to_string(),
+            datum: runde.datum(),
             erfasst_von: runde.erfasst_von().into(),
             zustand: zustand(&runde),
             begonnen_am: runde.begonnen_am(),
@@ -237,6 +256,9 @@ impl From<domain::Runde> for RundeBasic {
             anlage_id: runde.anlage_id().0,
             parkour_id: runde.parkour_id().0,
             parkour_name: runde.snapshot().parkour_name().to_string(),
+            datum: runde.datum(),
+            anzahl_ziele: runde.snapshot().ziele().len(),
+            anzahl_erfasste_ziele: 0,
             zustand: zustand(&runde),
             begonnen_am: runde.begonnen_am(),
             abgeschlossen_am: runde.abgeschlossen_am(),

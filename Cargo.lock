@@ -1797,6 +1797,7 @@ dependencies = [
  "bon",
  "chrono",
  "error-stack",
+ "futures",
  "libsql",
  "logandaim-core",
  "logandaim-fakes",

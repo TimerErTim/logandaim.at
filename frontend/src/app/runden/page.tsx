@@ -155,7 +155,7 @@ function RundenAbschnitt({
                 <TableCell className="text-right">
                   {offen ? (
                     <Button size="sm" asChild>
-                      <Link href={`${paths.runden}/detail?id=${runde.id}`}>
+                      <Link href={`${paths.rundenErfassen}?id=${runde.id}`}>
                         Fortsetzen
                       </Link>
                     </Button>

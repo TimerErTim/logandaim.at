@@ -66,6 +66,7 @@ pub trait AnlageRepository: Send + Sync {
 
 #[async_trait]
 pub trait RundeRepository: Send + Sync {
+    /// Conflict if the owner already has an open Runde (the database is the concurrency backstop).
     async fn create(&self, runde: NeueRunde) -> RepositoryResult<Versioned<Runde>>;
 
     async fn find_by_id(&self, id: RundeId) -> RepositoryResult<Versioned<Runde>>;
@@ -75,6 +76,11 @@ pub trait RundeRepository: Send + Sync {
         &self,
         benutzer_id: BenutzerId,
     ) -> RepositoryResult<Vec<Versioned<Runde>>>;
+
+    async fn find_offen_by_benutzer(
+        &self,
+        benutzer_id: BenutzerId,
+    ) -> RepositoryResult<Option<Versioned<Runde>>>;
 
     async fn update(&self, runde: &mut Versioned<Runde>) -> RepositoryResult<()>;
 

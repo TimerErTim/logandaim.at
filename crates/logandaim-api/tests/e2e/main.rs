@@ -303,6 +303,23 @@ impl LogandaimApiTestClient {
         json_response(self.client.put(path).body_json(&body).send().await).await
     }
 
+    pub async fn patch_json_auth(
+        &self,
+        path: &str,
+        body: Value,
+        bearer: &str,
+    ) -> (StatusCode, Value) {
+        json_response(
+            self.client
+                .patch(path)
+                .header("Authorization", format!("Bearer {bearer}"))
+                .body_json(&body)
+                .send()
+                .await,
+        )
+        .await
+    }
+
     pub async fn put_json_auth(
         &self,
         path: &str,
