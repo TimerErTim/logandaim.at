@@ -384,23 +384,22 @@ criteria.
 
 ## Risks and open questions
 
-- [ ] Q-1: How does a `Pflock`-form `Schussposition` enter the per-`Ziel` and per-`Parkour`
-  accuracy metrics of issue #12, where a `Schussdistanz` contributes its exact meters? Draft
-  assumption: through the `Pflock`'s configured `Distanz` when the snapshot has one, and excluded
-  from meter-based metrics when it does not, since no meter value was ever determined.
-
-Resolved (PO 2026-10-23): bow class per `Runde` deferred to issue #23. See the decision log.
+No open questions remain. The bow class question is deferred, not open
+([deferred](#bow-class-per-runde)), and every other question raised in review was answered:
 
 Resolved (PO 2026-11-06, spec review): `Schussposition` is a single optional value — a distance or
 a `Pflock` — not an `Anteil` between stakes. The UI converts a slider position to and from that
 value and clings to the nearest `Pflock` when the snapshot configures no `Distanzen`, storing the
 `Pflock`; a stored distance gets no `Pflock` indicator. A `Runde` is editable forever and deletion
 is irreversible for MVP with no restore. The nearest `Pflock` is the initial slider state, not a
-stored default. A `Schussdistanz` contributes exact meters to metrics. Also resolved then: one
-`Runde` in progress per `Benutzer`;
-capture is one `Ziel` at a time on a phone and a card per `Ziel` on a wide screen; the capture strip
-shows the `Runde` totals and progress; the end of the route shows a summary before the `Runde` is
-finished; deleting a `Schuss` renumbers the later `Schüsse`.
+stored default. Also resolved then: one `Runde` in progress per `Benutzer`; capture is one `Ziel`
+at a time on a phone and a card per `Ziel` on a wide screen; the capture strip shows the `Runde`
+totals and progress; the end of the route shows a summary before the `Runde` is finished; deleting
+a `Schuss` renumbers the later `Schüsse`.
+
+Resolved (PO 2026-11-06, follow-up): only a `Schussdistanz` feeds meter-based metrics. A
+`Pflock`-form `Schussposition` does not contribute, even where the snapshot configures a `Distanz`
+for that stake — the distance was never recorded for the shot, so it is not imputed.
 
 ## Verification
 
@@ -433,7 +432,8 @@ use-case conformance test.
 | 2026-11-06 | Reaching the end of the route opens a read-only `Rundenabschluss`; only its finish action completes the `Runde`. The summary never finishes implicitly. | Agent (Cursor) |
 | 2026-11-06 | `Schussposition` is one optional value, not an `Anteil`: a `Schussdistanz` in whole meters or a `Pflock`. The UI converts a slider position to and from that value; with no configured `Distanzen` the slider clings to the nearest `Pflock` and stores the `Pflock`; a stored distance shows no `Pflock` indicator. | TimerErTim (PO) |
 | 2026-11-06 | A `Runde` is editable forever; deletion is irreversible for MVP with no restore. | TimerErTim (PO) |
-| 2026-11-06 | The nearest `Pflock` is the initial slider state for a `Ziel` with no logged `Schuss`, and a `Schussdistanz` contributes exact meters to metrics. | TimerErTim (PO) |
+| 2026-11-06 | The nearest `Pflock` is the initial slider state for a `Ziel` with no logged `Schuss`. | TimerErTim (PO) |
+| 2026-11-06 | Only a `Schussdistanz` contributes to meter-based metrics; a `Pflock`-form `Schussposition` does not, even when the snapshot configures a `Distanz` for that stake. | TimerErTim (PO) |
 | 2026-11-06 | Rule 16 is named "initial slider state": the derived value seeds the control, while what a `Schuss` stores is decided at registration. | Agent (Cursor) |
 
 ## Revision history
@@ -443,6 +443,7 @@ use-case conformance test.
 | 2026-10-23 | Initial draft from issue #11 and PO decisions. | Agent (MiMo) |
 | 2026-11-06 | Redesigned capture: one running `Runde` per `Benutzer` with a bottom `Rundenübersicht` band, the mobile step flow and the desktop card layout, exact `Schussdistanz` entry, a `Rundenabschluss` summary before finishing, `Zielfortschritt`, and `Pfeil` renumbering on delete. Renamed `Schütze` to `Benutzer` and `Parcours` to `Parkour` to match the charter and `stammdaten.md`. | Agent (Cursor) |
 | 2026-11-06 | Spec review: replaced the `Anteil` position with one optional value (distance or `Pflock`), rewrote rules 3–5, AC-5/AC-6/AC-15, and renamed rule 16 to "initial slider state". Resolved Q-2 to Q-5 (editable forever, irreversible deletion, nearest-`Pflock` initial state, exact meters) and folded the remaining metric question into Q-1. Updated the charter's distance decision to match. | Agent (Cursor) |
+| 2026-11-06 | Follow-up review: Q-1 resolved — a `Pflock`-form position is excluded from meter-based metrics rather than imputed from the stake's configured `Distanz`. No open questions remain. | Agent (Cursor) |
 
 ## Appendix A: implementation sketch (non-normative)
 
