@@ -22,11 +22,11 @@ carrying the bow; reviewing or correcting the same `Runde` happens later on a wi
 
 A `Benutzer` starts a `Runde` for one `Parkour` and one date, walks the `Ziele` in order (skipping
 and revisiting freely), logs every `Schuss` at each `Ziel` with its `Wertungszone` and where it was
-shot from, and finishes the `Runde`. The app shows the `Wertungen` per `Ziel` and per `Runde`, and
-a meter value or estimate of the shooting position. At most one `Runde` is in progress per
-`Benutzer`; while it runs, any other screen keeps it one tap away with its elapsed time and
-progress. The capture screen focuses on one `Ziel` on a phone and lays the whole route out as cards
-on a wide screen, with one-thumb logging throughout.
+shot from — a distance in meters, or the `Pflock` — and finishes the `Runde`. The app shows the
+`Wertungen` per `Ziel` and per `Runde` and the shot positions as they were recorded. At most one
+`Runde` is in progress per `Benutzer`; while it runs, any other screen keeps it one tap away with
+its elapsed time and progress. The capture screen focuses on one `Ziel` on a phone and lays the
+whole route out as cards on a wide screen, with one-thumb logging throughout.
 
 ## Roles
 
@@ -45,8 +45,9 @@ on a wide screen, with one-thumb logging throughout.
 - At most one `Runde` in progress per `Benutzer`, and its `Rundenübersicht` band on the other
   screens.
 - Per `Ziel`: unlimited `Schüsse`, each with `Wertungszone` and `Schussposition`.
-- The `Schussposition` slider between the `Ziel`'s `Pflöcke` with detents at each `Pflock`, the
-  meter estimate when `Distanzen` exist, and an exact `Schussdistanz` typed for a single `Schuss`.
+- The `Schussposition`: a `Schussdistanz` in meters or the `Pflock`, entered through a slider that
+  clings to stakes without configured `Distanzen` and interpolates on a meter scale when they have
+  them, plus an exact distance typed for a single `Schuss`.
 - The capture screen in two presentations: one `Ziel` at a time on a narrow screen, all `Ziel`
   cards on a wide screen.
 - One-thumb mobile requirements for the capture flow.
@@ -75,11 +76,11 @@ on a wide screen, with one-thumb logging throughout.
    signed-in screen and taps it to return to capture (rule 15). Capture opens on the first
    uncaptured `Ziel`, or on the first `Ziel` when every `Ziel` is captured.
 3. **Capture a `Ziel` on a phone.** One `Ziel` fills the screen: its ledger of `Schüsse` above, a
-   `Wertungszone` button group that registers the next `Schuss` in one tap, and the default-position
+   `Wertungszone` button group that registers the next `Schuss` in one tap, and the position
    control in the thumb zone below (rule 13). The `Benutzer` taps `Weiter` to the next `Ziel` and
    `Zurück` to an earlier one.
 4. **Capture the route on a wide screen.** Every `Ziel` is a card in route order, each with its own
-   ledger and its own `Wertungszone` group next to its default-position control (rule 14). The
+   ledger and its own `Wertungszone` group next to its position control (rule 14). The
    `Benutzer` moves between cards freely; a card that received the latest entry is active and the
    captured cards read as done.
 5. **Skip and revisit.** The `Benutzer` moves to any other `Ziel` at any time — skipping ahead or
@@ -102,10 +103,8 @@ on a wide screen, with one-thumb logging throughout.
 | `Runde` | One logged pass of one `Benutzer` through one `Parkour` on one `Datum` ([charter](charter.md#domain-terms)). Owns its `Schüsse` and its `Parkour-Snapshot` ([`stammdaten.md`](stammdaten.md)). |
 | `Datum` | The day the `Runde` was shot. Part of the `Runde`, changeable by its owner. |
 | `Schuss` | One registered arrow at one `Ziel`: `Pfeil` position in shooting order, `Wertungszone`, `Schussposition`. |
-| `Schussposition` | Where a `Schuss` was shot from: either an `Anteil` between two adjacent `Pflöcke` of its `Ziel`, or a `Schussdistanz`. |
-| `Anteil` | Fraction from 0 to 1 along a pair of adjacent `Pflöcke`: 0 at the farther `Pflock`, 1 at the nearer `Pflock`. |
-| `Schussdistanz` | Distance of a `Schuss` in whole meters, typed by the `Benutzer` for that one `Schuss`. |
-| `Distanz-Schätzung` | Meter estimate of an `Anteil`, shown when the two adjacent `Pflöcke` both carry a `Distanz`. |
+| `Schussposition` | Where a `Schuss` was shot from: a `Schussdistanz`, or the `Pflock` it was shot from. Exactly one of the two. |
+| `Schussdistanz` | Distance a `Schuss` was shot from, as a positive whole number of meters. |
 | `Zielfortschritt` | Captured `Ziele` of a `Runde` over all `Ziele` of its snapshot. |
 | `Rundenübersicht` | The bottom band that keeps a `Runde` in progress reachable from the other screens. |
 
@@ -119,33 +118,39 @@ Rules:
    log them in any order: skip `Ziele`, revisit them, and add `Schüsse` at any time until the
    `Runde` is deleted. Within one `Ziel`, the `Schüsse` keep their shooting order (`Pfeil` 1, 2,
    3, … per [`wertung.md`](wertung.md)).
-3. Every `Schuss` records exactly one `Wertungszone` (`Spot`, `Kill`, `Body`, `Miss`) and exactly
+3. Every `Schuss` records exactly one `Wertungszone` (`Spot`, `Kill`, `Body`, `Miss`) and at most
    one `Schussposition`. There is no upper limit on `Schüsse` per `Ziel`
-   ([`wertung.md`](wertung.md) rule 1).
-4. `Schussposition`. The slider spans the `Ziel`'s `Pflöcke` from the farthest to the nearest
-   (`Pflock` order far to near, [`stammdaten.md`](stammdaten.md) rule 6) and has a detent at each
-   `Pflock`. The position is stored as the pair (segment, `Anteil`): the segment is one pair of
-   adjacent `Pflöcke` (farther, nearer) and the `Anteil` is a fraction from 0 (at the farther
-   `Pflock`) to 1 (at the nearer `Pflock`). A detent lands on `Anteil` 0 or 1; between detents the
-   position is continuous. So every position has exactly one representation: a detent on an
-   interior `Pflock` is stored as `Anteil` 1 of the segment whose nearer end is that `Pflock`;
-   `Anteil` 0 of the first segment is the farthest `Pflock` and `Anteil` 1 of the last segment the
-   nearest one. A `Ziel` with exactly one `Pflock` has no slider: every `Schussposition` of the
-   `Anteil` form is that `Pflock`.
+   ([`wertung.md`](wertung.md) rule 1). Recording stays a single optional field so "position not
+   recorded" is representable without a second, parallel state; the capture flow always fills it
+   from what the slider represents when the `Schuss` is registered (rule 4).
+4. `Schussposition`. When a `Schuss` has a `Schussposition`, it is one of two things and never
+   both: a `Schussdistanz` — a positive whole number of meters — or the `Pflock` it was shot from.
+   There is no fraction between stakes and no second derived field: the stored value is what the
+   position control represented when the `Schuss` was registered. Whether that is a distance or a
+   stake depends on the `Ziel`'s snapshot:
 
-   A `Schuss` whose distance was typed in meters stores a `Schussdistanz` instead of a segment and
-   `Anteil`. The two forms are exclusive: typing meters replaces an `Anteil` position and choosing
-   a slider position replaces a `Schussdistanz`, so a `Schuss` never carries both and always has
-   exactly one position. A `Schussdistanz` is a positive whole number of meters and is offered for
-   every `Ziel`, including one with a single `Pflock`, because it records a distance the `Benutzer`
-   measured rather than a stake the `Parkour` defines.
-5. Distance display. A `Pflock` with a `Distanz` shows its meter value at its detent
-   ([`stammdaten.md`](stammdaten.md) AC-6). For a position between two `Pflöcke` that both carry a
-   `Distanz`, the app shows the linear interpolation `d = d_f + Anteil × (d_n − d_f)` (farther
-   `d_f`, nearer `d_n`), rounded to whole meters and labelled as an estimate (for example
-   "ca. 35 m"). When either `Pflock` of the stored segment lacks a `Distanz`, no estimate is shown
-   for positions in that segment. A `Schussdistanz` is shown as its exact value ("35 m"), never as
-   an estimate, and takes the position's place in the `Ziel`'s shot ledger.
+   - When the `Ziel`'s `Pflöcke` carry configured `Distanzen`, the slider runs on a meter scale
+     spanning them from the farthest to the nearest ([`stammdaten.md`](stammdaten.md) rule 6). Its
+     position is the interpolated distance between the two adjacent `Pflöcke`, stored rounded to
+     whole meters as a `Schussdistanz`. Moving it there stores a distance, including when it sits
+     exactly on a `Pflock`: the stake's configured `Distanz` is stored as that distance.
+   - When they carry no configured `Distanzen`, there is no meter scale. The slider offers the
+     `Pflöcke` themselves, clings to the nearest one, and the `Schuss` stores that `Pflock`. No
+     meter value is invented for a stake whose distance nobody configured.
+   - A `Ziel` with exactly one `Pflock` has no slider. A one-tap `Schuss` stores that `Pflock`,
+     and an exact distance can still be typed.
+
+   An exact distance typed for a `Schuss` always stores a `Schussdistanz`, whatever the `Pflöcke`
+   configure, so a `Benutzer` who stepped somewhere off-stake records where they actually stood.
+   Registering or re-entering a position replaces the previous one, so a `Schuss` never carries
+   both forms and never carries two of the same form.
+5. Distance display. The shot ledger shows the stored `Schussposition` of every `Schuss`: a
+   `Schussdistanz` as meters, a `Pflock` as that `Pflock`. The slider shows a meter value only on a
+   `Ziel` whose `Pflöcke` configure `Distanzen`, and no meter value at all on a `Pflock` that has
+   none ([`stammdaten.md`](stammdaten.md) AC-6). A `Schuss` that stored a `Schussdistanz` gets no
+   `Pflock` indicator, because a distance is not a stake; a `Schuss` that stored a `Pflock` shows
+   that stake and no meters. A distance the slider interpolated is labelled as an estimate
+   ("ca. 35 m"); one the `Benutzer` typed is shown as its exact value ("35 m").
 6. `Wertung` follows [`wertung.md`](wertung.md) unchanged: per `Ziel`, `Erster Treffer` and
    `Mehrschuss` computed from its `Schüsse`; a `Ziel` without `Schuss` has no result (not 0); each
    `Runde` total is the sum of its `Ziel` results per `Wertung`.
@@ -186,15 +191,16 @@ Rules:
       action that opens that row's position control.
     - Directly beneath the ledger, a `Wertungszone` button group registers a new `Schuss` in one
       tap. The `Schuss` is appended as the next `Pfeil` of this `Ziel`.
-    - At the bottom, in the thumb zone, the default-position control sets where the next `Schuss`
-      is shot from (rule 16): the `Pflock` slider and a field for an exact `Schussdistanz`
-      (rule 4). It stays out of the ledger; a ledger row's expand action edits that row instead.
+    - At the bottom, in the thumb zone, the position control holds where the next `Schuss` is shot
+      from (rule 4), starting from the derived initial state (rule 16): the slider and a field for
+      an exact `Schussdistanz`. It stays out of the ledger; a ledger row's expand action edits that
+      row instead.
     - `Zurück` and `Weiter` move between `Ziele`. Advancing past the last `Ziel` opens the
       `Rundenabschluss` (rule 8) instead of wrapping around.
 14. Desktop capture. On a wide screen the capture screen shows the route as a column of `Ziel`
     cards in route order, with no step progression:
 
-    - Each card carries its `Ziel`, its shot ledger, and its own default-position control grouped
+    - Each card carries its `Ziel`, its shot ledger, and its own position control grouped
       with its `Wertungszone` button group, so the position a new `Schuss` will use reads as part
       of entering that `Schuss`.
     - The ledger rows carry the same contents as on a phone (rule 13), so a logged `Schuss` is
@@ -209,11 +215,19 @@ Rules:
     showing how long the `Runde` has been running (from its start) and its `Zielfortschritt`
     (rule 12). One tap resumes capture. The band is absent on the capture screen and on the
     `Rundenabschluss`, and reserves its own space, so no content is hidden behind it.
-16. Default position. Every new `Schuss` of a `Ziel` starts at the position of that `Ziel`'s most
-    recently logged `Schuss` in this `Runde`, whether an `Anteil` or a `Schussdistanz`. When the
-    `Ziel` holds no `Schuss`, the default is the nearest `Pflock`, which also covers a `Ziel` with
-    exactly one `Pflock` (rule 4). The default is derived from the logged `Schüsse` and never
-    stored separately, so it survives a resume without extra state.
+16. Initial slider state. What a `Schuss` stores is decided when it is registered: the value the
+    slider or the distance field holds at that moment (rule 4). This rule only fixes where the
+    slider *starts*, so a resumed or freshly opened `Ziel` does not begin from an arbitrary place:
+
+    - The slider opens at the position of that `Ziel`'s most recently logged `Schuss` in this
+      `Runde`, whether that `Schuss` holds a `Schussdistanz` or a `Pflock`.
+    - When the `Ziel` holds no `Schuss`, it opens at the nearest `Pflock`, which also covers a
+      `Ziel` with exactly one `Pflock`.
+    - An opened ledger row (rule 13) starts at that row's own stored position instead, since it is
+      editing that `Schuss`.
+
+    The initial state is derived from the logged `Schüsse` and never stored separately, so it
+    survives a resume without extra state and cannot drift from what was recorded.
 
 ## Requirements
 
@@ -225,9 +239,9 @@ Rules:
   move between them freely — skip and revisit (rule 2).
 - FR-3: Log unlimited `Schüsse` per `Ziel` in shooting order, each with `Wertungszone` and
   `Schussposition` (rules 3–4).
-- FR-4: Set the `Schussposition` on a slider between the `Ziel`'s `Pflöcke` with detents at each
-  `Pflock`, show the `Distanz-Schätzung` when it exists, and accept an exact `Schussdistanz` for a
-  single `Schuss` (rules 4–5).
+- FR-4: Set the `Schussposition` on a slider that stores a meter distance when the `Ziel`'s
+  `Pflöcke` configure `Distanzen` and clings to a `Pflock` when they do not, and accept an exact
+  `Schussdistanz` typed for a single `Schuss` (rules 4–5).
 - FR-5: Show the `Wertung` per `Ziel` and the two `Runde` totals, computed per
   [`wertung.md`](wertung.md) (rule 6).
 - FR-6: Hold at most one `Runde` in progress per `Benutzer`, refuse a second start, and offer to
@@ -240,24 +254,26 @@ Rules:
 - FR-10: Enforce ownership on every read and write of a `Runde` (rule 11).
 - FR-11: Show the `Zielfortschritt` of a `Runde` (rule 12).
 - FR-12: Present the capture screen on a narrow screen as one `Ziel` at a time with the strip,
-  `Zielübersicht`, ledger, `Wertungszone` group, bottom default-position control, and
+  `Zielübersicht`, ledger, `Wertungszone` group, bottom position control, and
   `Zurück`/`Weiter` (rule 13).
 - FR-13: Present the capture screen on a wide screen as `Ziel` cards with per-card ledger,
-  per-card default-position control next to the `Wertungszone` group, the active-card marking, and
+  per-card position control next to the `Wertungszone` group, the active-card marking, and
   one finish action (rule 14).
 - FR-14: Show the `Rundenübersicht` band while a `Runde` is in progress and the `Benutzer` is
   outside the capture flow, and resume capture from it (rule 15).
-- FR-15: Start each new `Schuss` from its `Ziel`'s default position (rule 16).
+- FR-15: Open a `Ziel`'s slider at its derived initial state — the `Ziel`'s last logged position, or
+  the nearest `Pflock` when it has none — and an opened ledger row at that row's own position
+  (rule 16).
 
 **Non-functional**
 
 - NFR-1: One-thumb logging. On the capture screen every interactive control has a touch target of
   at least 44×44 pixels ([charter](charter.md#accessibility)); the primary controls
-  (`Wertungszone`, default-position control, `Ziel` navigation, finish) sit in the lower thumb
-  zone and need no re-gripping. Registering a `Schuss` is one tap on a `Wertungszone`: no typing,
-  no hover, no scrolling to a control, and it stays usable with gloves. Setting the position
-  tolerates an imprecise finger — the slider's detents and its continuous range both accept a
-  coarse touch, and an exact `Schussdistanz` is only ever optional typing. `Wertungszone` state is
+  (`Wertungszone`, position control, `Ziel` navigation, finish) sit in the lower thumb zone and
+  need no re-gripping. Registering a `Schuss` is one tap on a `Wertungszone`: no typing, no hover,
+  no scrolling to a control, and it stays usable with gloves. Setting the position tolerates an
+  imprecise finger — the slider accepts a coarse touch in both its meter-scaled and its
+  stake-clinging mode, and typing a `Schussdistanz` is only ever optional. `Wertungszone` state is
   never encoded by colour alone.
 - NFR-2: The `Wertung` computation is authoritative in the backend domain
   ([`wertung.md`](wertung.md) NFR-1); the frontend may preview points.
@@ -286,14 +302,17 @@ Rules:
 - AC-4: Given `Schüsse` at a `Ziel`, then its `Erster Treffer` and `Mehrschuss` equal the results
   defined by [`wertung.md`](wertung.md), and the `Runde` totals equal the sum of its `Ziel`
   results; a `Ziel` without `Schuss` contributes nothing and shows no result.
-- AC-5: Given a `Ziel` with `Pflöcke` far to near, when the slider rests on a detent, then the
-  stored `Schussposition` is `Anteil` 0 or 1 of the matching segment and redisplay shows exactly
-  that `Pflock`; between two detents it is stored with `0 < Anteil < 1` and redisplay shows the
-  same place between the same two `Pflöcke`.
-- AC-6: Given `Pflöcke` with `Distanz` 40 m (farther) and 30 m (nearer) around one segment, then
-  the detents show 40 m and 30 m and `Anteil` 0.5 shows the estimate "ca. 35 m"; when only one of
-  the two `Pflöcke` has a `Distanz`, positions in that segment show no estimate while the `Pflock`
-  with a `Distanz` still shows its own value at its detent.
+- AC-5: Given a `Ziel` whose `Pflöcke` carry no configured `Distanzen`, when the slider is moved,
+  then it clings to a `Pflock`, the `Schuss` stores that `Pflock`, and redisplay shows the same
+  `Pflock`; no meter value is stored or shown. Given a `Ziel` whose `Pflöcke` do carry `Distanzen`,
+  moving the slider stores a positive whole-meter `Schussdistanz` and redisplay puts the slider at
+  the same place, and resting it on a `Pflock` stores that stake's configured `Distanz` rather than
+  the stake.
+- AC-6: Given adjacent `Pflöcke` with `Distanz` 40 m (farther) and 30 m (nearer), then a slider
+  position halfway between them stores 35 m and displays it as the estimate "ca. 35 m", while the
+  stakes' own 40 m and 30 m show at their positions; a value typed as 35 m displays as the exact
+  "35 m" instead. A `Pflock` without a configured `Distanz` gets no meter value, and a `Schuss`
+  that stored a `Schussdistanz` shows no `Pflock` indicator.
 - AC-7: Given a `Ziel` with exactly one `Pflock`, then no slider is offered, a `Schuss` registered
   by the `Wertungszone` group stores that `Pflock` as its `Schussposition`, and an exact
   `Schussdistanz` can still be typed for a `Schuss` (AC-15).
@@ -308,9 +327,9 @@ Rules:
   403 (401 when unauthenticated), and the same request with the owning `Benutzer` succeeds.
 - AC-12: On the capture screen every interactive control has a touch target of at least 44×44
   pixels; a `Schuss` is registered by one tap on a `Wertungszone` with no typing; the position of
-  a `Schuss` is settable without precise pointing, since both a slider position and a detent are
-  reachable with a coarse touch; and the whole journey on a phone (start, log a `Ziel` with
-  `Schüsse` and position, skip, finish) is completable with one thumb while wearing gloves.
+  a `Schuss` is settable without precise pointing in both slider modes and an exact distance is
+  only ever optional typing; and the whole journey on a phone (start, log a `Ziel` with `Schüsse`
+  and position, skip, finish) is completable with one thumb while wearing gloves.
 - AC-13: Given a `Benutzer` with a `Runde` in progress, when another `Runde` is started, then the
   start is refused, the running `Runde` is unchanged, and the app offers to resume it; after
   finishing or deleting the running `Runde` a new start succeeds; two start requests issued at the
@@ -319,11 +338,11 @@ Rules:
   then the `Zielfortschritt` reads 2 of 5 in the `Rundenübersicht` band and on the capture screen;
   removing the last `Schuss` of one of them returns it to 1 of 5.
 - AC-15: Given a `Ziel` with no `Schuss`, when the first `Schuss` is registered, then its position
-  is the nearest `Pflock`; given a `Ziel` whose most recent `Schuss` holds `Anteil` 0.5 or a
-  `Schussdistanz`, then the next one-tap `Schuss` starts from that same position. When a distance
-  is typed instead, the `Schuss` stores exactly that positive whole-meter `Schussdistanz`, shows it
-  without the estimate label, and no longer carries the `Anteil` form; a non-positive or fractional
-  value is rejected.
+  is the nearest `Pflock`; given a `Ziel` whose most recent `Schuss` holds a `Schussdistanz` of
+  35 m or the `Pflock` GELB, then the next one-tap `Schuss` starts from that same value. When a
+  distance is typed instead, the `Schuss` stores exactly that positive whole-meter
+  `Schussdistanz`, displays it without the estimate label, and holds no `Pflock`; a non-positive or
+  fractional value is rejected.
 - AC-16: Given a `Ziel` with `Schüsse` at `Pfeil` 1–4, when the `Schuss` at `Pfeil` 2 is deleted,
   then the remaining three are renumbered 1–3, their points follow their new `Pfeil`, and the
   `Ziel` and `Runde` `Wertungen` recompute.
@@ -331,11 +350,11 @@ Rules:
   `Runde` totals and the `Zielfortschritt` in a pinned strip, a `Zielübersicht` that expands into
   a selectable list of every `Ziel`, a shot ledger whose every row offers a `Wertungszone` select,
   its points, its position, delete, and expand, a `Wertungszone` group that registers a `Schuss`
-  in one tap, and the default-position control at the bottom; `Zurück` and `Weiter` move between
+  in one tap, and the position control at the bottom; `Zurück` and `Weiter` move between
   `Ziele` and advancing past the last `Ziel` opens the `Rundenabschluss`, which a mid-route
   `Weiter` never opens.
 - AC-18: On a wide screen the capture screen shows every `Ziel` as a card in route order with its
-  own ledger and its own default-position control grouped with its `Wertungszone` group; the card
+  own ledger and its own position control grouped with its `Wertungszone` group; the card
   that received the latest entry is active, a card holding at least one `Schuss` reads as
   captured, a card holding none keeps the uncaptured mark, and finishing is reached from the single
   action below the cards.
@@ -365,56 +384,57 @@ criteria.
 
 ## Risks and open questions
 
-- [ ] Q-1: Slider resolution. The PO decided the storage shape (fraction 0..1 between the two
-  adjacent `Pflöcke`, 2026-10-23) but not the resolution of a stored `Anteil`. Draft assumption:
-  continuous in the UI, stored rounded to 3 decimal places.
-- [ ] Q-2: Is a `Runde` editable forever by its owner (draft assumption), or does it lock after
-  some time or once it feeds history statistics?
-- [ ] Q-3: Is deletion irreversible behind a confirmation (draft assumption), or is there an undo
-  or trash period?
-- [ ] Q-4: Is the nearest `Pflock` the right default for the first `Schuss` of a `Ziel`
-  (rule 16), or should the first `Schuss` require an explicit position before it is registered?
-- [ ] Q-5: How does a `Schussdistanz` enter the per-`Ziel` and per-`Parkour` accuracy metrics of
-  issue #12 — as its exact meters, or only through the `Distanz-Schätzung` it would have had?
-  Draft assumption: exact meters, since that is what the `Benutzer` measured.
+- [ ] Q-1: How does a `Pflock`-form `Schussposition` enter the per-`Ziel` and per-`Parkour`
+  accuracy metrics of issue #12, where a `Schussdistanz` contributes its exact meters? Draft
+  assumption: through the `Pflock`'s configured `Distanz` when the snapshot has one, and excluded
+  from meter-based metrics when it does not, since no meter value was ever determined.
 
-Resolved (PO 2026-10-23): slider storage as `Anteil` fraction between the two adjacent `Pflöcke`
-with a meter estimate when `Distanzen` exist; bow class per `Runde` deferred to issue #23. See the
-decision log.
+Resolved (PO 2026-10-23): bow class per `Runde` deferred to issue #23. See the decision log.
 
-Resolved (PO 2026-11-06): one `Runde` in progress per `Benutzer`; a direct number field stores an
-exact `Schussdistanz` per `Schuss`; capture is one `Ziel` at a time on a phone and a card per `Ziel`
-on a wide screen; the capture strip shows the `Runde` totals and progress; the end of the route
-shows a summary before the `Runde` is finished; deleting a `Schuss` renumbers the later `Schüsse`.
+Resolved (PO 2026-11-06, spec review): `Schussposition` is a single optional value — a distance or
+a `Pflock` — not an `Anteil` between stakes. The UI converts a slider position to and from that
+value and clings to the nearest `Pflock` when the snapshot configures no `Distanzen`, storing the
+`Pflock`; a stored distance gets no `Pflock` indicator. A `Runde` is editable forever and deletion
+is irreversible for MVP with no restore. The nearest `Pflock` is the initial slider state, not a
+stored default. A `Schussdistanz` contributes exact meters to metrics. Also resolved then: one
+`Runde` in progress per `Benutzer`;
+capture is one `Ziel` at a time on a phone and a card per `Ziel` on a wide screen; the capture strip
+shows the `Runde` totals and progress; the end of the route shows a summary before the `Runde` is
+finished; deleting a `Schuss` renumbers the later `Schüsse`.
 
 ## Verification
 
-Domain unit tests in the backend core cover the `Schussposition` model (segment/`Anteil`
-canonicalization and detents of rule 4, the exclusive `Schussdistanz` form, single-`Pflock` case,
-interpolation of rule 5), the `Pfeil` renumbering of rule 9, and the `Wertung` hand-off to
-[`wertung.md`](wertung.md). Use-case conformance tests cover start, walk, skip/revisit, finish,
-edit, and delete (AC-1 to AC-10), the one-running-`Runde` rule including a concurrent double start
-(AC-13), `Zielfortschritt` (AC-14), and the default position (AC-15). API e2e tests cover ownership
-enforcement (AC-11) and the refused second start (AC-13). The two capture presentations and the
-`Rundenübersicht` band (AC-12, AC-17 to AC-20) are manual checks: a phone-sized viewport for
-one-thumb reach and touch targets, a wide viewport for the card layout, and both for layout parity
-(NFR-4).
+Domain unit tests in the backend core cover the `Schussposition` value (the two exclusive forms of
+rule 4, the single-`Pflock` case, and rejection of a non-positive or fractional `Schussdistanz`),
+the `Pfeil` renumbering of rule 9, and the `Wertung` hand-off to [`wertung.md`](wertung.md).
+Use-case conformance tests cover start, walk, skip/revisit, finish, edit, and delete (AC-1 to
+AC-10), the one-running-`Runde` rule including a concurrent double start (AC-13), `Zielfortschritt`
+(AC-14), and the initial slider state (AC-15). API e2e tests cover ownership enforcement (AC-11)
+and the refused second start (AC-13). The slider's two behaviours and its redisplay (AC-5, AC-6),
+the two capture presentations (AC-12, AC-17, AC-18), and the `Rundenübersicht` band (AC-19) are
+manual checks: a phone-sized viewport for one-thumb reach and touch targets, a wide viewport for the
+card layout, and both for layout parity (NFR-4). The `Rundenabschluss` completion rule (AC-20) is a
+use-case conformance test.
 
 ## Decision log
 
 | Date | Decision | By |
 |------|----------|----|
-| 2026-10-23 | Slider storage: `Anteil` fraction 0..1 between the two adjacent `Pflöcke`; meter estimate shown when `Pflock` `Distanzen` exist. | TimerErTim (PO) |
+| 2026-10-23 | ~~Slider storage: `Anteil` fraction 0..1 between the two adjacent `Pflöcke`; meter estimate shown when `Pflock` `Distanzen` exist.~~ Superseded 2026-11-06 by the single optional distance. | TimerErTim (PO) |
 | 2026-10-23 | Bow class per `Runde` is not in MVP; deferred and tracked in issue #23. | TimerErTim (PO) |
-| 2026-10-23 | A detent on an interior `Pflock` is stored as `Anteil` 1 of the segment whose nearer end is that `Pflock`, so every position has exactly one representation. | Agent (MiMo) |
+| 2026-10-23 | ~~A detent on an interior `Pflock` is stored as `Anteil` 1 of the segment whose nearer end is that `Pflock`, so every position has exactly one representation.~~ Superseded 2026-11-06: no `Anteil` is stored. | Agent (MiMo) |
 | 2026-10-23 | `Datum` is editable; `Parkour` is fixed at start, a wrong choice is fixed by delete and re-log (snapshot is taken at creation). | Agent (MiMo) |
 | 2026-11-06 | One `Runde` in progress per `Benutzer`; a second start is refused and offers to resume the running one. | TimerErTim (PO) |
-| 2026-11-06 | The direct number field stores an exact positive whole-meter `Schussdistanz` on the `Schuss`; a `Schuss` carries either the `Anteil` form or the `Schussdistanz` form, never both. | TimerErTim (PO) |
+| 2026-11-06 | The direct number field stores an exact positive whole-meter `Schussdistanz` on the `Schuss`; a `Schussposition` is one form or the other, never both. | TimerErTim (PO) |
 | 2026-11-06 | The `Rundenübersicht` band sits at the bottom of every signed-in screen except the capture screen and shows elapsed time and `Zielfortschritt`. | TimerErTim (PO) |
 | 2026-11-06 | Capture is one `Ziel` at a time with a pinned strip, `Zielübersicht`, and bottom position control on a phone, and `Ziel` cards with per-card position control on a wide screen; the difference is presentation only. | TimerErTim (PO) |
 | 2026-11-06 | The capture strip shows both `Runde` totals and the `Zielfortschritt`; the open `Ziel` shows its own two values. | TimerErTim (PO) |
 | 2026-11-06 | Deleting a `Schuss` renumbers the later `Schüsse` of that `Ziel`, so `Pfeil` stays contiguous. | TimerErTim (PO) |
 | 2026-11-06 | Reaching the end of the route opens a read-only `Rundenabschluss`; only its finish action completes the `Runde`. The summary never finishes implicitly. | Agent (Cursor) |
+| 2026-11-06 | `Schussposition` is one optional value, not an `Anteil`: a `Schussdistanz` in whole meters or a `Pflock`. The UI converts a slider position to and from that value; with no configured `Distanzen` the slider clings to the nearest `Pflock` and stores the `Pflock`; a stored distance shows no `Pflock` indicator. | TimerErTim (PO) |
+| 2026-11-06 | A `Runde` is editable forever; deletion is irreversible for MVP with no restore. | TimerErTim (PO) |
+| 2026-11-06 | The nearest `Pflock` is the initial slider state for a `Ziel` with no logged `Schuss`, and a `Schussdistanz` contributes exact meters to metrics. | TimerErTim (PO) |
+| 2026-11-06 | Rule 16 is named "initial slider state": the derived value seeds the control, while what a `Schuss` stores is decided at registration. | Agent (Cursor) |
 
 ## Revision history
 
@@ -422,14 +442,18 @@ one-thumb reach and touch targets, a wide viewport for the card layout, and both
 |------|--------|----|
 | 2026-10-23 | Initial draft from issue #11 and PO decisions. | Agent (MiMo) |
 | 2026-11-06 | Redesigned capture: one running `Runde` per `Benutzer` with a bottom `Rundenübersicht` band, the mobile step flow and the desktop card layout, exact `Schussdistanz` entry, a `Rundenabschluss` summary before finishing, `Zielfortschritt`, and `Pfeil` renumbering on delete. Renamed `Schütze` to `Benutzer` and `Parcours` to `Parkour` to match the charter and `stammdaten.md`. | Agent (Cursor) |
+| 2026-11-06 | Spec review: replaced the `Anteil` position with one optional value (distance or `Pflock`), rewrote rules 3–5, AC-5/AC-6/AC-15, and renamed rule 16 to "initial slider state". Resolved Q-2 to Q-5 (editable forever, irreversible deletion, nearest-`Pflock` initial state, exact meters) and folded the remaining metric question into Q-1. Updated the charter's distance decision to match. | Agent (Cursor) |
 
 ## Appendix A: implementation sketch (non-normative)
 
 - A `Runde` is an aggregate owning its `Schüsse`; it references `Ziel` identities (stable per
   [`stammdaten.md`](stammdaten.md) rule 9) and stores its `Parkour-Snapshot` as an immutable copy.
-- A `Schuss` stores `Pfeil`, `Wertungszone`, and the `Schussposition` as either (segment between
-  adjacent `Pflöcke`, `Anteil`) or a whole-meter `Schussdistanz`; the canonical form of rule 4 plus
-  the exclusive variants keep storage unambiguous and the slider redisplay exact.
+- A `Schuss` stores `Pfeil`, `Wertungszone`, and the `Schussposition` as one exclusive variant: a
+  whole-meter `Schussdistanz` or a `Pflock` reference. The two forms keep storage unambiguous, so
+  "the distance" and "the stake" can never disagree.
+- The slider lives entirely in the UI: it reads the snapshot's configured `Distanzen` to decide
+  between a meter scale and stake-clinging, and it writes one of the two stored forms. No slider
+  fraction, interpolation result, or meter estimate is persisted.
 - The one-running-`Runde` rule is a constraint on the owning `Benutzer`, enforced in the same
   transaction as the start (a partial unique index on in-progress `Runden` per owner, or an
   equivalent check), never only in the UI.
@@ -437,7 +461,7 @@ one-thumb reach and touch targets, a wide viewport for the card layout, and both
   the score of a moved `Schuss` changes with it; the domain owns that rewrite.
 - `Wertungen` are computed by the domain per [`wertung.md`](wertung.md) from the `Schüsse`; the
   `Runde` totals are the sums of its `Ziel` results.
-- `Zielfortschritt` and the default position (rules 12 and 16) are read from the logged `Schüsse`:
-  no capture cursor, "last visited `Ziel`", or remembered default is stored.
+- `Zielfortschritt` and the initial slider state (rules 12 and 16) are read from the logged
+  `Schüsse`: no capture cursor, "last visited `Ziel`", or remembered slider position is stored.
 - Deleting a `Runde` removes the aggregate; per-`Ziel` history queries (issue #12) read `Schüsse`
   through their `Ziel` reference.

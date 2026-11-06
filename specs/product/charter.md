@@ -87,9 +87,11 @@ Decisions by PO on 2026-10-21:
 4. **Web only.** The inherited Tauri desktop shell is removed. A native or desktop shell may return
    later, so architecture must keep the core and API independent of the delivery shell
    (see [`../decisions/0001-baseline-architecture.md`](../decisions/0001-baseline-architecture.md)).
-5. **Distance.** A slider between the Pflöcke of a Ziel. If Pflöcke have a configured distance
+5. **Distance.** A slider between the Pflöcke of a Ziel records how far the shot was taken from,
+   as a distance in meters or as the `Pflock` itself. When the `Pflöcke` have configured distances
    (optional, set by the `Anlage`'s `Administratoren` and `Mitarbeiter` and by the
-   `Systemadministrator`), the app also shows a meter estimate.
+   `Systemadministrator`), the slider runs on a meter scale and records an interpolated distance;
+   when they have none, it clings to the nearest `Pflock` and records that stake.
 
 MVP capabilities:
 
@@ -197,7 +199,7 @@ Open questions:
 | 2026-10-21 | Accounts required; online-first; offline sync is next milestone. | TimerErTim |
 | 2026-10-21 | MVP scoring: classic 3-arrow only. | TimerErTim |
 | 2026-10-21 | Remove Tauri for now; keep shell-agnostic architecture so it can return. | TimerErTim |
-| 2026-10-21 | Distance: slider between Pflöcke; meter estimate when Pflöcke have an optional configured distance. | TimerErTim |
+| 2026-10-21 | Distance: slider between Pflöcke; meter estimate when Pflöcke have an optional configured distance. Refined 2026-11-06: the slider records a distance or a `Pflock`, and meter values only exist where `Distanzen` are configured. | TimerErTim |
 | 2026-10-21 | Two Wertungen (Erster Treffer, Mehrschuss) from unlimited logged Schüsse. | TimerErTim |
 | 2026-10-21 | Code prefix `logandaim`: `logandaim-*` crates, `LOGANDAIM_*` env vars, `Logandaim*` type names. | TimerErTim |
 | 2026-10-26 | Account roles are `Benutzer` and `Systemadministrator` only. Authority inside an `Anlage` is an `AnlageVerwaltung` (`Administrator`, `Mitarbeiter`) stored in the `Anlage`; the `Anlagenbetreiber` role is dropped. | TimerErTim (PO) |
@@ -213,3 +215,4 @@ Open questions:
 | 2026-10-23 | Added Draft "Quality bars" (accessibility, language) and "Import" sections, and linked the `datenschutz.md` and `betrieb.md` drafts. Approved MVP scope text unchanged; the new sections are pending PO approval. | Agent (Cursor) |
 | 2026-10-26 | Split roles into account roles (`Benutzer`, `Systemadministrator`) and per-`Anlage` `AnlageVerwaltungen` (`Administrator`, `Mitarbeiter`); master data is no longer superuser-only and the "Master data by admin" decision was rewritten. Linked `stammdaten.md` and `anlage-anfrage.md`. | Agent (Cursor) |
 | 2026-10-26 | Distinguished `Benutzer` (logical identity) from `Konto` (one way to authenticate it); renamed the per-`Anlage` relationship from `Mitgliedschaft` to `AnlageVerwaltung` and dropped the `Anlagen-` role prefix. | Agent (Cursor) |
+| 2026-11-06 | MVP scope decision 5 (distance) now states what the slider records — a distance in meters or the `Pflock` — and that meter values exist only where the `Pflöcke` configure them. Linked `runde.md` in the capability table. | Agent (Cursor) |
