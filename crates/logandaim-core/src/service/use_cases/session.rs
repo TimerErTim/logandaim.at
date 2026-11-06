@@ -250,6 +250,7 @@ pub enum SessionPrüfenFehler {
 
 /// Verify an access token that the API already parsed structurally.
 ///
+/// A use case rather than a read: it decides an identity instead of returning a page's data.
 /// The signature is checked against the public key stored **on the session row**, not
 /// against a key registry: a row issued under another key rejects the token even when that
 /// key is valid on its own (AC-17). The `sid` row must exist and be unrevoked, and the

@@ -7,8 +7,8 @@ use logandaim_core::{
     adapters::{InMemorySigning, InMemoryThrottle},
     application::{AppBuilder, AuthContext, IdentityProviderConfiguration, SetUowProvider},
     domain::{Anlage, AnlageId, Runde, RundeId, Schuss, konto::AccessTokenClaims},
-    ports::{Clock, Signing},
-    service::{RundeAnzeigenFehler, SessionPrüfen, StammdatenFehler},
+    ports::{Clock, RepositoryError, Signing},
+    service::{SessionPrüfen, StammdatenFehler},
 };
 use logandaim_fakes::{FakeMailSender, FixedClock};
 
@@ -154,29 +154,26 @@ pub async fn runde_laden(harness: &Harness, runde_id: RundeId) -> (Runde, Vec<Sc
     harness
         .app()
         .execute_fn(AuthContext::Anonymous, async |ctx| {
-            let uow = ctx
-                .enter()
-                .await
-                .change_context(RundeAnzeigenFehler::RundeLaden)?;
+            let uow = ctx.enter().await.change_context(RepositoryError::Unknown)?;
             let runde = uow
                 .runden()
                 .find_by_id(runde_id)
                 .await
                 .map_err(error_stack::IntoReport::into_report)
-                .change_context(RundeAnzeigenFehler::RundeLaden)?
+                .change_context(RepositoryError::Unknown)?
                 .into_data();
             let schüsse = uow
                 .schüsse()
                 .find_by_runde(runde_id)
                 .await
                 .map_err(error_stack::IntoReport::into_report)
-                .change_context(RundeAnzeigenFehler::SchüsseLaden)?
+                .change_context(RepositoryError::Unknown)?
                 .into_iter()
                 .map(|schuss| schuss.into_data())
                 .collect();
             uow.finish(
-                Ok::<_, Report<RundeAnzeigenFehler>>((runde, schüsse)),
-                RundeAnzeigenFehler::RundeLaden,
+                Ok::<_, Report<RepositoryError>>((runde, schüsse)),
+                RepositoryError::Unknown,
             )
             .await
         })

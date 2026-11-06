@@ -18,7 +18,7 @@ ubiquitous-language term of the slice); never invent vocabulary that the specs d
 | Domain | `crates/logandaim-core/src/domain/<begriff>.rs` | Identity newtypes, the aggregate, its `Neues…` creation input, the `<Begriff>Fehler` enum, domain services, `#[cfg(test)]` unit tests. |
 | Domain exports | `crates/logandaim-core/src/domain/mod.rs` | `pub mod <begriff>;` plus re-exports, so callers use `crate::domain::<Begriff>`. |
 | Port | `crates/logandaim-core/src/application/ports/repos.rs` | The repository trait for the aggregate. Repositories only store and load. |
-| Use case | `crates/logandaim-core/src/service/use_cases/<begriff>.rs` | One struct per operation implementing `UseCase`, plus its error enum. |
+| Use case | `crates/logandaim-core/src/service/use_cases/<begriff>.rs` | One struct per write implementing `UseCase`, plus its error enum. Reads run as one-off `execute_fn` closures in the API facade, with their error enum in `crates/logandaim-api/src/api/errors.rs`. |
 | Use case exports | `crates/logandaim-core/src/service/use_cases/mod.rs` | `mod <begriff>; pub use <begriff>::*;`. |
 | UoW facade | `crates/logandaim-core/src/application/uow.rs` | Accessor on `UnitOfWork`, on `UnitOfWorkImpl`, and on `LockedUnitOfWorkImpl`. |
 | Instrumented UoW | `crates/logandaim-core/src/application/instrumented.rs` | Accessor delegating to the instrumented wrapper. |
@@ -52,7 +52,7 @@ ships in. Migrations are the exception: they are append-only and ordered by vers
    domain service on the same file so it is testable without a unit of work.
 2. **Port** — write the repository trait. It takes the `Neues…` input from the domain and
    returns the aggregate; it never enforces business rules.
-3. **Use case** — build the `Neues…` input, `ctx.enter()`, call the port,
+3. **Write use case** — build the `Neues…` input, `ctx.enter()`, call the port,
    `uow.finish(result, …)`, emit one `info!` event. Orchestration only; aggregation lives
    in the domain.
 4. **UoW + instrumented repo** — three small additions (accessors on `UnitOfWork`, on

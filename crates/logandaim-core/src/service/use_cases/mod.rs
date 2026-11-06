@@ -7,6 +7,8 @@
 //! Each use case owns its own error enum. A variant names what the use case could not do,
 //! keeps the underlying repository or crypto error in the `error_stack` chain, and has at
 //! most one HTTP meaning — `logandaim-api` maps them in `errors/http_status.rs`.
+//!
+//! Only writes live here. A read is a one-off `execute_fn` closure in `LogandaimAppApi`.
 
 mod login;
 mod password;
