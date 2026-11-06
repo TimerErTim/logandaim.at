@@ -71,6 +71,10 @@ impl Deref for SQLiteConnection {
 impl SQLiteInstance {
     pub async fn local(path: impl AsRef<Path>) -> ResultReport<Self, RepositoryError> {
         let path = path.as_ref();
+        // `new_local` gives every connection its own database; `:memory:` must be shared.
+        if path == Path::new(":memory:") {
+            return Self::in_memory().await;
+        }
         tracing::info!(path = %path.display(), "intializing local database instance");
         let this = Self {
             variant: InstanceType::Local(

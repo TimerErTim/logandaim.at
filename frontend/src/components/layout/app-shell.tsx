@@ -1,16 +1,38 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import {
+  CircleAlert,
+  LogIn,
+  LogOut,
+  Menu,
+  Settings2,
+  UserRound,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/api/auth-provider";
+import {
+  useAnlagenQuery,
+  useAuthMutations,
+  useBenutzerQuery,
+} from "@/api/hooks";
 import { usePageChrome } from "@/components/layout/page-chrome";
 import { Sidebar } from "@/components/layout/sidebar";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   breadcrumbsForPathname,
   homeNavItem,
-  navActionsForPathname,
   sidebarCategories,
+  visibleSidebarCategories,
 } from "@/lib/navigation";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -18,14 +40,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { breadcrumbLabel } = usePageChrome();
 
   const breadcrumbs = breadcrumbsForPathname(pathname, breadcrumbLabel);
-  const actions = navActionsForPathname(pathname);
+  const phase = useAuth();
+  const benutzer = useBenutzerQuery();
+  const anlagen = useAnlagenQuery();
+  const auth = useAuthMutations();
+  const onAuthRoute = ["/anmeldung", "/registrierung", "/passwort"].includes(
+    pathname.replace(/\/$/, ""),
+  );
+
+  const categories = visibleSidebarCategories(sidebarCategories, {
+    istSystemadministrator: benutzer.data?.rolle === "Systemadministrator",
+    anzahlAnlagen: anlagen.data?.length ?? 0,
+  });
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-100 dark:bg-zinc-950">
+    <div className="flex h-screen overflow-hidden bg-canvas">
+      <a
+        href="#main"
+        className="sr-only rounded-sm px-4 py-2 text-sm font-medium text-ink focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        Zum Inhalt springen
+      </a>
+
       <input id="main-drawer" type="checkbox" className="peer hidden" />
 
       <Sidebar
-        categories={sidebarCategories}
+        categories={categories}
         homeItem={homeNavItem}
         pathname={pathname}
       />
@@ -37,13 +77,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       />
 
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/80 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/80">
+        <header className="sticky top-0 z-30 border-b border-subtle bg-surface">
           <div className="flex h-14 items-center gap-3 px-4">
             <label
               htmlFor="main-drawer"
-              className="cursor-pointer rounded-lg p-2 hover:bg-zinc-100 lg:hidden dark:hover:bg-zinc-900"
+              className="inline-flex size-11 cursor-pointer items-center justify-center rounded-md text-ink hover:bg-surface-muted lg:hidden"
             >
               <Menu className="size-5" />
+              <span className="sr-only">Navigation öffnen</span>
             </label>
 
             <nav
@@ -56,17 +97,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className="flex items-center"
                 >
                   {index > 0 ? (
-                    <span className="mx-1 text-zinc-400">/</span>
+                    <span className="mx-1 text-secondary">/</span>
                   ) : null}
                   {crumb.href ? (
                     <Link
                       href={crumb.href}
-                      className="rounded-md px-2 py-1 font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                      className="rounded-sm px-2 py-1 font-medium text-ink hover:bg-surface-muted"
                     >
                       {crumb.label}
                     </Link>
                   ) : (
-                    <span className="px-2 py-1 font-semibold text-zinc-900 dark:text-zinc-100">
+                    <span className="px-2 py-1 font-semibold text-ink">
                       {crumb.label}
                     </span>
                   )}
@@ -75,18 +116,83 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
 
             <div className="flex shrink-0 items-center gap-2">
-              {actions.map((action) => (
-                <Link key={action.href} href={action.href}>
-                  <Button size="sm" variant="primary">
-                    {action.label}
+              {phase.status === "authenticated" && benutzer.data ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      aria-label="Profilmenü öffnen"
+                      disabled={
+                        auth.logout.isPending || auth.deleteAccount.isPending
+                      }
+                    >
+                      <UserRound />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuLabel className="normal-case">
+                      <span className="block truncate text-secondary">
+                        Angemeldet als
+                      </span>
+                      <span className="mt-1 block truncate text-sm font-medium text-ink">
+                        {benutzer.data.eMailAdresse}
+                      </span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/profil">
+                        <UserRound aria-hidden="true" /> Profil
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/optionen">
+                        <Settings2 aria-hidden="true" /> Optionen
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        auth.logout.mutate(undefined, {
+                          onSuccess: () => window.location.assign("/"),
+                        })
+                      }
+                    >
+                      <LogOut aria-hidden="true" /> Abmelden
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : !onAuthRoute ? (
+                <Link href="/anmeldung">
+                  <Button
+                    size="sm"
+                    variant={onAuthRoute ? "secondary" : "primary"}
+                  >
+                    <LogIn />
+                    Anmelden
                   </Button>
                 </Link>
-              ))}
+              ) : null}
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main id="main" tabIndex={-1} className="flex-1 overflow-y-auto">
+          {phase.status === "unavailable" ? (
+            <div className="mx-auto w-full max-w-5xl px-6 pt-6">
+              <Alert
+                variant="warning"
+                icon={<CircleAlert aria-hidden="true" />}
+              >
+                <p>
+                  Ihre Sitzung konnte nicht überprüft werden. Bitte laden Sie
+                  die Seite erneut oder melden Sie sich an.
+                </p>
+              </Alert>
+            </div>
+          ) : null}
+          {children}
+        </main>
       </div>
     </div>
   );

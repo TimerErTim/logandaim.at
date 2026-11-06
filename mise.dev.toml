@@ -1,6 +1,7 @@
 [tools]
 "pipx:graphifyy" = "latest"
 "npm:diffx-cli" = "latest"
+"gh" = "latest"
 
 [env]
 LOGANDAIM_LOG_LEVEL = "trace"

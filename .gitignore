@@ -2,12 +2,19 @@
 node_modules
 history.txt
 
-target/
+# Compose deployment configuration and persistent application state
+.env
+.env.*
+!.env.example
+/data/
+secrets/
+.deploy/
 *.local/
 *.local.*
 
+target/
+
 .miserc.toml
 
-graphify-out/cost.json
-graphify-out/cache/
-graphify-out/*/
+graphify-out/
+*Zone.Identifier

@@ -1,15 +1,34 @@
 #:schema https://mise.jdx.dev/schema/mise-task.json
 
+# CI sets `LOGANDAIM_BUILD_RELEASE=true`; a local run stays on the debug profile for
+# an incremental rebuild.
+
 ["build:server"]
 description = "Build the standalone backend server binary"
-run = "cargo build -p logandaim-server --release"
+usage = """
+flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Compile with the release profile"
+"""
+run = "cargo build -p logandaim-server{% if usage.release %} --release{% endif %}"
 
 ["build:frontend"]
-description = "Build the Next.js frontend"
+description = "Build the static Next.js frontend export"
 dir = "{{ vars.REPO_ROOT }}/frontend"
 depends = ["sync:openapi"]
+# Keys on files, not the environment: `--force` when a `NEXT_PUBLIC_*` value changes.
+sources = [
+    "src/**",
+    "!src/api/schema.ts",
+    "public/**",
+    "next.config.ts",
+    "postcss.config.mjs",
+    "tsconfig.json",
+    "biome.json",
+    "package.json",
+    "package-lock.json",
+]
+outputs = ["out/**"]
 run = "npm run build"
 
-[build]
+["build"]
 description = "Builds whole project"
-depends = ["build:{server,frontend}"]
+depends = ["build:server", "build:frontend"]

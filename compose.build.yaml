@@ -1,0 +1,20 @@
+# Local override: build the runtime image from a binary already on this machine.
+#
+# `compose.yaml` requires an image reference, because a deployment must name the
+# exact revision it runs. A laptop has no such reference, so this file supplies one
+# and restores the build.
+#
+#   mise run build:server
+#   mkdir -p .deploy/incoming
+#   install -m 0755 target/release/logandaim-server .deploy/incoming/logandaim-server
+#   docker compose -f compose.yaml -f compose.build.yaml up -d --build
+#
+# The deployment never passes this file: `deploy:vps` runs plain `docker compose`,
+# so a deploy can pull but cannot build.
+
+services:
+  backend:
+    image: logandaim-server:local
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile

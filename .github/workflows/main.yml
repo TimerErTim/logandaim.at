@@ -1,0 +1,230 @@
+name: Main
+
+# Deploys the frontend and backend; a push to `main` also cuts the release.
+# `workflow_dispatch` runs the same pipeline from any branch and skips only the
+# release, so a pull request can be deployed and tried before it merges.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: main-${{ github.ref }}
+  # A half-deployed site and a missing tag are worse than a queued run.
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: pr/base
+    # A called workflow cannot outrank its caller, so these repeat here.
+    permissions:
+      contents: read
+      checks: write
+      pages: read
+    uses: ./.github/workflows/ci.yml
+
+  release-check:
+    name: release-check
+    # A dispatch deploys without releasing, so there is no release to validate.
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/release-check.yml
+
+  pages:
+    name: deploy/pages
+    needs: [ci]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Deployed as built, so the artefact under test is the artefact that ships.
+      - name: Download the static export
+        uses: actions/download-artifact@v8
+        with:
+          name: pages-export
+          path: frontend/out
+
+      - name: Upload the export
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: frontend/out
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+  image:
+    name: deploy/image
+    # Wraps the binary `pr/base` tested, so the VPS never compiles.
+    needs: [ci]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      # One immutable tag per commit; `:main` is for humans and is never passed on.
+      reference: ${{ steps.reference.outputs.reference }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Download the server binary
+        uses: actions/download-artifact@v8
+        with:
+          name: server
+          path: .deploy/incoming
+
+      # An artefact archive preserves no executable bit.
+      - name: Make the binary executable
+        run: chmod 0755 .deploy/incoming/logandaim-server
+
+      - name: Compose the image reference
+        id: reference
+        env:
+          OWNER: ${{ github.repository_owner }}
+          # `:main` is for humans browsing the registry, so only a `main` push may move
+          # it. A dispatch from a branch must never repoint it.
+          MOVE_MAIN_TAG: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          set -eu
+          owner="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
+          printf 'reference=%s\n' "ghcr.io/$owner/logandaim-server:sha-$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          if [ "$MOVE_MAIN_TAG" = "true" ]; then
+            printf 'main_tag=%s\n' "ghcr.io/$owner/logandaim-server:main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # `.dockerignore` whitelists the binary, so the image cannot pick up a file
+      # the gate never saw.
+      - name: Build and push the runtime image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.reference.outputs.reference }}
+            ${{ steps.reference.outputs.main_tag }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+      # Printed for operators; a summary failure must not fail a push that worked.
+      - name: Summarise the push
+        env:
+          REFERENCE: ${{ steps.reference.outputs.reference }}
+          MAIN_TAG: ${{ steps.reference.outputs.main_tag }}
+        run: |
+          set -eu
+          digest="$(docker buildx imagetools inspect --format '{{json .Manifest}}' "$REFERENCE" 2>/dev/null | jq -r '.digest' 2>/dev/null || true)"
+          {
+            echo "### deploy/image"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Deployed reference | \`$REFERENCE\` |"
+            echo "| Digest | \`${digest:-unavailable}\` |"
+            echo "| Human tag | \`${MAIN_TAG:-not moved (not a main push)}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-backend:
+    name: deploy/backend
+    # Runs beside `deploy/pages`; only `deploy/release` waits for both.
+    needs: [ci, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      # `install: false` skips the language toolchain, which this job never uses.
+      - name: Install mise
+        uses: jdx/mise-action@v5
+        with:
+          install: false
+          cache: true
+
+      - name: Prepare SSH credentials
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
+        run: |
+          set -eu
+          test -n "$VPS_SSH_PRIVATE_KEY" || { echo "::error::Set production secret VPS_SSH_PRIVATE_KEY"; exit 1; }
+          test -n "$VPS_SSH_KNOWN_HOSTS" || { echo "::error::Set production secret VPS_SSH_KNOWN_HOSTS"; exit 1; }
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$VPS_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      # The same task an operator runs for a manual deploy or rollback.
+      - name: Deploy the image on the VPS
+        env:
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          API_DOMAIN: ${{ vars.API_DOMAIN }}
+        run: |
+          set -eu
+          test -n "${VPS_HOST:-}" || { echo "::error::Set production variable VPS_HOST"; exit 1; }
+          test -n "${VPS_USER:-}" || { echo "::error::Set production variable VPS_USER"; exit 1; }
+          test -n "${API_DOMAIN:-}" || { echo "::error::Set production variable API_DOMAIN"; exit 1; }
+          mise run deploy:vps \
+            "${{ needs.image.outputs.reference }}" \
+            "${{ github.sha }}" \
+            --host "$VPS_HOST" \
+            --user "$VPS_USER" \
+            --api-domain "$API_DOMAIN"
+
+  release:
+    name: deploy/release
+    # Push only: a manual dispatch redeploys but never cuts a second release for a
+    # version that is already out.
+    if: github.event_name == 'push'
+    needs: [ci, release-check, pages, deploy-backend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_SHA: ${{ github.sha }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up tooling
+        uses: ./.github/actions/setup
+
+      - name: Create the release
+        run: mise run release:publish

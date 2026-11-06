@@ -1,0 +1,271 @@
+//! SMTP adapter for the `MailSender` port.
+//!
+//! Transaction mail is plain text: a token-bearing HTML mail invites link rewriting,
+//! prefetching, and rendering bugs that a one-click link cannot afford, so this adapter
+//! only ever builds a `text/plain; charset=utf-8` body.
+//!
+//! Configuration is data, not behaviour: credentials arrive from deployment configuration
+//! and the relay is either Mailpit on loopback (development, tests) or the production
+//! relay. A send failure is returned as [`MailError::Zustellung`]; the calling use case
+//! logs it instead of failing the request that triggered it (SPEC-konto NFR-5).
+
+use async_trait::async_trait;
+use error_stack::{IntoReport, ResultExt};
+use lettre::{
+    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
+    message::{Mailbox, header::ContentType},
+    transport::smtp::{
+        authentication::Credentials,
+        client::{Tls, TlsParameters},
+    },
+};
+use logandaim_core::{
+    ResultReport,
+    domain::EmailAdresse,
+    ports::{Mail, MailError, MailSender},
+};
+
+/// How the adapter talks to the relay.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Verschlüsselung {
+    /// Plain SMTP: Mailpit on loopback in development and tests.
+    Klar,
+    /// `STARTTLS` upgrade, requiring a valid certificate.
+    StartTls,
+    /// TLS from the first byte (submission port 465).
+    Implizit,
+}
+
+/// Where mail goes and who it comes from.
+#[derive(Debug, Clone)]
+pub struct SmtpKonfiguration {
+    /// Host the TCP connection is opened to.
+    pub host: String,
+    pub port: u16,
+    pub verschlüsselung: Verschlüsselung,
+    pub benutzername: Option<String>,
+    pub passwort: Option<String>,
+    pub absender: EmailAdresse,
+    /// Display name shown in the mail client, e.g. "logandaim".
+    pub absender_name: Option<String>,
+    /// Frontend origin the mailed links point at. The routes are the product's; only the
+    /// origin is deployment data (see [`logandaim_core::ports::Mail`]).
+    pub frontend_basis_url: String,
+}
+
+impl SmtpKonfiguration {
+    // TODO: improve ergonomics of having a hardcoded dev config in the codebase
+    /// A local Mailpit relay: port 1025, plain SMTP, no credentials.
+    pub fn mailpit(absender: EmailAdresse) -> Self {
+        Self {
+            host: "127.0.0.1".to_owned(),
+            port: 1025,
+            verschlüsselung: Verschlüsselung::Klar,
+            benutzername: None,
+            passwort: None,
+            absender,
+            absender_name: Some("logandaim".to_owned()),
+            frontend_basis_url: "http://localhost:3000".to_owned(),
+        }
+    }
+}
+
+/// TLS parameters for the configured hop, verified against the configured host.
+///
+/// There is deliberately no separate certified-name override: the deployment submits over
+/// the Compose bridge in plain SMTP, where no certificate is involved, and a relay reached
+/// over TLS is addressed by the name its certificate is issued for. An override existed to
+/// reach a service name no CA certifies; the deployed hop now dials the public FQDN, which
+/// the mail server answers to inside the bridge, so no override is needed.
+fn tls_parameter(konfiguration: &SmtpKonfiguration) -> ResultReport<TlsParameters, MailError> {
+    TlsParameters::new(konfiguration.host.clone()).change_context(MailError::NichtKonfiguriert)
+}
+
+/// A TLS relay is a submission relay, and submission always authenticates. Without
+/// credentials `test_connection` never sends `AUTH`, so the probe would pass while every
+/// send is refused.
+fn prüfe_zugangsdaten(konfiguration: &SmtpKonfiguration) -> ResultReport<(), MailError> {
+    let verschlüsselt = konfiguration.verschlüsselung != Verschlüsselung::Klar;
+    let zugangsdaten = konfiguration.benutzername.is_some() && konfiguration.passwort.is_some();
+    if verschlüsselt && !zugangsdaten {
+        return Err(error_stack::Report::new(MailError::OhneZugangsdaten));
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone)]
+pub struct SmtpMailSender {
+    konfiguration: SmtpKonfiguration,
+    transport: AsyncSmtpTransport<Tokio1Executor>,
+}
+
+impl SmtpMailSender {
+    /// Build the transport once and reuse its connection pool across sends.
+    pub fn neu(konfiguration: SmtpKonfiguration) -> ResultReport<Self, MailError> {
+        let mut builder = match konfiguration.verschlüsselung {
+            Verschlüsselung::Klar => {
+                AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(konfiguration.host.clone())
+                    .port(konfiguration.port)
+            }
+            Verschlüsselung::StartTls => {
+                // Built explicitly rather than with `starttls_relay` so the port stays
+                // caller-supplied; the certificate is verified against `host`, which for a
+                // TLS relay must therefore be the name the certificate is issued for.
+                let builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(
+                    konfiguration.host.clone(),
+                )
+                .tls(Tls::Required(tls_parameter(&konfiguration)?));
+                builder.port(konfiguration.port)
+            }
+            Verschlüsselung::Implizit => {
+                let builder = AsyncSmtpTransport::<Tokio1Executor>::builder_dangerous(
+                    konfiguration.host.clone(),
+                )
+                .tls(Tls::Wrapper(tls_parameter(&konfiguration)?));
+                builder.port(konfiguration.port)
+            }
+        };
+
+        if let (Some(benutzer), Some(passwort)) = (
+            konfiguration.benutzername.clone(),
+            konfiguration.passwort.clone(),
+        ) {
+            builder = builder.credentials(Credentials::new(benutzer, passwort));
+        }
+
+        Ok(Self {
+            transport: builder.build(),
+            konfiguration,
+        })
+    }
+
+    /// Build the wire message. Separate from sending so a unit test can assert recipient,
+    /// subject, and body without a relay. This is where a token becomes a link: the
+    /// use case does not know the frontend origin and must not know the route table.
+    pub fn baue_nachricht(&self, mail: &Mail) -> ResultReport<Message, MailError> {
+        let von = Mailbox::new(
+            self.konfiguration.absender_name.clone(),
+            self.konfiguration
+                .absender
+                .as_ref()
+                .parse()
+                .change_context(MailError::Zustellung)?,
+        );
+        let an = mail
+            .empfänger
+            .as_ref()
+            .parse()
+            .change_context(MailError::Zustellung)?;
+
+        Message::builder()
+            .from(von)
+            .to(Mailbox::new(None, an))
+            .subject(mail.betreff())
+            .header(ContentType::TEXT_PLAIN)
+            .body(mail.text(&self.konfiguration.frontend_basis_url))
+            .map_err(IntoReport::into_report)
+            .change_context(MailError::Zustellung)
+    }
+}
+
+#[async_trait]
+impl MailSender for SmtpMailSender {
+    async fn send(&self, mail: Mail) -> ResultReport<(), MailError> {
+        let nachricht = self.baue_nachricht(&mail)?;
+        self.transport
+            .send(nachricht)
+            .await
+            .map_err(IntoReport::into_report)
+            .change_context(MailError::Zustellung)?;
+        Ok(())
+    }
+
+    /// Open one connection, complete the TLS upgrade and authentication, then close it.
+    ///
+    /// A send would prove the same hop but deliver a message; NOOP proves it without a
+    /// recipient, so a deployment can report whether mail works before anyone registers.
+    async fn prüfe_verbindung(&self) -> ResultReport<(), MailError> {
+        prüfe_zugangsdaten(&self.konfiguration)?;
+        self.transport
+            .test_connection()
+            .await
+            .map_err(IntoReport::into_report)
+            .change_context(MailError::Zustellung)
+            .and_then(|res| {
+                if !res {
+                    Err(error_stack::Report::new(MailError::AntwortetNichtAufNoop))
+                } else {
+                    Ok(())
+                }
+            })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn konfiguration() -> SmtpKonfiguration {
+        let mut konfiguration =
+            SmtpKonfiguration::mailpit(EmailAdresse::normalisiert("noreply@logandaim.at").unwrap());
+        // The real deployment dials the public FQDN, so that is what the fixture names:
+        // it is the only name the Let's Encrypt certificate carries.
+        konfiguration.host = "api.logandaim.at".to_owned();
+        konfiguration.port = 587;
+        konfiguration.verschlüsselung = Verschlüsselung::StartTls;
+        konfiguration
+    }
+
+    /// Verification follows the configured host, so a TLS relay must be named by the name
+    /// its certificate is issued for.
+    #[test_log::test]
+    fn tls_wird_gegen_den_host_geprüft() {
+        let konfiguration = konfiguration();
+
+        let parameter = tls_parameter(&konfiguration).expect("TLS-Parameter bauen");
+
+        assert_eq!(parameter.domain(), "api.logandaim.at");
+    }
+
+    /// The names from a configuration address the same relay: a second host is a second
+    /// certificate, not an alias of the first.
+    #[test_log::test]
+    fn ein_anderer_host_wird_gegen_seinen_eigenen_namen_geprüft() {
+        let mut konfiguration = konfiguration();
+        konfiguration.host = "mail.logandaim.at".to_owned();
+
+        let parameter = tls_parameter(&konfiguration).expect("TLS-Parameter bauen");
+
+        assert_eq!(parameter.domain(), "mail.logandaim.at");
+    }
+
+    #[test_log::test]
+    fn ein_tls_relay_ohne_zugangsdaten_besteht_die_prüfung_nicht() {
+        let konfiguration = konfiguration();
+
+        let fehler = prüfe_zugangsdaten(&konfiguration).expect_err("ohne Zugangsdaten");
+
+        assert!(matches!(
+            fehler.current_context(),
+            MailError::OhneZugangsdaten
+        ));
+    }
+
+    #[test_log::test]
+    fn ein_tls_relay_mit_zugangsdaten_besteht_die_prüfung() {
+        let mut konfiguration = konfiguration();
+        konfiguration.benutzername = Some("noreply@logandaim.at".to_owned());
+        konfiguration.passwort = Some("geheim".to_owned());
+
+        assert!(prüfe_zugangsdaten(&konfiguration).is_ok());
+    }
+
+    /// Mailpit takes plain SMTP without a login; development must stay green.
+    #[test_log::test]
+    fn klares_smtp_braucht_keine_zugangsdaten() {
+        let konfiguration =
+            SmtpKonfiguration::mailpit(EmailAdresse::normalisiert("noreply@logandaim.at").unwrap());
+
+        assert!(prüfe_zugangsdaten(&konfiguration).is_ok());
+    }
+}

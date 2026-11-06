@@ -4,13 +4,27 @@
 use std::sync::Arc;
 
 use logandaim_core::App;
+use logandaim_core::adapters::{InMemorySigning, InMemoryThrottle};
+use logandaim_core::application::IdentityProviderConfiguration;
 use logandaim_core::ports::RepositoryError;
+use logandaim_fakes::FakeMailSender;
 use logandaim_sqlite::SQLiteInstance;
 
 async fn app() -> Arc<App> {
     let sqlite = SQLiteInstance::in_temp_dir().await.unwrap();
     sqlite.migrate_repos_to_latest().await.unwrap();
-    Arc::new(App::builder().uow_provider(Box::new(sqlite)).build())
+    Arc::new(
+        App::builder()
+            .uow_provider(Box::new(sqlite))
+            .signing(Arc::new(InMemorySigning::from_secret_bytes(&[7u8; 32])))
+            .throttle(Arc::new(InMemoryThrottle::new()))
+            .mail_sender(Arc::new(FakeMailSender::new()))
+            .konto(IdentityProviderConfiguration::neu(
+                "logandaim.at",
+                "logandaim-api",
+            ))
+            .build(),
+    )
 }
 
 #[test_log::test(pollster::test)]
@@ -28,10 +42,13 @@ async fn parallel_execute_fn_survives_wal_connection_init() {
         handles.push(std::thread::spawn(move || {
             pollster::block_on(async move {
                 writer_app
-                    .execute_fn::<_, _, RepositoryError>(async |ctx| {
-                        let uow = ctx.enter().await?;
-                        uow.commit().await
-                    })
+                    .execute_fn::<_, _, RepositoryError>(
+                        logandaim_core::application::AuthContext::Anonymous,
+                        async |ctx| {
+                            let uow = ctx.enter().await?;
+                            uow.commit().await
+                        },
+                    )
                     .await
                     .expect("writer execute_fn must not fail with database locked");
             })
@@ -39,10 +56,13 @@ async fn parallel_execute_fn_survives_wal_connection_init() {
         handles.push(std::thread::spawn(move || {
             pollster::block_on(async move {
                 opener_app
-                    .execute_fn::<_, _, RepositoryError>(async |ctx| {
-                        let uow = ctx.enter().await?;
-                        uow.rollback().await
-                    })
+                    .execute_fn::<_, _, RepositoryError>(
+                        logandaim_core::application::AuthContext::Anonymous,
+                        async |ctx| {
+                            let uow = ctx.enter().await?;
+                            uow.rollback().await
+                        },
+                    )
                     .await
                     .expect("opener execute_fn must not fail with database locked / WAL init");
             })

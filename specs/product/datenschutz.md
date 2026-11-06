@@ -28,11 +28,16 @@ Items marked Q- are blocking for the section they appear in.
 
 ## Roles
 
-- [`Schütze`](charter.md#roles): data subject. Reads the notices, gives consent, exports and deletes
+- [`Benutzer`](charter.md#roles): data subject. Reads the notices, gives consent, exports and deletes
   data.
-- [`System-Administrator`](charter.md#roles): executes data-subject requests and incident steps.
+- [`Systemadministrator`](charter.md#roles): executes data-subject requests and incident steps.
 - Operator (the PO, not a product role): controller under GDPR, accountable for the record of
   processing, the processors, and breach reporting.
+
+An `AnlageVerwaltung` in an `Anlage` does not make anyone a data controller. An `Administrator` or
+`Mitarbeiter` sees only the `AnlageVerwaltung` list of that `Anlage` — the fact that a `Benutzer`
+belongs there and in which role — and never the `Runden`, `Schüsse`, or `Konto` data of its
+members. Statistics read inside an `Anlage` are aggregates across its `Runden`.
 
 ## Scope
 
@@ -51,8 +56,8 @@ Items marked Q- are blocking for the section they appear in.
 **Out of scope**
 
 - Employment, tax, and payment data: the product takes no payments.
-- Operator (`Anlagenbetreiber`) data processing for their own purposes; a later milestone needs its
-  own controller/processor analysis.
+- An `Anlage`'s own processing for its own purposes (marketing, membership administration outside
+  the product); a later milestone needs its own controller/processor analysis.
 - Marketing consent.
 
 ## Domain terms and business rules
@@ -108,7 +113,7 @@ Rules:
 
 1. Every store that holds personal data appears in the retention table below with a period and a
    basis.
-2. `Konto-Löschung` removes or irreversibly anonymizes rows in every personal store. One test
+2. `Benutzer-Löschung` removes or irreversibly anonymizes rows in every personal store. One test
    inspects each store after deletion.
 3. Deleted data leaves backups within the documented backup window; the window and the restore
    caveat are stated in the privacy notice.
@@ -123,7 +128,7 @@ Draft retention table. Periods are Q-17 and must be confirmed by the PO.
 | Store | Content | Draft period | Basis |
 |-------|---------|--------------|-------|
 | `konten` | credentials, role | until deletion | contract |
-| `anmelde_sitzungen` | session metadata | 30 days idle, plus absolute cap | security |
+| `anmelde_sitzungen` | session metadata | refresh token expiry (one month, `konto.md` rule 12); access tokens are not stored | security |
 | recovery and verification tokens | hashed tokens | until expiry or use | security |
 | auth audit | login metadata | 90 days | security |
 | application logs | technical logs | 30 days | operations |
@@ -234,7 +239,9 @@ Rules:
 3. Measurement is cookieless or self-hosted where feasible; otherwise the trade-off is recorded
    here.
 4. IP addresses are truncated before storage and no cross-site profile is built.
-5. The session cookie is classified as strictly necessary and is not gated behind consent.
+5. The auth tokens are classified as strictly necessary for the core product and are not gated
+   behind consent; the refresh token is stored, not a tracking cookie (see
+   [`../decisions/0004-jwt-refresh-auth.md`](../decisions/0004-jwt-refresh-auth.md)).
 6. A fresh browser without consent makes no analytics request on the core pages.
 
 Open questions:
@@ -303,9 +310,11 @@ checks, processors and incident response are document reviews.
 |------|----------|----|
 | 2026-10-23 | GDPR: self-service account deletion only; no data export in MVP. | TimerErTim |
 | 2026-10-23 | Deletion keeps `Runden`/`Schüsse` anonymized for aggregate statistics. | TimerErTim |
+| 2026-10-26 | Membership in an `Anlage` does not make anyone a controller; members see only the membership list of their `Anlage`, never other members' `Runden` or account data. | TimerErTim (PO) |
 
 ## Revision history
 
 | Date | Change | By |
 |------|--------|----|
 | 2026-10-23 | Initial draft from the deferred-requirement tickets #36–#43 and #51. | Agent (Cursor) |
+| 2026-10-26 | Roles renamed to `Benutzer`/`Systemadministrator`; membership visibility rule added; the excluded "operator processing" item now names an `Anlage` instead of the dropped `Anlagenbetreiber` role. | Agent (Cursor) |

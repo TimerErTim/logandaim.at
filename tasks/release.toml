@@ -1,0 +1,36 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+
+# Release helpers.
+#
+# The release body has three parts, in this order:
+#   1. the description (body) of the `dev` -> `main` pull request that ships the release
+#   2. the `## [X.Y.Z]` section of CHANGELOG.md
+#   3. the `New Contributors` block from GitHub's generated release notes
+#
+# GitHub attaches the source archives to the release itself; no assets are uploaded.
+
+["release:version"]
+description = "Bump the workspace and frontend versions for a release PR"
+usage = """
+arg "<kind>" help="patch, minor, major, or an explicit X.Y.Z version"
+"""
+run = "node {{ vars.REPO_ROOT }}/tasks/scripts/release-version.mjs"
+
+["release:notes"]
+description = "Write the release body for a version to stdout or a file"
+usage = """
+arg "<version>" help="Version without the v prefix, for example 0.2.0"
+flag "--pr <pr>" help="Pull request number of the dev -> main release PR"
+flag "-o --out <path>" help="Write to this file instead of stdout"
+"""
+tools.gh = "latest"
+run = "node {{ vars.REPO_ROOT }}/tasks/scripts/release-notes.mjs"
+
+["release:publish"]
+description = "Create the source-only GitHub release for the current commit"
+usage = """
+arg "[version]" help="Version without the v prefix; read from Cargo.toml when omitted"
+flag "--pr <pr>" help="Merged release pull request; derived from HEAD when omitted"
+"""
+tools.gh = "latest"
+run = "node {{ vars.REPO_ROOT }}/tasks/scripts/release-publish.mjs"

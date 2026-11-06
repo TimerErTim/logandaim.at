@@ -1,12 +1,18 @@
 ---
 id: ADR-0002
 title: Session cookies for auth; explicit-origin CORS
-status: Proposed
+status: Superseded by ADR-0004
 date: 2026-10-23
 deciders: TimerErTim
 ---
 
 # ADR-0002: Session cookie auth across frontend and API origins
+
+> **Superseded 2026-10-26 by [ADR-0004](0004-jwt-refresh-auth.md).** The PO chose JWT access tokens
+> with single-use rotating refresh tokens, so the opaque cookie session decided here is no longer
+> the mechanism. The cross-site cookie analysis and the CORS allowlist reasoning below still explain
+> the constraints; the decision itself does not stand. Product rules live in
+> [`../product/konto.md`](../product/konto.md), not here.
 
 ## Context
 
@@ -44,8 +50,9 @@ explicitly allows.
    login, cleared on logout.
 3. **Server-side revocation.** Every request validates the session against the store. Logout
    revokes the current session; a completed password recovery revokes all sessions of the
-   `Konto`; account deletion removes them. Sessions carry an expiry (rolling idle timeout plus an
-   absolute cap); expired rows are cleaned up.
+   `Konto`; account deletion removes them. Sessions carry an expiry: a 30-day idle timeout
+   (SPEC-konto rule 12) plus an absolute cap whose length is still open there (Q-15); expired rows
+   are cleaned up.
 4. **Production frontend uses the custom domain.** `https://logandaim.at` keeps frontend and API
    same-site, so `SameSite=Lax` cookies work in every browser. The bare `*.github.io` origin is
    preview-only; login from it is not supported (its requests are cross-site and cookies behave as
@@ -55,7 +62,12 @@ explicitly allows.
    configured origins (`https://logandaim.at`, `http://localhost:3001` for development), always
    together with `Access-Control-Allow-Credentials: true`. Never `*` with credentials, never a
    reflected unvalidated `Origin`. Preflight (`OPTIONS`) and error responses carry the same
-   headers, so 401/403 responses stay readable for the frontend.
+   headers, so 401/403 responses stay readable for the frontend. The frontend sets
+   `credentials: "include"` on every API call; without it the browser neither stores nor sends the
+   cookie cross-origin. The current server CORS layer (`backend/server/src/main.rs`) still allows
+   any `localhost`/`127.0.0.1` port from an inline prefix check and sets no
+   `Allow-Credentials`; it must move to a configured allowlist before the first auth endpoint
+   ships.
 6. **CSRF defense in depth.** `SameSite=Lax` already withholds cookies from cross-site `fetch`
    requests. Additionally, state-changing requests must carry an `Origin` (or `Referer`) from the
    allowlist, and no state change is reachable via GET.
@@ -107,14 +119,20 @@ not part of the contract; the contract lives in SPEC-konto's rules and acceptanc
 
 | Store | Fields |
 |-------|--------|
-| `konten` | `id`, `e_mail_adresse` (unique, normalized), `passwort_hash`, `rolle` (`Schütze` \| `System-Administrator`), `erstellt_am` |
+| `konten` | `id`, `e_mail_adresse` (unique, normalized), `passwort_hash`, `rolle` (`Benutzer` \| `Systemadministrator`), `e_mail_bestätigt_am` (nullable), `erstellt_am` |
 | `anmelde_sitzungen` | `id`, `konto_id`, `token_hash`, `erstellt_am`, `läuft_ab_am`, `zuletzt_verwendet_am` |
 | `passwort_wiederherstellungen` | `id`, `konto_id`, `token_hash`, `läuft_ab_am`, `verbraucht_am` |
+| `e_mail_bestätigungen` | `id`, `konto_id`, `token_hash`, `läuft_ab_am`, `verbraucht_am` |
 
-Session and recovery tokens are stored hashed; the raw token exists only in the cookie resp. the
-recovery link. `Runden` and `Schüsse` reference `konten.id` optionally. On `Konto-Löschung`
-(SPEC-konto rule 8) the reference and every personal attribute are stripped, and the rows stay as
-anonymized records for aggregate statistics; the `Konto` row itself is deleted.
+Session, recovery, and confirmation tokens are stored hashed; the raw token exists only in the
+cookie resp. the mailed link. `Runden` and `Schüsse` reference `konten.id` optionally. On
+`Konto-Löschung` (SPEC-konto rule 8) the reference and every personal attribute are stripped, and
+the rows stay as anonymized records for aggregate statistics; the `Konto` row itself is deleted.
+
+`Mitgliedschaften` do not live here. They belong to the `Anlage` aggregate (master-data spec,
+issue #10): the loaded `Anlage` answers whether a `Konto` is its `Anlagen-Administrator` or
+`Anlagen-Mitarbeiter`, which is why authorisation needs no lookup outside the aggregate a use case
+already loads (SPEC-konto rule 16).
 
 ### API surface (sketch)
 
@@ -122,15 +140,41 @@ German domain paths as in ADR-0001, JSON keys `camelCase` UTF-8.
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/konto/registrierung` | Register (`eMailAdresse`, `passwort`) → one generic response whether or not the address is taken (SPEC-konto rule 4). |
+| `POST /api/konto/registrierung` | Register (`eMailAdresse`, `passwort`) → creates the `Konto` and starts the first `Anmelde-Sitzung`; a taken address answers 409 and sets no cookie (SPEC-konto rule 4). |
 | `POST /api/konto/anmeldung` | Log in (`eMailAdresse`, `passwort`) → starts `Anmelde-Sitzung`. |
 | `POST /api/konto/abmeldung` | Log out → revokes the current `Anmelde-Sitzung`. |
 | `POST /api/konto/passwort-vergessen` | Request `Passwort-Wiederherstellung` email (`eMailAdresse`). Same response for unknown emails. |
 | `POST /api/konto/passwort-wiederherstellen` | Set new `Passwort` (`token`, `neuesPasswort`) → ends all sessions. |
-| `GET /api/konto` | The logged-in `Konto` (`id`, `eMailAdresse`, `rolle`). |
-| `POST /api/konto/loeschung` | `Konto-Löschung` (`passwort` re-entry + confirmation). |
+| `POST /api/konto/e-mail-bestätigung` | Confirm the address with the mailed `token`; idempotent, 400 on expired or superseded (SPEC-konto rule 13). |
+| `POST /api/konto/e-mail-bestätigung/anfordern` | Send a new confirmation mail; throttled per `Konto` and client (rule 14). |
+| `GET /api/konto` | The logged-in `Konto` (`id`, `eMailAdresse`, `rolle`, `eMailBestätigt`). |
+| `POST /api/konto/löschung` | `Konto-Löschung` (`passwort` re-entry + confirmation). |
 
-Registration answers with the same generic response in both branches and starts no
-`Anmelde-Sitzung`; the immediate login step (SPEC-konto journey 1) establishes the session for a
-freshly created `Konto`. Error shape follows the existing structured errors (400 validation,
-401 not logged in, 403 wrong `Rolle`, 429 throttled) — no `409` for duplicate registration.
+Registration needs no follow-up login call: the request that creates the `Konto` starts its first
+`Anmelde-Sitzung` in the response itself (SPEC-konto journey 1, rule 3, AC-1). A taken
+`E-Mail-Adresse` answers 409 and sets no cookie (rule 4, AC-2).
+
+**Account existence is disclosed by registration, deliberately.** Because registration logs the
+user in, a response that also stayed silent about a taken address would be impossible: the cookie
+itself answers the question. SPEC-konto rule 4 therefore makes the disclosure the contract — 409
+with "address already in use" — instead of hiding one channel and leaking another. What an attacker
+gains is the set of registered addresses; login and recovery stay generic, the
+5-registrations-per-client-hour throttle (rule 5) keeps bulk probing slow, and no email is sent to
+an address that did not ask for one. Error shape follows the existing structured errors (400
+validation, 409 address taken, 401 not logged in, 403 wrong role, 429 throttled).
+
+### Mail port (sketch)
+
+Transaction mail leaves through one outbound port in the core; the delivery adapter is chosen by
+configuration and is the only place that knows an SMTP host. Development and tests point at
+Mailpit (`localhost:1025`, web UI on `8025`); the deployment points at the configured relay. A
+failing mail server never fails a request: the port is called after the use case's own work and its
+failure is logged, not propagated (SPEC-konto NFR-5).
+
+### Authorisation (sketch)
+
+No permission strings and no role middleware. A use case loads what it needs — the calling
+`Konto` (with `rolle`), and the `Anlage` it acts on (with its `Mitgliedschaften`) — and decides
+inside its own body. Reads of another `Konto`'s data are refused unless the caller is a
+`Systemadministrator`. This keeps one rule per use case, testable at the domain layer without
+spinning up a router.

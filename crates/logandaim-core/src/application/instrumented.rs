@@ -8,8 +8,11 @@ use crate::ResultReport;
 use crate::application::instrumented_repos::RepoStorage;
 use crate::application::uow::UnitOfWorkImpl;
 use crate::ports::{
-    ObjectStore, ObjectStoreError, ObjectStream, PdfDokument, PdfRenderError, PdfRenderer,
-    RepositoryResult, SchussRepository,
+    AnlageRepository, BenutzerRepository, ClientKey, EmailBestätigungRepository, KontoRepository,
+    Mail, MailError, MailSender, ObjectStore, ObjectStoreError, ObjectStream,
+    PasswortWiederherstellungRepository, PdfDokument, PdfRenderError, PdfRenderer,
+    RepositoryResult, RundeRepository, SchussRepository, SessionRepository, Throttle,
+    ThrottleAction, ThrottleError,
 };
 
 #[derive(Clone)]
@@ -60,6 +63,84 @@ impl PdfRenderer for InstrumentedPdfRenderer {
     }
 }
 
+#[derive(Clone)]
+pub struct InstrumentedThrottle {
+    inner: Arc<dyn Throttle>,
+}
+
+impl InstrumentedThrottle {
+    pub fn new(inner: Arc<dyn Throttle>) -> Arc<dyn Throttle> {
+        Arc::new(Self { inner })
+    }
+}
+
+#[async_trait]
+impl Throttle for InstrumentedThrottle {
+    #[instrument(skip(self, client), fields(action = action.as_str(), ip = %client.ip), level = "debug", err(Debug))]
+    async fn check(
+        &self,
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> ResultReport<(), ThrottleError> {
+        self.inner.check(client, action, now).await
+    }
+
+    #[instrument(skip(self, client), fields(action = action.as_str(), ip = %client.ip), level = "debug", err(Debug))]
+    async fn increment(
+        &self,
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> ResultReport<(), ThrottleError> {
+        self.inner.increment(client, action, now).await
+    }
+
+    #[instrument(skip(self, client), fields(action = action.as_str(), ip = %client.ip), level = "debug", err(Debug))]
+    async fn check_and_increment(
+        &self,
+        client: &ClientKey,
+        action: ThrottleAction,
+        now: chrono::DateTime<chrono::Utc>,
+    ) -> ResultReport<(), ThrottleError> {
+        self.inner.check_and_increment(client, action, now).await
+    }
+
+    #[instrument(skip(self, client), fields(action = action.as_str(), ip = %client.ip), level = "debug", err(Debug))]
+    async fn reset(
+        &self,
+        client: &ClientKey,
+        action: ThrottleAction,
+    ) -> ResultReport<(), ThrottleError> {
+        self.inner.reset(client, action).await
+    }
+}
+
+#[derive(Clone)]
+pub struct InstrumentedMailSender {
+    inner: Arc<dyn MailSender>,
+}
+
+impl InstrumentedMailSender {
+    pub fn new(inner: Arc<dyn MailSender>) -> Arc<dyn MailSender> {
+        Arc::new(Self { inner })
+    }
+}
+
+#[async_trait]
+impl MailSender for InstrumentedMailSender {
+    // The body carries a single-use token, so it is never recorded in a span.
+    #[instrument(skip(self, mail), fields(betreff = mail.betreff()), level = "debug", err(Debug))]
+    async fn send(&self, mail: Mail) -> ResultReport<(), MailError> {
+        self.inner.send(mail).await
+    }
+
+    #[instrument(skip(self), level = "debug", err(Debug))]
+    async fn prüfe_verbindung(&self) -> ResultReport<(), MailError> {
+        self.inner.prüfe_verbindung().await
+    }
+}
+
 pub struct InstrumentedUnitOfWork {
     storage: Pin<Box<RepoStorage>>,
 }
@@ -86,7 +167,35 @@ impl UnitOfWorkImpl for InstrumentedUnitOfWork {
         uow.rollback().await
     }
 
+    fn anlagen(&self) -> &dyn AnlageRepository {
+        &self.storage.anlagen
+    }
+
+    fn runden(&self) -> &dyn RundeRepository {
+        &self.storage.runden
+    }
+
     fn schüsse(&self) -> &dyn SchussRepository {
         &self.storage.schüsse
+    }
+
+    fn benutzer(&self) -> &dyn BenutzerRepository {
+        &self.storage.benutzer
+    }
+
+    fn konten(&self) -> &dyn KontoRepository {
+        &self.storage.konten
+    }
+
+    fn sessions(&self) -> &dyn SessionRepository {
+        &self.storage.sessions
+    }
+
+    fn bestätigungen(&self) -> &dyn EmailBestätigungRepository {
+        &self.storage.bestätigungen
+    }
+
+    fn wiederherstellungen(&self) -> &dyn PasswortWiederherstellungRepository {
+        &self.storage.wiederherstellungen
     }
 }

@@ -10,43 +10,84 @@ type Step = {
 type WorkflowStepsProps = {
   steps: Step[];
   currentStepId: string;
+  /** Iteration labels come from the locale source, never from this component. */
+  optionalLabel?: string;
 };
 
-export function WorkflowSteps({ steps, currentStepId }: WorkflowStepsProps) {
+/**
+ * A workflow as a ruled sequence: numbered marks joined by a short stitched line,
+ * like the entries of a logbook. A passed step is a filled mark, the step ahead an
+ * outline, and the current step is confirmed by a stamp-like ring.
+ *
+ * State is carried by the mark shape, the step number, the text and `aria-current`,
+ * never by colour alone, so the sequence stays readable in daylight and to
+ * colour-blind users. The current step is named in text ("Schritt 2 von 3").
+ */
+export function WorkflowSteps({
+  steps,
+  currentStepId,
+  optionalLabel = "optional",
+}: WorkflowStepsProps) {
+  const aktuell = steps.findIndex((step) => step.id === currentStepId);
+
   return (
-    <ol className="flex flex-wrap gap-2">
+    <ol
+      aria-label={
+        aktuell >= 0
+          ? `Schritt ${aktuell + 1} von ${steps.length}: ${steps[aktuell]?.label}`
+          : undefined
+      }
+      className="flex flex-wrap items-center gap-x-2 gap-y-3"
+    >
       {steps.map((step, index) => {
         const isCurrent = step.id === currentStepId;
         const isDone = step.done;
+        const isLast = index === steps.length - 1;
 
         return (
           <li
             key={step.id}
-            className={cn(
-              "flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium",
-              isCurrent
-                ? "border-emerald-600 bg-emerald-50 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100"
-                : isDone
-                  ? "border-zinc-300 text-zinc-600 dark:border-zinc-600 dark:text-zinc-300"
-                  : "border-zinc-200 text-zinc-400 dark:border-zinc-800",
-            )}
+            aria-current={isCurrent ? "step" : undefined}
+            className="flex items-center gap-2"
           >
             <span
               className={cn(
-                "flex size-5 items-center justify-center rounded-full text-[10px]",
+                "flex size-6 items-center justify-center rounded-sm text-[11px] font-semibold tabular-nums",
                 isCurrent
-                  ? "bg-emerald-600 text-white"
+                  ? "border-2 border-primary bg-surface text-ink"
                   : isDone
-                    ? "bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-100"
-                    : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800",
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-subtle text-secondary",
               )}
             >
               {index + 1}
             </span>
-            {step.label}
+            <span
+              className={cn(
+                "text-sm",
+                isCurrent
+                  ? "font-semibold text-ink"
+                  : isDone
+                    ? "text-ink"
+                    : "text-secondary",
+              )}
+            >
+              {step.label}
+              {isCurrent ? (
+                <span className="ml-1.5 font-mono text-xs text-secondary">
+                  Schritt {index + 1} von {steps.length}
+                </span>
+              ) : null}
+            </span>
             {step.optional ? (
-              <span className="text-zinc-400">(optional)</span>
+              <span className="text-xs text-secondary">({optionalLabel})</span>
             ) : null}
+            {isLast ? null : (
+              <span
+                aria-hidden="true"
+                className="h-px w-8 border-t border-dashed border-subtle"
+              />
+            )}
           </li>
         );
       })}

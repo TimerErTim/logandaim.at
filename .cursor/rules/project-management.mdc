@@ -13,18 +13,8 @@ Follow [.github/CONTRIBUTING.md](../../.github/CONTRIBUTING.md) and [specs/READM
 - If a spec does not define the behavior you need: stop, comment on the issue, and label it `needs-PO`. Do not guess.
 - Never change issue priority labels (`P0`–`P3`) or milestones without PO instruction.
 - Reference acceptance criteria by number (`AC-3`) in tests, commits, and PRs.
-- Add a `CHANGELOG.md` entry under `Unreleased` for every user-visible change (Keep a Changelog sections).
-- `CHANGELOG.md` is **end-user facing**. It describes only real impact for people using the product:
-  features, behavior changes, fixes, removals, breaking changes.
-  - It is **not** for the PO, the project manager, or agents. Spec refinement, spec/ADR drafting,
-    issue triage, label or milestone changes, refactors with no observable effect, internal tooling,
-    CI and dependency chores, and test-only work must **not** appear.
-  - If a change has no observable effect for an end user, omit it entirely. Do not log the work
-    that produced a change; log the change the user experiences.
-  - Phrase entries from the user's perspective ("Scores now persist after a reload"), not the
-    implementation's ("refactored the scoring repository").
-- Pre-release: logandaim.at is a new project seeded from another project's architecture. Until the
-  first release, `Unreleased` may be empty and that is correct. Removing or reshaping inherited base
-  material (e.g. the Tauri shell, inherited domain code) is not an end-user change — no user ever
-  ran it. Log those in the issue/PR, not the changelog.
+- `CHANGELOG.md` records only what a user can observe; see
+  [changelog scope](../../.github/CONTRIBUTING.md#changelog-scope). Before the first release
+  `Unreleased` may stay empty, because removing inherited base material (the Tauri shell, inherited
+  domain code) is not something a user ever ran.
 - Do not add YAMS names, assets, or veterinary domain terms. Do not reintroduce Tauri without an ADR.

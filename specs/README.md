@@ -25,7 +25,7 @@ specs/
 ├── decisions/
 │   └── NNNN-<title>.md          # Architecture decision records (ADR)
 ├── 3d_archery_tracking_austria_product_requirements_document.md  # Original PRD (input)
-└── legacy/                      # YAMS proof-of-concept specs, superseded
+└── legacy/                      # Superseded proof-of-concept specs
 ```
 
 The original PRD is **input**, not approved scope. Approved scope lives in
@@ -34,7 +34,7 @@ The original PRD is **input**, not approved scope. Approved scope lives in
 ## Language
 
 Specs are written in English. Domain terms use the German ubiquitous language
-(`Anlage`, `Parcours`, `Ziel`, `Pflock`, `Runde`, `Schuss`, `Wertung`), matching code, API, and UI.
+(`Anlage`, `Parkour`, `Ziel`, `Pflock`, `Runde`, `Schuss`, `Wertung`), matching code, API, and UI.
 
 ## Lifecycle
 
@@ -84,6 +84,7 @@ Rules:
 
 ## Legacy
 
-[`legacy/`](legacy/) holds the YAMS proof-of-concept specs (billing, seminars, backend and frontend
-architecture notes). They are `Superseded` as product specs. The architecture notes stay useful as
-reference for the inherited Rust and Next.js structure until replaced by ADRs.
+[`legacy/`](legacy/) holds the superseded proof-of-concept specs (billing, seminars, backend and
+frontend architecture notes) that logandaim.at started from. They are `Superseded` as product
+specs. The architecture notes stay useful as reference for the inherited Rust and Next.js structure
+until replaced by ADRs.

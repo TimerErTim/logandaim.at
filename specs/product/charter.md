@@ -12,36 +12,63 @@ superseded_by: null
 ## Vision
 
 logandaim.at is an Austria-wide online logbook for 3D archery, optimized for 3D targets and
-parcours. Archers log rounds target by target, including the exact shooting distance between
-stakes, and see how their accuracy develops over time. Parcours operators get a standard way to
+parkour. Archers log rounds target by target, including the exact shooting distance between
+stakes, and see how their accuracy develops over time. Parkour operators get a standard way to
 describe their courses.
 
 Source input: [`../3d_archery_tracking_austria_product_requirements_document.md`](../3d_archery_tracking_austria_product_requirements_document.md).
 
 ## Problem
 
-Existing tools are score cards or tournament software. They do not track accuracy per parcours
+Existing tools are score cards or tournament software. They do not track accuracy per parkour
 and per target over time, and they do not record distances between the fixed stake positions.
 
 ## Roles
 
+Two kinds of role exist, and only the first is a property of the `Benutzer`.
+
+**Account roles** (`Benutzer.Rolle`, exactly one per `Benutzer`):
+
+| Account role | MVP | Description |
+|--------------|-----|-------------|
+| `Benutzer` | Yes | Every registered person: casual and power archers, and the `Administratoren` and `Mitarbeiter` of any `Anlage`. Owns personal data, logs Runden, reviews own history. |
+| `Systemadministrator` | Yes | Superuser. Creates and manages every `Anlage`, every `Benutzer`, and every setup in the product. |
+
+**Roles inside an `Anlage`** (`AnlageVerwaltung`, zero or more per `Benutzer`, one per `Anlage`):
+
 | Role | MVP | Description |
 |------|-----|-------------|
-| Schütze (archer) | Yes | Registered user. Logs rounds, reviews personal history. Casual and power users share this role; power features come later. |
-| System-Administrator | Yes | Maintains master data. Seeds the pilot Anlagen, Parcours, Ziele, and Pflöcke. |
-| Anlagenbetreiber (operator) | No | Manages own Anlage and Parcours. Later milestone. |
+| `Administrator` | Yes | Manages that `Anlage`'s `AnlageVerwaltungen` and everything a `Mitarbeiter` may do. |
+| `Mitarbeiter` | Yes | Manages Parkour, Ziele, and Pflöcke of that `Anlage`, and reads its statistics. |
+
+A `Benutzer` may hold an `AnlageVerwaltung` in several `Anlagen` or in none. It is granted inside an
+`Anlage`, never across the product. The role names stay bare (`Administrator`, `Mitarbeiter`) because
+`AnlageVerwaltung` already names the scope. The former `Anlagenbetreiber` role is replaced by these
+two.
+
+| Not an account role | MVP | Description |
+|---------------------|-----|-------------|
 | Turnierleiter (tournament lead) | No | Events, group scoring, leaderboards. Future. |
 | Gast (guest) | No | Logging without account. Not planned before accounts are stable. |
+
+Authorisation is not a permission grid. The product has two account roles and the two `Anlage` roles
+above; every use case decides for itself whether the caller may perform it, from the aggregates it
+loads. There is no generic role middleware and no permission table. See
+[`konto.md#ubiquitous-language`](konto.md#ubiquitous-language) for why a person is a `Benutzer` and
+their login is a `Konto`.
 
 ## Domain terms
 
 | Term | Meaning |
 |------|---------|
+| `Benutzer` | The logical identity of one person in the product: owns personal data, `Runden`, and `AnlageVerwaltungen`. |
+| `Konto` | One way to authenticate a `Benutzer`. In MVP an email address plus a password, one per `Benutzer`. |
 | `Anlage` | Physical site of a club or commercial operator. |
-| `Parcours` | Predefined ordered sequence of Ziele at an Anlage (for example "Große Runde, 32 Ziele"). The PRD calls this Route / Parcours-Layout. |
+| `AnlageVerwaltung` | A `Benutzer`'s role inside one `Anlage`: `Administrator` or `Mitarbeiter`. Not club membership. |
+| `Parkour` | Predefined ordered sequence of Ziele at an Anlage (for example "Große Runde, 32 Ziele"). The PRD calls this Route / Parkour-Layout. |
 | `Ziel` | One 3D animal target with master data: animal, target group 1–4, Pflock configuration. |
-| `Pflock` | Colored stake marking a shooting position (for example Weiß, Blau, Rot, Gelb), ordered far to near per Ziel. |
-| `Runde` | One logged pass of an archer through one Parcours on one date. The PRD calls this Session. |
+| `Pflock` | Colored stake marking a shooting position (for example Weiß, Blau, Rot, Gelb), ordered near to far per Ziel. |
+| `Runde` | One logged pass of an archer through one Parkour on one date. The PRD calls this Session. |
 | `Schuss` | One registered arrow at one Ziel: arrow number, Wertungszone, shooting position. |
 | `Wertungszone` | `Spot`, `Kill`, `Body`, or `Miss`. |
 
@@ -49,9 +76,11 @@ and per target over time, and they do not record distances between the fixed sta
 
 Decisions by PO on 2026-10-21:
 
-1. **Master data by admin.** The System-Administrator seeds 2–3 pilot Anlagen with Parcours, Ziele,
-   and Pflöcke. Archers do not create or edit master data in the MVP.
-2. **Accounts, online-first.** Archers need an account. The app works online. Offline capture and
+1. **Master data by superuser and `Anlage` roles.** The `Systemadministrator` creates the 2–3
+   pilot Anlagen and seeds their Parkour, Ziele, and Pflöcke. Inside an `Anlage`, its
+   `Administratoren` and `Mitarbeiter` maintain that Anlage's master data. A `Benutzer` without a
+   `AnlageVerwaltung` in an `Anlage` never creates or edits its master data.
+2. **Accounts, online-first.** Archers need a `Benutzer`. The app works online. Offline capture and
    background sync (PWA, IndexedDB) are the next milestone after MVP.
 3. **Scoring: classic 3-arrow only**, shown as two Wertungen (Erster Treffer and Mehrschuss) from
    the same logged Schüsse. See [`wertung.md`](wertung.md). WA 2-arrow and IFAA modes come later.
@@ -59,7 +88,8 @@ Decisions by PO on 2026-10-21:
    later, so architecture must keep the core and API independent of the delivery shell
    (see [`../decisions/0001-baseline-architecture.md`](../decisions/0001-baseline-architecture.md)).
 5. **Distance.** A slider between the Pflöcke of a Ziel. If Pflöcke have a configured distance
-   (optional, set by admin now and by the Anlagenbetreiber later), the app also shows a meter estimate.
+   (optional, set by the `Anlage`'s `Administratoren` and `Mitarbeiter` and by the
+   `Systemadministrator`), the app also shows a meter estimate.
 
 MVP capabilities:
 
@@ -69,14 +99,16 @@ MVP capabilities:
 | Account registration and login | [`konto.md`](konto.md) |
 | Data protection, consent, and legal obligations | [`datenschutz.md`](datenschutz.md) |
 | Operations, security, and launch readiness | [`betrieb.md`](betrieb.md) |
-| Master data: Anlage, Parcours, Ziel, Pflock (admin seeding) | to be written |
+| Master data and Anlage membership: Anlage, Parkour, Ziel, Pflock | [`stammdaten.md`](stammdaten.md) |
+| Requesting a new Anlage | [`anlage-anfrage.md`](anlage-anfrage.md) |
 | Log a Runde target by target, with distance slider between Pflöcke | to be written |
-| Personal history: scores and first-arrow hit rate per Parcours over time | to be written |
+| Personal history: scores and first-arrow hit rate per Parkour over time | to be written |
 | Remove legacy branding and domain | [GitHub milestone "M0 Rebrand"](https://github.com/TimerErTim/logandaim.at/milestones) |
 
 ## Non-goals for MVP
 
-- Operator self-service, tournaments, leaderboards.
+- Operator self-service: a `Benutzer` requests an `Anlage`, a `Systemadministrator` decides. No
+  self-service creation, tournaments, leaderboards.
 - Global benchmarks across users (needs privacy and consent design first).
 - Equipment tracking, photo log, weather and terrain data, GPS target detection.
 - Damage reports, lost-arrow board, traffic heatmaps, announcements.
@@ -126,14 +158,14 @@ Issues: #49.
 An archer may bring existing paper or spreadsheet history in, so the first session is not an empty
 profile.
 
-1. A documented CSV schema defines the columns for `Runde`, date, `Parcours`, `Ziel`, `Pfeil`
+1. A documented CSV schema defines the columns for `Runde`, date, `Parkour`, `Ziel`, `Pfeil`
    position, and `Wertungszone`.
 2. Validation reports every failing row with a row number and a reason; nothing is written on
    failure.
 3. A dry-run preview shows what would be imported, including computed `Wertungen`, before
    committing.
 4. Imported `Runden` are marked as imported and are distinguishable in history.
-5. The import references existing master data only; an unknown `Parcours` or `Ziel` fails with a
+5. The import references existing master data only; an unknown `Parkour` or `Ziel` fails with a
    clear message.
 6. Re-importing the same file does not duplicate `Runden`.
 
@@ -146,7 +178,7 @@ Open questions:
 | Milestone | Goal |
 |-----------|------|
 | M0 Rebrand | No legacy name, logo, domain, or Tauri shell remains. Build, check, and test pass. |
-| M1 MVP | Archer registers, picks a pilot Parcours, logs a Runde, sees personal history. |
+| M1 MVP | Archer registers, picks a pilot Parkour, logs a Runde, sees personal history. |
 | M2 Offline | Full Runde capture without network, background sync. |
 | Later | Power-user features, operators, benchmarks, tournaments. |
 
@@ -168,6 +200,8 @@ Open questions:
 | 2026-10-21 | Distance: slider between Pflöcke; meter estimate when Pflöcke have an optional configured distance. | TimerErTim |
 | 2026-10-21 | Two Wertungen (Erster Treffer, Mehrschuss) from unlimited logged Schüsse. | TimerErTim |
 | 2026-10-21 | Code prefix `logandaim`: `logandaim-*` crates, `LOGANDAIM_*` env vars, `Logandaim*` type names. | TimerErTim |
+| 2026-10-26 | Account roles are `Benutzer` and `Systemadministrator` only. Authority inside an `Anlage` is an `AnlageVerwaltung` (`Administrator`, `Mitarbeiter`) stored in the `Anlage`; the `Anlagenbetreiber` role is dropped. | TimerErTim (PO) |
+| 2026-10-26 | A `Benutzer` never creates an `Anlage`; they request one and a `Systemadministrator` decides. Authorisation lives in use cases, not in a permission table. | TimerErTim (PO) |
 
 ## Revision history
 
@@ -177,3 +211,5 @@ Open questions:
 | 2026-10-21 | Approved. | TimerErTim |
 | 2026-10-23 | Linked the konto.md draft for the accounts capability. | Agent (MiMo) |
 | 2026-10-23 | Added Draft "Quality bars" (accessibility, language) and "Import" sections, and linked the `datenschutz.md` and `betrieb.md` drafts. Approved MVP scope text unchanged; the new sections are pending PO approval. | Agent (Cursor) |
+| 2026-10-26 | Split roles into account roles (`Benutzer`, `Systemadministrator`) and per-`Anlage` `AnlageVerwaltungen` (`Administrator`, `Mitarbeiter`); master data is no longer superuser-only and the "Master data by admin" decision was rewritten. Linked `stammdaten.md` and `anlage-anfrage.md`. | Agent (Cursor) |
+| 2026-10-26 | Distinguished `Benutzer` (logical identity) from `Konto` (one way to authenticate it); renamed the per-`Anlage` relationship from `Mitgliedschaft` to `AnlageVerwaltung` and dropped the `Anlagen-` role prefix. | Agent (Cursor) |

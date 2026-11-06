@@ -5,10 +5,11 @@ import { createContext, type ReactNode, useContext, useMemo } from "react";
 
 import { config } from "@/lib/config";
 import { createLogandaimApi } from "./index";
-import type { LogandaimApi } from "./logandaim-api";
+import type { AuthSession, LogandaimApi } from "./logandaim-api";
 
 type LogandaimApiContextValue = {
   api: LogandaimApi;
+  authSession: AuthSession;
   apiBaseUrl: string;
   dev: boolean;
 };
@@ -18,14 +19,14 @@ const LogandaimApiContext = createContext<LogandaimApiContextValue | null>(
 );
 
 /**
- * Creates the API instance once per client and exposes it. Config is static, so there
- * is no async bootstrap, loading state, or reload path.
+ * Creates the API instance once per client and exposes it. Configuration is static;
+ * authentication bootstrap is managed by `AuthProvider` above the app shell.
  */
 export function LogandaimApiProvider({ children }: { children: ReactNode }) {
   // One transport instance per client; `config` never changes at runtime.
   const value = useMemo<LogandaimApiContextValue>(
     () => ({
-      api: createLogandaimApi(),
+      ...createLogandaimApi(),
       apiBaseUrl: config.apiBaseUrl,
       dev: config.dev,
     }),

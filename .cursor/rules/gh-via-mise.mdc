@@ -7,4 +7,5 @@ alwaysApply: true
 
 - Invoke `gh` using `mise x -- gh ...` (or `mise x gh@latest -- gh ...` if the unpinned tool must be fetched). Do not run bare `gh` or activate it in project mise configuration just for an invocation.
 - Use this wrapper for every GitHub CLI command, including issue, pull request, workflow, and project operations.
+- In agent sessions the active account is the agent account (`TimerErTim-Agent`). Do not run `gh auth switch` to the maintainer account.
 - Example: `mise x -- gh pr view 19 --repo TimerErTim/logandaim.at`.

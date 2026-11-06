@@ -22,9 +22,9 @@ Prompt gives `mode` + `issue #N` or `PR #P` (+ optional `base <branch>`).
 2. `jj git fetch && jj new <base or main@github>`.
 3. Implement vertical slice per `.cursor/AGENTS.md`. Tests at each affected layer, named after ACs (`ac_3_...`). `mise run sync:openapi` if API changed. `CHANGELOG.md` `Unreleased` entry if user-visible. Add issue to spec's `issues:` list.
 4. `mise run check` and `mise run test` must pass. Run formatter if format check fails (`mise run fmt:rust`, `mise run fmt:biome` or equivalents in `mise tasks`).
-5. Commit (literal newlines, never `\n`):
+5. Commit (literal newlines, never `\n`; author identity and signing key come from jj config, so pass no identity):
    ```
-   JJ_USER="GPT-6-luna" JJ_EMAIL=agent@cursor.com jj commit -m "feat(scope): summary
+   jj commit -m "feat(scope): summary
 
    body if needed
 
@@ -53,7 +53,7 @@ Integrate base via merge commit, never rebase (see `.cursor/AGENTS.md` → Versi
 1. `jj git fetch && jj new <headRefName> <base>@github`
 2. Resolve conflicts (`jj resolve` / edit files), check + test pass.
 3. ```
-   JJ_USER="GPT-6-luna" JJ_EMAIL=agent@cursor.com jj commit -m "chore: merge <base> into <headRefName>
+   jj commit -m "chore: merge <base> into <headRefName>
 
    Resolve conflicts in <files>"
    ```
@@ -63,6 +63,7 @@ Integrate base via merge commit, never rebase (see `.cursor/AGENTS.md` → Versi
 
 - Single shared workspace. No worktrees, no extra jj workspaces. Leave working copy clean (`jj st` empty) when done.
 - One issue per branch/PR. No scope creep. No YAMS names/assets or veterinary terms in new code; no Tauri.
+- Never pass `JJ_USER`/`JJ_EMAIL` or `--no-sign`. jj picks the agent account and its SSH signing key from the `CURSOR_AGENT`-conditional config. Never run `git commit`; jj is the VCS.
 - Never merge, never close issues, never change priority labels or milestones, never mark specs approved.
 - Never rebase or rewrite pushed commits; integrate upstream by merge (mode merge-base). Rebase only unpushed local work. Never force-push.
 

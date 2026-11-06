@@ -9,7 +9,7 @@ Keep these domain-agnostic rules when replacing domain types. Examples use place
 ## Layout
 
 - One file per aggregate or value-object family, named after the German domain term
-  (`ziel.rs`, `wertung.rs`), never after a technical role (`model.rs`, `types.rs`).
+  (`schuss.rs`, `runde.rs`), never after a technical role (`model.rs`, `types.rs`).
 - `mod.rs` declares the modules and re-exports the public types (`pub use ziel::Ziel;`), so callers
   write `crate::domain::Ziel`.
 - The domain depends on nothing outside `crate` except value libraries (`uuid`, `chrono`,
@@ -65,7 +65,7 @@ free-form `String` or integer code.
 ### Variant data in enums
 
 When fields only make sense together, model the alternatives as enum variants that carry their
-fields (`Quelle::Produkt { menge, einzelpreis }` vs `Quelle::Manuell { preis }`). No
+fields (`Quelle::Stückpreis { menge, einzelpreis }` vs `Quelle::Pauschal { preis }`). No
 `Option` fields that are only valid in combination.
 
 ### Type-state aggregates
