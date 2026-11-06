@@ -101,7 +101,7 @@ MVP capabilities:
 | Operations, security, and launch readiness | [`betrieb.md`](betrieb.md) |
 | Master data and Anlage membership: Anlage, Parkour, Ziel, Pflock | [`stammdaten.md`](stammdaten.md) |
 | Requesting a new Anlage | [`anlage-anfrage.md`](anlage-anfrage.md) |
-| Log a Runde target by target, with distance slider between Pflöcke | to be written |
+| Log a Runde target by target, with distance slider between Pflöcke | [`runde.md`](runde.md) |
 | Personal history: scores and first-arrow hit rate per Parkour over time | to be written |
 | Remove legacy branding and domain | [GitHub milestone "M0 Rebrand"](https://github.com/TimerErTim/logandaim.at/milestones) |
 
