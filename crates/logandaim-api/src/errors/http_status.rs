@@ -7,10 +7,12 @@ use logandaim_core::ports::{ObjectStoreError, RepositoryError};
 use logandaim_core::service::{
     AbmeldungFehler, AnmeldungFehler, BenutzerLöschenFehler, ErneuerungFehler,
     PasswortVergessenFehler, PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler,
-    RegistrierungStartenFehler, RundeAbschliessenFehler, RundeAnzeigenFehler, RundeStartenFehler,
-    RundenAnzeigenFehler, SchussRegistrierenFehler, SessionPrüfenFehler, StammdatenFehler,
+    RegistrierungStartenFehler, RundeAbschliessenFehler, RundeStartenFehler,
+    SchussRegistrierenFehler, SessionPrüfenFehler, StammdatenFehler,
     SystemadministratorBefördernFehler,
 };
+
+use crate::api::errors::{RundeAnzeigenFehler, RundenAnzeigenFehler};
 
 use super::ValidationError;
 

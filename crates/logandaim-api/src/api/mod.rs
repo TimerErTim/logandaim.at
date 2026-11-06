@@ -2,7 +2,8 @@
 //!
 //! Everything here is a thin translation: request → use case → schema. Reads are composed
 //! inline from the repositories they need, writes run as use cases. No business rules.
-//! Use-case errors pass through unchanged; `errors/http_status.rs` maps them to status codes.
+//! Use-case errors pass through unchanged; a read's refusal enum lives in [`errors`];
+//! `errors/http_status.rs` maps both to status codes.
 //! Nothing here touches `poem`: the HTTP edge lives in `http/mod.rs` behind the `openapi`
 //! feature, so the library compiles without it. Requests are grouped in `api/requests/`; the
 //! HTTP edge owns JWT encoding and bearer verification (`http/jwt.rs`, `http/auth.rs`).
@@ -28,15 +29,18 @@ use logandaim_core::{
         PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen,
         PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
         RegistrierungStarten, RegistrierungStartenFehler, RundeAbschliessen,
-        RundeAbschliessenFehler, RundeAnzeigenFehler, RundeStarten, RundeStartenFehler,
-        RundenAnzeigenFehler, SchussRegistrieren, SchussRegistrierenFehler, SessionAusgestellt,
-        StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern,
-        darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
+        RundeAbschliessenFehler, RundeStarten, RundeStartenFehler, SchussRegistrieren,
+        SchussRegistrierenFehler, SessionAusgestellt, StammdatenFehler, ZielEntfernen,
+        ZielErsetzen, ZielHinzufügen, ZielÄndern, darf_anlage_lesen, darf_anlage_verwalten,
+        darf_masterdaten_pflegen,
     },
 };
 use tracing::warn;
 
+pub mod errors;
 pub mod requests;
+
+use self::errors::{RundeAnzeigenFehler, RundenAnzeigenFehler};
 
 use crate::schema::{
     Anlage, AnlageZugriff, AnlageÖffentlich, Benutzer, ParkourKurz, ParkourÖffentlich, Runde,

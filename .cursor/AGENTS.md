@@ -89,8 +89,9 @@ Use **proper UTF-8** in identifiers and persisted names. Never transliterate uml
 
 ## Patterns an agent can silently break
 
-- **`UseCase`** — one struct per business operation; `async fn perform(self, ctx)` returns
-  `ResultReport<Output, Context>`. Use cases enter and finish the UoW themselves.
+- **`UseCase`** — one struct per write operation; `async fn perform(self, ctx)` returns
+  `ResultReport<Output, Context>`. Use cases enter and finish the UoW themselves. Reads are not
+  use cases: they run inline as `execute_fn` closures in `LogandaimAppApi`.
 - **UoW** — `ctx.enter()` for an owned UoW, `ctx.sub(&uow)` for nested work (nested `enter` joins
   the outer TX; nested `commit`/`rollback` are no-ops). Collect work without `?` across the UoW,
   then `uow.finish(result, ctx)`. Dropping a UoW that neither committed nor rolled back panics.
@@ -148,10 +149,11 @@ adapters emit `debug!`/`trace!` events only, never duplicate spans.
 
 ## API layer
 
-`LogandaimAppApi` is a thin translation: request → use case → schema DTO. No business rules, no
-`poem` or OpenAPI types leaking into core, and none in the facade either: the library compiles with
-`--no-default-features`. Schema DTOs are separate from domain types; request DTOs are `…Request` and
-convert with `From`/`TryFrom`.
+`LogandaimAppApi` is a thin translation: request → use case → schema DTO. Writes go through
+`App::execute`; reads run inline as one-off `execute_fn` closures and keep their refusal enum in
+`api/errors.rs`. No business rules, no `poem` or OpenAPI types leaking into core, and none in the
+facade either: the library compiles with `--no-default-features`. Schema DTOs are separate from
+domain types; request DTOs are `…Request` and convert with `From`/`TryFrom`.
 
 `LogandaimApiSpec` in `crates/logandaim-api/src/http/mod.rs` is the HTTP edge: `#[OpenApi]` handlers
 and native `poem_openapi` extractors. Its supporting HTTP code is split into `http/auth.rs`,
