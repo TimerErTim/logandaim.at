@@ -84,10 +84,11 @@ on a wide screen, with one-thumb logging throughout.
    captured cards read as done.
 5. **Skip and revisit.** The `Benutzer` moves to any other `Ziel` at any time — skipping ahead or
    going back — and adds `Schüsse` there. `Ziele` without `Schuss` are visibly uncaptured.
-6. **Finish.** After the last `Ziel` the phone flow opens the `Rundenabschluss` with the two
-   `Wertung` totals; on a wide screen the same screen is reached from the finish action below the
-   cards. Finishing marks the `Runde` complete. `Ziele` without `Schuss` have no result. An
-   unfinished `Runde` stays open and can be resumed.
+6. **Finish.** After the last `Ziel` the phone flow opens the `Rundenabschluss`, a summary with the
+   two `Wertung` totals and the uncaptured `Ziele`; on a wide screen the same summary is reached
+   from the finish action below the cards. The summary finishes nothing by itself: the `Runde` is
+   completed by its finish action (rule 8). `Ziele` without `Schuss` have no result. An unfinished
+   `Runde` stays open and can be resumed.
 7. **Edit.** The `Benutzer` corrects a mis-entry in an own `Runde`: add, change, or remove
    `Schüsse` and `Schusspositionen`, or change the date. The `Wertungen` recompute; the `Parkour`
    and its snapshot never change.
@@ -152,10 +153,12 @@ Rules:
    starting another is refused while one is in progress, and the app offers to resume the running
    one instead. Finishing or deleting the running `Runde` frees the slot. Two start requests issued
    at the same time leave exactly one `Runde` in progress.
-8. `Rundenabschluss`. The end of the capture flow shows the two `Runde` totals and, when `Ziele`
-   are still uncaptured, how many. Finishing marks the `Runde` complete and is display-only state:
-   it changes no data. A finished `Runde` can still be edited and deleted; an unfinished `Runde`
-   can be resumed.
+8. `Rundenabschluss`. Reaching the end of the route opens a summary of the whole `Runde`: both
+   totals, the `Zielfortschritt`, and how many `Ziele` are still uncaptured. The summary is a read
+   of what was logged, not a write — it is shown *before* the `Runde` is finished, and the finish
+   action lives in it. Only pressing that action marks the `Runde` complete, and completing is
+   display-only state that changes no data. A finished `Runde` can still be edited and deleted; an
+   unfinished `Runde` can be resumed.
 9. Editing never changes the `Parkour` or the `Parkour-Snapshot`. Removing a `Schuss` renumbers the
    later `Schüsse` of that `Ziel`, so `Pfeil` stays contiguous from 1 and the points of the moved
    `Schüsse` follow their new `Pfeil`. Master-data changes made after the `Runde` was started never
@@ -194,6 +197,8 @@ Rules:
     - Each card carries its `Ziel`, its shot ledger, and its own default-position control grouped
       with its `Wertungszone` button group, so the position a new `Schuss` will use reads as part
       of entering that `Schuss`.
+    - The ledger rows carry the same contents as on a phone (rule 13), so a logged `Schuss` is
+      corrected in place here too (NFR-4).
     - The card that received the latest entry is the active card. Every other card settles into
       its capture state (rule 12): one holding at least one `Schuss` reads as captured, one holding
       none keeps the uncaptured mark. So the first entry in a new card settles the card just left,
@@ -206,8 +211,9 @@ Rules:
     `Rundenabschluss`, and reserves its own space, so no content is hidden behind it.
 16. Default position. Every new `Schuss` of a `Ziel` starts at the position of that `Ziel`'s most
     recently logged `Schuss` in this `Runde`, whether an `Anteil` or a `Schussdistanz`. When the
-    `Ziel` holds no `Schuss`, the default is the nearest `Pflock`. The default is derived from the
-    logged `Schüsse` and never stored separately, so it survives a resume without extra state.
+    `Ziel` holds no `Schuss`, the default is the nearest `Pflock`, which also covers a `Ziel` with
+    exactly one `Pflock` (rule 4). The default is derived from the logged `Schüsse` and never
+    stored separately, so it survives a resume without extra state.
 
 ## Requirements
 
@@ -226,7 +232,8 @@ Rules:
   [`wertung.md`](wertung.md) (rule 6).
 - FR-6: Hold at most one `Runde` in progress per `Benutzer`, refuse a second start, and offer to
   resume the running one (rule 7).
-- FR-7: Finish a `Runde` through the `Rundenabschluss` and resume an unfinished one (rule 8).
+- FR-7: Summarise the `Runde` in the `Rundenabschluss` before finishing, complete it only on that
+  summary's finish action, and resume an unfinished one (rule 8).
 - FR-8: Edit `Datum`, `Schüsse`, and `Schusspositionen` of an own `Runde`, with `Wertungen`
   recomputed and deleted `Schüsse` renumbered (rule 9).
 - FR-9: Delete an own `Runde` after explicit confirmation (rule 10).
@@ -247,9 +254,11 @@ Rules:
 - NFR-1: One-thumb logging. On the capture screen every interactive control has a touch target of
   at least 44×44 pixels ([charter](charter.md#accessibility)); the primary controls
   (`Wertungszone`, default-position control, `Ziel` navigation, finish) sit in the lower thumb
-  zone and need no re-gripping; logging a `Schuss` needs no typing, no hover, and no precise
-  pointing or drag accuracy, and stays usable with gloves; `Wertungszone` state is never encoded
-  by colour alone.
+  zone and need no re-gripping. Registering a `Schuss` is one tap on a `Wertungszone`: no typing,
+  no hover, no scrolling to a control, and it stays usable with gloves. Setting the position
+  tolerates an imprecise finger — the slider's detents and its continuous range both accept a
+  coarse touch, and an exact `Schussdistanz` is only ever optional typing. `Wertungszone` state is
+  never encoded by colour alone.
 - NFR-2: The `Wertung` computation is authoritative in the backend domain
   ([`wertung.md`](wertung.md) NFR-1); the frontend may preview points.
 - NFR-3: Ownership is enforced at the API level, not merely in the UI
@@ -298,8 +307,10 @@ Rules:
 - AC-11: When another `Benutzer` requests a `Runde` that is not its own, then the request fails with
   403 (401 when unauthenticated), and the same request with the owning `Benutzer` succeeds.
 - AC-12: On the capture screen every interactive control has a touch target of at least 44×44
-  pixels, and the whole journey on a phone (start, log a `Ziel` with `Schüsse` and position, skip,
-  finish) is completable with one thumb.
+  pixels; a `Schuss` is registered by one tap on a `Wertungszone` with no typing; the position of
+  a `Schuss` is settable without precise pointing, since both a slider position and a detent are
+  reachable with a coarse touch; and the whole journey on a phone (start, log a `Ziel` with
+  `Schüsse` and position, skip, finish) is completable with one thumb while wearing gloves.
 - AC-13: Given a `Benutzer` with a `Runde` in progress, when another `Runde` is started, then the
   start is refused, the running `Runde` is unchanged, and the app offers to resume it; after
   finishing or deleting the running `Runde` a new start succeeds; two start requests issued at the
@@ -332,6 +343,11 @@ Rules:
   capture flow, a bottom band shows the `Parkour`, the elapsed time since the `Runde` started, and
   its `Zielfortschritt`, and one tap opens capture at the first uncaptured `Ziel`; on the capture
   screen and the `Rundenabschluss` the band is absent and nothing is drawn under it.
+- AC-20: When the `Benutzer` reaches the end of the route, then the `Rundenabschluss` shows both
+  totals, the `Zielfortschritt`, and the number of uncaptured `Ziele` while the `Runde` is still in
+  progress; the `Runde` becomes complete only when the finish action in that summary is pressed,
+  so opening the summary and leaving without pressing it leaves the `Runde` resumable, and pressing
+  it changes no `Schuss`, `Wertung`, or `Datum`.
 
 ## Deferred requirements
 
@@ -368,8 +384,8 @@ decision log.
 
 Resolved (PO 2026-11-06): one `Runde` in progress per `Benutzer`; a direct number field stores an
 exact `Schussdistanz` per `Schuss`; capture is one `Ziel` at a time on a phone and a card per `Ziel`
-on a wide screen; the capture strip shows the `Runde` totals and progress; deleting a `Schuss`
-renumbers the later `Schüsse`.
+on a wide screen; the capture strip shows the `Runde` totals and progress; the end of the route
+shows a summary before the `Runde` is finished; deleting a `Schuss` renumbers the later `Schüsse`.
 
 ## Verification
 
@@ -379,8 +395,8 @@ interpolation of rule 5), the `Pfeil` renumbering of rule 9, and the `Wertung` h
 [`wertung.md`](wertung.md). Use-case conformance tests cover start, walk, skip/revisit, finish,
 edit, and delete (AC-1 to AC-10), the one-running-`Runde` rule including a concurrent double start
 (AC-13), `Zielfortschritt` (AC-14), and the default position (AC-15). API e2e tests cover ownership
-enforcement (AC-11) and the refused second start (AC-13). The two capture presentations (AC-12,
-AC-17 to AC-19) and the `Rundenübersicht` band are manual checks: a phone-sized viewport for
+enforcement (AC-11) and the refused second start (AC-13). The two capture presentations and the
+`Rundenübersicht` band (AC-12, AC-17 to AC-20) are manual checks: a phone-sized viewport for
 one-thumb reach and touch targets, a wide viewport for the card layout, and both for layout parity
 (NFR-4).
 
@@ -398,13 +414,14 @@ one-thumb reach and touch targets, a wide viewport for the card layout, and both
 | 2026-11-06 | Capture is one `Ziel` at a time with a pinned strip, `Zielübersicht`, and bottom position control on a phone, and `Ziel` cards with per-card position control on a wide screen; the difference is presentation only. | TimerErTim (PO) |
 | 2026-11-06 | The capture strip shows both `Runde` totals and the `Zielfortschritt`; the open `Ziel` shows its own two values. | TimerErTim (PO) |
 | 2026-11-06 | Deleting a `Schuss` renumbers the later `Schüsse` of that `Ziel`, so `Pfeil` stays contiguous. | TimerErTim (PO) |
+| 2026-11-06 | Reaching the end of the route opens a read-only `Rundenabschluss`; only its finish action completes the `Runde`. The summary never finishes implicitly. | Agent (Cursor) |
 
 ## Revision history
 
 | Date | Change | By |
 |------|--------|----|
 | 2026-10-23 | Initial draft from issue #11 and PO decisions. | Agent (MiMo) |
-| 2026-11-06 | Redesigned capture: one running `Runde` per `Benutzer` with a bottom `Rundenübersicht` band, the mobile step flow and the desktop card layout, exact `Schussdistanz` entry, `Zielfortschritt`, and `Pfeil` renumbering on delete. Renamed `Schütze` to `Benutzer` and `Parcours` to `Parkour` to match the charter and `stammdaten.md`. | Agent (Cursor) |
+| 2026-11-06 | Redesigned capture: one running `Runde` per `Benutzer` with a bottom `Rundenübersicht` band, the mobile step flow and the desktop card layout, exact `Schussdistanz` entry, a `Rundenabschluss` summary before finishing, `Zielfortschritt`, and `Pfeil` renumbering on delete. Renamed `Schütze` to `Benutzer` and `Parcours` to `Parkour` to match the charter and `stammdaten.md`. | Agent (Cursor) |
 
 ## Appendix A: implementation sketch (non-normative)
 
