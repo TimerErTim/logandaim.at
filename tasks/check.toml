@@ -12,11 +12,11 @@ depends = ["lint:crates", "lint:frontend", "lint:check:ts"]
 
 ["check:docs"]
 description = "Check the crates documentation"
-run = "cargo doc --workspace --no-deps --all-features --release"
+run = "cargo doc --release --workspace --no-deps --all-features"
 
 ["check:openapi"]
 description = "Fail when the generated OpenAPI client differs from the exported spec"
-depends = ["sync:openapi"]
+depends = ["sync:openapi --release"]
 run = "git diff --exit-code -- frontend/src/api/schema.ts"
 
 ["check:design"]

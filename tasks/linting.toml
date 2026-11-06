@@ -4,13 +4,13 @@ usage = """
 flag "--fix" env="LOGANDAIM_LINT_FIX" help="Apply all lint suggestions"
 flag "--allow-dirty" env="LOGANDAIM_LINT_FIX_DIRTY" help="Allow dirty working directory"
 """
-run = 'cargo clippy --workspace{% if usage.fix %} --fix{% endif %}{% if usage.fix and usage.allow_dirty %} --allow-dirty{% endif %}'
+run = 'cargo clippy --release --all-features --workspace{% if usage.fix %} --fix{% endif %}{% if usage.fix and usage.allow_dirty %} --allow-dirty{% endif %}'
 
 ["lint:check:ts"]
 description = "Check the frontend types"
 dir = "{{ vars.REPO_ROOT }}/frontend"
 depends = [
-  "sync:openapi"
+  "sync:openapi --release"
 ]
 run = "npm run check:ts"
 
