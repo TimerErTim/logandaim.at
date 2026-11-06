@@ -1,7 +1,7 @@
 ---
 id: SPEC-runde
 title: Capture a Runde target by target, on phone and desktop
-status: Draft
+status: PO-approved
 owner: TimerErTim
 issues: [11, 23]
 superseded_by: null
@@ -444,6 +444,7 @@ use-case conformance test.
 | 2026-11-06 | Redesigned capture: one running `Runde` per `Benutzer` with a bottom `Rundenübersicht` band, the mobile step flow and the desktop card layout, exact `Schussdistanz` entry, a `Rundenabschluss` summary before finishing, `Zielfortschritt`, and `Pfeil` renumbering on delete. Renamed `Schütze` to `Benutzer` and `Parcours` to `Parkour` to match the charter and `stammdaten.md`. | Agent (Cursor) |
 | 2026-11-06 | Spec review: replaced the `Anteil` position with one optional value (distance or `Pflock`), rewrote rules 3–5, AC-5/AC-6/AC-15, and renamed rule 16 to "initial slider state". Resolved Q-2 to Q-5 (editable forever, irreversible deletion, nearest-`Pflock` initial state, exact meters) and folded the remaining metric question into Q-1. Updated the charter's distance decision to match. | Agent (Cursor) |
 | 2026-11-06 | Follow-up review: Q-1 resolved — a `Pflock`-form position is excluded from meter-based metrics rather than imputed from the stake's configured `Distanz`. No open questions remain. | Agent (Cursor) |
+| 2026-11-06 | Approved. Status set to `PO-approved` on the PO's explicit instruction; implementation is tracked in #86. | TimerErTim (PO) |
 
 ## Appendix A: implementation sketch (non-normative)
 
