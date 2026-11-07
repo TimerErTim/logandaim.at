@@ -2,6 +2,7 @@
 
 import {
   CircleAlert,
+  History,
   LogIn,
   LogOut,
   Menu,
@@ -15,6 +16,7 @@ import {
   useAnlagenQuery,
   useAuthMutations,
   useBenutzerQuery,
+  useRundenQuery,
 } from "@/api/hooks";
 import { usePageChrome } from "@/components/layout/page-chrome";
 import { RundenBand } from "@/components/layout/runden-band";
@@ -37,9 +39,11 @@ import {
   sidebarCategories,
   visibleSidebarCategories,
 } from "@/lib/navigation";
+import { useQueryParam } from "@/lib/use-query-param";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const captureRundeId = useQueryParam("id");
   const { breadcrumbLabel } = usePageChrome();
 
   const breadcrumbs = breadcrumbsForPathname(pathname, breadcrumbLabel);
@@ -47,6 +51,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const phase = useAuth();
   const benutzer = useBenutzerQuery();
   const anlagen = useAnlagenQuery();
+  const runden = useRundenQuery();
+  const laufendeRundeId = runden.data?.find(
+    (runde) => runde.zustand === "InBearbeitung",
+  )?.id;
+  const erfassungsHref = isCapturePage
+    ? `${paths.rundenErfassen}?id=${captureRundeId ?? laufendeRundeId ?? ""}`
+    : laufendeRundeId
+      ? `${paths.rundenErfassen}?id=${laufendeRundeId}`
+      : undefined;
   const auth = useAuthMutations();
   const onAuthRoute = ["/anmeldung", "/registrierung", "/passwort"].includes(
     pathname.replace(/\/$/, ""),
@@ -126,6 +139,61 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
 
             <div className="flex shrink-0 items-center gap-2">
+              {phase.status === "authenticated" && benutzer.data ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  asChild
+                  aria-current={
+                    isExactPath(pathname, paths.runden) && !isCapturePage
+                      ? "page"
+                      : undefined
+                  }
+                  className={
+                    isExactPath(pathname, paths.runden) && !isCapturePage
+                      ? "font-semibold text-primary"
+                      : undefined
+                  }
+                >
+                  <Link href={paths.runden} aria-label="Historie öffnen">
+                    <History aria-hidden="true" />
+                    <span className="hidden sm:inline">Historie</span>
+                  </Link>
+                </Button>
+              ) : null}
+              {phase.status === "authenticated" &&
+              benutzer.data &&
+              erfassungsHref ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  asChild
+                  aria-current={isCapturePage ? "page" : undefined}
+                  className={
+                    isCapturePage ? "font-semibold text-primary" : undefined
+                  }
+                >
+                  <Link
+                    href={erfassungsHref}
+                    aria-label={
+                      isCapturePage
+                        ? "Erfassung geöffnet"
+                        : laufendeRundeId
+                          ? "Laufende Runde fortsetzen"
+                          : "Erfassung öffnen"
+                    }
+                  >
+                    <History aria-hidden="true" />
+                    <span className="hidden sm:inline">
+                      {isCapturePage
+                        ? "Erfassung"
+                        : laufendeRundeId
+                          ? "Fortsetzen"
+                          : "Erfassung"}
+                    </span>
+                  </Link>
+                </Button>
+              ) : null}
               {phase.status === "authenticated" && benutzer.data ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

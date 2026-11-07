@@ -1,17 +1,18 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import type { CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type {
   RundePflock,
   RundeZiel,
   SchusspositionInput,
 } from "@/api/logandaim-api";
+import { PflockSwatch } from "@/components/stammdaten/pflock-swatch";
 import {
   type Checkpoint,
   CheckpointSlider,
 } from "@/components/ui/checkpoint-slider";
-import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { formatPosition, positionsModus } from "@/lib/runden-position";
 
@@ -27,105 +28,182 @@ export function PositionSteuerung({
   onChange: (position: SchusspositionInput | null) => void;
 }) {
   const modus = positionsModus(ziel, pflöcke.length);
-  const abstaende = ziel.abstände;
   const abstandByFarbe = useMemo(
-    () => new Map(abstaende.map((abstand) => [abstand.pflock, abstand.meter])),
-    [abstaende],
+    () =>
+      new Map(ziel.abstände.map((abstand) => [abstand.pflock, abstand.meter])),
+    [ziel.abstände],
   );
   const checkpoints = useMemo<Checkpoint[]>(
     () =>
-      pflöcke.map((pflock, index) => ({
-        id: `${pflock.position}-${pflock.farbe}`,
-        wert:
-          modus === "meter"
-            ? (abstandByFarbe.get(pflock.farbe) ?? index + 1)
-            : index + 1,
-        farbe: pflock.farbe,
-        label: pflock.farbe,
-        anzeige:
-          modus === "meter" && abstandByFarbe.has(pflock.farbe)
-            ? `${abstandByFarbe.get(pflock.farbe)} m`
-            : undefined,
-      })),
+      [...pflöcke]
+        .sort((a, b) => a.position - b.position)
+        .map((pflock, index) => ({
+          id: `${pflock.position}-${pflock.farbe}`,
+          wert:
+            modus === "meter"
+              ? (abstandByFarbe.get(pflock.farbe) ?? index + 1)
+              : pflock.position + 1,
+          farbe: pflock.farbe,
+          label: pflock.farbe,
+          anzeige:
+            modus === "meter" && abstandByFarbe.has(pflock.farbe)
+              ? `${abstandByFarbe.get(pflock.farbe)} m`
+              : undefined,
+        }))
+        .sort((a, b) => a.wert - b.wert),
     [pflöcke, modus, abstandByFarbe],
   );
-  const [eingabe, setEingabe] = useState("");
-  const exactPositionValid = /^[1-9]\d*$/.test(eingabe);
-  const meter =
+  const min =
+    modus === "meter"
+      ? Math.min(...checkpoints.map((checkpoint) => checkpoint.wert))
+      : 1;
+  const max =
+    modus === "meter"
+      ? Math.max(...checkpoints.map((checkpoint) => checkpoint.wert))
+      : Math.max(1, pflöcke.length);
+  const positionPflock =
+    value && "Pflock" in value
+      ? pflöcke.find((pflock) => pflock.farbe === value.Pflock.farbe)
+      : undefined;
+  const meterFürPflock = positionPflock
+    ? abstandByFarbe.get(positionPflock.farbe)
+    : undefined;
+  const aktuellerMeter =
     value && "Distanz" in value
       ? value.Distanz.meter
-      : value && "Pflock" in value
+      : modus === "meter" && meterFürPflock !== undefined
+        ? meterFürPflock
+        : undefined;
+  const sliderWert =
+    modus === "meter"
+      ? Math.min(max, Math.max(min, aktuellerMeter ?? min))
+      : positionPflock
         ? (checkpoints.find((checkpoint) =>
-            checkpoint.id.endsWith(`-${value.Pflock.farbe}`),
-          )?.wert ??
-          checkpoints[0]?.wert ??
-          1)
-        : (checkpoints[0]?.wert ?? 1);
+            checkpoint.id.endsWith(`-${positionPflock.farbe}`),
+          )?.wert ?? 1)
+        : 1;
+  const sliderVertretbar =
+    modus === "meter"
+      ? (aktuellerMeter === undefined ||
+          (aktuellerMeter >= min && aktuellerMeter <= max)) &&
+        checkpoints.length >= 2 &&
+        max > min
+      : modus === "staken"
+        ? !value || "Pflock" in value
+        : false;
 
-  if (modus === "single") {
-    return (
-      <p className="text-sm text-secondary">
-        Position: {formatPosition(value)}
-      </p>
-    );
-  }
+  const initialEingabe =
+    aktuellerMeter !== undefined &&
+    (modus !== "meter" || (aktuellerMeter >= min && aktuellerMeter <= max))
+      ? String(aktuellerMeter)
+      : "";
+  const [eingabe, setEingabe] = useState(initialEingabe);
+  const vorigeEingabe = useRef(initialEingabe);
+  const [letzteEingabe, setLetzteEingabe] = useState(initialEingabe);
+  useEffect(() => {
+    if (initialEingabe !== vorigeEingabe.current) {
+      vorigeEingabe.current = initialEingabe;
+      if (letzteEingabe !== initialEingabe) {
+        setEingabe(letzteEingabe);
+      }
+    }
+  }, [initialEingabe, letzteEingabe]);
+
+  const pflockFarbe =
+    modus === "staken" && eingabe === "" && value && "Pflock" in value
+      ? positionPflock?.farbe
+      : undefined;
+  const eingabeUngueltig = eingabe !== "" && !/^[1-9]\d*$/.test(eingabe);
 
   return (
-    <div className="space-y-4">
-      {modus === "meter" && value && "Distanz" in value ? (
-        <p className="text-sm tabular-nums text-ink">{value.Distanz.meter} m</p>
-      ) : null}
-      <CheckpointSlider
-        checkpoints={checkpoints}
-        value={meter}
-        onValueChange={(next) => {
-          if (modus === "meter")
-            onChange({ Distanz: { meter: Math.max(1, Math.round(next)) } });
-          else {
-            const pflock =
-              pflöcke[
-                Math.max(0, Math.min(pflöcke.length - 1, Math.round(next) - 1))
-              ];
-            if (pflock) onChange({ Pflock: { farbe: pflock.farbe } });
-          }
-        }}
-        min={
-          modus === "meter"
-            ? Math.min(...checkpoints.map((item) => item.wert))
-            : 1
-        }
-        max={
-          modus === "meter"
-            ? Math.max(...checkpoints.map((item) => item.wert))
-            : Math.max(1, pflöcke.length)
-        }
-        step={1}
-        label="Schussposition"
-        einheit={modus === "meter" ? "m" : undefined}
-      />
-      {modus === "staken" && value && "Pflock" in value ? (
-        <p className="text-sm text-secondary">{formatPosition(value)}</p>
-      ) : null}
-      <Field
-        label="Exakte Entfernung"
-        error={
-          eingabe !== "" && !exactPositionValid
-            ? "Bitte geben Sie eine positive ganze Meterzahl ein."
+    <fieldset className="min-w-0 space-y-3">
+      <legend className="min-h-[18px] text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
+        Entfernung
+      </legend>
+      {modus !== "single" ? (
+        <CheckpointSlider
+          checkpoints={checkpoints}
+          value={sliderWert}
+          onValueChange={(next) => {
+            if (modus === "meter") {
+              const distanz = Math.max(1, Math.round(next));
+              onChange({ Distanz: { meter: distanz } });
+              const nächsteEingabe = String(distanz);
+              setEingabe(nächsteEingabe);
+              setLetzteEingabe(nächsteEingabe);
+            } else {
+              const pflock =
+                pflöcke[
+                  Math.max(
+                    0,
+                    Math.min(pflöcke.length - 1, Math.round(next) - 1),
+                  )
+                ];
+              if (pflock) {
+                onChange({ Pflock: { farbe: pflock.farbe } });
+                setEingabe("");
+                setLetzteEingabe("");
+              }
+            }
+          }}
+          min={min}
+          max={max}
+          step={1}
+          label="Entfernung"
+          einheit={modus === "meter" ? "m" : undefined}
+          inactive={!sliderVertretbar}
+        />
+      ) : (
+        <p className="text-sm text-secondary">
+          Position: {formatPosition(value)}
+        </p>
+      )}
+      <div
+        className="relative"
+        style={
+          pflockFarbe
+            ? ({ "--pflock-farbe": pflockFarbe } as CSSProperties)
             : undefined
         }
       >
         <Input
+          aria-label="Entfernung in Metern"
+          aria-invalid={eingabeUngueltig}
           inputMode="numeric"
           value={eingabe}
           onChange={(event) => {
             const next = event.target.value;
             setEingabe(next);
-            if (/^[1-9]\d*$/.test(next))
+            setLetzteEingabe(next);
+            if (/^[1-9]\d*$/.test(next)) {
               onChange({ Distanz: { meter: Number(next) } });
+            }
           }}
-          placeholder="Meter"
+          placeholder={pflockFarbe ? "" : "Meter"}
+          onFocus={() => {
+            if (pflockFarbe) {
+              setEingabe("");
+              setLetzteEingabe("");
+            }
+          }}
+          className={
+            pflockFarbe
+              ? "border-transparent text-transparent caret-transparent"
+              : undefined
+          }
         />
-      </Field>
-    </div>
+        {pflockFarbe ? (
+          <PflockSwatch
+            farbe={pflockFarbe}
+            className="pointer-events-none absolute inset-0 size-full rounded-sm border-0 bg-[var(--pflock-farbe)]"
+          />
+        ) : null}
+      </div>
+      {eingabeUngueltig ? (
+        <p role="alert" className="text-xs text-impact">
+          Bitte geben Sie eine positive ganze Meterzahl ein.
+        </p>
+      ) : null}
+    </fieldset>
   );
 }

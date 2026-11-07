@@ -31,6 +31,8 @@ type CheckpointSliderProps = {
   /** Unit appended to the read-out and to `aria-valuetext`. */
   einheit?: string;
   disabled?: boolean;
+  /** The scale is known but this value cannot be represented on it. */
+  inactive?: boolean;
   className?: string;
 };
 
@@ -55,6 +57,7 @@ export function CheckpointSlider({
   label,
   einheit,
   disabled = false,
+  inactive = false,
   className,
 }: CheckpointSliderProps) {
   const span = max - min;
@@ -117,8 +120,11 @@ export function CheckpointSlider({
         )}
       </div>
       <SliderPrimitive.Root
-        className="relative flex h-11 w-full touch-none items-center select-none data-[disabled]:opacity-50"
-        disabled={disabled}
+        className={cn(
+          "relative flex h-11 w-full touch-none items-center select-none data-[disabled]:opacity-50",
+          inactive && "opacity-50",
+        )}
+        disabled={disabled || inactive}
         value={[value]}
         onValueChange={([next]) => {
           if (typeof next === "number") {

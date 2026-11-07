@@ -28,6 +28,10 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
   const meldung = useErfolgsmeldung();
   const [zielIndex, setZielIndex] = useState(0);
   const ziel = runde.ziele[zielIndex];
+  const schussAnzahl = runde.ziele.reduce(
+    (gesamt, eintrag) => gesamt + eintrag.schüsse.length,
+    0,
+  );
   const [positionen, setPositionen] = useState<
     Record<string, SchusspositionInput | null>
   >({});
@@ -146,11 +150,20 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
-            <WertungAnzeige
-              ersterTreffer={runde.gesamtErsterTreffer}
-              mehrschuss={runde.gesamtMehrschuss}
-              className="text-base font-semibold"
-            />
+            <div className="flex items-center gap-2">
+              <WertungAnzeige
+                ersterTreffer={runde.gesamtErsterTreffer}
+                mehrschuss={runde.gesamtMehrschuss}
+                className="text-base font-semibold"
+              />
+              <span
+                role="img"
+                aria-label={`${schussAnzahl} Schüsse insgesamt`}
+                className="font-mono text-sm tabular-nums text-secondary"
+              >
+                {schussAnzahl} Schüsse
+              </span>
+            </div>
             <div className="flex items-center gap-1 text-sm tabular-nums text-secondary">
               <span>
                 {
