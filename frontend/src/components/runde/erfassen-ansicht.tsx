@@ -10,7 +10,6 @@ import type {
   Wertungszone,
 } from "@/api/logandaim-api";
 import { Erfolgsmeldung } from "@/components/feedback/erfolgsmeldung";
-import { PageHeader } from "@/components/layout/page-header";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -143,15 +142,17 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
 
   return (
     <div className="space-y-6 p-6">
-      <PageHeader
-        register={["Logbuch", "Historie"]}
-        title={runde.parkourName}
-        description={`Runde vom ${runde.datum}`}
-      />
       <div className="sticky top-0 z-20 -mx-6 flex flex-col gap-2 border-y border-subtle bg-surface px-6 py-3">
-        <div className="flex items-center justify-between gap-4 text-sm">
-          <span className="font-medium text-ink">Rundenfortschritt</span>
-          <span className="tabular-nums text-secondary">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="truncate font-medium text-ink">{runde.parkourName}</p>
+            <p className="text-sm text-secondary">
+              {new Date(`${runde.datum}T00:00:00`).toLocaleDateString("de-AT", {
+                dateStyle: "long",
+              })}
+            </p>
+          </div>
+          <span className="shrink-0 text-sm tabular-nums text-secondary">
             {runde.ziele.filter((eintrag) => eintrag.schüsse.length > 0).length}{" "}
             / {runde.ziele.length} Ziele
           </span>

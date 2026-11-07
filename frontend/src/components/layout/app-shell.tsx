@@ -32,6 +32,8 @@ import {
 import {
   breadcrumbsForPathname,
   homeNavItem,
+  isExactPath,
+  paths,
   sidebarCategories,
   visibleSidebarCategories,
 } from "@/lib/navigation";
@@ -41,6 +43,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { breadcrumbLabel } = usePageChrome();
 
   const breadcrumbs = breadcrumbsForPathname(pathname, breadcrumbLabel);
+  const isCapturePage = isExactPath(pathname, paths.rundenErfassen);
   const phase = useAuth();
   const benutzer = useBenutzerQuery();
   const anlagen = useAnlagenQuery();
@@ -88,33 +91,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="sr-only">Navigation öffnen</span>
             </label>
 
-            <nav
-              aria-label="Breadcrumb"
-              className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto text-sm"
-            >
-              {breadcrumbs.map((crumb, index) => (
-                <span
-                  key={`${crumb.label}-${index}`}
-                  className="flex items-center"
-                >
-                  {index > 0 ? (
-                    <span className="mx-1 text-secondary">/</span>
-                  ) : null}
-                  {crumb.href ? (
-                    <Link
-                      href={crumb.href}
-                      className="rounded-sm px-2 py-1 font-medium text-ink hover:bg-surface-muted"
-                    >
-                      {crumb.label}
-                    </Link>
-                  ) : (
-                    <span className="px-2 py-1 font-semibold text-ink">
-                      {crumb.label}
-                    </span>
-                  )}
-                </span>
-              ))}
-            </nav>
+            {isCapturePage ? (
+              <div className="min-w-0 flex-1" aria-hidden="true" />
+            ) : (
+              <nav
+                aria-label="Breadcrumb"
+                className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto text-sm"
+              >
+                {breadcrumbs.map((crumb, index) => (
+                  <span
+                    key={`${crumb.label}-${index}`}
+                    className="flex items-center"
+                  >
+                    {index > 0 ? (
+                      <span className="mx-1 text-secondary">/</span>
+                    ) : null}
+                    {crumb.href ? (
+                      <Link
+                        href={crumb.href}
+                        className="rounded-sm px-2 py-1 font-medium text-ink hover:bg-surface-muted"
+                      >
+                        {crumb.label}
+                      </Link>
+                    ) : (
+                      <span className="px-2 py-1 font-semibold text-ink">
+                        {crumb.label}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </nav>
+            )}
 
             <div className="flex shrink-0 items-center gap-2">
               {phase.status === "authenticated" && benutzer.data ? (
@@ -194,7 +201,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : null}
           {children}
         </main>
-        <RundenBand />
+        {!isCapturePage ? <RundenBand /> : null}
       </div>
     </div>
   );
