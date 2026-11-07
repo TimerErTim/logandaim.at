@@ -2,7 +2,6 @@
 
 import {
   CircleAlert,
-  History,
   LogIn,
   LogOut,
   Menu,
@@ -16,7 +15,6 @@ import {
   useAnlagenQuery,
   useAuthMutations,
   useBenutzerQuery,
-  useRundenQuery,
 } from "@/api/hooks";
 import { usePageChrome } from "@/components/layout/page-chrome";
 import { RundenBand } from "@/components/layout/runden-band";
@@ -39,27 +37,16 @@ import {
   sidebarCategories,
   visibleSidebarCategories,
 } from "@/lib/navigation";
-import { useQueryParam } from "@/lib/use-query-param";
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const captureRundeId = useQueryParam("id");
   const { breadcrumbLabel } = usePageChrome();
-
-  const breadcrumbs = breadcrumbsForPathname(pathname, breadcrumbLabel);
   const isCapturePage = isExactPath(pathname, paths.rundenErfassen);
+  const breadcrumbs = isCapturePage
+    ? [{ label: "Historie", href: paths.runden }, { label: "Erfassung" }]
+    : breadcrumbsForPathname(pathname, breadcrumbLabel);
   const phase = useAuth();
   const benutzer = useBenutzerQuery();
   const anlagen = useAnlagenQuery();
-  const runden = useRundenQuery();
-  const laufendeRundeId = runden.data?.find(
-    (runde) => runde.zustand === "InBearbeitung",
-  )?.id;
-  const erfassungsHref = isCapturePage
-    ? `${paths.rundenErfassen}?id=${captureRundeId ?? laufendeRundeId ?? ""}`
-    : laufendeRundeId
-      ? `${paths.rundenErfassen}?id=${laufendeRundeId}`
-      : undefined;
   const auth = useAuthMutations();
   const onAuthRoute = ["/anmeldung", "/registrierung", "/passwort"].includes(
     pathname.replace(/\/$/, ""),
@@ -106,94 +93,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="sr-only">Navigation öffnen</span>
             </label>
 
-            {isCapturePage ? (
-              <div className="min-w-0 flex-1" aria-hidden="true" />
-            ) : (
-              <nav
-                aria-label="Breadcrumb"
-                className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto text-sm"
-              >
-                {breadcrumbs.map((crumb, index) => (
-                  <span
-                    key={`${crumb.label}-${index}`}
-                    className="flex items-center"
-                  >
-                    {index > 0 ? (
-                      <span className="mx-1 text-secondary">/</span>
-                    ) : null}
-                    {crumb.href ? (
-                      <Link
-                        href={crumb.href}
-                        className="rounded-sm px-2 py-1 font-medium text-ink hover:bg-surface-muted"
-                      >
-                        {crumb.label}
-                      </Link>
-                    ) : (
-                      <span className="px-2 py-1 font-semibold text-ink">
-                        {crumb.label}
-                      </span>
-                    )}
-                  </span>
-                ))}
-              </nav>
-            )}
+            <nav
+              aria-label="Breadcrumb"
+              className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto text-sm"
+            >
+              {breadcrumbs.map((crumb, index) => (
+                <span
+                  key={`${crumb.label}-${index}`}
+                  className="flex items-center"
+                >
+                  {index > 0 ? (
+                    <span className="mx-1 text-secondary">/</span>
+                  ) : null}
+                  {crumb.href ? (
+                    <Link
+                      href={crumb.href}
+                      className="rounded-sm px-2 py-1 font-medium text-ink hover:bg-surface-muted"
+                    >
+                      {crumb.label}
+                    </Link>
+                  ) : (
+                    <span className="px-2 py-1 font-semibold text-ink">
+                      {crumb.label}
+                    </span>
+                  )}
+                </span>
+              ))}
+            </nav>
 
             <div className="flex shrink-0 items-center gap-2">
-              {phase.status === "authenticated" && benutzer.data ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  asChild
-                  aria-current={
-                    isExactPath(pathname, paths.runden) && !isCapturePage
-                      ? "page"
-                      : undefined
-                  }
-                  className={
-                    isExactPath(pathname, paths.runden) && !isCapturePage
-                      ? "font-semibold text-primary"
-                      : undefined
-                  }
-                >
-                  <Link href={paths.runden} aria-label="Historie öffnen">
-                    <History aria-hidden="true" />
-                    <span className="hidden sm:inline">Historie</span>
-                  </Link>
-                </Button>
-              ) : null}
-              {phase.status === "authenticated" &&
-              benutzer.data &&
-              erfassungsHref ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  asChild
-                  aria-current={isCapturePage ? "page" : undefined}
-                  className={
-                    isCapturePage ? "font-semibold text-primary" : undefined
-                  }
-                >
-                  <Link
-                    href={erfassungsHref}
-                    aria-label={
-                      isCapturePage
-                        ? "Erfassung geöffnet"
-                        : laufendeRundeId
-                          ? "Laufende Runde fortsetzen"
-                          : "Erfassung öffnen"
-                    }
-                  >
-                    <History aria-hidden="true" />
-                    <span className="hidden sm:inline">
-                      {isCapturePage
-                        ? "Erfassung"
-                        : laufendeRundeId
-                          ? "Fortsetzen"
-                          : "Erfassung"}
-                    </span>
-                  </Link>
-                </Button>
-              ) : null}
               {phase.status === "authenticated" && benutzer.data ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

@@ -14,6 +14,7 @@ import {
   CheckpointSlider,
 } from "@/components/ui/checkpoint-slider";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/cn";
 import { formatPosition, positionsModus } from "@/lib/runden-position";
 
 export function PositionSteuerung({
@@ -82,21 +83,18 @@ export function PositionSteuerung({
             checkpoint.id.endsWith(`-${positionPflock.farbe}`),
           )?.wert ?? 1)
         : 1;
-  const sliderVertretbar =
+  const sliderAuflösbar =
     modus === "meter"
-      ? (aktuellerMeter === undefined ||
-          (aktuellerMeter >= min && aktuellerMeter <= max)) &&
-        checkpoints.length >= 2 &&
-        max > min
+      ? checkpoints.length >= 2 &&
+        max > min &&
+        (aktuellerMeter === undefined ||
+          (aktuellerMeter >= min && aktuellerMeter <= max))
       : modus === "staken"
         ? !value || "Pflock" in value
         : false;
 
   const initialEingabe =
-    aktuellerMeter !== undefined &&
-    (modus !== "meter" || (aktuellerMeter >= min && aktuellerMeter <= max))
-      ? String(aktuellerMeter)
-      : "";
+    aktuellerMeter !== undefined ? String(aktuellerMeter) : "";
   const [eingabe, setEingabe] = useState(initialEingabe);
   const vorigeEingabe = useRef(initialEingabe);
   const [letzteEingabe, setLetzteEingabe] = useState(initialEingabe);
@@ -120,84 +118,86 @@ export function PositionSteuerung({
       <legend className="min-h-[18px] text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
         Entfernung
       </legend>
-      {modus !== "single" ? (
-        <CheckpointSlider
-          checkpoints={checkpoints}
-          value={sliderWert}
-          onValueChange={(next) => {
-            if (modus === "meter") {
-              const distanz = Math.max(1, Math.round(next));
-              onChange({ Distanz: { meter: distanz } });
-              const nächsteEingabe = String(distanz);
-              setEingabe(nächsteEingabe);
-              setLetzteEingabe(nächsteEingabe);
-            } else {
-              const pflock =
-                pflöcke[
-                  Math.max(
-                    0,
-                    Math.min(pflöcke.length - 1, Math.round(next) - 1),
-                  )
-                ];
-              if (pflock) {
-                onChange({ Pflock: { farbe: pflock.farbe } });
+      <div className="flex min-w-0 items-center gap-3">
+        {modus !== "single" ? (
+          <CheckpointSlider
+            checkpoints={checkpoints}
+            value={sliderWert}
+            onValueChange={(next) => {
+              if (modus === "meter") {
+                const distanz = Math.max(1, Math.round(next));
+                onChange({ Distanz: { meter: distanz } });
+                const nächsteEingabe = String(distanz);
+                setEingabe(nächsteEingabe);
+                setLetzteEingabe(nächsteEingabe);
+              } else {
+                const pflock =
+                  pflöcke[
+                    Math.max(
+                      0,
+                      Math.min(pflöcke.length - 1, Math.round(next) - 1),
+                    )
+                  ];
+                if (pflock) {
+                  onChange({ Pflock: { farbe: pflock.farbe } });
+                  setEingabe("");
+                  setLetzteEingabe("");
+                }
+              }
+            }}
+            min={min}
+            max={max}
+            step={1}
+            label="Entfernung"
+            einheit={modus === "meter" ? "m" : undefined}
+            thumbHidden={!sliderAuflösbar}
+          />
+        ) : (
+          <p className="text-sm text-secondary">
+            Position: {formatPosition(value)}
+          </p>
+        )}
+        <div
+          className="relative ml-auto w-20 shrink-0 sm:w-24"
+          style={
+            pflockFarbe
+              ? ({ "--pflock-farbe": pflockFarbe } as CSSProperties)
+              : undefined
+          }
+        >
+          <Input
+            aria-label="Entfernung in Metern"
+            aria-invalid={eingabeUngueltig}
+            inputMode="numeric"
+            value={eingabe}
+            onChange={(event) => {
+              const next = event.target.value;
+              setEingabe(next);
+              setLetzteEingabe(next);
+              if (/^[1-9]\d*$/.test(next)) {
+                onChange({ Distanz: { meter: Number(next) } });
+              }
+            }}
+            placeholder={pflockFarbe ? "" : "Meter"}
+            onFocus={() => {
+              if (pflockFarbe) {
                 setEingabe("");
                 setLetzteEingabe("");
               }
-            }
-          }}
-          min={min}
-          max={max}
-          step={1}
-          label="Entfernung"
-          einheit={modus === "meter" ? "m" : undefined}
-          inactive={!sliderVertretbar}
-        />
-      ) : (
-        <p className="text-sm text-secondary">
-          Position: {formatPosition(value)}
-        </p>
-      )}
-      <div
-        className="relative"
-        style={
-          pflockFarbe
-            ? ({ "--pflock-farbe": pflockFarbe } as CSSProperties)
-            : undefined
-        }
-      >
-        <Input
-          aria-label="Entfernung in Metern"
-          aria-invalid={eingabeUngueltig}
-          inputMode="numeric"
-          value={eingabe}
-          onChange={(event) => {
-            const next = event.target.value;
-            setEingabe(next);
-            setLetzteEingabe(next);
-            if (/^[1-9]\d*$/.test(next)) {
-              onChange({ Distanz: { meter: Number(next) } });
-            }
-          }}
-          placeholder={pflockFarbe ? "" : "Meter"}
-          onFocus={() => {
-            if (pflockFarbe) {
-              setEingabe("");
-              setLetzteEingabe("");
-            }
-          }}
-          className={
-            pflockFarbe
-              ? "border-transparent text-transparent caret-transparent"
-              : undefined
-          }
-        />
-        {pflockFarbe ? (
-          <PflockSwatch
-            farbe={pflockFarbe}
-            className="pointer-events-none absolute inset-0 size-full rounded-sm border-0 bg-[var(--pflock-farbe)]"
+            }}
+            className={cn(
+              "w-full px-2 tabular-nums",
+              pflockFarbe &&
+                "border-transparent bg-transparent text-transparent caret-transparent",
+            )}
           />
-        ) : null}
+          {pflockFarbe ? (
+            <PflockSwatch
+              farbe={pflockFarbe}
+              className="pointer-events-none absolute inset-0 size-full rounded-sm border-0 bg-[var(--pflock-farbe)]"
+            />
+          ) : null}
+        </div>
       </div>
       {eingabeUngueltig ? (
         <p role="alert" className="text-xs text-impact">

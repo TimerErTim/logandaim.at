@@ -31,8 +31,8 @@ type CheckpointSliderProps = {
   /** Unit appended to the read-out and to `aria-valuetext`. */
   einheit?: string;
   disabled?: boolean;
-  /** The scale is known but this value cannot be represented on it. */
-  inactive?: boolean;
+  /** Keep the scale interactive while hiding an unresolvable value's thumb. */
+  thumbHidden?: boolean;
   className?: string;
 };
 
@@ -57,7 +57,7 @@ export function CheckpointSlider({
   label,
   einheit,
   disabled = false,
-  inactive = false,
+  thumbHidden = false,
   className,
 }: CheckpointSliderProps) {
   const span = max - min;
@@ -122,9 +122,9 @@ export function CheckpointSlider({
       <SliderPrimitive.Root
         className={cn(
           "relative flex h-11 w-full touch-none items-center select-none data-[disabled]:opacity-50",
-          inactive && "opacity-50",
+          thumbHidden && "cursor-pointer",
         )}
-        disabled={disabled || inactive}
+        disabled={disabled}
         value={[value]}
         onValueChange={([next]) => {
           if (typeof next === "number") {
@@ -158,7 +158,9 @@ export function CheckpointSlider({
         <SliderPrimitive.Thumb
           aria-label={label}
           aria-valuetext={valuetext}
+          tabIndex={thumbHidden ? -1 : undefined}
           className={cn(
+            thumbHidden && "invisible",
             // The same round, inked bullet as `Slider`, so both sliders read alike.
             // The contour is ink rather than primary: the track underneath is a ramp
             // of caller-supplied stake colours, and ink survives every one of them.
