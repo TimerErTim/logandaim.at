@@ -11,7 +11,7 @@ export function positionsModus(
   pflockAnzahl: number,
 ): PositionsModus {
   if (pflockAnzahl === 1) return "single";
-  return ziel.abstände.length > 0 ? "meter" : "staken";
+  return ziel.abstände.length >= 2 ? "meter" : "staken";
 }
 
 export function anfangsPosition(

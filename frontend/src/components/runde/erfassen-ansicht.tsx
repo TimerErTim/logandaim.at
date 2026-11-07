@@ -122,27 +122,13 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
             schussLoeschen.mutate({ rundeId: runde.id, schussId })
           }
         />
-        {index === zielIndex ? (
-          <div className="flex justify-between gap-3 lg:hidden">
-            <Button
-              variant="secondary"
-              disabled={index === 0}
-              onClick={() => setZielIndex(index - 1)}
-            >
-              Zurück
-            </Button>
-            <Button variant="secondary" onClick={() => setZielIndex(index + 1)}>
-              Weiter
-            </Button>
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   );
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="sticky top-0 z-20 -mx-6 flex flex-col gap-2 border-y border-subtle bg-surface px-6 py-3">
+    <div className="px-6 pb-24">
+      <div className="sticky top-0 z-40 -mx-6 flex flex-col gap-2 border-y border-subtle bg-surface px-6 py-3">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="truncate font-medium text-ink">{runde.parkourName}</p>
@@ -152,10 +138,20 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
               })}
             </p>
           </div>
-          <span className="shrink-0 text-sm tabular-nums text-secondary">
-            {runde.ziele.filter((eintrag) => eintrag.schüsse.length > 0).length}{" "}
-            / {runde.ziele.length} Ziele
-          </span>
+          <div className="flex shrink-0 items-center gap-1 text-sm tabular-nums text-secondary">
+            <span>
+              {
+                runde.ziele.filter((eintrag) => eintrag.schüsse.length > 0)
+                  .length
+              }{" "}
+              / {runde.ziele.length} Ziele
+            </span>
+            <Zieluebersicht
+              ziele={runde.ziele}
+              currentIndex={zielIndex}
+              onSelect={setZielIndex}
+            />
+          </div>
         </div>
         <Progress
           value={
@@ -170,23 +166,37 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
         />
       </div>
       {fehler ? <Alert variant="error">{fehler}</Alert> : null}
-      <Erfolgsmeldung meldung={meldung.meldung} />
-      <div className="lg:hidden">
-        <Zieluebersicht
-          ziele={runde.ziele}
-          currentIndex={zielIndex}
-          onSelect={setZielIndex}
-        />
-        <div className="mt-4 space-y-4">
+      <div className="py-6">
+        <div className="space-y-4 lg:hidden">
+          <Erfolgsmeldung meldung={meldung.meldung} />
           {ziel ? inhalt(ziel, zielIndex) : null}
           {zielIndex >= runde.ziele.length ? (
             <Rundenabschluss runde={runde} />
           ) : null}
         </div>
+        <div className="hidden space-y-4 lg:block">
+          {zielCards.map(({ eintrag, index }) => inhalt(eintrag, index))}
+          <Rundenabschluss runde={runde} />
+        </div>
       </div>
-      <div className="hidden space-y-4 lg:block">
-        {zielCards.map(({ eintrag, index }) => inhalt(eintrag, index))}
-        <Rundenabschluss runde={runde} />
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-subtle bg-surface p-3 lg:hidden">
+        <div className="mx-auto flex max-w-3xl justify-between gap-3">
+          <Button
+            variant="secondary"
+            disabled={zielIndex === 0}
+            onClick={() => setZielIndex((index) => Math.max(0, index - 1))}
+          >
+            Zurück
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() =>
+              setZielIndex((index) => Math.min(runde.ziele.length, index + 1))
+            }
+          >
+            Weiter
+          </Button>
+        </div>
       </div>
     </div>
   );

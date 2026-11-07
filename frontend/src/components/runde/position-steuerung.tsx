@@ -41,7 +41,11 @@ export function PositionSteuerung({
             ? (abstandByFarbe.get(pflock.farbe) ?? index + 1)
             : index + 1,
         farbe: pflock.farbe,
-        label: `Pflock ${index + 1}`,
+        label: pflock.farbe,
+        anzeige:
+          modus === "meter" && abstandByFarbe.has(pflock.farbe)
+            ? `${abstandByFarbe.get(pflock.farbe)} m`
+            : undefined,
       })),
     [pflöcke, modus, abstandByFarbe],
   );
@@ -97,7 +101,7 @@ export function PositionSteuerung({
         }
         step={1}
         label="Schussposition"
-        einheit={modus === "meter" ? "m" : "Pflock"}
+        einheit={modus === "meter" ? "m" : undefined}
       />
       {modus === "staken" && value && "Pflock" in value ? (
         <p className="text-sm text-secondary">{formatPosition(value)}</p>
