@@ -21,11 +21,13 @@ const ZONEN = [
 
 export function SchussLedger({
   ziel,
+  reihenfolge,
   editable,
   onEdit,
   onDelete,
 }: {
   ziel: RundeZiel;
+  reihenfolge: number;
   editable: boolean;
   onEdit: (
     schussId: string,
@@ -37,7 +39,7 @@ export function SchussLedger({
   const [editing, setEditing] = useState<string | null>(null);
   return (
     <ol
-      aria-label={`Schüsse bei Ziel ${ziel.zielnummer}`}
+      aria-label={`Schüsse bei Ziel ${reihenfolge}`}
       className="divide-y divide-subtle"
     >
       {ziel.schüsse.map((schuss: Schuss) => (

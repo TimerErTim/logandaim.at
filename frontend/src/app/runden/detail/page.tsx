@@ -445,7 +445,6 @@ function Zielabschnitt({
           {String(reihenfolge).padStart(2, "0")}
         </SheetNumber>
         <h3 className="text-sm font-semibold text-ink">{ziel.tiername}</h3>
-        <Badge>Ziel Nr. {ziel.zielnummer}</Badge>
         <SheetNumber>{ziel.zielId.slice(0, 8)}</SheetNumber>
       </div>
 

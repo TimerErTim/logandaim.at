@@ -1460,7 +1460,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/runden/{runde_id}/sch\u00FCsse": {
+    "/runden/{runde_id}/schuesse": {
         parameters: {
             query?: never;
             header?: never;
@@ -1522,7 +1522,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/runden/{runde_id}/sch\u00FCsse/{schuss_id}": {
+    "/runden/{runde_id}/schuesse/{schuss_id}": {
         parameters: {
             query?: never;
             header?: never;

@@ -735,7 +735,7 @@ impl LogandaimApiSpec {
     ///
     /// The owner comes from the token, and the Ziel must be part of the Runde's snapshot.
     #[oai(
-        path = "/runden/:runde_id/schüsse",
+        path = "/runden/:runde_id/schuesse",
         method = "post",
         tag = "ApiTag::Runden"
     )]
@@ -762,7 +762,7 @@ impl LogandaimApiSpec {
     ///
     /// Sending `position: null` clears the saved position.
     #[oai(
-        path = "/runden/:runde_id/schüsse/:schuss_id",
+        path = "/runden/:runde_id/schuesse/:schuss_id",
         method = "put",
         tag = "ApiTag::Runden"
     )]
@@ -792,7 +792,7 @@ impl LogandaimApiSpec {
     ///
     /// The scoring total is recomputed from the remaining shots.
     #[oai(
-        path = "/runden/:runde_id/schüsse/:schuss_id",
+        path = "/runden/:runde_id/schuesse/:schuss_id",
         method = "delete",
         tag = "ApiTag::Runden"
     )]

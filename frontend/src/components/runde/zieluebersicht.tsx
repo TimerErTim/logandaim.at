@@ -36,7 +36,7 @@ export function Zieluebersicht({
                   setExpanded(false);
                 }}
               >
-                Ziel {ziel.zielnummer}: {ziel.tiername} · {ziel.schüsse.length}{" "}
+                Ziel {index + 1}: {ziel.tiername} · {ziel.schüsse.length}{" "}
                 Schüsse
               </Button>
             </li>

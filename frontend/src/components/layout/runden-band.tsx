@@ -8,7 +8,7 @@ import { useRundenQuery } from "@/api/hooks";
 import { useRundeQuery } from "@/api/hooks/queries";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { paths } from "@/lib/navigation";
+import { isExactPath, paths } from "@/lib/navigation";
 
 export function RundenBand() {
   const phase = useAuth();
@@ -25,8 +25,8 @@ export function RundenBand() {
   if (
     phase.status !== "authenticated" ||
     !offen ||
-    pathname === paths.rundenErfassen ||
-    pathname === paths.rundenAbschluss
+    isExactPath(pathname, paths.rundenErfassen) ||
+    isExactPath(pathname, paths.rundenAbschluss)
   )
     return null;
   const minutes = Math.max(
@@ -38,7 +38,7 @@ export function RundenBand() {
   return (
     <aside
       aria-label="Offene Runde"
-      className="flex flex-wrap items-center gap-4 border-b border-subtle bg-surface px-4 py-3"
+      className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-subtle bg-surface px-6 py-4"
     >
       <div className="min-w-0 flex-1">
         <p className="font-medium text-ink">{offen.parkourName}</p>
@@ -46,10 +46,17 @@ export function RundenBand() {
           Seit {minutes} Min.
         </p>
       </div>
-      <div className="w-40">
+      <div className="min-w-48 flex-[2] space-y-1.5">
+        <div className="flex items-center justify-between text-xs tabular-nums">
+          <span className="font-medium text-ink">Zielfortschritt</span>
+          <span className="text-secondary">
+            {done} / {total}
+          </span>
+        </div>
         <Progress
           value={total ? (done / total) * 100 : 0}
           aria-label={`Zielfortschritt: ${done} von ${total}`}
+          className="h-3"
         />
       </div>
       <Button size="sm" asChild>

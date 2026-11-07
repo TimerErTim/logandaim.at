@@ -586,7 +586,7 @@ impl LogandaimAppApi {
                 .await;
 
                 let runden = uow.finish(ergebnis, RundenAnzeigenFehler::Laden).await?;
-                Ok(runden.into_iter().map(Into::into).collect())
+                Ok(runden.into_iter().collect())
             })
             .await
     }

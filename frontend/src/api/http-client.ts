@@ -439,7 +439,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     schuss: SchussErstellungInput,
   ): Promise<Schuss> {
     return this.authenticated(() =>
-      this.client.POST("/runden/{runde_id}/schüsse", {
+      this.client.POST("/runden/{runde_id}/schuesse", {
         params: { path: { runde_id: rundeId } },
         body: { ...schuss, position: schuss.position ?? undefined },
         headers: this.authorizationHeaders(),
@@ -453,7 +453,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     schuss: SchussAenderungInput,
   ): Promise<Schuss> {
     return this.authenticated(() =>
-      this.client.PUT("/runden/{runde_id}/schüsse/{schuss_id}", {
+      this.client.PUT("/runden/{runde_id}/schuesse/{schuss_id}", {
         params: { path: { runde_id: rundeId, schuss_id: schussId } },
         body: { ...schuss, position: schuss.position ?? undefined },
         headers: this.authorizationHeaders(),
@@ -463,7 +463,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
 
   async schussLoeschen(rundeId: string, schussId: string): Promise<void> {
     await this.authenticated(() =>
-      this.client.DELETE("/runden/{runde_id}/schüsse/{schuss_id}", {
+      this.client.DELETE("/runden/{runde_id}/schuesse/{schuss_id}", {
         params: { path: { runde_id: rundeId, schuss_id: schussId } },
         headers: this.authorizationHeaders(),
       }),

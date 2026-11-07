@@ -96,7 +96,7 @@ async fn schuss(
     harness
         .client
         .post_json_auth(
-            &format!("/api/runden/{runde_id}/schüsse"),
+            &format!("/api/runden/{runde_id}/schuesse"),
             json!({ "zielId": ziel_id, "wertungszone": zone }),
             bearer,
         )
@@ -202,7 +202,7 @@ async fn ac9_nicht_positive_schussdistanz_ist_bad_request() {
     let (status, _) = harness
         .client
         .post_json_auth(
-            &format!("/api/runden/{runde_id}/schüsse"),
+            &format!("/api/runden/{runde_id}/schuesse"),
             json!({"zielId":ziel_id,"wertungszone":"Kill","position":{"Distanz":{"meter":0}}}),
             &benutzer,
         )
@@ -348,7 +348,7 @@ async fn ac11_runden_und_schuesse_sind_nur_fuer_eigentuemer_aenderbar() {
     assert_eq!(status, StatusCode::OK);
     let schuss_id = shot["id"].as_str().unwrap();
     let runde_path = format!("/api/runden/{runde_id}");
-    let schuss_path = format!("{runde_path}/schüsse/{schuss_id}");
+    let schuss_path = format!("{runde_path}/schuesse/{schuss_id}");
 
     assert_eq!(
         harness.client.get_json_auth(&runde_path, &eigner).await.0,
@@ -489,7 +489,7 @@ async fn ac5_schussposition_ist_exklusiv_ganzzahlig_und_wird_beim_lesen_erhalten
     let (status, body) = harness
         .client
         .post_json_auth(
-            &format!("/api/runden/{runde_id}/schüsse"),
+            &format!("/api/runden/{runde_id}/schuesse"),
             json!({"zielId":ziel_id,"wertungszone":"Kill","position":{"Distanz":{"meter":35}}}),
             &benutzer,
         )
@@ -498,7 +498,7 @@ async fn ac5_schussposition_ist_exklusiv_ganzzahlig_und_wird_beim_lesen_erhalten
     assert_eq!(body["position"]["Distanz"]["meter"], 35);
 
     let (status, body) = harness.client.post_json_auth(
-        &format!("/api/runden/{runde_id}/schüsse"),
+        &format!("/api/runden/{runde_id}/schuesse"),
         json!({"zielId":ziel_id,"wertungszone":"Spot","position":{"Pflock":{"farbe":"#c0392b"}}}),
         &benutzer,
     ).await;
@@ -508,7 +508,7 @@ async fn ac5_schussposition_ist_exklusiv_ganzzahlig_und_wird_beim_lesen_erhalten
     let (status, _) = harness
         .client
         .post_json_auth(
-            &format!("/api/runden/{runde_id}/schüsse"),
+            &format!("/api/runden/{runde_id}/schuesse"),
             json!({"zielId":ziel_id,"wertungszone":"Body","position":{"distanz":{"meter":35.5}}}),
             &benutzer,
         )

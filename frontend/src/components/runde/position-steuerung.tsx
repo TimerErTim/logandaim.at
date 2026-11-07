@@ -46,10 +46,17 @@ export function PositionSteuerung({
     [pflöcke, modus, abstandByFarbe],
   );
   const [eingabe, setEingabe] = useState("");
+  const exactPositionValid = /^[1-9]\d*$/.test(eingabe);
   const meter =
     value && "Distanz" in value
       ? value.Distanz.meter
-      : (checkpoints[0]?.wert ?? 1);
+      : value && "Pflock" in value
+        ? (checkpoints.find((checkpoint) =>
+            checkpoint.id.endsWith(`-${value.Pflock.farbe}`),
+          )?.wert ??
+          checkpoints[0]?.wert ??
+          1)
+        : (checkpoints[0]?.wert ?? 1);
 
   if (modus === "single") {
     return (
@@ -61,6 +68,9 @@ export function PositionSteuerung({
 
   return (
     <div className="space-y-4">
+      {modus === "meter" && value && "Distanz" in value ? (
+        <p className="text-sm tabular-nums text-ink">{value.Distanz.meter} m</p>
+      ) : null}
       <CheckpointSlider
         checkpoints={checkpoints}
         value={meter}
@@ -89,11 +99,13 @@ export function PositionSteuerung({
         label="Schussposition"
         einheit={modus === "meter" ? "m" : "Pflock"}
       />
-      <p className="text-sm tabular-nums text-ink">{formatPosition(value)}</p>
+      {modus === "staken" && value && "Pflock" in value ? (
+        <p className="text-sm text-secondary">{formatPosition(value)}</p>
+      ) : null}
       <Field
         label="Exakte Entfernung"
         error={
-          eingabe !== "" && (!/^\\d+$/.test(eingabe) || Number(eingabe) < 1)
+          eingabe !== "" && !exactPositionValid
             ? "Bitte geben Sie eine positive ganze Meterzahl ein."
             : undefined
         }
@@ -104,7 +116,7 @@ export function PositionSteuerung({
           onChange={(event) => {
             const next = event.target.value;
             setEingabe(next);
-            if (/^[1-9]\\d*$/.test(next))
+            if (/^[1-9]\d*$/.test(next))
               onChange({ Distanz: { meter: Number(next) } });
           }}
           placeholder="Meter"
