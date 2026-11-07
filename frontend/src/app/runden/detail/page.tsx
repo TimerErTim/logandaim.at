@@ -13,7 +13,6 @@ import {
 } from "@/api/hooks";
 import type { Runde } from "@/api/logandaim-api";
 import { Wertungszone } from "@/api/logandaim-api";
-import { Erfolgsmeldung } from "@/components/feedback/erfolgsmeldung";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
 import { PflockMarker } from "@/components/stammdaten/pflock-swatch";
@@ -260,8 +259,6 @@ function RundeInhalt({ runde }: { runde: Runde }) {
               })}
             </Alert>
           ) : null}
-          <Erfolgsmeldung meldung={schussMeldung.meldung} />
-
           {zieleGesamt === 0 ? (
             <p className="text-sm text-secondary">
               Diese Runde hat keine Ziele.
@@ -301,9 +298,7 @@ function RundeInhalt({ runde }: { runde: Runde }) {
       </div>
 
       <div className="sticky bottom-0 z-20 border-t border-subtle bg-surface">
-        <div className="px-6">
-          <Erfolgsmeldung meldung={abschlussMeldung.meldung} className="mt-3" />
-        </div>
+        <div className="px-6"></div>
         <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-3">
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
             <span className="text-[10px] font-semibold tracking-[0.09em] text-secondary uppercase">

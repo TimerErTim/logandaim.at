@@ -35,7 +35,6 @@ import type {
   Pflock,
   Zielplatzierung,
 } from "@/api/logandaim-api";
-import { Erfolgsmeldung } from "@/components/feedback/erfolgsmeldung";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -330,7 +329,6 @@ function ParkourInhalt({
               })}
             </Alert>
           ) : null}
-          <Erfolgsmeldung meldung={umbenennenMeldung.meldung} />
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -443,7 +441,6 @@ function ParkourInhalt({
             sich deshalb nicht entfernen; legen Sie zuerst einen weiteren an.
           </MarginNote>
         ) : null}
-        <Erfolgsmeldung meldung={pflockMeldung.meldung} />
       </section>
 
       <HatchBand />
@@ -516,7 +513,6 @@ function ParkourInhalt({
           </Alert>
         ) : null}
         {/* Same slot as the failure: one result, in the section the save belongs to. */}
-        <Erfolgsmeldung meldung={aufstellungMeldung.meldung} />
         <div className="flex flex-wrap gap-3">
           <Button
             disabled={gesperrt || parkourSetupAendern.isPending}

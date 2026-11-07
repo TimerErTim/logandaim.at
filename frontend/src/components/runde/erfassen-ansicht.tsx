@@ -9,7 +9,6 @@ import type {
   SchusspositionInput,
   Wertungszone,
 } from "@/api/logandaim-api";
-import { Erfolgsmeldung } from "@/components/feedback/erfolgsmeldung";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +18,7 @@ import { anfangsPosition } from "@/lib/runden-position";
 import { PositionSteuerung } from "./position-steuerung";
 import { Rundenabschluss } from "./rundenabschluss";
 import { SchussLedger } from "./schuss-ledger";
+import { WertungAnzeige } from "./wertung-anzeige";
 import { WertungszoneGruppe } from "./wertungszone-gruppe";
 import { Zieluebersicht } from "./zieluebersicht";
 
@@ -75,13 +75,20 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
       key={selected.zielId}
       className={index === zielIndex ? "ring-1 ring-primary" : ""}
     >
-      <CardHeader>
-        <CardTitle>
-          Ziel {index + 1} · {selected.tiername}
-        </CardTitle>
+      <CardHeader className="pt-4 pb-2 [&>div:last-child]:mt-2">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <CardTitle className="min-w-0 flex-1 truncate">
+            {index + 1}. {selected.tiername}
+          </CardTitle>
+          <WertungAnzeige
+            ersterTreffer={selected.wertung?.ersterTreffer}
+            mehrschuss={selected.wertung?.mehrschuss}
+            className="text-base font-semibold"
+          />
+        </div>
       </CardHeader>
-      <CardContent className="space-y-5">
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(16rem,0.8fr)] xl:items-start">
+      <CardContent className="space-y-3 pt-3">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(16rem,0.8fr)] xl:items-start">
           <PositionSteuerung
             key={selected.zielId}
             ziel={selected}
@@ -138,19 +145,26 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
               })}
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-1 text-sm tabular-nums text-secondary">
-            <span>
-              {
-                runde.ziele.filter((eintrag) => eintrag.schüsse.length > 0)
-                  .length
-              }{" "}
-              / {runde.ziele.length} Ziele
-            </span>
-            <Zieluebersicht
-              ziele={runde.ziele}
-              currentIndex={zielIndex}
-              onSelect={setZielIndex}
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <WertungAnzeige
+              ersterTreffer={runde.gesamtErsterTreffer}
+              mehrschuss={runde.gesamtMehrschuss}
+              className="text-base font-semibold"
             />
+            <div className="flex items-center gap-1 text-sm tabular-nums text-secondary">
+              <span>
+                {
+                  runde.ziele.filter((eintrag) => eintrag.schüsse.length > 0)
+                    .length
+                }{" "}
+                / {runde.ziele.length} Ziele
+              </span>
+              <Zieluebersicht
+                ziele={runde.ziele}
+                currentIndex={zielIndex}
+                onSelect={setZielIndex}
+              />
+            </div>
           </div>
         </div>
         <Progress
@@ -168,7 +182,6 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
       {fehler ? <Alert variant="error">{fehler}</Alert> : null}
       <div className="py-6">
         <div className="space-y-4 lg:hidden">
-          <Erfolgsmeldung meldung={meldung.meldung} />
           {ziel ? inhalt(ziel, zielIndex) : null}
           {zielIndex >= runde.ziele.length ? (
             <Rundenabschluss runde={runde} />

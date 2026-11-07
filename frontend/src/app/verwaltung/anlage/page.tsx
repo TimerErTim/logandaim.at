@@ -22,7 +22,6 @@ import {
   type Pflock,
   type ZielInput,
 } from "@/api/logandaim-api";
-import { Erfolgsmeldung } from "@/components/feedback/erfolgsmeldung";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -171,8 +170,6 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
 
       {/* The confirmation lives here, not in the card that deactivated: a success
           replaces that card with the archived state of the whole page. */}
-      <Erfolgsmeldung meldung={deaktivierenMeldung.meldung} />
-
       <Tabs defaultValue="ziele">
         <TabsList>
           <TabsTrigger value="ziele">Ziele</TabsTrigger>
@@ -361,8 +358,6 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
             })}
           </Alert>
         ) : null}
-
-        <Erfolgsmeldung meldung={meldung.meldung} />
       </section>
 
       {gesperrt ? null : (
@@ -546,7 +541,6 @@ function ParkourListe({
               </Alert>
             ) : null}
             {/* One slot for the result of this form: failure above, success here. */}
-            <Erfolgsmeldung meldung={meldung.meldung} />
             <form className="space-y-4" onSubmit={parkourErstellen}>
               <Field label="Parkourname" className="sm:max-w-md">
                 <Input
@@ -862,8 +856,6 @@ function Verwaltungen({
           })}
         </Alert>
       ) : null}
-
-      <Erfolgsmeldung meldung={meldung.meldung} />
 
       <MarginNote label="Rollen">
         Eine Anlage wird von Mitarbeitern gepflegt; ein Administrator darf
@@ -1190,7 +1182,6 @@ function Stammdaten({
               })}
             </Alert>
           ) : null}
-          <Erfolgsmeldung meldung={meldung.meldung} className="mt-4" />
         </CardContent>
       </Card>
 
