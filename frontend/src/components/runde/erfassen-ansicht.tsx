@@ -147,35 +147,31 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
   return (
     <div className="px-6 pb-24">
       <div className="sticky top-0 z-40 -mx-6 flex flex-col gap-2 border-y border-subtle bg-surface px-6 py-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0 flex-1">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
+          <div className="row-span-2 min-w-0">
             <p className="truncate font-medium text-ink">{runde.parkourName}</p>
             <p className="font-mono text-sm tabular-nums text-secondary">
               {schussAnzahl} Schüsse
             </p>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <div className="flex items-center gap-2">
-              <WertungAnzeige
-                ersterTreffer={runde.gesamtErsterTreffer}
-                mehrschuss={runde.gesamtMehrschuss}
-                className="text-base font-semibold"
-              />
-            </div>
-            <div className="flex items-center gap-1 text-sm tabular-nums text-secondary">
-              <span>
-                {
-                  runde.ziele.filter((eintrag) => eintrag.schüsse.length > 0)
-                    .length
-                }{" "}
-                / {runde.ziele.length} Ziele
-              </span>
-              <Zieluebersicht
-                ziele={runde.ziele}
-                currentIndex={zielIndex}
-                onSelect={setZielIndex}
-              />
-            </div>
+          <WertungAnzeige
+            ersterTreffer={runde.gesamtErsterTreffer}
+            mehrschuss={runde.gesamtMehrschuss}
+            className="justify-self-end text-base font-semibold"
+          />
+          <div className="flex items-center justify-self-end gap-1 text-sm tabular-nums text-secondary">
+            <span>
+              {
+                runde.ziele.filter((eintrag) => eintrag.schüsse.length > 0)
+                  .length
+              }{" "}
+              / {runde.ziele.length} Ziele
+            </span>
+            <Zieluebersicht
+              ziele={runde.ziele}
+              currentIndex={zielIndex}
+              onSelect={setZielIndex}
+            />
           </div>
         </div>
         <Progress
