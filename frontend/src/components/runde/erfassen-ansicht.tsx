@@ -77,7 +77,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
   const inhalt = (selected: (typeof runde.ziele)[number], index: number) => (
     <Card
       key={selected.zielId}
-      className={index === zielIndex ? "ring-1 ring-primary" : ""}
+      className={`-mx-6 sm:mx-0 ${index === zielIndex ? "ring-1 ring-primary" : ""}`}
     >
       <CardHeader className="pt-4 pb-2 [&>div:last-child]:mt-2">
         <div className="flex min-w-0 items-center justify-between gap-3">
@@ -123,6 +123,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
         <div className="pt-1">
           <SchussLedger
             ziel={selected}
+            pflöcke={runde.pflöcke}
             reihenfolge={index + 1}
             editable={
               runde.zustand === "InBearbeitung" ||
@@ -148,17 +149,17 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
     <div className="px-6 pb-24">
       <div className="sticky top-0 z-40 -mx-6 flex flex-col gap-2 border-y border-subtle bg-surface px-6 py-3">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
-          <div className="row-span-2 min-w-0">
-            <p className="truncate font-medium text-ink">{runde.parkourName}</p>
-            <p className="font-mono text-sm tabular-nums text-secondary">
-              {schussAnzahl} Schüsse
-            </p>
-          </div>
+          <p className="truncate font-medium text-ink font-serif">
+            {runde.parkourName}
+          </p>
           <WertungAnzeige
             ersterTreffer={runde.gesamtErsterTreffer}
             mehrschuss={runde.gesamtMehrschuss}
             className="justify-self-end text-base font-semibold"
           />
+          <p className="font-mono text-sm tabular-nums text-secondary">
+            {schussAnzahl} Schüsse
+          </p>
           <div className="flex items-center justify-self-end gap-1 text-sm tabular-nums text-secondary">
             <span>
               {

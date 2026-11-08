@@ -1,8 +1,8 @@
 "use client";
 
 import { Trash2 } from "lucide-react";
-
 import type {
+  RundePflock,
   RundeZiel,
   Schuss,
   SchusspositionInput,
@@ -12,6 +12,7 @@ import { PflockSwatch } from "@/components/stammdaten/pflock-swatch";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { formatPosition } from "@/lib/runden-position";
+import { SchussDistanzEditor } from "./schuss-distanz-editor";
 
 const ZONEN = [
   Wertungszone.Spot,
@@ -22,12 +23,14 @@ const ZONEN = [
 
 export function SchussLedger({
   ziel,
+  pflöcke,
   reihenfolge,
   editable,
   onEdit,
   onDelete,
 }: {
   ziel: RundeZiel;
+  pflöcke: RundePflock[];
   reihenfolge: number;
   editable: boolean;
   onEdit: (
@@ -43,26 +46,29 @@ export function SchussLedger({
         aria-hidden="true"
         className="flex items-center gap-3 border-b border-subtle bg-surface-muted py-3 text-[11px] font-semibold tracking-[0.07em] text-secondary uppercase"
       >
-        <span className="w-10 shrink-0">Pfeil</span>
-        <span className="w-20 shrink-0">Wertung</span>
+        <span className="w-8 shrink-0 sm:w-10">Pfeil</span>
+        <span className="w-16 shrink-0 sm:w-20">Wertung</span>
         <span className="min-w-0 flex-1">Position</span>
-        <span className="w-12 shrink-0">Punkte</span>
-        <span className="w-10 shrink-0" />
+        <span className="w-10 shrink-0 sm:w-12">Punkte</span>
+        <span className="w-8 shrink-0 sm:w-10" />
       </div>
       <ol
         aria-label={`Schüsse bei Ziel ${reihenfolge}`}
         className="divide-y divide-subtle"
       >
         {ziel.schüsse.map((schuss: Schuss) => (
-          <li key={schuss.id} className="flex min-h-11 items-center gap-3 py-2">
-            <span className="w-10 shrink-0 font-mono text-sm tabular-nums text-secondary">
+          <li
+            key={schuss.id}
+            className="flex min-h-11 items-center gap-2 py-2 sm:gap-3"
+          >
+            <span className="w-8 shrink-0 font-mono text-sm tabular-nums text-secondary sm:w-10">
               {schuss.pfeil}.
             </span>
             {editable ? (
               <Select
                 aria-label={`Wertungszone für Schuss ${schuss.pfeil}`}
                 value={schuss.wertungszone}
-                className="w-20 shrink-0 pr-7 pl-2"
+                className="w-16 shrink-0 pr-6 pl-2 sm:w-20 sm:pr-7"
                 onChange={(event) => {
                   const nextZone = event.target.value as Wertungszone;
                   if (nextZone !== schuss.wertungszone) {
@@ -82,7 +88,19 @@ export function SchussLedger({
               </span>
             )}
             <span className="min-w-0 flex-1 text-sm text-secondary">
-              {schuss.position && "Pflock" in schuss.position ? (
+              {editable ? (
+                <div className="min-w-0 flex-1">
+                  <SchussDistanzEditor
+                    pfeil={schuss.pfeil}
+                    ziel={ziel}
+                    pflöcke={pflöcke}
+                    position={schuss.position as SchusspositionInput | null}
+                    onCommit={(position) =>
+                      onEdit(schuss.id, schuss.wertungszone, position)
+                    }
+                  />
+                </div>
+              ) : schuss.position && "Pflock" in schuss.position ? (
                 <span className="inline-flex items-center gap-2">
                   <PflockSwatch farbe={schuss.position.Pflock.farbe} />
                   <span>Pflock</span>
@@ -91,7 +109,7 @@ export function SchussLedger({
                 formatPosition(schuss.position as SchusspositionInput | null)
               )}
             </span>
-            <span className="w-12 shrink-0 text-left text-sm tabular-nums text-ink">
+            <span className="w-10 shrink-0 text-left text-sm tabular-nums text-ink sm:w-12">
               {punkte(schuss)}
             </span>
             {editable ? (

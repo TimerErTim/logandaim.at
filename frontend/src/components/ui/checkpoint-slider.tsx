@@ -23,6 +23,7 @@ type CheckpointSliderProps = {
   checkpoints: Checkpoint[];
   value: number;
   onValueChange: (next: number) => void;
+  onValueCommit?: (next: number) => void;
   min: number;
   max: number;
   step?: number;
@@ -51,6 +52,7 @@ export function CheckpointSlider({
   checkpoints,
   value,
   onValueChange,
+  onValueCommit,
   min,
   max,
   step = 1,
@@ -129,6 +131,11 @@ export function CheckpointSlider({
         onValueChange={([next]) => {
           if (typeof next === "number") {
             onValueChange(next);
+          }
+        }}
+        onValueCommit={([next]) => {
+          if (typeof next === "number") {
+            onValueCommit?.(next);
           }
         }}
         min={min}
