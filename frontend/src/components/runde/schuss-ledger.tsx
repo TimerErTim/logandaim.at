@@ -54,6 +54,7 @@ export function SchussLedger({
             <Select
               aria-label={`Wertungszone für Schuss ${schuss.pfeil}`}
               value={schuss.wertungszone}
+              className="w-20 shrink-0 pr-7 pl-2"
               onChange={(event) => {
                 const nextZone = event.target.value as Wertungszone;
                 if (nextZone !== schuss.wertungszone) {
@@ -88,7 +89,7 @@ export function SchussLedger({
           {editable ? (
             <Button
               size="icon"
-              variant="ghost"
+              variant="destructive"
               aria-label={`Schuss ${schuss.pfeil} löschen`}
               onClick={() => onDelete(schuss.id)}
             >

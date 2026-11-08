@@ -92,7 +92,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-3">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(16rem,0.8fr)] xl:items-start">
+        <div className="space-y-3">
           <PositionSteuerung
             key={selected.zielId}
             ziel={selected}
@@ -108,11 +108,17 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
               }))
             }
           />
-          <WertungszoneGruppe
-            disabled={runde.zustand !== "InBearbeitung"}
-            busy={busy}
-            onSelect={(zone) => erfassen(selected, zone)}
-          />
+          <Separator />
+          <fieldset className="min-w-0 space-y-1.5">
+            <legend className="min-h-[18px] text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
+              Schüsse
+            </legend>
+            <WertungszoneGruppe
+              disabled={runde.zustand !== "InBearbeitung"}
+              busy={busy}
+              onSelect={(zone) => erfassen(selected, zone)}
+            />
+          </fieldset>
         </div>
         <Separator />
         <SchussLedger
@@ -143,12 +149,12 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0 flex-1">
             <p className="truncate font-medium text-ink">{runde.parkourName}</p>
+            <p className="font-mono text-sm tabular-nums text-secondary">
+              {schussAnzahl} Schüsse
+            </p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
             <div className="flex items-center gap-2">
-              <span className="font-mono text-sm tabular-nums text-secondary">
-                {schussAnzahl} Schüsse
-              </span>
               <WertungAnzeige
                 ersterTreffer={runde.gesamtErsterTreffer}
                 mehrschuss={runde.gesamtMehrschuss}

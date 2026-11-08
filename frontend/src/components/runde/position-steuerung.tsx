@@ -114,10 +114,7 @@ export function PositionSteuerung({
   const eingabeUngueltig = eingabe !== "" && !/^[1-9]\d*$/.test(eingabe);
 
   return (
-    <fieldset className="min-w-0 space-y-3">
-      <legend className="min-h-[18px] text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
-        Entfernung
-      </legend>
+    <fieldset className="min-w-0 space-y-1.5">
       <div className="flex min-w-0 items-center gap-3">
         {modus !== "single" ? (
           <CheckpointSlider
