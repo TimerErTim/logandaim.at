@@ -120,25 +120,26 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
             />
           </fieldset>
         </div>
-        <Separator />
-        <SchussLedger
-          ziel={selected}
-          reihenfolge={index + 1}
-          editable={
-            runde.zustand === "InBearbeitung" ||
-            runde.zustand === "Abgeschlossen"
-          }
-          onEdit={(schussId, wertungszone, shotPosition) =>
-            schussAendern.mutate({
-              rundeId: runde.id,
-              schussId,
-              schuss: { wertungszone, position: shotPosition },
-            })
-          }
-          onDelete={(schussId) =>
-            schussLoeschen.mutate({ rundeId: runde.id, schussId })
-          }
-        />
+        <div className="pt-1">
+          <SchussLedger
+            ziel={selected}
+            reihenfolge={index + 1}
+            editable={
+              runde.zustand === "InBearbeitung" ||
+              runde.zustand === "Abgeschlossen"
+            }
+            onEdit={(schussId, wertungszone, shotPosition) =>
+              schussAendern.mutate({
+                rundeId: runde.id,
+                schussId,
+                schuss: { wertungszone, position: shotPosition },
+              })
+            }
+            onDelete={(schussId) =>
+              schussLoeschen.mutate({ rundeId: runde.id, schussId })
+            }
+          />
+        </div>
       </CardContent>
     </Card>
   );

@@ -41,7 +41,7 @@ export function SchussLedger({
     <div>
       <div
         aria-hidden="true"
-        className="flex items-center gap-3 border-b border-subtle bg-surface-muted py-2 text-[11px] font-semibold tracking-[0.07em] text-secondary uppercase"
+        className="flex items-center gap-3 border-b border-subtle bg-surface-muted py-3 text-[11px] font-semibold tracking-[0.07em] text-secondary uppercase"
       >
         <span className="w-10 shrink-0">Pfeil</span>
         <span className="w-20 shrink-0">Wertung</span>

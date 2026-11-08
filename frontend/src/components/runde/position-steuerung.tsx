@@ -108,9 +108,9 @@ export function PositionSteuerung({
   }, [initialEingabe, letzteEingabe]);
 
   const pflockFarbe =
-    modus === "staken" && eingabe === "" && value && "Pflock" in value
-      ? positionPflock?.farbe
-      : undefined;
+    value && "Pflock" in value ? positionPflock?.farbe : undefined;
+  const pflockHatDistanz =
+    positionPflock !== undefined && abstandByFarbe.has(positionPflock.farbe);
   const eingabeUngueltig = eingabe !== "" && !/^[1-9]\d*$/.test(eingabe);
 
   return (
@@ -178,9 +178,9 @@ export function PositionSteuerung({
                 onChange({ Distanz: { meter: Number(next) } });
               }
             }}
-            placeholder={pflockFarbe ? "" : "Meter"}
+            placeholder={pflockFarbe && !pflockHatDistanz ? "Pflock" : "Meter"}
             onFocus={() => {
-              if (pflockFarbe) {
+              if (pflockFarbe && !pflockHatDistanz) {
                 setEingabe("");
                 setLetzteEingabe("");
               }
@@ -188,14 +188,21 @@ export function PositionSteuerung({
             className={cn(
               "w-full px-2 tabular-nums",
               pflockFarbe &&
+                pflockHatDistanz &&
                 "border-transparent bg-transparent text-transparent caret-transparent",
             )}
           />
-          {pflockFarbe ? (
+          {pflockFarbe && pflockHatDistanz ? (
             <PflockSwatch
               farbe={pflockFarbe}
               className="pointer-events-none absolute inset-0 size-full rounded-sm border-0 bg-[var(--pflock-farbe)]"
             />
+          ) : null}
+          {pflockFarbe && !pflockHatDistanz ? (
+            <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center gap-2 text-xs text-secondary">
+              <PflockSwatch farbe={pflockFarbe} />
+              Pflock
+            </span>
           ) : null}
         </div>
       </div>
