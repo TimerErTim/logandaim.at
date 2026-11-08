@@ -41,12 +41,12 @@ export function SchussLedger({
     <div>
       <div
         aria-hidden="true"
-        className="flex items-center gap-3 border-b border-subtle bg-surface-muted px-3 py-2 text-[11px] font-semibold tracking-[0.07em] text-secondary uppercase"
+        className="flex items-center gap-3 border-b border-subtle bg-surface-muted py-2 text-[11px] font-semibold tracking-[0.07em] text-secondary uppercase"
       >
         <span className="w-10 shrink-0">Pfeil</span>
-        <span className="w-20 shrink-0">Wertungszone</span>
+        <span className="w-20 shrink-0">Wertung</span>
         <span className="min-w-0 flex-1">Position</span>
-        <span className="w-12 shrink-0 text-right">Punkte</span>
+        <span className="w-12 shrink-0">Punkte</span>
         <span className="w-10 shrink-0" />
       </div>
       <ol
@@ -91,7 +91,7 @@ export function SchussLedger({
                 formatPosition(schuss.position as SchusspositionInput | null)
               )}
             </span>
-            <span className="w-12 shrink-0 text-right text-sm tabular-nums text-ink">
+            <span className="w-12 shrink-0 text-left text-sm tabular-nums text-ink">
               {punkte(schuss)}
             </span>
             {editable ? (
