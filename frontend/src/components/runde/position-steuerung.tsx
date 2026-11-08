@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
 import { formatPosition, positionsModus } from "@/lib/runden-position";
+import { PflockPlatzhalter } from "./pflock-platzhalter";
 
 export function PositionSteuerung({
   ziel,
@@ -195,15 +196,7 @@ export function PositionSteuerung({
                 "border-transparent bg-transparent text-transparent caret-transparent",
             )}
           />
-          {pflockPlaceholder ? (
-            <span
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 z-10 flex items-center gap-2 overflow-hidden px-2 text-xs text-secondary"
-            >
-              <PflockSwatch farbe={pflockFarbe} />
-              <span className="truncate">Pflock</span>
-            </span>
-          ) : null}
+          {pflockPlaceholder ? <PflockPlatzhalter farbe={pflockFarbe} /> : null}
           {pflockFarbe && pflockHatDistanz ? (
             <PflockSwatch
               farbe={pflockFarbe}

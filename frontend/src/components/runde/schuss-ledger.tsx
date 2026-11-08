@@ -46,11 +46,11 @@ export function SchussLedger({
         aria-hidden="true"
         className="flex items-center gap-3 border-b border-subtle bg-surface-muted py-3 text-[11px] font-semibold tracking-[0.07em] text-secondary uppercase"
       >
-        <span className="w-8 shrink-0 sm:w-10">Pfeil</span>
-        <span className="w-16 shrink-0 sm:w-20">Wertung</span>
+        <span className="w-10 shrink-0">Pfeil</span>
+        <span className="w-20 shrink-0">Wertung</span>
         <span className="min-w-0 flex-1">Position</span>
-        <span className="w-10 shrink-0 sm:w-12">Punkte</span>
-        <span className="w-8 shrink-0 sm:w-10" />
+        <span className="w-12 shrink-0">Punkte</span>
+        <span className="w-10 shrink-0" />
       </div>
       <ol
         aria-label={`Schüsse bei Ziel ${reihenfolge}`}
@@ -68,7 +68,7 @@ export function SchussLedger({
               <Select
                 aria-label={`Wertungszone für Schuss ${schuss.pfeil}`}
                 value={schuss.wertungszone}
-                className="w-16 shrink-0 pr-6 pl-2 sm:w-20 sm:pr-7"
+                className="w-20 shrink-0 pr-7 pl-2"
                 onChange={(event) => {
                   const nextZone = event.target.value as Wertungszone;
                   if (nextZone !== schuss.wertungszone) {
