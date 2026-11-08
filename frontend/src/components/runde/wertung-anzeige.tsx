@@ -7,24 +7,40 @@ function Einzelpfeil(props: SVGProps<SVGSVGElement>) {
       viewBox="0 0 32 16"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       {...props}
     >
-      <path d="M2 8h23" />
-      <path d="m20 3 9 5-9 5" />
-      <path d="M3 5v6m3-6v6" />
+      <path d="M4 8h22" />
+      <path d="m21 3 6 5-6 5" />
+      <path d="M3 5 7 8l-4 3" />
+      <path d="M5 6.5v3" />
     </svg>
   );
 }
 
 function Mehrfachpfeil(props: SVGProps<SVGSVGElement>) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 48 32" fill="currentColor" {...props}>
-      <path d="M1 3.5h2.5L5 1l1.5 2.5H38V1l9 4.5-9 4.5V7H6.5L5 9.5 3.5 7H1z" />
-      <path d="M1 13.5h4L7 11l2 2.5h32V10l7 6-7 6v-3.5H9L7 21l-2-2.5H1z" />
-      <path d="M1 24.5h2.5L5 22l1.5 2.5H38V21l9 4.5-9 4.5v-3H6.5L5 29.5 3.5 27H1z" />
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 40 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M4 4h24" />
+      <path d="m24 1 5 3-5 3" />
+      <path d="M2 3 5 4 2 5" />
+      <path d="M4 12h30" />
+      <path d="m29 8 7 4-7 4" />
+      <path d="M2 10 5 12l-3 2" />
+      <path d="M4 20h24" />
+      <path d="m24 17 5 3-5 3" />
+      <path d="M2 19 5 20l-3 1" />
     </svg>
   );
 }
@@ -52,7 +68,7 @@ export function WertungAnzeige({
       <Einzelpfeil className="h-3 w-5" />
       <span aria-hidden="true">/</span>
       <span aria-hidden="true">{mehrschuss ?? "—"}</span>
-      <Mehrfachpfeil className="h-4 w-6" />
+      <Mehrfachpfeil className="h-4 w-7" />
     </span>
   );
 }

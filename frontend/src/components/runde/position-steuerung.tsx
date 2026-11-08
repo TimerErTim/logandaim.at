@@ -115,6 +115,9 @@ export function PositionSteuerung({
 
   return (
     <fieldset className="min-w-0 space-y-1.5">
+      <legend className="min-h-[18px] text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
+        Entfernung
+      </legend>
       <div className="flex min-w-0 items-center gap-3">
         {modus !== "single" ? (
           <CheckpointSlider
