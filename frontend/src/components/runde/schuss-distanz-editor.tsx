@@ -145,8 +145,8 @@ export function SchussDistanzEditor({
   const pflockPlaceholder = draft === "" && draftStake !== undefined;
 
   return (
-    <div className="flex min-w-0 items-center">
-      <div className="ml-auto w-20 shrink-0 sm:w-24">
+    <div className="min-w-0">
+      <div className="w-20 shrink-0 sm:w-24">
         <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
           <PopoverPrimitive.Anchor asChild>
             <div className="relative w-full">
@@ -179,8 +179,7 @@ export function SchussDistanzEditor({
                 }}
                 className={cn(
                   "h-11 w-full px-2 tabular-nums",
-                  pflockPlaceholder &&
-                    "border-transparent bg-transparent text-transparent caret-ink",
+                  pflockPlaceholder && "text-transparent caret-ink",
                 )}
               />
               {pflockPlaceholder ? (

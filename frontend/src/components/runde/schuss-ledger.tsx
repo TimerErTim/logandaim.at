@@ -87,7 +87,7 @@ export function SchussLedger({
                 {schuss.wertungszone}
               </span>
             )}
-            <span className="min-w-0 flex-1 text-sm text-secondary">
+            <span className="min-w-0 flex-1 text-left text-sm text-secondary">
               {editable ? (
                 <div className="min-w-0 flex-1">
                   <SchussDistanzEditor
