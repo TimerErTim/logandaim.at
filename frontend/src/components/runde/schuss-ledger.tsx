@@ -38,20 +38,20 @@ export function SchussLedger({
   onDelete: (schussId: string) => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-sm border border-subtle">
+    <div>
       <div
         aria-hidden="true"
-        className="grid grid-cols-[2.5rem_minmax(5rem,1fr)_minmax(5rem,1fr)_auto_auto] items-center gap-3 bg-surface-muted px-3 py-2 text-[11px] font-semibold tracking-[0.07em] text-secondary uppercase"
+        className="flex items-center gap-3 border-b border-subtle bg-surface-muted px-3 py-2 text-[11px] font-semibold tracking-[0.07em] text-secondary uppercase"
       >
-        <span>Pfeil</span>
-        <span>Wertungszone</span>
-        <span>Position</span>
-        <span className="text-right">Punkte</span>
-        <span className="w-10" />
+        <span className="w-10 shrink-0">Pfeil</span>
+        <span className="w-20 shrink-0">Wertungszone</span>
+        <span className="min-w-0 flex-1">Position</span>
+        <span className="w-12 shrink-0 text-right">Punkte</span>
+        <span className="w-10 shrink-0" />
       </div>
       <ol
         aria-label={`Schüsse bei Ziel ${reihenfolge}`}
-        className="divide-y divide-subtle px-3"
+        className="divide-y divide-subtle"
       >
         {ziel.schüsse.map((schuss: Schuss) => (
           <li key={schuss.id} className="flex min-h-11 items-center gap-3 py-2">
