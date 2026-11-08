@@ -111,6 +111,8 @@ export function PositionSteuerung({
     value && "Pflock" in value ? positionPflock?.farbe : undefined;
   const pflockHatDistanz =
     positionPflock !== undefined && abstandByFarbe.has(positionPflock.farbe);
+  const pflockPlaceholder =
+    pflockFarbe !== undefined && !pflockHatDistanz && eingabe === "";
   const eingabeUngueltig = eingabe !== "" && !/^[1-9]\d*$/.test(eingabe);
 
   return (
@@ -165,15 +167,6 @@ export function PositionSteuerung({
               : undefined
           }
         >
-          {pflockFarbe && !pflockHatDistanz ? (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 left-2 z-10 flex items-center gap-2 text-xs text-secondary"
-            >
-              <PflockSwatch farbe={pflockFarbe} />
-              Pflock
-            </div>
-          ) : null}
           <Input
             aria-label="Entfernung in Metern"
             aria-invalid={eingabeUngueltig}
@@ -187,7 +180,7 @@ export function PositionSteuerung({
                 onChange({ Distanz: { meter: Number(next) } });
               }
             }}
-            placeholder={pflockFarbe && !pflockHatDistanz ? "Pflock" : "Meter"}
+            placeholder={pflockPlaceholder ? "" : "Meter"}
             onFocus={() => {
               if (pflockFarbe && !pflockHatDistanz) {
                 setEingabe("");
@@ -196,11 +189,21 @@ export function PositionSteuerung({
             }}
             className={cn(
               "w-full px-2 tabular-nums",
+              pflockPlaceholder && "text-transparent caret-ink",
               pflockFarbe &&
                 pflockHatDistanz &&
                 "border-transparent bg-transparent text-transparent caret-transparent",
             )}
           />
+          {pflockPlaceholder ? (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 z-10 flex items-center gap-2 overflow-hidden px-2 text-xs text-secondary"
+            >
+              <PflockSwatch farbe={pflockFarbe} />
+              <span className="truncate">Pflock</span>
+            </span>
+          ) : null}
           {pflockFarbe && pflockHatDistanz ? (
             <PflockSwatch
               farbe={pflockFarbe}
