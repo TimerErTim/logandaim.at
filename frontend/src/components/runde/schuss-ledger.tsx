@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Trash2 } from "lucide-react";
 
 import type {
   RundeZiel,
@@ -8,6 +8,7 @@ import type {
   SchusspositionInput,
 } from "@/api/logandaim-api";
 import { Wertungszone } from "@/api/logandaim-api";
+import { PflockSwatch } from "@/components/stammdaten/pflock-swatch";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { formatPosition } from "@/lib/runden-position";
@@ -36,7 +37,6 @@ export function SchussLedger({
   ) => void;
   onDelete: (schussId: string) => void;
 }) {
-  const [editing, setEditing] = useState<string | null>(null);
   return (
     <ol
       aria-label={`Schüsse bei Ziel ${reihenfolge}`}
@@ -50,17 +50,15 @@ export function SchussLedger({
           <span className="w-10 font-mono text-sm tabular-nums text-secondary">
             {schuss.pfeil}.
           </span>
-          {editing === schuss.id ? (
+          {editable ? (
             <Select
-              aria-label="Wertungszone"
+              aria-label={`Wertungszone für Schuss ${schuss.pfeil}`}
               value={schuss.wertungszone}
               onChange={(event) => {
-                onEdit(
-                  schuss.id,
-                  event.target.value as Wertungszone,
-                  schuss.position ?? null,
-                );
-                setEditing(null);
+                const nextZone = event.target.value as Wertungszone;
+                if (nextZone !== schuss.wertungszone) {
+                  onEdit(schuss.id, nextZone, schuss.position ?? null);
+                }
               }}
             >
               {ZONEN.map((zone) => (
@@ -74,30 +72,27 @@ export function SchussLedger({
               {schuss.wertungszone}
             </span>
           )}
-          <span className="text-sm text-secondary">
-            {formatPosition(schuss.position as SchusspositionInput | null)}
+          <span className="inline-flex items-center gap-2 text-sm text-secondary">
+            {schuss.position && "Pflock" in schuss.position ? (
+              <span className="inline-flex items-center gap-2">
+                <PflockSwatch farbe={schuss.position.Pflock.farbe} />
+                <span>Pflock</span>
+              </span>
+            ) : (
+              formatPosition(schuss.position as SchusspositionInput | null)
+            )}
           </span>
           <span className="ml-auto text-sm tabular-nums text-ink">
             {punkte(schuss)}
           </span>
           {editable ? (
             <Button
-              size="sm"
-              variant="secondary"
-              onClick={() =>
-                setEditing(editing === schuss.id ? null : schuss.id)
-              }
-            >
-              {editing === schuss.id ? "Fertig" : "Ändern"}
-            </Button>
-          ) : null}
-          {editable ? (
-            <Button
-              size="sm"
-              variant="destructive"
+              size="icon"
+              variant="ghost"
+              aria-label={`Schuss ${schuss.pfeil} löschen`}
               onClick={() => onDelete(schuss.id)}
             >
-              Löschen
+              <Trash2 aria-hidden="true" />
             </Button>
           ) : null}
         </li>
