@@ -165,6 +165,15 @@ export function PositionSteuerung({
               : undefined
           }
         >
+          {pflockFarbe && !pflockHatDistanz ? (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 left-2 z-10 flex items-center gap-2 text-xs text-secondary"
+            >
+              <PflockSwatch farbe={pflockFarbe} />
+              Pflock
+            </div>
+          ) : null}
           <Input
             aria-label="Entfernung in Metern"
             aria-invalid={eingabeUngueltig}
@@ -197,12 +206,6 @@ export function PositionSteuerung({
               farbe={pflockFarbe}
               className="pointer-events-none absolute inset-0 size-full rounded-sm border-0 bg-[var(--pflock-farbe)]"
             />
-          ) : null}
-          {pflockFarbe && !pflockHatDistanz ? (
-            <span className="pointer-events-none absolute inset-y-0 left-2 flex items-center gap-2 text-xs text-secondary">
-              <PflockSwatch farbe={pflockFarbe} />
-              Pflock
-            </span>
           ) : null}
         </div>
       </div>
