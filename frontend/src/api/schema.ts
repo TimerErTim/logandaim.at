@@ -1353,53 +1353,7 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        /**
-         * Change the calendar date of one of the caller's Runden.
-         * @description The immutable Parkour snapshot and its shots remain unchanged.
-         */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: {
-                    Authorization?: string;
-                };
-                path: {
-                    runde_id: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json; charset=utf-8": components["schemas"]["RundeDatumRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json; charset=utf-8": components["schemas"]["Runde"];
-                    };
-                };
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain; charset=utf-8": string;
-                    };
-                };
-                "4XX": {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
-                    };
-                };
-            };
-        };
+        patch?: never;
         trace?: never;
     };
     "/runden/{runde_id}/abschluss": {
@@ -2827,11 +2781,6 @@ export interface components {
             parkourName: string;
             /** @description Who the Runde belongs to. */
             erfasstVon: components["schemas"]["Erfasser"] & unknown;
-            /**
-             * Format: naive-date
-             * @description Calendar date of the Runde.
-             */
-            datum: string;
             /** @description Whether it is still open or already closed. */
             zustand: components["schemas"]["RundeZustand"] & unknown;
             /**
@@ -2890,11 +2839,6 @@ export interface components {
             /** @description The Parkour' name as captured at the start. */
             parkourName: string;
             /**
-             * Format: naive-date
-             * @description Calendar date of the Runde.
-             */
-            datum: string;
-            /**
              * Format: uint64
              * @description Number of Ziele in the captured route.
              */
@@ -2916,17 +2860,6 @@ export interface components {
              * @description End of the Runde; absent while it is open.
              */
             abgeschlossenAm?: string;
-        };
-        /**
-         * RundeDatumRequest
-         * @description Set a Runde's calendar date without changing its captured route or shots.
-         */
-        RundeDatumRequest: {
-            /**
-             * Format: naive-date
-             * @description Calendar date of the Runde.
-             */
-            datum: string;
         };
         /**
          * RundePflock
@@ -2957,11 +2890,6 @@ export interface components {
              * @description The Parkour to shoot. It must be active.
              */
             parkourId: string;
-            /**
-             * Format: naive-date
-             * @description Optional calendar date; defaults to the current date.
-             */
-            datum?: string;
         };
         /**
          * RundeZiel

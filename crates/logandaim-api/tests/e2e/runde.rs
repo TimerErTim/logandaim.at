@@ -363,14 +363,6 @@ async fn ac11_runden_und_schuesse_sind_nur_fuer_eigentuemer_aenderbar() {
         StatusCode::FORBIDDEN
     );
     assert_eq!(
-        harness
-            .client
-            .patch_json_auth(&runde_path, json!({"datum":"2026-11-06"}), &fremder)
-            .await
-            .0,
-        StatusCode::FORBIDDEN
-    );
-    assert_eq!(
         harness.client.delete_auth(&runde_path, &fremder).await.0,
         StatusCode::FORBIDDEN
     );
@@ -413,17 +405,6 @@ async fn ac11_runden_und_schuesse_sind_nur_fuer_eigentuemer_aenderbar() {
         "Eigentümer ändert den Schuss: {body}"
     );
     assert_eq!(body["position"]["Distanz"]["meter"], 35);
-    let (status, body) = harness
-        .client
-        .patch_json_auth(&runde_path, json!({"datum":"2026-11-06"}), &eigner)
-        .await;
-    assert_eq!(
-        status,
-        StatusCode::OK,
-        "Eigentümer ändert das Datum: {body}"
-    );
-    assert_eq!(body["datum"], "2026-11-06");
-
     assert_eq!(
         harness.client.delete_auth(&schuss_path, &eigner).await.0,
         StatusCode::OK

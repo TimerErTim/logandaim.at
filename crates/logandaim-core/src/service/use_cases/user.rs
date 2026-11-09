@@ -5,6 +5,7 @@
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
+use tracing::instrument;
 
 use crate::{
     application::ExecutionContext,
@@ -62,6 +63,7 @@ pub struct BenutzerLöschen {
 impl UseCase<()> for BenutzerLöschen {
     type Error = Report<BenutzerLöschenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
         let (benutzer_id, _) = ctx
             .auth()
@@ -226,6 +228,7 @@ pub enum Beförderung {
 impl UseCase<Beförderung> for SystemadministratorBefördern {
     type Error = Report<SystemadministratorBefördernFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Beförderung, Self::Error> {
         let uow = ctx
             .enter()

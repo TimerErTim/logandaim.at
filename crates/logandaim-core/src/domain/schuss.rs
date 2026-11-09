@@ -4,7 +4,7 @@
 //! summary of one Ziel's `Schuss` rows, and those rows belong to `Schuss`. The Runde-wide
 //! total belongs to `Runde`, which owns the ordered Ziel list (SPEC-wertung rule 6, AC-8).
 
-use std::num::{NonZeroU32, NonZeroUsize};
+use std::num::NonZeroUsize;
 
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -103,22 +103,7 @@ impl Erfasser {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Schussdistanz(NonZeroU32);
-
-#[derive(Debug, thiserror::Error)]
-#[error("der Schussabstand muss positiv sein, war aber 0 m")]
-pub struct SchussdistanzFehler;
-
-impl Schussdistanz {
-    pub fn neu(meter: u32) -> Result<Self, SchussdistanzFehler> {
-        NonZeroU32::new(meter).map(Self).ok_or(SchussdistanzFehler)
-    }
-
-    pub fn meter(self) -> u32 {
-        self.0.get()
-    }
-}
+pub use super::common::{Abstand as Schussdistanz, AbstandFehler as SchussdistanzFehler};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Schussposition {
@@ -374,7 +359,7 @@ impl ZielSchüsse {
         &self.schüsse
     }
 
-    pub fn naechster_pfeil(&self) -> NonZeroUsize {
+    pub fn nächster_pfeil(&self) -> NonZeroUsize {
         self.schüsse.last().map_or_else(
             || NonZeroUsize::new(1).expect("one is nonzero"),
             |schuss| {
@@ -384,7 +369,7 @@ impl ZielSchüsse {
         )
     }
 
-    pub fn ohne(&self, schuss_id: SchussId) -> Vec<Schuss> {
+    pub fn ohne_schuss(&self, schuss_id: SchussId) -> Vec<Schuss> {
         self.schüsse
             .iter()
             .filter(|schuss| schuss.id() != schuss_id)
@@ -582,7 +567,7 @@ mod tests {
     #[test_log::test]
     fn pfeil_luecke_wird_beim_loeschen_geschlossen() {
         let menge = mengen(&[(1, Spot), (2, Kill), (3, Body), (4, Miss)]);
-        let verbleibend = menge.ohne(SchussId(Uuid::from_u128(2)));
+        let verbleibend = menge.ohne_schuss(SchussId(Uuid::from_u128(2)));
         assert_eq!(
             verbleibend
                 .iter()
@@ -591,7 +576,7 @@ mod tests {
             [1, 2, 3]
         );
         assert_eq!(verbleibend[1].punkte(), 10);
-        assert_eq!(menge.naechster_pfeil().get(), 5);
+        assert_eq!(menge.nächster_pfeil().get(), 5);
     }
 
     #[test_log::test]

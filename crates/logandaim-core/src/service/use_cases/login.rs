@@ -6,6 +6,7 @@
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
+use tracing::instrument;
 
 use crate::{
     application::ExecutionContext,
@@ -55,6 +56,7 @@ pub struct Anmeldung {
 impl UseCase<SessionAusgestellt> for Anmeldung {
     type Error = Report<AnmeldungFehler>;
 
+    #[instrument(skip_all, fields(email = ?self.email), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SessionAusgestellt, Self::Error> {
         let jetzt = ctx.clock().now();
 

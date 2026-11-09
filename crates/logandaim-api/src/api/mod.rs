@@ -569,7 +569,7 @@ impl LogandaimAppApi {
                             .or_default()
                             .insert(schuss.ziel_id());
                     }
-                    // Newest first: the list a caller opens to find today's Runde.
+                    // Newest first: the list a caller opens to find the latest Runde.
                     runden.sort_by_key(|runde| std::cmp::Reverse(runde.begonnen_am()));
                     let result: Vec<RundeBasic> = runden
                         .into_iter()
@@ -589,18 +589,6 @@ impl LogandaimAppApi {
                 Ok(runden.into_iter().collect())
             })
             .await
-    }
-
-    pub async fn runde_datum_aendern(
-        &self,
-        auth: AuthContext,
-        runde_id: RundeId,
-        anfrage: requests::RundeDatumRequest,
-    ) -> ResultReport<Runde, logandaim_core::service::RundeDatumÄndernFehler> {
-        self.app
-            .execute(auth, anfrage.in_use_case(runde_id))
-            .await
-            .map(Into::into)
     }
 
     pub async fn runde_loeschen(

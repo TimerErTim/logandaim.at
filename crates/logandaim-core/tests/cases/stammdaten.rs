@@ -749,13 +749,7 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
 
     let runde = harness
         .app()
-        .execute(
-            admin,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("AC-7: eine Runde startet");
     let vorher = runde.snapshot().clone();
@@ -824,13 +818,7 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
     // AC-7: a Runde started after the edit captures L2.
     let neue = harness
         .app()
-        .execute(
-            admin,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("AC-7: eine neue Runde startet");
     assert_eq!(neue.snapshot().ziele()[0].tiername().as_str(), "Reh");
@@ -847,13 +835,7 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
 
     let erste = harness
         .app()
-        .execute(
-            admin,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("die erste Runde startet");
     harness
@@ -908,7 +890,6 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
             admin,
             RundeStarten {
                 parkour_id: zweiter_parkour,
-                datum: None,
             },
         )
         .await
@@ -954,13 +935,7 @@ async fn ac10_deaktivieren_verhindert_neue_runden_und_haelt_alte_lesbar() {
 
     let runde = harness
         .app()
-        .execute(
-            admin,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("eine Runde vor der Deaktivierung");
 
@@ -978,13 +953,7 @@ async fn ac10_deaktivieren_verhindert_neue_runden_und_haelt_alte_lesbar() {
 
     let fehler = harness
         .app()
-        .execute(
-            admin,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect_err("AC-10: keine neuen Runden");
     assert!(matches!(
@@ -1035,13 +1004,7 @@ async fn ac11_ein_referenziertes_ziel_wird_archiviert_nicht_geloescht() {
     let (anlage, ziel_id, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
     harness
         .app()
-        .execute(
-            admin,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("eine Runde referenziert das Ziel");
 
@@ -1071,13 +1034,7 @@ async fn ac11_ein_archiviertes_ziel_verweigert_jede_aenderung() {
     let (anlage, ziel_id, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
     harness
         .app()
-        .execute(
-            admin,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("eine Runde referenziert das Ziel");
     harness
@@ -1151,13 +1108,7 @@ async fn ac11_ein_referenzierter_parkour_wird_archiviert() {
     let (anlage, _, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
     harness
         .app()
-        .execute(
-            admin,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("eine Runde referenziert den Parkour");
 
@@ -1243,13 +1194,7 @@ async fn ac13_ein_mitarbeiter_liest_keine_fremde_runde() {
 
     let fremde_runde = harness
         .app()
-        .execute(
-            admin,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(admin, RundeStarten { parkour_id })
         .await
         .expect("die Runde gehört dem Systemadministrator");
 
@@ -1271,13 +1216,7 @@ async fn ac13_der_systemadministrator_handelt_anlagenuebergreifend() {
 
     let runde = harness
         .app()
-        .execute(
-            anna,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(anna, RundeStarten { parkour_id })
         .await
         .expect("Anna startet eine Runde");
 
@@ -1369,13 +1308,7 @@ async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
 
     let runde = harness
         .app()
-        .execute(
-            anna,
-            RundeStarten {
-                parkour_id,
-                datum: None,
-            },
-        )
+        .execute(anna, RundeStarten { parkour_id })
         .await
         .expect("Anna startet eine Runde");
     harness

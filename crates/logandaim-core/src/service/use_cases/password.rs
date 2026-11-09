@@ -6,6 +6,7 @@
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
+use tracing::instrument;
 
 use crate::{
     application::ExecutionContext,
@@ -48,6 +49,7 @@ pub struct PasswortVergessen {
 impl UseCase<()> for PasswortVergessen {
     type Error = Report<PasswortVergessenFehler>;
 
+    #[instrument(skip_all, fields(email = ?self.email), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
         let jetzt = ctx.clock().now();
 
@@ -169,6 +171,7 @@ pub struct PasswortWiederherstellen {
 impl UseCase<()> for PasswortWiederherstellen {
     type Error = Report<PasswortWiederherstellenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
         let jetzt = ctx.clock().now();
 

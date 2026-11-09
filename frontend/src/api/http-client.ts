@@ -388,20 +388,10 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     );
   }
 
-  async rundeStarten(parkourId: string, datum?: string): Promise<Runde> {
+  async rundeStarten(parkourId: string): Promise<Runde> {
     return this.authenticated(() =>
       this.client.POST("/runden", {
-        body: { parkourId, datum },
-        headers: this.authorizationHeaders(),
-      }),
-    );
-  }
-
-  async rundeDatumAendern(id: string, datum: string): Promise<Runde> {
-    return this.authenticated(() =>
-      this.client.PATCH("/runden/{runde_id}", {
-        params: { path: { runde_id: id } },
-        body: { datum },
+        body: { parkourId },
         headers: this.authorizationHeaders(),
       }),
     );

@@ -6,7 +6,7 @@
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::{
     application::ExecutionContext,
@@ -57,6 +57,7 @@ pub enum SchussRegistrierenFehler {
 impl UseCase<Schuss> for SchussRegistrieren {
     type Error = Report<SchussRegistrierenFehler>;
 
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id, ziel_id = ?self.ziel_id), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Schuss, Self::Error> {
         let (benutzer_id, _) = ctx
             .auth()
@@ -112,7 +113,7 @@ impl UseCase<Schuss> for SchussRegistrieren {
                 .collect();
             let ziel_schüsse = ZielSchüsse::für_ziel(self.ziel_id, vorhandene)
                 .expect("all filtered Schüsse belong to this Ziel");
-            let pfeil = ziel_schüsse.naechster_pfeil().get();
+            let pfeil = ziel_schüsse.nächster_pfeil().get();
             let neu = NeuerSchuss::neu(
                 self.runde_id,
                 Erfasser::Benutzer(benutzer_id),
@@ -186,6 +187,7 @@ pub struct SchussÄndern {
 impl UseCase<Schuss> for SchussÄndern {
     type Error = Report<SchussÄndernFehler>;
 
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id, schuss_id = ?self.schuss_id), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Schuss, Self::Error> {
         let benutzer_id = ctx
             .auth()
@@ -267,6 +269,7 @@ pub struct SchussLöschen {
 impl UseCase<()> for SchussLöschen {
     type Error = Report<SchussLöschenFehler>;
 
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id, schuss_id = ?self.schuss_id), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
         let benutzer_id = ctx
             .auth()
@@ -317,7 +320,7 @@ impl UseCase<()> for SchussLöschen {
                 .collect::<Vec<_>>();
             let verbleibend = ZielSchüsse::für_ziel(ziel_id, ziel_schüsse)
                 .expect("the target's shot list contains only that target")
-                .ohne(self.schuss_id);
+                .ohne_schuss(self.schuss_id);
 
             uow.schüsse()
                 .delete(schuss)

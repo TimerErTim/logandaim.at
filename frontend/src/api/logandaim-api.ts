@@ -82,8 +82,7 @@ export interface LogandaimApi {
 
   // ---------------------------------------------------------------- Runden
   rundenAnzeigen(): Promise<RundeBasic[]>;
-  rundeStarten(parkourId: string, datum?: string): Promise<Runde>;
-  rundeDatumAendern(id: string, datum: string): Promise<Runde>;
+  rundeStarten(parkourId: string): Promise<Runde>;
   rundeLoeschen(id: string): Promise<void>;
   rundeAnzeigen(id: string): Promise<Runde>;
   rundeAbschliessen(id: string): Promise<Runde>;

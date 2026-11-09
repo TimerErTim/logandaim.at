@@ -6,9 +6,8 @@
 //! the domain's `ZielSchüsse`/`Runde::wertung`, and defines the shape it answers.
 
 use async_trait::async_trait;
-use chrono::NaiveDate;
 use error_stack::{IntoReport, Report, ResultExt};
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::{
     application::ExecutionContext,
@@ -41,13 +40,13 @@ pub enum RundeStartenFehler {
 #[derive(Debug, Clone)]
 pub struct RundeStarten {
     pub parkour_id: crate::domain::ParkourId,
-    pub datum: Option<NaiveDate>,
 }
 
 #[async_trait]
 impl UseCase<Runde> for RundeStarten {
     type Error = Report<RundeStartenFehler>;
 
+    #[instrument(skip_all, fields(parkour_id = ?self.parkour_id), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
         let benutzer_id = ctx
             .auth()
@@ -87,15 +86,14 @@ impl UseCase<Runde> for RundeStarten {
                 return Err(Report::new(RundeStartenFehler::NichtGefunden));
             };
             let anlage_id = anlage.id();
-            if uow
-                .runden()
-                .find_offen_by_benutzer(benutzer_id)
-                .await
-                .map_err(IntoReport::into_report)
-                .change_context(RundeStartenFehler::AnlageLaden)?
-                .is_some()
-            {
-                return Err(Report::new(RundeStartenFehler::RundeLaeuft));
+            match uow.runden().find_offen_by_benutzer(benutzer_id).await {
+                Ok(_) => {
+                    return Err(Report::new(RundeStartenFehler::RundeLaeuft));
+                }
+                Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {}
+                Err(fehler) => {
+                    return Err(fehler.change_context(RundeStartenFehler::AnlageLaden));
+                }
             }
 
             uow.runden()
@@ -103,13 +101,14 @@ impl UseCase<Runde> for RundeStarten {
                     anlage_id,
                     Erfasser::Benutzer(benutzer_id),
                     snapshot,
-                    self.datum.unwrap_or_else(|| jetzt.date_naive()),
                     jetzt,
                 ))
                 .await
                 .map_err(IntoReport::into_report)
                 .map_err(|fehler| match fehler.current_context() {
-                    RepositoryError::Conflict => Report::new(RundeStartenFehler::RundeLaeuft),
+                    RepositoryError::Conflict => {
+                        fehler.change_context(RundeStartenFehler::RundeLaeuft)
+                    }
                     _ => fehler.change_context(RundeStartenFehler::Starten),
                 })
                 .map(|runde| runde.into_data())
@@ -127,69 +126,8 @@ impl UseCase<Runde> for RundeStarten {
 }
 
 // ---------------------------------------------------------------------------------------
-// RundeDatumÄndern and RundeLöschen
+// RundeLöschen
 // ---------------------------------------------------------------------------------------
-
-#[derive(Debug, thiserror::Error)]
-pub enum RundeDatumÄndernFehler {
-    #[error("für diese Aktion ist eine Anmeldung erforderlich")]
-    NichtAngemeldet,
-    #[error("diese Runde gehört nicht zu diesem Benutzer")]
-    NichtErlaubt,
-    #[error("die Runde wurde nicht gefunden")]
-    NichtGefunden,
-    #[error("die Runde konnte nicht geladen werden")]
-    Laden,
-    #[error("die Runde konnte nicht gespeichert werden")]
-    Speichern,
-}
-
-#[derive(Debug, Clone)]
-pub struct RundeDatumÄndern {
-    pub runde_id: RundeId,
-    pub datum: NaiveDate,
-}
-
-#[async_trait]
-impl UseCase<Runde> for RundeDatumÄndern {
-    type Error = Report<RundeDatumÄndernFehler>;
-
-    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
-        let benutzer_id = ctx
-            .auth()
-            .require_benutzer_id()
-            .change_context(RundeDatumÄndernFehler::NichtAngemeldet)?;
-        let uow = ctx
-            .enter()
-            .await
-            .change_context(RundeDatumÄndernFehler::Laden)?;
-        let ergebnis = async {
-            let mut runde = match uow.runden().find_by_id(self.runde_id).await {
-                Ok(runde) => runde,
-                Err(error) => {
-                    return Err(match error.current_context() {
-                        RepositoryError::NotFound => {
-                            Report::new(RundeDatumÄndernFehler::NichtGefunden)
-                        }
-                        _ => error.change_context(RundeDatumÄndernFehler::Laden),
-                    });
-                }
-            };
-            if !runde.gehört_zu(benutzer_id) {
-                return Err(Report::new(RundeDatumÄndernFehler::NichtErlaubt));
-            }
-            runde.set_data(runde.cloned_data().mit_datum(self.datum));
-            uow.runden()
-                .update(&mut runde)
-                .await
-                .map_err(IntoReport::into_report)
-                .change_context(RundeDatumÄndernFehler::Speichern)?;
-            Ok(runde.into_data())
-        }
-        .await;
-        uow.finish(ergebnis, RundeDatumÄndernFehler::Laden).await
-    }
-}
 
 #[derive(Debug, thiserror::Error)]
 pub enum RundeLöschenFehler {
@@ -214,6 +152,7 @@ pub struct RundeLöschen {
 impl UseCase<()> for RundeLöschen {
     type Error = Report<RundeLöschenFehler>;
 
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
         let benutzer_id = ctx
             .auth()
@@ -290,6 +229,7 @@ pub struct RundeAbschliessen {
 impl UseCase<Runde> for RundeAbschliessen {
     type Error = Report<RundeAbschliessenFehler>;
 
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
         let benutzer_id = ctx
             .auth()

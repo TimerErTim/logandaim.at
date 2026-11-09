@@ -18,9 +18,6 @@ impl UpMigration<libsql::Transaction, libsql::Error> for Migration {
         transaction
             .execute_batch(
                 r#"
-            ALTER TABLE "runden" ADD COLUMN datum TEXT NOT NULL DEFAULT '';
-            UPDATE "runden" SET datum = substr(begonnen_am, 1, 10) WHERE datum = '';
-
             CREATE UNIQUE INDEX "idx_runden_offen_pro_benutzer"
                 ON "runden" (benutzer_id)
                 WHERE zustand = 'InBearbeitung' AND benutzer_id IS NOT NULL;

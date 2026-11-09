@@ -6,6 +6,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use error_stack::{IntoReport, Report, ResultExt};
+use tracing::instrument;
 
 use crate::{
     ThreadSafeError,
@@ -52,6 +53,7 @@ pub struct Erneuerung {
 impl UseCase<SessionAusgestellt> for Erneuerung {
     type Error = Report<ErneuerungFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SessionAusgestellt, Self::Error> {
         let jetzt = ctx.clock().now();
         ctx.throttle()
@@ -193,6 +195,7 @@ pub struct Abmeldung;
 impl UseCase<()> for Abmeldung {
     type Error = Report<AbmeldungFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
         let (_, session_id) = ctx
             .auth()
@@ -267,6 +270,7 @@ pub struct SessionPrüfen {
 impl UseCase<AuthContext> for SessionPrüfen {
     type Error = Report<SessionPrüfenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<AuthContext, Self::Error> {
         let jetzt = ctx.clock().now();
         let konfiguration = ctx.identity_provider_conf();

@@ -103,18 +103,13 @@ export function useStammdatenMutations() {
     ),
     /** Starting a Runde changes the caller's own list and consumes the public one. */
     rundeStarten: useMutation({
-      mutationFn: (variables: { parkourId: string; datum?: string }) =>
-        api.rundeStarten(variables.parkourId, variables.datum),
+      mutationFn: (variables: { parkourId: string }) =>
+        api.rundeStarten(variables.parkourId),
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: logandaimKeys.runden.all(),
         });
       },
-    }),
-    rundeDatumAendern: useMutation({
-      mutationFn: (variables: { id: string; datum: string }) =>
-        api.rundeDatumAendern(variables.id, variables.datum),
-      onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
     }),
     rundeLoeschen: useMutation({
       mutationFn: (id: string) => api.rundeLoeschen(id),

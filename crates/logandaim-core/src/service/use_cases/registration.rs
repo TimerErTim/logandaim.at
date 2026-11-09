@@ -4,6 +4,7 @@
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
+use tracing::instrument;
 
 use crate::{
     application::ExecutionContext,
@@ -51,6 +52,7 @@ pub struct RegistrierungStarten {
 impl UseCase<()> for RegistrierungStarten {
     type Error = Report<RegistrierungStartenFehler>;
 
+    #[instrument(skip_all, fields(email = ?self.email), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
         let jetzt = ctx.clock().now();
 
@@ -181,6 +183,7 @@ pub struct RegistrierungAbschließen {
 impl UseCase<SessionAusgestellt> for RegistrierungAbschließen {
     type Error = Report<RegistrierungAbschliessenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<SessionAusgestellt, Self::Error> {
         let jetzt = ctx.clock().now();
 

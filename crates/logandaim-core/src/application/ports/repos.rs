@@ -77,10 +77,11 @@ pub trait RundeRepository: Send + Sync {
         benutzer_id: BenutzerId,
     ) -> RepositoryResult<Vec<Versioned<Runde>>>;
 
+    /// Find the user's open Runde; returns `RepositoryError::NotFound` when none exists.
     async fn find_offen_by_benutzer(
         &self,
         benutzer_id: BenutzerId,
-    ) -> RepositoryResult<Option<Versioned<Runde>>>;
+    ) -> RepositoryResult<Versioned<Runde>>;
 
     async fn update(&self, runde: &mut Versioned<Runde>) -> RepositoryResult<()>;
 

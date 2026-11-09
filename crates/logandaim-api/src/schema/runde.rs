@@ -4,7 +4,7 @@
 //! (SPEC-wertung rule 6). The snapshot fields are copied verbatim from what was captured,
 //! never re-read from master data (AC-7, AC-9).
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use logandaim_core::domain;
@@ -89,8 +89,6 @@ pub struct Runde {
     pub parkour_name: String,
     /// Who the Runde belongs to.
     pub erfasst_von: Erfasser,
-    /// Calendar date of the Runde.
-    pub datum: NaiveDate,
     /// Whether it is still open or already closed.
     pub zustand: RundeZustand,
     /// Start of the Runde.
@@ -127,8 +125,6 @@ pub struct RundeBasic {
     pub parkour_id: Uuid,
     /// The Parkour' name as captured at the start.
     pub parkour_name: String,
-    /// Calendar date of the Runde.
-    pub datum: NaiveDate,
     /// Number of Ziele in the captured route.
     pub anzahl_ziele: usize,
     /// Number of Ziele with a recorded shot.
@@ -180,7 +176,6 @@ impl Runde {
         let gesamt = runde.wertung(schüsse);
         let mut gerendert: Self = runde.into();
         gerendert.ziele = ziele;
-        gerendert.ziele_mit_wertung = gesamt.ziele_mit_wertung();
         gerendert.gesamt_erster_treffer = gesamt.erster_treffer();
         gerendert.gesamt_mehrschuss = gesamt.mehrschuss();
         gerendert.ziele_mit_wertung = gesamt.ziele_mit_wertung();
@@ -227,7 +222,6 @@ impl From<domain::Runde> for Runde {
             anlage_id: runde.anlage_id().0,
             parkour_id: runde.parkour_id().0,
             parkour_name: runde.snapshot().parkour_name().to_string(),
-            datum: runde.datum(),
             erfasst_von: runde.erfasst_von().into(),
             zustand: zustand(&runde),
             begonnen_am: runde.begonnen_am(),
@@ -256,7 +250,6 @@ impl From<domain::Runde> for RundeBasic {
             anlage_id: runde.anlage_id().0,
             parkour_id: runde.parkour_id().0,
             parkour_name: runde.snapshot().parkour_name().to_string(),
-            datum: runde.datum(),
             anzahl_ziele: runde.snapshot().ziele().len(),
             anzahl_erfasste_ziele: 0,
             zustand: zustand(&runde),

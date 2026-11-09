@@ -7,8 +7,6 @@
 
 use std::sync::Arc;
 
-use chrono::NaiveDate;
-
 use async_lock::Mutex;
 use async_trait::async_trait;
 use libsql::{Row, Transaction};
@@ -138,7 +136,7 @@ fn snapshot_from_json(json: &str) -> RepositoryResult<ParkourSnapshot> {
 // ---------------------------------------------------------------------------------------
 
 const SELECT: &str = r#"SELECT id, anlage_id, parkour_id, snapshot, benutzer_id, anonymisiert_am,
-            zustand, begonnen_am, abgeschlossen_am, datum, _version
+            zustand, begonnen_am, abgeschlossen_am, _version
        FROM "runden""#;
 
 fn zuordnung_aus_zeile(
@@ -164,19 +162,17 @@ fn runde_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Runde>> {
     let anonymisiert_am: Option<String> = row.get(5).contextualize(RepositoryError::Data)?;
     let begonnen_am_raw: String = row.get(7).contextualize(RepositoryError::Data)?;
     let abgeschlossen_am: Option<String> = row.get(8).contextualize(RepositoryError::Data)?;
-    let datum: String = row.get(9).contextualize(RepositoryError::Data)?;
 
     let runde = Runde::from_parts(
         RundeId(parse_uuid(&id_raw)?),
         AnlageId(parse_uuid(&anlage_id_raw)?),
         zuordnung_aus_zeile(benutzer_id, anonymisiert_am)?,
         snapshot_from_json(&snapshot_raw)?,
-        NaiveDate::parse_from_str(&datum, "%Y-%m-%d").contextualize(RepositoryError::Data)?,
         parse_datetime(&begonnen_am_raw)?,
         abgeschlossen_am.map(|am| parse_datetime(&am)).transpose()?,
     );
 
-    Ok(Versioned::new(parse_version(row, 10)?, runde))
+    Ok(Versioned::new(parse_version(row, 9)?, runde))
 }
 
 // ---------------------------------------------------------------------------------------
@@ -240,8 +236,8 @@ impl SQLiteRundeRepository {
         update_versioned(
             tx,
             r#"UPDATE "runden" SET snapshot = ?2, benutzer_id = ?3, anonymisiert_am = ?4,
-                   zustand = ?5, abgeschlossen_am = ?6, datum = ?7, _version = ?8 + 1
-               WHERE id = ?1 AND _version = ?8"#,
+                   zustand = ?5, abgeschlossen_am = ?6, _version = ?7 + 1
+               WHERE id = ?1 AND _version = ?7"#,
             (
                 runde.id().0.to_string(),
                 snapshot,
@@ -249,7 +245,6 @@ impl SQLiteRundeRepository {
                 anonymisiert_am,
                 runde.zustand(),
                 runde.abgeschlossen_am().map(format_datetime),
-                runde.datum().format("%Y-%m-%d").to_string(),
                 erwartete_version,
             ),
             u64::try_from(erwartete_version).contextualize(RepositoryError::Data)?,
@@ -275,8 +270,8 @@ impl RundeRepository for SQLiteRundeRepository {
         tx.execute(
             r#"INSERT INTO "runden" (id, anlage_id, parkour_id, snapshot, benutzer_id,
                                      anonymisiert_am, zustand, begonnen_am, abgeschlossen_am,
-                                     datum, _version)
-               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, ?9, 0)"#,
+                                     _version)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, 0)"#,
             (
                 id.0.to_string(),
                 domain.anlage_id().0.to_string(),
@@ -286,7 +281,6 @@ impl RundeRepository for SQLiteRundeRepository {
                 anonymisiert_am,
                 domain.zustand(),
                 format_datetime(domain.begonnen_am()),
-                domain.datum().format("%Y-%m-%d").to_string(),
             ),
         )
         .await
@@ -346,7 +340,7 @@ impl RundeRepository for SQLiteRundeRepository {
     async fn find_offen_by_benutzer(
         &self,
         benutzer_id: BenutzerId,
-    ) -> RepositoryResult<Option<Versioned<Runde>>> {
+    ) -> RepositoryResult<Versioned<Runde>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
         let mut rows = tx
@@ -358,11 +352,14 @@ impl RundeRepository for SQLiteRundeRepository {
             )
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;
-        rows.next()
+        let Some(row) = rows
+            .next()
             .await
             .contextualize_with(libsql_error_to_persistence_error)?
-            .map(|row| runde_aus_zeile(&row))
-            .transpose()
+        else {
+            return Err(RepositoryError::NotFound.into());
+        };
+        runde_aus_zeile(&row)
     }
 
     async fn update(&self, runde: &mut Versioned<Runde>) -> RepositoryResult<()> {

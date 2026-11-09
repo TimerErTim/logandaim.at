@@ -9,7 +9,7 @@
 //! timestamp lives in the `Abgeschlossen` marker, so "when was it closed?" is not an
 //! `Option` a reader must interpret.
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 
 use super::anlage::{AnlageId, ParkourId, ParkourSnapshot, ZielId};
 use super::konto::BenutzerId;
@@ -66,7 +66,6 @@ pub struct NeueRunde {
     parkour_id: ParkourId,
     erfasst_von: Erfasser,
     snapshot: ParkourSnapshot,
-    datum: NaiveDate,
     begonnen_am: DateTime<Utc>,
 }
 
@@ -75,7 +74,6 @@ impl NeueRunde {
         anlage_id: AnlageId,
         erfasst_von: Erfasser,
         snapshot: ParkourSnapshot,
-        datum: NaiveDate,
         begonnen_am: DateTime<Utc>,
     ) -> Self {
         Self {
@@ -83,7 +81,6 @@ impl NeueRunde {
             parkour_id: snapshot.parkour_id(),
             erfasst_von,
             snapshot,
-            datum,
             begonnen_am,
         }
     }
@@ -104,10 +101,6 @@ impl NeueRunde {
         &self.snapshot
     }
 
-    pub fn datum(&self) -> NaiveDate {
-        self.datum
-    }
-
     pub fn begonnen_am(&self) -> DateTime<Utc> {
         self.begonnen_am
     }
@@ -121,7 +114,6 @@ pub struct RundeIn<S> {
     parkour_id: ParkourId,
     erfasst_von: Erfasser,
     snapshot: ParkourSnapshot,
-    datum: NaiveDate,
     begonnen_am: DateTime<Utc>,
     state: S,
 }
@@ -155,10 +147,6 @@ impl<S> RundeIn<S> {
 
     pub fn snapshot(&self) -> &ParkourSnapshot {
         &self.snapshot
-    }
-
-    pub fn datum(&self) -> NaiveDate {
-        self.datum
     }
 
     pub fn begonnen_am(&self) -> DateTime<Utc> {
@@ -239,7 +227,6 @@ impl RundeInBearbeitung {
             parkour_id: neu.parkour_id,
             erfasst_von: neu.erfasst_von,
             snapshot: neu.snapshot,
-            datum: neu.datum,
             begonnen_am: neu.begonnen_am,
             state: InBearbeitung,
         }
@@ -251,7 +238,6 @@ impl RundeInBearbeitung {
         anlage_id: AnlageId,
         erfasst_von: Erfasser,
         snapshot: ParkourSnapshot,
-        datum: NaiveDate,
         begonnen_am: DateTime<Utc>,
     ) -> Self {
         Self {
@@ -260,7 +246,6 @@ impl RundeInBearbeitung {
             parkour_id: snapshot.parkour_id(),
             erfasst_von,
             snapshot,
-            datum,
             begonnen_am,
             state: InBearbeitung,
         }
@@ -274,7 +259,6 @@ impl RundeInBearbeitung {
             parkour_id: self.parkour_id,
             erfasst_von: self.erfasst_von,
             snapshot: self.snapshot,
-            datum: self.datum,
             begonnen_am: self.begonnen_am,
             state: Abgeschlossen {
                 abgeschlossen_am: am,
@@ -291,7 +275,6 @@ impl RundeAbgeschlossen {
         anlage_id: AnlageId,
         erfasst_von: Erfasser,
         snapshot: ParkourSnapshot,
-        datum: NaiveDate,
         begonnen_am: DateTime<Utc>,
         abgeschlossen_am: DateTime<Utc>,
     ) -> Self {
@@ -301,7 +284,6 @@ impl RundeAbgeschlossen {
             parkour_id: snapshot.parkour_id(),
             erfasst_von,
             snapshot,
-            datum,
             begonnen_am,
             state: Abgeschlossen { abgeschlossen_am },
         }
@@ -335,7 +317,6 @@ impl Runde {
         anlage_id: AnlageId,
         erfasst_von: Erfasser,
         snapshot: ParkourSnapshot,
-        datum: NaiveDate,
         begonnen_am: DateTime<Utc>,
         abgeschlossen_am: Option<DateTime<Utc>>,
     ) -> Self {
@@ -345,7 +326,6 @@ impl Runde {
                 anlage_id,
                 erfasst_von,
                 snapshot,
-                datum,
                 begonnen_am,
             )),
             Some(am) => Self::Abgeschlossen(RundeAbgeschlossen::from_parts(
@@ -353,7 +333,6 @@ impl Runde {
                 anlage_id,
                 erfasst_von,
                 snapshot,
-                datum,
                 begonnen_am,
                 am,
             )),
@@ -401,21 +380,6 @@ impl Runde {
             Self::InBearbeitung(runde) => runde.state.as_str(),
             Self::Abgeschlossen(runde) => runde.state.as_str(),
         }
-    }
-
-    pub fn datum(&self) -> NaiveDate {
-        match self {
-            Self::InBearbeitung(runde) => runde.datum(),
-            Self::Abgeschlossen(runde) => runde.datum(),
-        }
-    }
-
-    pub fn mit_datum(mut self, datum: NaiveDate) -> Self {
-        match &mut self {
-            Self::InBearbeitung(runde) => runde.datum = datum,
-            Self::Abgeschlossen(runde) => runde.datum = datum,
-        }
-        self
     }
 
     pub fn begonnen_am(&self) -> DateTime<Utc> {
@@ -559,7 +523,6 @@ mod tests {
                 AnlageId(Uuid::nil()),
                 Erfasser::Benutzer(BenutzerId(Uuid::nil())),
                 snapshot(ziele),
-                jetzt().date_naive(),
                 jetzt(),
             ),
         ))
@@ -702,7 +665,6 @@ mod tests {
             offen.anlage_id(),
             offen.erfasst_von(),
             offen.snapshot().clone(),
-            offen.datum(),
             offen.begonnen_am(),
             offen.abgeschlossen_am(),
         );
@@ -717,7 +679,6 @@ mod tests {
             geschlossen.anlage_id(),
             geschlossen.erfasst_von(),
             geschlossen.snapshot().clone(),
-            geschlossen.datum(),
             geschlossen.begonnen_am(),
             geschlossen.abgeschlossen_am(),
         );
@@ -733,7 +694,6 @@ mod tests {
             offen.anlage_id(),
             offen.erfasst_von(),
             offen.snapshot().clone(),
-            offen.datum(),
             offen.begonnen_am(),
             Some(jetzt()),
         );

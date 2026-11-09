@@ -296,13 +296,13 @@ impl RundeRepository for FakeRundeRepository {
     async fn find_offen_by_benutzer(
         &self,
         benutzer_id: BenutzerId,
-    ) -> RepositoryResult<Option<Versioned<Runde>>> {
-        Ok(self
-            .datastore
+    ) -> RepositoryResult<Versioned<Runde>> {
+        self.datastore
             .runden()
             .values()
             .find(|runde| runde.gehört_zu(benutzer_id) && runde.ist_in_bearbeitung())
-            .cloned())
+            .cloned()
+            .ok_or_else(|| Report::new(RepositoryError::NotFound))
     }
 
     async fn update(&self, runde: &mut Versioned<Runde>) -> RepositoryResult<()> {

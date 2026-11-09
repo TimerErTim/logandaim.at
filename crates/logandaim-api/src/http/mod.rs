@@ -47,8 +47,8 @@ use crate::{
             AnmeldungRequest, BenutzerLöschungRequest, ParkourErstellungRequest,
             ParkourSetupRequest, ParkourUmbenennenRequest, PasswortVergessenRequest,
             PasswortWiederherstellenRequest, RegistrierungAbschlussRequest,
-            RegistrierungStartRequest, RundeDatumRequest, RundeStartenRequest,
-            SchussErstellungRequest, SchussÄnderungRequest, ZielRequest,
+            RegistrierungStartRequest, RundeStartenRequest, SchussErstellungRequest,
+            SchussÄnderungRequest, ZielRequest,
         },
     },
     schema::{
@@ -663,26 +663,6 @@ impl LogandaimApiSpec {
             .unwrap_or(AuthContext::Anonymous);
         let ergebnis = self.app_api.runde_anzeigen(auth, RundeId(runde_id.0)).await;
         ergebnis.into()
-    }
-
-    /// Change the calendar date of one of the caller's Runden.
-    ///
-    /// The immutable Parkour snapshot and its shots remain unchanged.
-    #[oai(path = "/runden/:runde_id", method = "patch", tag = "ApiTag::Runden")]
-    async fn runde_datum_aendern(
-        &self,
-        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
-        runde_id: Path<Uuid>,
-        body: Json<RundeDatumRequest>,
-    ) -> TypicalJsonResponse<Runde> {
-        let auth = self
-            .auth_context(authorization.0.as_deref())
-            .await
-            .unwrap_or(AuthContext::Anonymous);
-        self.app_api
-            .runde_datum_aendern(auth, RundeId(runde_id.0), body.0)
-            .await
-            .into()
     }
 
     /// Delete the caller's Runde and every Schuss that belongs to it.
