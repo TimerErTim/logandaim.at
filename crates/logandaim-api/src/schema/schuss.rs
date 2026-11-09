@@ -96,6 +96,53 @@ impl From<domain::Erfasser> for Erfasser {
 
 /// One logged arrow.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Union))]
+#[cfg_attr(feature = "openapi", oai(externally_tagged))]
+#[derive(serde::Serialize, serde::Deserialize)]
+pub enum Schussposition {
+    Distanz(DistanzPosition),
+    Pflock(PflockPosition),
+}
+
+/// One logged position expressed as a whole-metre distance.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DistanzPosition {
+    /// Positive whole metres from the Ziel.
+    pub meter: u32,
+}
+
+/// One logged position expressed as a configured Pflock colour.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PflockPosition {
+    /// The configured Pflock's colour.
+    pub farbe: crate::schema::Farbe,
+}
+
+impl From<domain::Schussposition> for Schussposition {
+    fn from(position: domain::Schussposition) -> Self {
+        match position {
+            domain::Schussposition::Distanz(distanz) => Self::Distanz(DistanzPosition {
+                meter: distanz.meter(),
+            }),
+            domain::Schussposition::Pflock(farbe) => Self::Pflock(PflockPosition {
+                farbe: farbe.into(),
+            }),
+        }
+    }
+}
+
+/// One logged arrow.
+///
+/// Its position is either a whole-metre distance or a configured Pflock colour.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -113,6 +160,7 @@ pub struct Schuss {
     pub pfeil: usize,
     /// Where on the Ziel it landed.
     pub wertungszone: Wertungszone,
+    pub position: Option<Schussposition>,
 }
 
 /// The fold of every Schuss at one Ziel: both Wertungen plus the first-arrow hit.
@@ -141,6 +189,7 @@ impl From<domain::Schuss> for Schuss {
             erfasser: schuss.erfasser().into(),
             pfeil: schuss.pfeil().get(),
             wertungszone: schuss.wertungszone().into(),
+            position: schuss.position().map(Into::into),
         }
     }
 }

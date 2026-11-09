@@ -537,6 +537,7 @@ mod tests {
                 ZielId(Uuid::from_u128(ziel)),
                 pfeil,
                 zone,
+                None,
             )
             .unwrap(),
         )
@@ -559,6 +560,7 @@ mod tests {
                     ZielId(Uuid::from_u128(11)),
                     2,
                     Wertungszone::Spot,
+                    None,
                 )
                 .unwrap(),
             ),
@@ -567,6 +569,21 @@ mod tests {
         assert_eq!(wertung.erster_treffer(), 18 + 14);
         assert_eq!(wertung.mehrschuss(), 38 + 14);
         assert_eq!(wertung.ziele_mit_wertung(), 2);
+    }
+
+    #[test_log::test]
+    fn ac15_zielwertungen_zeigen_leerzustand_und_fortschritt_aus_schuessen() {
+        let runde = runde(&[(10, "Keiler"), (11, "Reh")]);
+        let schüsse = vec![schuss(10, 1, Wertungszone::Kill)];
+        let ziel_wertungen = runde.ziel_wertungen(schüsse.clone());
+        let Some(erster) = ziel_wertungen[0] else {
+            panic!("logged Ziel has a result");
+        };
+        assert_eq!(erster.erster_treffer(), 18);
+        assert_eq!(erster.mehrschuss(), 18);
+        assert!(ziel_wertungen[1].is_none(), "uncaptured Ziel has no result");
+        let wertung = runde.wertung(schüsse);
+        assert_eq!(wertung.ziele_mit_wertung(), 1);
     }
 
     #[test_log::test]
@@ -589,6 +606,7 @@ mod tests {
                 ZielId(Uuid::from_u128(10)),
                 1,
                 Wertungszone::Spot,
+                None,
             )
             .unwrap(),
         );

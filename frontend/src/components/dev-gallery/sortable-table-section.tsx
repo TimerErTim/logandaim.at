@@ -334,6 +334,35 @@ function CheckpointSliderDemo({
   );
 }
 
+/** A snapped scale for selecting one named mark at a time. */
+function SnappingCheckpointSliderDemo() {
+  const [stake, setStake] = useState(1);
+  const stakes: Checkpoint[] = [
+    { id: "s1", label: "Nah", wert: 0, farbe: "var(--border-strong)" },
+    { id: "s2", label: "Mitte", wert: 1, farbe: "var(--color-primary)" },
+    { id: "s3", label: "Fern", wert: 2, farbe: "var(--semantic-warning)" },
+  ];
+
+  return (
+    <div className="w-full max-w-md space-y-2">
+      <p className="text-xs font-medium text-secondary">Einrastende Auswahl</p>
+      <CheckpointSlider
+        checkpoints={stakes}
+        value={stake}
+        onValueChange={setStake}
+        min={0}
+        max={2}
+        step={1}
+        label="Marke"
+        einheit="Marken"
+      />
+      <p className="text-xs text-secondary tabular-nums">
+        {stakes[stake]?.label ?? "Nah"}
+      </p>
+    </div>
+  );
+}
+
 /**
  * The slider on its own, in the states the table does not show. A scale with only
  * one checkpoint must still render, so the empty-checkpoint case is here.
@@ -347,6 +376,7 @@ export function CheckpointSliderSection() {
       description="Ein kontinuierlicher Wert, dessen Bahn in farbige Bänder geteilt ist. Der Griff rastet nie ein; die benachbarten Marken stehen in der Legende und werden vom Griff angesagt."
     >
       <CheckpointSliderDemo caption="Vier Marken" />
+      <SnappingCheckpointSliderDemo />
       <CheckpointSliderDemo
         caption="Eine Marke (Legende bleibt, keine Bänder)"
         checkpoints={[CHECKPOINTS[1] as Checkpoint]}

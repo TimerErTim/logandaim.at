@@ -13,7 +13,6 @@ import {
 } from "@/api/hooks";
 import type { Runde } from "@/api/logandaim-api";
 import { Wertungszone } from "@/api/logandaim-api";
-import { Erfolgsmeldung } from "@/components/feedback/erfolgsmeldung";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
 import { PflockMarker } from "@/components/stammdaten/pflock-swatch";
@@ -127,7 +126,8 @@ function RundeSkeleton() {
 }
 
 function RundeInhalt({ runde }: { runde: Runde }) {
-  const { rundeAbschliessen, schussRegistrieren } = useStammdatenMutations();
+  const { rundeAbschliessen, schussRegistrieren, rundeLoeschen } =
+    useStammdatenMutations();
   const schussMeldung = useErfolgsmeldung();
   const abschlussMeldung = useErfolgsmeldung();
   const [abschliessenOffen, setAbschliessenOffen] = useState(false);
@@ -153,7 +153,7 @@ function RundeInhalt({ runde }: { runde: Runde }) {
               </Badge>
               {offen ? null : <StampMark>Abgeschlossen</StampMark>}
               <SheetNumber>
-                Begonnen {new Date(runde.begonnenAm).toLocaleString("de-AT")}
+                {new Date(runde.begonnenAm).toLocaleDateString("de-AT")}
               </SheetNumber>
             </>
           }
@@ -257,8 +257,6 @@ function RundeInhalt({ runde }: { runde: Runde }) {
               })}
             </Alert>
           ) : null}
-          <Erfolgsmeldung meldung={schussMeldung.meldung} />
-
           {zieleGesamt === 0 ? (
             <p className="text-sm text-secondary">
               Diese Runde hat keine Ziele.
@@ -271,15 +269,15 @@ function RundeInhalt({ runde }: { runde: Runde }) {
                   reihenfolge={index + 1}
                   offen={offen}
                   ausstehend={schussRegistrieren.isPending}
-                  onErfassen={(wertungszone, pfeil) => {
+                  onErfassen={(wertungszone) => {
                     schussMeldung.verwerfen();
                     schussRegistrieren.mutate(
                       {
                         rundeId: runde.id,
                         schuss: {
                           zielId: ziel.zielId,
-                          pfeil,
                           wertungszone,
+                          position: null,
                         },
                       },
                       {
@@ -298,9 +296,7 @@ function RundeInhalt({ runde }: { runde: Runde }) {
       </div>
 
       <div className="sticky bottom-0 z-20 border-t border-subtle bg-surface">
-        <div className="px-6">
-          <Erfolgsmeldung meldung={abschlussMeldung.meldung} className="mt-3" />
-        </div>
+        <div className="px-6"></div>
         <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-3">
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
             <span className="text-[10px] font-semibold tracking-[0.09em] text-secondary uppercase">
@@ -327,6 +323,16 @@ function RundeInhalt({ runde }: { runde: Runde }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="destructive"
+              onClick={() =>
+                rundeLoeschen.mutate(runde.id, {
+                  onSuccess: () => window.location.assign(paths.runden),
+                })
+              }
+            >
+              Runde löschen
+            </Button>
             {offen ? (
               <Button
                 variant="destructive"
@@ -417,7 +423,6 @@ function Zielabschnitt({
           {String(reihenfolge).padStart(2, "0")}
         </SheetNumber>
         <h3 className="text-sm font-semibold text-ink">{ziel.tiername}</h3>
-        <Badge>Ziel Nr. {ziel.zielnummer}</Badge>
         <SheetNumber>{ziel.zielId.slice(0, 8)}</SheetNumber>
       </div>
 

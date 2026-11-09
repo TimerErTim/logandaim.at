@@ -9,8 +9,8 @@ use logandaim_core::{
     ResultReport,
     application::uow::Versioned,
     domain::{
-        Anlage, AnlageAktiv, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId,
-        Runde, RundeId, RundeInBearbeitung, Schuss, SchussId, ZielId,
+        Anlage, AnlageAktiv, AnlageId, EmailAdresse, Erfasser, NeueAnlage, NeueRunde, NeuerSchuss,
+        ParkourId, Runde, RundeId, RundeInBearbeitung, Schuss, SchussId, ZielId,
         konto::{
             Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
             NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
@@ -258,9 +258,17 @@ impl FakeRundeRepository {
 #[async_trait]
 impl RundeRepository for FakeRundeRepository {
     async fn create(&self, runde: NeueRunde) -> RepositoryResult<Versioned<Runde>> {
+        let mut runden = self.datastore.runden();
+        if let Erfasser::Benutzer(benutzer_id) = runde.erfasst_von()
+            && runden
+                .values()
+                .any(|bestehend| bestehend.gehört_zu(benutzer_id) && bestehend.ist_in_bearbeitung())
+        {
+            return Err(Report::new(RepositoryError::Conflict));
+        }
         let id = RundeId(Uuid::new_v4());
         let erstellt = Versioned::init(Runde::InBearbeitung(RundeInBearbeitung::neu(id, runde)));
-        self.datastore.runden().insert(id, erstellt.clone());
+        runden.insert(id, erstellt.clone());
         Ok(erstellt)
     }
 
@@ -283,6 +291,18 @@ impl RundeRepository for FakeRundeRepository {
             .filter(|runde| runde.gehört_zu(benutzer_id))
             .cloned()
             .collect())
+    }
+
+    async fn find_offen_by_benutzer(
+        &self,
+        benutzer_id: BenutzerId,
+    ) -> RepositoryResult<Versioned<Runde>> {
+        self.datastore
+            .runden()
+            .values()
+            .find(|runde| runde.gehört_zu(benutzer_id) && runde.ist_in_bearbeitung())
+            .cloned()
+            .ok_or_else(|| Report::new(RepositoryError::NotFound))
     }
 
     async fn update(&self, runde: &mut Versioned<Runde>) -> RepositoryResult<()> {

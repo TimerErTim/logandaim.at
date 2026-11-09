@@ -145,6 +145,10 @@ impl ParkourSnapshot {
     pub fn enthält_ziel(&self, ziel_id: ZielId) -> bool {
         self.ziel(ziel_id).is_some()
     }
+
+    pub fn hat_pflock(&self, farbe: Farbe) -> bool {
+        self.pflöcke.iter().any(|pflock| pflock.farbe() == farbe)
+    }
 }
 
 /// Capture one Parkour's current setup, resolving every Pflock id to its colour so the
@@ -287,6 +291,8 @@ mod tests {
         let snapshot = snapshot(&anlage.into(), parkour_id).unwrap();
         assert!(snapshot.enthält_ziel(ziel_id(10)));
         assert!(!snapshot.enthält_ziel(ziel_id(11)));
+        assert!(snapshot.hat_pflock(Farbe::neu("#c0392b").unwrap()));
+        assert!(!snapshot.hat_pflock(Farbe::neu("#ffffff").unwrap()));
     }
 
     #[test_log::test]

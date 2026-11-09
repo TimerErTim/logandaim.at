@@ -18,6 +18,7 @@ import type {
   Runde,
   RundeBasic,
   Schuss,
+  SchussAenderungInput,
   SchussErstellungInput,
   ZielInput,
 } from "./logandaim-api";
@@ -396,6 +397,15 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     );
   }
 
+  async rundeLoeschen(id: string): Promise<void> {
+    await this.authenticated(() =>
+      this.client.DELETE("/runden/{runde_id}", {
+        params: { path: { runde_id: id } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
   async rundeAnzeigen(id: string): Promise<Runde> {
     return this.authenticated(() =>
       this.client.GET("/runden/{runde_id}", {
@@ -419,9 +429,32 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     schuss: SchussErstellungInput,
   ): Promise<Schuss> {
     return this.authenticated(() =>
-      this.client.POST("/runden/{runde_id}/schüsse", {
+      this.client.POST("/runden/{runde_id}/schuesse", {
         params: { path: { runde_id: rundeId } },
-        body: schuss,
+        body: { ...schuss, position: schuss.position ?? undefined },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async schussAendern(
+    rundeId: string,
+    schussId: string,
+    schuss: SchussAenderungInput,
+  ): Promise<Schuss> {
+    return this.authenticated(() =>
+      this.client.PUT("/runden/{runde_id}/schuesse/{schuss_id}", {
+        params: { path: { runde_id: rundeId, schuss_id: schussId } },
+        body: { ...schuss, position: schuss.position ?? undefined },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+  }
+
+  async schussLoeschen(rundeId: string, schussId: string): Promise<void> {
+    await this.authenticated(() =>
+      this.client.DELETE("/runden/{runde_id}/schuesse/{schuss_id}", {
+        params: { path: { runde_id: rundeId, schuss_id: schussId } },
         headers: this.authorizationHeaders(),
       }),
     );

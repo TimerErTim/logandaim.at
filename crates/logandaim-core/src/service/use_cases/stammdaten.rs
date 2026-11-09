@@ -11,7 +11,7 @@
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
 use std::num::NonZeroU32;
-use tracing::info;
+use tracing::{info, instrument};
 use uuid::Uuid;
 
 use crate::{
@@ -88,6 +88,7 @@ pub struct AnlageErstellen {
 impl UseCase<Anlage> for AnlageErstellen {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -139,6 +140,7 @@ pub struct AnlageBeschreibendeDatenÄndern {
 impl UseCase<Anlage> for AnlageBeschreibendeDatenÄndern {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -193,6 +195,7 @@ pub struct AnlageDeaktivieren {
 impl UseCase<Anlage> for AnlageDeaktivieren {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let jetzt = ctx.clock().now();
         let uow = ctx
@@ -256,6 +259,7 @@ pub struct AnlageVerwaltungGewähren {
 impl UseCase<Anlage> for AnlageVerwaltungGewähren {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -323,6 +327,7 @@ pub struct AnlageVerwaltungÄndern {
 impl UseCase<Anlage> for AnlageVerwaltungÄndern {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -380,6 +385,7 @@ pub struct AnlageVerwaltungEntziehen {
 impl UseCase<Anlage> for AnlageVerwaltungEntziehen {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -441,6 +447,7 @@ pub struct ZielHinzufügen {
 impl UseCase<Anlage> for ZielHinzufügen {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -500,6 +507,7 @@ pub struct ZielÄndern {
 impl UseCase<Anlage> for ZielÄndern {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -562,6 +570,7 @@ pub struct ZielErsetzen {
 impl UseCase<Anlage> for ZielErsetzen {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -620,6 +629,7 @@ pub struct ZielEntfernen {
 impl UseCase<Anlage> for ZielEntfernen {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -697,6 +707,7 @@ pub struct ParkourHinzufügen {
 impl UseCase<Anlage> for ParkourHinzufügen {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -760,6 +771,7 @@ pub struct ParkourSetupÄndern {
 impl UseCase<Anlage> for ParkourSetupÄndern {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -818,6 +830,7 @@ pub struct ParkourUmbenennen {
 impl UseCase<Anlage> for ParkourUmbenennen {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()
@@ -875,6 +888,7 @@ pub struct ParkourEntfernen {
 impl UseCase<Anlage> for ParkourEntfernen {
     type Error = Report<StammdatenFehler>;
 
+    #[instrument(skip_all, err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Anlage, Self::Error> {
         let uow = ctx
             .enter()

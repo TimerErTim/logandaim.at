@@ -26,7 +26,7 @@ services:
       LOGANDAIM_TOKEN_ISSUER: ${API_DOMAIN:?Set API_DOMAIN in .env}
       LOGANDAIM_TOKEN_AUDIENCE: logandaim-api
       LOGANDAIM_FRONTEND_BASIS_URL: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
-      LOGANDAIM_CORS_ORIGIN: ${FRONTEND_ORIGIN:?Set FRONTEND_ORIGIN in .env}
+      LOGANDAIM_CORS_ORIGIN: ${API_DOMAIN:?Set API_DOMAIN in .env}
       LOGANDAIM_SUPERUSER_EMAIL: ${SUPERUSER_EMAIL:-}
       # STARTTLS to the public FQDN, the only name on the certificate. A network alias keeps
       # the hop inside the bridge.

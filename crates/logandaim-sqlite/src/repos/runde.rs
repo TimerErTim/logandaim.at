@@ -337,6 +337,31 @@ impl RundeRepository for SQLiteRundeRepository {
         Ok(runden)
     }
 
+    async fn find_offen_by_benutzer(
+        &self,
+        benutzer_id: BenutzerId,
+    ) -> RepositoryResult<Versioned<Runde>> {
+        let mut guard = self.tx.lock().await;
+        let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
+        let mut rows = tx
+            .query(
+                &format!(
+                    r#"{SELECT} WHERE benutzer_id = ?1 AND zustand = 'InBearbeitung' LIMIT 1"#
+                ),
+                [benutzer_id.0.to_string()],
+            )
+            .await
+            .contextualize_with(libsql_error_to_persistence_error)?;
+        let Some(row) = rows
+            .next()
+            .await
+            .contextualize_with(libsql_error_to_persistence_error)?
+        else {
+            return Err(RepositoryError::NotFound.into());
+        };
+        runde_aus_zeile(&row)
+    }
+
     async fn update(&self, runde: &mut Versioned<Runde>) -> RepositoryResult<()> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;

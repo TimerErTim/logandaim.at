@@ -10,6 +10,7 @@ use crate::SQLiteConnection;
 mod v0001_schuss;
 mod v0002_konto;
 mod v0003_stammdaten;
+mod v0004_erfassung;
 
 type Registry = MigrationRegistry<dyn UpMigration<libsql::Transaction, libsql::Error>>;
 
@@ -19,6 +20,7 @@ pub static MIGRATIONS: LazyLock<Registry> = LazyLock::new(|| {
     registry.add(v0001_schuss::Migration);
     registry.add(v0002_konto::Migration);
     registry.add(v0003_stammdaten::Migration);
+    registry.add(v0004_erfassung::Migration);
     registry
 });
 

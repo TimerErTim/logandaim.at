@@ -16,7 +16,8 @@ use logandaim_core::{
     ErrorReportExt,
     application::uow::Versioned,
     domain::{
-        Erfasser, NeuerSchuss, RundeId, Schuss, SchussId, Wertungszone, ZielId, konto::BenutzerId,
+        Abstand, Erfasser, NeuerSchuss, RundeId, Schuss, SchussId, Schussposition, Wertungszone,
+        ZielId, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, SchussRepository},
 };
@@ -30,7 +31,7 @@ use crate::{
 };
 
 const SELECT: &str = r#"SELECT id, runde_id, benutzer_id, anonymisiert_am, ziel_id, pfeil,
-            "wertungszone", _version
+            "wertungszone", schussdistanz, pflock_farbe, _version
        FROM "schüsse""#;
 
 fn zone_from_str(value: &str) -> RepositoryResult<Wertungszone> {
@@ -45,6 +46,19 @@ fn schuss_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
     let ziel_id: String = row.get(4).contextualize(RepositoryError::Data)?;
     let pfeil: i64 = row.get(5).contextualize(RepositoryError::Data)?;
     let zone: String = row.get(6).contextualize(RepositoryError::Data)?;
+    let distanz: Option<i64> = row.get(7).contextualize(RepositoryError::Data)?;
+    let pflock: Option<String> = row.get(8).contextualize(RepositoryError::Data)?;
+    let position = match (distanz, pflock) {
+        (Some(_), Some(_)) => return Err(RepositoryError::Data.into()),
+        (Some(meter), None) => Some(Schussposition::Distanz(
+            Abstand::neu(u32::try_from(meter).contextualize(RepositoryError::Data)?)
+                .contextualize(RepositoryError::Data)?,
+        )),
+        (None, Some(farbe)) => Some(Schussposition::Pflock(
+            logandaim_core::domain::Farbe::neu(&farbe).contextualize(RepositoryError::Data)?,
+        )),
+        (None, None) => None,
+    };
 
     let zuordnung = match (benutzer_id, anonymisiert_am) {
         (Some(benutzer_id), None) => Erfasser::Benutzer(BenutzerId(parse_uuid(&benutzer_id)?)),
@@ -55,7 +69,7 @@ fn schuss_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
     };
 
     Ok(Versioned::new(
-        parse_version(row, 7)?,
+        parse_version(row, 9)?,
         Schuss::from_parts(
             SchussId(parse_uuid(&id)?),
             RundeId(parse_uuid(&runde_id)?),
@@ -63,9 +77,18 @@ fn schuss_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
             ZielId(parse_uuid(&ziel_id)?),
             usize::try_from(pfeil).contextualize(RepositoryError::Data)?,
             zone_from_str(&zone)?,
+            position,
         )
         .change_context(RepositoryError::Data)?,
     ))
+}
+
+fn positionsspalten(position: Option<Schussposition>) -> (Option<i64>, Option<String>) {
+    match position {
+        Some(Schussposition::Distanz(distanz)) => (Some(i64::from(distanz.meter())), None),
+        Some(Schussposition::Pflock(farbe)) => (None, Some(farbe.to_hex())),
+        None => (None, None),
+    }
 }
 
 fn zuordnungsspalten(zuordnung: Erfasser) -> (Option<String>, Option<String>) {
@@ -112,14 +135,15 @@ impl SchussRepository for SQLiteSchussRepository {
         let id = SchussId(Uuid::new_v4());
         let domain = Schuss::neu(id, schuss);
         let (benutzer_id, anonymisiert_am) = zuordnungsspalten(domain.erfasser());
+        let (distanz, pflock) = positionsspalten(domain.position());
 
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
 
         tx.execute(
             r#"INSERT INTO "schüsse" (id, runde_id, benutzer_id, anonymisiert_am, ziel_id, pfeil,
-                                      "wertungszone", _version)
-               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0)"#,
+                                      "wertungszone", schussdistanz, pflock_farbe, _version)
+               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0)"#,
             (
                 id.0.to_string(),
                 domain.runde_id().0.to_string(),
@@ -128,6 +152,8 @@ impl SchussRepository for SQLiteSchussRepository {
                 domain.ziel_id().0.to_string(),
                 domain.pfeil().get() as i64,
                 domain.wertungszone().as_str(),
+                distanz,
+                pflock,
             ),
         )
         .await
@@ -187,12 +213,14 @@ impl SchussRepository for SQLiteSchussRepository {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
         let (benutzer_id, anonymisiert_am) = zuordnungsspalten(schuss.erfasser());
+        let (distanz, pflock) = positionsspalten(schuss.position());
 
         update_versioned(
             tx,
             r#"UPDATE "schüsse" SET runde_id = ?2, benutzer_id = ?3, anonymisiert_am = ?4,
-                   ziel_id = ?5, pfeil = ?6, "wertungszone" = ?7, _version = ?8 + 1
-               WHERE id = ?1 AND _version = ?8"#,
+                   ziel_id = ?5, pfeil = ?6, "wertungszone" = ?7, schussdistanz = ?8,
+                   pflock_farbe = ?9, _version = ?10 + 1
+               WHERE id = ?1 AND _version = ?10"#,
             (
                 schuss.id().0.to_string(),
                 schuss.runde_id().0.to_string(),
@@ -201,6 +229,8 @@ impl SchussRepository for SQLiteSchussRepository {
                 schuss.ziel_id().0.to_string(),
                 schuss.pfeil().get() as i64,
                 schuss.wertungszone().as_str(),
+                distanz,
+                pflock,
                 schuss.v() as i64,
             ),
             schuss.v(),

@@ -17,6 +17,7 @@ import {
   useBenutzerQuery,
 } from "@/api/hooks";
 import { usePageChrome } from "@/components/layout/page-chrome";
+import { RundenBand } from "@/components/layout/runden-band";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -31,15 +32,18 @@ import {
 import {
   breadcrumbsForPathname,
   homeNavItem,
+  isExactPath,
+  paths,
   sidebarCategories,
   visibleSidebarCategories,
 } from "@/lib/navigation";
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { breadcrumbLabel } = usePageChrome();
-
-  const breadcrumbs = breadcrumbsForPathname(pathname, breadcrumbLabel);
+  const isCapturePage = isExactPath(pathname, paths.rundenErfassen);
+  const breadcrumbs = isCapturePage
+    ? [{ label: "Historie", href: paths.runden }, { label: "Erfassung" }]
+    : breadcrumbsForPathname(pathname, breadcrumbLabel);
   const phase = useAuth();
   const benutzer = useBenutzerQuery();
   const anlagen = useAnlagenQuery();
@@ -77,7 +81,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       />
 
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-30 border-b border-subtle bg-surface">
+        <header
+          className={`sticky top-0 ${isCapturePage ? "z-50" : "z-30"} border-b border-subtle bg-surface`}
+        >
           <div className="flex h-14 items-center gap-3 px-4">
             <label
               htmlFor="main-drawer"
@@ -177,7 +183,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main id="main" tabIndex={-1} className="flex-1 overflow-y-auto">
+        <main
+          id="main"
+          tabIndex={-1}
+          className={`flex-1 overflow-y-auto ${isCapturePage ? "relative z-20" : ""}`}
+        >
           {phase.status === "unavailable" ? (
             <div className="mx-auto w-full max-w-5xl px-6 pt-6">
               <Alert
@@ -193,6 +203,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ) : null}
           {children}
         </main>
+        {!isCapturePage ? <RundenBand /> : null}
       </div>
     </div>
   );

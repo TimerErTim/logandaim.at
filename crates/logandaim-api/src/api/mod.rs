@@ -19,7 +19,7 @@ use error_stack::{IntoReport, Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
-    domain::{AnlageId, EmailAdresse, ParkourId, RundeId, ZielId, konto::BenutzerId},
+    domain::{AnlageId, EmailAdresse, ParkourId, RundeId, SchussId, ZielId, konto::BenutzerId},
     ports::{ClientKey, RepositoryError, ThrottleAction},
     service::{
         Abmeldung, AbmeldungFehler, AnlageBeschreibendeDatenÄndern, AnlageDeaktivieren,
@@ -29,10 +29,10 @@ use logandaim_core::{
         PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen,
         PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
         RegistrierungStarten, RegistrierungStartenFehler, RundeAbschliessen,
-        RundeAbschliessenFehler, RundeStarten, RundeStartenFehler, SchussRegistrieren,
-        SchussRegistrierenFehler, SessionAusgestellt, StammdatenFehler, ZielEntfernen,
-        ZielErsetzen, ZielHinzufügen, ZielÄndern, darf_anlage_lesen, darf_anlage_verwalten,
-        darf_masterdaten_pflegen,
+        RundeAbschliessenFehler, RundeStarten, RundeStartenFehler, SchussLöschen,
+        SchussLöschenFehler, SchussRegistrieren, SchussRegistrierenFehler, SchussÄndernFehler,
+        SessionAusgestellt, StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen,
+        ZielÄndern, darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
     },
 };
 use tracing::warn;
@@ -553,15 +553,51 @@ impl LogandaimAppApi {
                         .into_iter()
                         .map(|runde| runde.into_data())
                         .collect();
-                    // Newest first: the list a caller opens to find today's Runde.
+                    let schüsse = uow
+                        .schüsse()
+                        .find_by_benutzer(benutzer_id)
+                        .await
+                        .map_err(IntoReport::into_report)
+                        .change_context(RundenAnzeigenFehler::Laden)?;
+                    let mut erfasste_ziele: std::collections::HashMap<
+                        RundeId,
+                        std::collections::HashSet<ZielId>,
+                    > = std::collections::HashMap::new();
+                    for schuss in schüsse {
+                        erfasste_ziele
+                            .entry(schuss.runde_id())
+                            .or_default()
+                            .insert(schuss.ziel_id());
+                    }
+                    // Newest first: the list a caller opens to find the latest Runde.
                     runden.sort_by_key(|runde| std::cmp::Reverse(runde.begonnen_am()));
-                    Ok::<_, Report<RundenAnzeigenFehler>>(runden)
+                    let result: Vec<RundeBasic> = runden
+                        .into_iter()
+                        .map(|runde| {
+                            let id = runde.id();
+                            let mut basic: RundeBasic = runde.into();
+                            basic.anzahl_erfasste_ziele =
+                                erfasste_ziele.get(&id).map_or(0, |ziele| ziele.len());
+                            basic
+                        })
+                        .collect();
+                    Ok::<_, Report<RundenAnzeigenFehler>>(result)
                 }
                 .await;
 
                 let runden = uow.finish(ergebnis, RundenAnzeigenFehler::Laden).await?;
-                Ok(runden.into_iter().map(Into::into).collect())
+                Ok(runden.into_iter().collect())
             })
+            .await
+    }
+
+    pub async fn runde_loeschen(
+        &self,
+        auth: AuthContext,
+        runde_id: RundeId,
+    ) -> ResultReport<(), logandaim_core::service::RundeLöschenFehler> {
+        self.app
+            .execute(auth, logandaim_core::service::RundeLöschen { runde_id })
             .await
     }
 
@@ -589,6 +625,34 @@ impl LogandaimAppApi {
         let use_case: SchussRegistrieren = anfrage.in_use_case(runde_id)?;
         let schuss = self.app.execute(auth, use_case).await?;
         Ok(schuss.into())
+    }
+
+    pub async fn schuss_aendern(
+        &self,
+        auth: AuthContext,
+        runde_id: RundeId,
+        schuss_id: SchussId,
+        anfrage: requests::SchussÄnderungRequest,
+    ) -> ResultReport<Schuss, SchussÄndernFehler> {
+        let use_case = anfrage.in_use_case(runde_id, schuss_id)?;
+        self.app.execute(auth, use_case).await.map(Into::into)
+    }
+
+    pub async fn schuss_loeschen(
+        &self,
+        auth: AuthContext,
+        runde_id: RundeId,
+        schuss_id: SchussId,
+    ) -> ResultReport<(), SchussLöschenFehler> {
+        self.app
+            .execute(
+                auth,
+                SchussLöschen {
+                    runde_id,
+                    schuss_id,
+                },
+            )
+            .await
     }
 
     // ---------------------------------------------------------------- Registration

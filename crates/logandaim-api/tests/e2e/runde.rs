@@ -90,14 +90,14 @@ async fn schuss(
     bearer: &str,
     runde_id: &str,
     ziel_id: &str,
-    pfeil: usize,
+    _pfeil: usize,
     zone: &str,
 ) -> (StatusCode, Value) {
     harness
         .client
         .post_json_auth(
-            &format!("/api/runden/{runde_id}/schüsse"),
-            json!({ "zielId": ziel_id, "pfeil": pfeil, "wertungszone": zone }),
+            &format!("/api/runden/{runde_id}/schuesse"),
+            json!({ "zielId": ziel_id, "wertungszone": zone }),
             bearer,
         )
         .await
@@ -193,17 +193,24 @@ async fn ac9_ein_schuss_ausserhalb_des_snapshots_antwortet_409() {
 }
 
 #[test_log::test(pollster::test)]
-async fn ac9_pfeil_null_ist_bad_request() {
+async fn ac9_nicht_positive_schussdistanz_ist_bad_request() {
     let harness = E2eHarness::new().await;
     let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
     let runde_id = runde_starten(&harness, &benutzer, &parkour_id).await;
 
-    let (status, _) = schuss(&harness, &benutzer, &runde_id, &ziel_id, 0, "Kill").await;
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/runden/{runde_id}/schuesse"),
+            json!({"zielId":ziel_id,"wertungszone":"Kill","position":{"Distanz":{"meter":0}}}),
+            &benutzer,
+        )
+        .await;
     assert_eq!(
         status,
         StatusCode::BAD_REQUEST,
-        "AC-9: Pfeil 0 ist ungültig"
+        "AC-5: Distanz muss positiv sein"
     );
 }
 
@@ -328,6 +335,185 @@ async fn ac9_die_rundenliste_zeigt_nur_eigene_runden() {
     assert_eq!(runden[0]["parkourName"], "Waldrunde");
 }
 
+// ------------------------------------------------------------------------- AC-11 ownership and AC-9 edits
+
+#[test_log::test(pollster::test)]
+async fn ac11_runden_und_schuesse_sind_nur_fuer_eigentuemer_aenderbar() {
+    let harness = E2eHarness::new().await;
+    let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
+    let (eigner, _) = neuer_benutzer(&harness, "anna@muster.at").await;
+    let (fremder, _) = neuer_benutzer(&harness, "bea@muster.at").await;
+    let runde_id = runde_starten(&harness, &eigner, &parkour_id).await;
+    let (status, shot) = schuss(&harness, &eigner, &runde_id, &ziel_id, 1, "Kill").await;
+    assert_eq!(status, StatusCode::OK);
+    let schuss_id = shot["id"].as_str().unwrap();
+    let runde_path = format!("/api/runden/{runde_id}");
+    let schuss_path = format!("{runde_path}/schuesse/{schuss_id}");
+
+    assert_eq!(
+        harness.client.get_json_auth(&runde_path, &eigner).await.0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        harness.client.get_json(&runde_path).await.0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        harness.client.get_json_auth(&runde_path, &fremder).await.0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        harness.client.delete_auth(&runde_path, &fremder).await.0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        schuss(&harness, &fremder, &runde_id, &ziel_id, 2, "Spot")
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        harness
+            .client
+            .put_json_auth(
+                &schuss_path,
+                json!({"wertungszone":"Spot","position":null}),
+                &fremder
+            )
+            .await
+            .0,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        harness.client.delete_auth(&schuss_path, &fremder).await.0,
+        StatusCode::FORBIDDEN
+    );
+
+    let (status, body) = harness
+        .client
+        .put_json_auth(
+            &schuss_path,
+            json!({
+                "wertungszone":"Spot", "position":{"Distanz":{"meter":35}}
+            }),
+            &eigner,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "Eigentümer ändert den Schuss: {body}"
+    );
+    assert_eq!(body["position"]["Distanz"]["meter"], 35);
+    assert_eq!(
+        harness.client.delete_auth(&schuss_path, &eigner).await.0,
+        StatusCode::OK
+    );
+    let (status, body) = harness.client.get_json_auth(&runde_path, &eigner).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body["ziele"][0]["schüsse"].as_array().unwrap().is_empty());
+    assert_eq!(
+        harness.client.delete_auth(&runde_path, &eigner).await.0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        harness.client.get_json_auth(&runde_path, &eigner).await.0,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[test_log::test(pollster::test)]
+async fn ac13_zweiter_start_wird_abgelehnt_und_nach_abschluss_wieder_freigegeben() {
+    let harness = E2eHarness::new().await;
+    let (_, _, _, parkour_id) = anlage_mit_parkour(&harness).await;
+    let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
+    let erste = runde_starten(&harness, &benutzer, &parkour_id).await;
+    let (status, _) = harness
+        .client
+        .post_json_auth("/api/runden", json!({"parkourId":parkour_id}), &benutzer)
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "AC-13: zweiter Start ist verweigert"
+    );
+    assert_eq!(
+        harness
+            .client
+            .get_json_auth(&format!("/api/runden/{erste}"), &benutzer)
+            .await
+            .0,
+        StatusCode::OK
+    );
+
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/runden/{erste}/abschluss"),
+            json!({}),
+            &benutzer,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        runde_starten(&harness, &benutzer, &parkour_id).await.len(),
+        36
+    );
+}
+
+#[test_log::test(pollster::test)]
+async fn ac5_schussposition_ist_exklusiv_ganzzahlig_und_wird_beim_lesen_erhalten() {
+    let harness = E2eHarness::new().await;
+    let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
+    let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
+    let runde_id = runde_starten(&harness, &benutzer, &parkour_id).await;
+    let (status, body) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/runden/{runde_id}/schuesse"),
+            json!({"zielId":ziel_id,"wertungszone":"Kill","position":{"Distanz":{"meter":35}}}),
+            &benutzer,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "Distanzposition: {body}");
+    assert_eq!(body["position"]["Distanz"]["meter"], 35);
+
+    let (status, body) = harness.client.post_json_auth(
+        &format!("/api/runden/{runde_id}/schuesse"),
+        json!({"zielId":ziel_id,"wertungszone":"Spot","position":{"Pflock":{"farbe":"#c0392b"}}}),
+        &benutzer,
+    ).await;
+    assert_eq!(status, StatusCode::OK, "Pflockposition: {body}");
+    assert_eq!(body["position"]["Pflock"]["farbe"], "#c0392b");
+
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/runden/{runde_id}/schuesse"),
+            json!({"zielId":ziel_id,"wertungszone":"Body","position":{"distanz":{"meter":35.5}}}),
+            &benutzer,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "Bruchteile sind keine Meterwerte"
+    );
+    let (status, body) = harness
+        .client
+        .get_json_auth(&format!("/api/runden/{runde_id}"), &benutzer)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body["ziele"][0]["schüsse"][0]["position"]["Distanz"]["meter"],
+        35
+    );
+    assert_eq!(
+        body["ziele"][0]["schüsse"][1]["position"]["Pflock"]["farbe"],
+        "#c0392b"
+    );
+}
+
 // ------------------------------------------------------------------------- 404, Liste
 
 #[test_log::test(pollster::test)]
@@ -353,6 +539,11 @@ async fn die_rundenliste_zeigt_die_eigenen_runden_neueste_zuerst() {
     let (anna, _) = neuer_benutzer(&harness, "anna@muster.at").await;
 
     let erste = runde_starten(&harness, &anna, &parkour_id).await;
+    let (status, _) = harness
+        .client
+        .post_json_auth(&format!("/api/runden/{erste}/abschluss"), json!({}), &anna)
+        .await;
+    assert_eq!(status, StatusCode::OK, "die erste Runde wird abgeschlossen");
     harness.vorspulen(chrono::Duration::minutes(5));
     let zweite = runde_starten(&harness, &anna, &parkour_id).await;
 

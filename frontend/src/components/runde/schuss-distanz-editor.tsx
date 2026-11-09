@@ -1,0 +1,245 @@
+"use client";
+
+import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import type {
+  RundePflock,
+  RundeZiel,
+  SchusspositionInput,
+} from "@/api/logandaim-api";
+import {
+  type Checkpoint,
+  CheckpointSlider,
+} from "@/components/ui/checkpoint-slider";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/cn";
+import { positionsModus } from "@/lib/runden-position";
+import { PflockPlatzhalter } from "./pflock-platzhalter";
+
+export function SchussDistanzEditor({
+  pfeil,
+  ziel,
+  pflöcke,
+  position,
+  onCommit,
+}: {
+  pfeil: number;
+  ziel: RundeZiel;
+  pflöcke: RundePflock[];
+  position: SchusspositionInput | null;
+  onCommit: (position: SchusspositionInput) => void;
+}) {
+  const modus = positionsModus(ziel, pflöcke.length);
+  const abstände = useMemo(
+    () =>
+      new Map(ziel.abstände.map((abstand) => [abstand.pflock, abstand.meter])),
+    [ziel.abstände],
+  );
+  const sortedPflöcke = useMemo(
+    () => [...pflöcke].sort((a, b) => a.position - b.position),
+    [pflöcke],
+  );
+  const checkpoints = useMemo<Checkpoint[]>(
+    () =>
+      sortedPflöcke
+        .flatMap((pflock) => {
+          const meter = abstände.get(pflock.farbe);
+          return meter === undefined
+            ? []
+            : [
+                {
+                  id: `${pflock.position}-${pflock.farbe}`,
+                  wert: meter,
+                  farbe: pflock.farbe,
+                  label: pflock.farbe,
+                  anzeige: `${meter} m`,
+                },
+              ];
+        })
+        .sort((a, b) => a.wert - b.wert),
+    [sortedPflöcke, abstände],
+  );
+  const stakeCheckpoints = useMemo<Checkpoint[]>(
+    () =>
+      sortedPflöcke.map((pflock, index) => ({
+        id: `${pflock.position}-${pflock.farbe}`,
+        wert: index,
+        farbe: pflock.farbe,
+        label: pflock.farbe,
+      })),
+    [sortedPflöcke],
+  );
+  const min = checkpoints.length
+    ? Math.min(...checkpoints.map((checkpoint) => checkpoint.wert))
+    : 1;
+  const max = checkpoints.length
+    ? Math.max(...checkpoints.map((checkpoint) => checkpoint.wert))
+    : 1;
+  const storedMeter =
+    position && "Distanz" in position ? position.Distanz.meter : undefined;
+  const storedStake =
+    position && "Pflock" in position ? position.Pflock.farbe : undefined;
+  const [open, setOpen] = useState(false);
+  const committedMeter = useRef(storedMeter);
+  const committedStake = useRef(storedStake);
+  const [draftStake, setDraftStake] = useState(storedStake);
+  const [draft, setDraft] = useState(
+    storedMeter === undefined ? "" : String(storedMeter),
+  );
+
+  useEffect(() => {
+    committedMeter.current = storedMeter;
+    committedStake.current = storedStake;
+    setDraftStake(storedStake);
+    setDraft(storedMeter === undefined ? "" : String(storedMeter));
+  }, [storedMeter, storedStake]);
+
+  const canUseMeterSlider =
+    modus === "meter" && checkpoints.length >= 2 && max > min;
+  const canUseStakeSlider = modus === "staken" && stakeCheckpoints.length >= 2;
+  const stakeIndex = draftStake
+    ? sortedPflöcke.findIndex((pflock) => pflock.farbe === draftStake)
+    : -1;
+  const sliderValue = Math.min(
+    max,
+    Math.max(min, Number(draft) || storedMeter || min),
+  );
+  const valid = /^[1-9]\d*$/.test(draft);
+  const saveMeter = (meter: number) => {
+    committedMeter.current = meter;
+    committedStake.current = undefined;
+    setDraftStake(undefined);
+    onCommit({ Distanz: { meter } });
+  };
+  const saveStake = (farbe: string) => {
+    committedStake.current = farbe;
+    committedMeter.current = undefined;
+    setDraftStake(farbe);
+    setDraft("");
+    onCommit({ Pflock: { farbe } });
+  };
+  const commitDraft = () => {
+    if (valid) {
+      const meter = Number(draft);
+      if (
+        meter !== committedMeter.current ||
+        committedStake.current !== undefined
+      ) {
+        saveMeter(meter);
+      }
+      return;
+    }
+    if (draft === "" && draftStake !== committedStake.current && draftStake) {
+      saveStake(draftStake);
+      return;
+    }
+    setDraft(
+      committedMeter.current === undefined
+        ? ""
+        : String(committedMeter.current),
+    );
+    setDraftStake(committedStake.current);
+  };
+
+  const pflockPlaceholder = draft === "" && draftStake !== undefined;
+
+  return (
+    <div className="min-w-0">
+      <div className="w-20 shrink-0 sm:w-24">
+        <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+          <PopoverPrimitive.Anchor asChild>
+            <div className="relative w-full">
+              <Input
+                aria-label={`Exakte Entfernung für Schuss ${pfeil} in Metern`}
+                aria-invalid={draft !== "" && !valid}
+                inputMode="numeric"
+                value={draft}
+                placeholder={pflockPlaceholder ? "" : "Meter"}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setDraft(next);
+                  if (next !== "") setDraftStake(undefined);
+                }}
+                onFocus={() => setOpen(true)}
+                onBlur={commitDraft}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    event.currentTarget.blur();
+                  }
+                  if (event.key === "Escape") {
+                    setDraft(
+                      committedMeter.current === undefined
+                        ? ""
+                        : String(committedMeter.current),
+                    );
+                    setDraftStake(committedStake.current);
+                  }
+                }}
+                className={cn(
+                  "h-11 w-full px-2 tabular-nums",
+                  pflockPlaceholder && "text-transparent caret-ink",
+                )}
+              />
+              {pflockPlaceholder ? (
+                <PflockPlatzhalter farbe={draftStake} />
+              ) : null}
+            </div>
+          </PopoverPrimitive.Anchor>
+          <PopoverPrimitive.Portal>
+            <PopoverPrimitive.Content
+              sideOffset={6}
+              align="start"
+              onOpenAutoFocus={(event) => event.preventDefault()}
+              onCloseAutoFocus={(event) => event.preventDefault()}
+              onPointerDown={(event) => {
+                if (
+                  event.target instanceof Element &&
+                  event.target.closest('[role="slider"]')
+                ) {
+                  event.preventDefault();
+                }
+              }}
+              className="paper-overlay z-50 w-[min(20rem,calc(100vw-2rem))] rounded-sm border border-subtle bg-elevated p-4 text-ink"
+            >
+              {canUseMeterSlider ? (
+                <CheckpointSlider
+                  checkpoints={checkpoints}
+                  value={sliderValue}
+                  onValueChange={(value) => {
+                    setDraft(String(Math.round(value)));
+                    setDraftStake(undefined);
+                  }}
+                  min={min}
+                  max={max}
+                  step={1}
+                  label={`Entfernung für Schuss ${pfeil}`}
+                  einheit="m"
+                />
+              ) : null}
+              {canUseStakeSlider ? (
+                <CheckpointSlider
+                  checkpoints={stakeCheckpoints}
+                  value={Math.max(0, stakeIndex)}
+                  onValueChange={(value) => {
+                    const pflock = sortedPflöcke[Math.round(value)];
+                    if (pflock) {
+                      setDraftStake(pflock.farbe);
+                      setDraft("");
+                      saveStake(pflock.farbe);
+                    }
+                  }}
+                  min={0}
+                  max={stakeCheckpoints.length - 1}
+                  step={1}
+                  label={`Pflock für Schuss ${pfeil}`}
+                />
+              ) : null}
+            </PopoverPrimitive.Content>
+          </PopoverPrimitive.Portal>
+        </PopoverPrimitive.Root>
+      </div>
+    </div>
+  );
+}

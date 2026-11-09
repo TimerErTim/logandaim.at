@@ -1,8 +1,6 @@
 "use client";
 
 import * as SliderPrimitive from "@radix-ui/react-slider";
-import { useId } from "react";
-
 import { cn } from "@/lib/cn";
 
 /**
@@ -15,14 +13,17 @@ export type Checkpoint = {
   wert: number;
   /** Caller-supplied band colour, for example `#3f6b8a`. */
   farbe: string;
-  /** Name shown in the legend; colour is never the only signal. */
+  /** Name announced when this checkpoint is nearest to the thumb. */
   label: string;
+  /** Compact annotation drawn at this checkpoint's track position. */
+  anzeige?: string;
 };
 
 type CheckpointSliderProps = {
   checkpoints: Checkpoint[];
   value: number;
   onValueChange: (next: number) => void;
+  onValueCommit?: (next: number) => void;
   min: number;
   max: number;
   step?: number;
@@ -31,6 +32,8 @@ type CheckpointSliderProps = {
   /** Unit appended to the read-out and to `aria-valuetext`. */
   einheit?: string;
   disabled?: boolean;
+  /** Keep the scale interactive while hiding an unresolvable value's thumb. */
+  thumbHidden?: boolean;
   className?: string;
 };
 
@@ -39,9 +42,8 @@ type CheckpointSliderProps = {
  * master-data checkpoints, like the stop bar of a colour picker.
  *
  * The thumb moves freely: the value is a distance, not a stake, so it must not snap.
- * Bands are decoration and are `aria-hidden`; the legend repeats every checkpoint
- * with its name, and the thumb announces the distance plus the nearest stake, so the
- * control is usable without seeing the colours.
+ * Bands and tick marks are decoration; the thumb announces the distance plus the
+ * nearest stake, so the control is usable without seeing the colours.
  *
  * The band between two stakes carries the colour of the stake below it, which makes
  * each band mean "from this stake up to the next one".
@@ -50,15 +52,16 @@ export function CheckpointSlider({
   checkpoints,
   value,
   onValueChange,
+  onValueCommit,
   min,
   max,
   step = 1,
   label,
   einheit,
   disabled = false,
+  thumbHidden = false,
   className,
 }: CheckpointSliderProps) {
-  const legendId = useId();
   const span = max - min;
 
   const sorted = [...checkpoints].sort((a, b) => a.wert - b.wert);
@@ -103,14 +106,36 @@ export function CheckpointSlider({
     : wertText;
 
   return (
-    <div className={cn("w-full space-y-2", className)}>
+    <div className={cn("w-full", className)}>
+      <div className="relative h-5">
+        {sorted.map((eintrag) =>
+          eintrag.anzeige ? (
+            <span
+              key={eintrag.id}
+              aria-hidden="true"
+              className="absolute -translate-x-1/2 whitespace-nowrap text-xs tabular-nums text-secondary"
+              style={{ left: `${position(eintrag.wert)}%` }}
+            >
+              {eintrag.anzeige}
+            </span>
+          ) : null,
+        )}
+      </div>
       <SliderPrimitive.Root
-        className="relative flex h-11 w-full touch-none items-center select-none data-[disabled]:opacity-50"
+        className={cn(
+          "relative flex h-11 w-full touch-none items-center select-none data-[disabled]:opacity-50",
+          thumbHidden && "cursor-pointer",
+        )}
         disabled={disabled}
         value={[value]}
         onValueChange={([next]) => {
           if (typeof next === "number") {
             onValueChange(next);
+          }
+        }}
+        onValueCommit={([next]) => {
+          if (typeof next === "number") {
+            onValueCommit?.(next);
           }
         }}
         min={min}
@@ -140,8 +165,9 @@ export function CheckpointSlider({
         <SliderPrimitive.Thumb
           aria-label={label}
           aria-valuetext={valuetext}
-          aria-describedby={legendId}
+          tabIndex={thumbHidden ? -1 : undefined}
           className={cn(
+            thumbHidden && "invisible",
             // The same round, inked bullet as `Slider`, so both sliders read alike.
             // The contour is ink rather than primary: the track underneath is a ramp
             // of caller-supplied stake colours, and ink survives every one of them.
@@ -154,26 +180,6 @@ export function CheckpointSlider({
           )}
         />
       </SliderPrimitive.Root>
-
-      <ul
-        id={legendId}
-        className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs"
-      >
-        {sorted.map((eintrag) => (
-          <li key={eintrag.id} className="flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className="size-3 rounded-sm border border-subtle"
-              style={{ background: eintrag.farbe }}
-            />
-            <span className="font-medium text-ink">{eintrag.label}</span>
-            <span className="text-secondary tabular-nums">
-              {eintrag.wert}
-              {einheitText}
-            </span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

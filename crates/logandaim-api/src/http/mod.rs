@@ -47,7 +47,8 @@ use crate::{
             AnmeldungRequest, BenutzerLöschungRequest, ParkourErstellungRequest,
             ParkourSetupRequest, ParkourUmbenennenRequest, PasswortVergessenRequest,
             PasswortWiederherstellenRequest, RegistrierungAbschlussRequest,
-            RegistrierungStartRequest, RundeStartenRequest, SchussErstellungRequest, ZielRequest,
+            RegistrierungStartRequest, RundeStartenRequest, SchussErstellungRequest,
+            SchussÄnderungRequest, ZielRequest,
         },
     },
     schema::{
@@ -664,6 +665,26 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
+    /// Delete the caller's Runde and every Schuss that belongs to it.
+    ///
+    /// This removes the Runde from history and clears its per-Ziel shot records.
+    #[oai(path = "/runden/:runde_id", method = "delete", tag = "ApiTag::Runden")]
+    async fn runde_loeschen(
+        &self,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
+        runde_id: Path<Uuid>,
+    ) -> TypicalJsonResponse<crate::schema::Ok> {
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        self.app_api
+            .runde_loeschen(auth, RundeId(runde_id.0))
+            .await
+            .map(|()| crate::schema::Ok { ok: true })
+            .into()
+    }
+
     /// Close the caller's own Runde.
     ///
     /// Afterwards it refuses further Schüsse and its Wertungen are final.
@@ -694,7 +715,7 @@ impl LogandaimApiSpec {
     ///
     /// The owner comes from the token, and the Ziel must be part of the Runde's snapshot.
     #[oai(
-        path = "/runden/:runde_id/schüsse",
+        path = "/runden/:runde_id/schuesse",
         method = "post",
         tag = "ApiTag::Runden"
     )]
@@ -715,6 +736,65 @@ impl LogandaimApiSpec {
                 .await
         };
         ergebnis.into()
+    }
+
+    /// Replace the scoring zone and position of one of the caller's shots.
+    ///
+    /// Sending `position: null` clears the saved position.
+    #[oai(
+        path = "/runden/:runde_id/schuesse/:schuss_id",
+        method = "put",
+        tag = "ApiTag::Runden"
+    )]
+    async fn schuss_aendern(
+        &self,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
+        runde_id: Path<Uuid>,
+        schuss_id: Path<Uuid>,
+        body: Json<SchussÄnderungRequest>,
+    ) -> TypicalJsonResponse<Schuss> {
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        self.app_api
+            .schuss_aendern(
+                auth,
+                RundeId(runde_id.0),
+                logandaim_core::domain::SchussId(schuss_id.0),
+                body.0,
+            )
+            .await
+            .into()
+    }
+
+    /// Delete one of the caller's shots and renumber later shots at the same Ziel.
+    ///
+    /// The scoring total is recomputed from the remaining shots.
+    #[oai(
+        path = "/runden/:runde_id/schuesse/:schuss_id",
+        method = "delete",
+        tag = "ApiTag::Runden"
+    )]
+    async fn schuss_loeschen(
+        &self,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
+        runde_id: Path<Uuid>,
+        schuss_id: Path<Uuid>,
+    ) -> TypicalJsonResponse<crate::schema::Ok> {
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        self.app_api
+            .schuss_loeschen(
+                auth,
+                RundeId(runde_id.0),
+                logandaim_core::domain::SchussId(schuss_id.0),
+            )
+            .await
+            .map(|()| crate::schema::Ok { ok: true })
+            .into()
     }
 
     // ------------------------------------------------------------------ konto

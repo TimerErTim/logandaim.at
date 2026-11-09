@@ -83,12 +83,19 @@ export interface LogandaimApi {
   // ---------------------------------------------------------------- Runden
   rundenAnzeigen(): Promise<RundeBasic[]>;
   rundeStarten(parkourId: string): Promise<Runde>;
+  rundeLoeschen(id: string): Promise<void>;
   rundeAnzeigen(id: string): Promise<Runde>;
   rundeAbschliessen(id: string): Promise<Runde>;
   schussRegistrieren(
     rundeId: string,
     schuss: SchussErstellungInput,
   ): Promise<Schuss>;
+  schussAendern(
+    rundeId: string,
+    schussId: string,
+    schuss: SchussAenderungInput,
+  ): Promise<Schuss>;
+  schussLoeschen(rundeId: string, schussId: string): Promise<void>;
 
   // ---------------------------------------------------------------- konto
   registrierungStarten(eMailAdresse: string): Promise<void>;
@@ -149,8 +156,17 @@ export type ZielInput = Schemas["ZielRequest"];
 export type ParkourInput = Schemas["ParkourErstellungRequest"];
 export type ParkourSetupInput = Schemas["ParkourSetupRequest"];
 
+export type SchusspositionInput =
+  | { Distanz: { meter: number } }
+  | { Pflock: { farbe: string } };
+
 export type SchussErstellungInput = {
   zielId: string;
-  pfeil: number;
   wertungszone: Wertungszone;
+  position: SchusspositionInput | null;
+};
+
+export type SchussAenderungInput = {
+  wertungszone: Wertungszone;
+  position: SchusspositionInput | null;
 };

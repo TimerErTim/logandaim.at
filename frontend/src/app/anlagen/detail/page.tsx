@@ -223,14 +223,17 @@ function ParkourLedger({
                       disabled={rundeStarten.isPending}
                       onClick={() => {
                         setStartend(eintrag.id);
-                        rundeStarten.mutate(eintrag.id, {
-                          onSuccess: (runde) => {
-                            router.push(
-                              `${paths.runden}/detail?id=${runde.id}`,
-                            );
+                        rundeStarten.mutate(
+                          { parkourId: eintrag.id },
+                          {
+                            onSuccess: (runde) => {
+                              router.push(
+                                `${paths.rundenErfassen}?id=${runde.id}`,
+                              );
+                            },
+                            onError: () => setStartend(null),
                           },
-                          onError: () => setStartend(null),
-                        });
+                        );
                       }}
                     >
                       <Play />

@@ -803,6 +803,18 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
         "AC-9: der Name ist Teil des Schnappschusses"
     );
 
+    // A fresh route capture requires the previous Runde to be closed.
+    harness
+        .app()
+        .execute(
+            admin,
+            RundeAbschliessen {
+                runde_id: runde.id(),
+            },
+        )
+        .await
+        .expect("the earlier Runde is finished");
+
     // AC-7: a Runde started after the edit captures L2.
     let neue = harness
         .app()
@@ -833,8 +845,8 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
             SchussRegistrieren {
                 runde_id: erste.id(),
                 ziel_id,
-                pfeil: 1,
                 wertungszone: Wertungszone::Kill,
+                position: None,
             },
         )
         .await
@@ -889,8 +901,8 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
             SchussRegistrieren {
                 runde_id: zweite.id(),
                 ziel_id,
-                pfeil: 1,
                 wertungszone: Wertungszone::Spot,
+                position: None,
             },
         )
         .await
@@ -1306,8 +1318,8 @@ async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
             SchussRegistrieren {
                 runde_id: runde.id(),
                 ziel_id,
-                pfeil: 1,
                 wertungszone: Wertungszone::Kill,
+                position: None,
             },
         )
         .await

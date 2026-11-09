@@ -176,7 +176,13 @@ function LetzteRundeZeile({ runde }: { runde: RundeBasic }) {
       </TableCell>
       <TableCell className="text-right">
         <Button variant="secondary" size="sm" asChild>
-          <Link href={`${paths.runden}/detail?id=${runde.id}`}>
+          <Link
+            href={
+              offen
+                ? `${paths.rundenErfassen}?id=${runde.id}`
+                : `${paths.runden}/detail?id=${runde.id}`
+            }
+          >
             {offen ? "Fortsetzen" : "Öffnen"}
           </Link>
         </Button>

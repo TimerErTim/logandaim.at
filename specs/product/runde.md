@@ -149,8 +149,9 @@ Rules:
    `Ziel` whose `Pflöcke` configure `Distanzen`, and no meter value at all on a `Pflock` that has
    none ([`stammdaten.md`](stammdaten.md) AC-6). A `Schuss` that stored a `Schussdistanz` gets no
    `Pflock` indicator, because a distance is not a stake; a `Schuss` that stored a `Pflock` shows
-   that stake and no meters. A distance the slider interpolated is labelled as an estimate
-   ("ca. 35 m"); one the `Benutzer` typed is shown as its exact value ("35 m").
+   that stake and no meters. Interpolated and typed distances are both displayed as a bare meter
+   value ("35 m"); the stored position does not distinguish an estimate from a directly entered
+   value.
 6. `Wertung` follows [`wertung.md`](wertung.md) unchanged: per `Ziel`, `Erster Treffer` and
    `Mehrschuss` computed from its `Schüsse`; a `Ziel` without `Schuss` has no result (not 0); each
    `Runde` total is the sum of its `Ziel` results per `Wertung`.
@@ -309,10 +310,9 @@ Rules:
   the same place, and resting it on a `Pflock` stores that stake's configured `Distanz` rather than
   the stake.
 - AC-6: Given adjacent `Pflöcke` with `Distanz` 40 m (farther) and 30 m (nearer), then a slider
-  position halfway between them stores 35 m and displays it as the estimate "ca. 35 m", while the
-  stakes' own 40 m and 30 m show at their positions; a value typed as 35 m displays as the exact
-  "35 m" instead. A `Pflock` without a configured `Distanz` gets no meter value, and a `Schuss`
-  that stored a `Schussdistanz` shows no `Pflock` indicator.
+  position halfway between them stores 35 m and displays it as "35 m", while the stakes' own
+  40 m and 30 m show at their positions. A `Pflock` without a configured `Distanz` gets no meter
+  value, and a `Schuss` that stored a `Schussdistanz` shows no `Pflock` indicator.
 - AC-7: Given a `Ziel` with exactly one `Pflock`, then no slider is offered, a `Schuss` registered
   by the `Wertungszone` group stores that `Pflock` as its `Schussposition`, and an exact
   `Schussdistanz` can still be typed for a `Schuss` (AC-15).
@@ -435,6 +435,8 @@ use-case conformance test.
 | 2026-11-06 | The nearest `Pflock` is the initial slider state for a `Ziel` with no logged `Schuss`. | TimerErTim (PO) |
 | 2026-11-06 | Only a `Schussdistanz` contributes to meter-based metrics; a `Pflock`-form `Schussposition` does not, even when the snapshot configures a `Distanz` for that stake. | TimerErTim (PO) |
 | 2026-11-06 | Rule 16 is named "initial slider state": the derived value seeds the control, while what a `Schuss` stores is decided at registration. | Agent (Cursor) |
+| 2026-11-07 | Interpolated and typed distances use the same bare meter display (for example, "35 m"); no estimate label is shown because the single stored position cannot preserve that distinction. | TimerErTim (PO) |
+| 2026-11-07 | A closed `Runde` remains correctable: its `Schüsse` and `Datum` can be edited, but no new `Schuss` can be registered after completion. | TimerErTim (PO) |
 
 ## Revision history
 
@@ -444,6 +446,7 @@ use-case conformance test.
 | 2026-11-06 | Redesigned capture: one running `Runde` per `Benutzer` with a bottom `Rundenübersicht` band, the mobile step flow and the desktop card layout, exact `Schussdistanz` entry, a `Rundenabschluss` summary before finishing, `Zielfortschritt`, and `Pfeil` renumbering on delete. Renamed `Schütze` to `Benutzer` and `Parcours` to `Parkour` to match the charter and `stammdaten.md`. | Agent (Cursor) |
 | 2026-11-06 | Spec review: replaced the `Anteil` position with one optional value (distance or `Pflock`), rewrote rules 3–5, AC-5/AC-6/AC-15, and renamed rule 16 to "initial slider state". Resolved Q-2 to Q-5 (editable forever, irreversible deletion, nearest-`Pflock` initial state, exact meters) and folded the remaining metric question into Q-1. Updated the charter's distance decision to match. | Agent (Cursor) |
 | 2026-11-06 | Follow-up review: Q-1 resolved — a `Pflock`-form position is excluded from meter-based metrics rather than imputed from the stake's configured `Distanz`. No open questions remain. | Agent (Cursor) |
+| 2026-11-07 | Capture implementation decisions: use the bare meter display for interpolated distances, and preserve correction of `Schüsse` and `Datum` after a `Runde` is closed while refusing new `Schüsse`. | TimerErTim (PO) |
 | 2026-11-06 | Approved. Status set to `PO-approved` on the PO's explicit instruction; implementation is tracked in #86. | TimerErTim (PO) |
 
 ## Appendix A: implementation sketch (non-normative)

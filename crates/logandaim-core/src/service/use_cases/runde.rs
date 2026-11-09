@@ -7,7 +7,7 @@
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
-use tracing::info;
+use tracing::{info, instrument};
 
 use crate::{
     application::ExecutionContext,
@@ -28,6 +28,8 @@ pub enum RundeStartenFehler {
     NichtGefunden,
     #[error("der Parkour oder seine Anlage ist nicht mehr aktiv")]
     NichtAktiv,
+    #[error("für diesen Benutzer läuft bereits eine Runde")]
+    RundeLaeuft,
     #[error("die Anlage konnte nicht geladen werden")]
     AnlageLaden,
     #[error("die Runde konnte nicht gestartet werden")]
@@ -44,6 +46,7 @@ pub struct RundeStarten {
 impl UseCase<Runde> for RundeStarten {
     type Error = Report<RundeStartenFehler>;
 
+    #[instrument(skip_all, fields(parkour_id = ?self.parkour_id), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
         let benutzer_id = ctx
             .auth()
@@ -83,6 +86,15 @@ impl UseCase<Runde> for RundeStarten {
                 return Err(Report::new(RundeStartenFehler::NichtGefunden));
             };
             let anlage_id = anlage.id();
+            match uow.runden().find_offen_by_benutzer(benutzer_id).await {
+                Ok(_) => {
+                    return Err(Report::new(RundeStartenFehler::RundeLaeuft));
+                }
+                Err(fehler) if matches!(fehler.current_context(), RepositoryError::NotFound) => {}
+                Err(fehler) => {
+                    return Err(fehler.change_context(RundeStartenFehler::AnlageLaden));
+                }
+            }
 
             uow.runden()
                 .create(NeueRunde::neu(
@@ -93,7 +105,12 @@ impl UseCase<Runde> for RundeStarten {
                 ))
                 .await
                 .map_err(IntoReport::into_report)
-                .change_context(RundeStartenFehler::Starten)
+                .map_err(|fehler| match fehler.current_context() {
+                    RepositoryError::Conflict => {
+                        fehler.change_context(RundeStartenFehler::RundeLaeuft)
+                    }
+                    _ => fehler.change_context(RundeStartenFehler::Starten),
+                })
                 .map(|runde| runde.into_data())
         }
         .await;
@@ -105,6 +122,80 @@ impl UseCase<Runde> for RundeStarten {
             "runde gestartet"
         );
         Ok(runde)
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// RundeLöschen
+// ---------------------------------------------------------------------------------------
+
+#[derive(Debug, thiserror::Error)]
+pub enum RundeLöschenFehler {
+    #[error("für diese Aktion ist eine Anmeldung erforderlich")]
+    NichtAngemeldet,
+    #[error("diese Runde gehört nicht zu diesem Benutzer")]
+    NichtErlaubt,
+    #[error("die Runde wurde nicht gefunden")]
+    NichtGefunden,
+    #[error("die Runde konnte nicht geladen werden")]
+    Laden,
+    #[error("die Runde konnte nicht gelöscht werden")]
+    Löschen,
+}
+
+#[derive(Debug, Clone)]
+pub struct RundeLöschen {
+    pub runde_id: RundeId,
+}
+
+#[async_trait]
+impl UseCase<()> for RundeLöschen {
+    type Error = Report<RundeLöschenFehler>;
+
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id), err(Debug))]
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<(), Self::Error> {
+        let benutzer_id = ctx
+            .auth()
+            .require_benutzer_id()
+            .change_context(RundeLöschenFehler::NichtAngemeldet)?;
+        let uow = ctx
+            .enter()
+            .await
+            .change_context(RundeLöschenFehler::Laden)?;
+        let ergebnis = async {
+            let runde = match uow.runden().find_by_id(self.runde_id).await {
+                Ok(runde) => runde,
+                Err(error) => {
+                    return Err(match error.current_context() {
+                        RepositoryError::NotFound => Report::new(RundeLöschenFehler::NichtGefunden),
+                        _ => error.change_context(RundeLöschenFehler::Laden),
+                    });
+                }
+            };
+            if !runde.gehört_zu(benutzer_id) {
+                return Err(Report::new(RundeLöschenFehler::NichtErlaubt));
+            }
+            for schuss in uow
+                .schüsse()
+                .find_by_runde(self.runde_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeLöschenFehler::Löschen)?
+            {
+                uow.schüsse()
+                    .delete(schuss)
+                    .await
+                    .map_err(IntoReport::into_report)
+                    .change_context(RundeLöschenFehler::Löschen)?;
+            }
+            uow.runden()
+                .delete(runde)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeLöschenFehler::Löschen)
+        }
+        .await;
+        uow.finish(ergebnis, RundeLöschenFehler::Laden).await
     }
 }
 
@@ -138,6 +229,7 @@ pub struct RundeAbschliessen {
 impl UseCase<Runde> for RundeAbschliessen {
     type Error = Report<RundeAbschliessenFehler>;
 
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
         let benutzer_id = ctx
             .auth()

@@ -149,6 +149,31 @@ pub async fn anlage_laden(harness: &Harness, anlage_id: AnlageId) -> Anlage {
         .expect("die Anlage ist lesbar")
 }
 
+/// Read the shots of a Runde, straight from the repository.
+pub async fn schuesse_laden(harness: &Harness, runde_id: RundeId) -> Vec<Schuss> {
+    harness
+        .app()
+        .execute_fn(AuthContext::Anonymous, async |ctx| {
+            let uow = ctx.enter().await.change_context(RepositoryError::Unknown)?;
+            let schüsse = uow
+                .schüsse()
+                .find_by_runde(runde_id)
+                .await
+                .map_err(error_stack::IntoReport::into_report)
+                .change_context(RepositoryError::Unknown)?
+                .into_iter()
+                .map(|schuss| schuss.into_data())
+                .collect();
+            uow.finish(
+                Ok::<_, Report<RepositoryError>>(schüsse),
+                RepositoryError::Unknown,
+            )
+            .await
+        })
+        .await
+        .expect("die Schüsse sind lesbar")
+}
+
 /// Read one Runde with its Schüsse, straight from the repositories.
 pub async fn runde_laden(harness: &Harness, runde_id: RundeId) -> (Runde, Vec<Schuss>) {
     harness
