@@ -70,8 +70,6 @@ pub use schuss::NeuerSchuss;
 pub use schuss::Schuss;
 pub use schuss::SchussFehler;
 pub use schuss::SchussId;
-pub use schuss::Schussdistanz;
-pub use schuss::SchussdistanzFehler;
 pub use schuss::Schussposition;
 pub use schuss::Wertungszone;
 pub use schuss::ZielSchüsse;

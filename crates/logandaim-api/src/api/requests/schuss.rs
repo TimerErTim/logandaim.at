@@ -50,7 +50,7 @@ pub struct PflockPositionRequest {
 fn position_aus_anfrage(position: SchusspositionRequest) -> Result<Schussposition, ()> {
     match position {
         SchusspositionRequest::Distanz(request) => Ok(Schussposition::Distanz(
-            logandaim_core::domain::Schussdistanz::neu(request.meter).map_err(|_| ())?,
+            logandaim_core::domain::Abstand::neu(request.meter).map_err(|_| ())?,
         )),
         SchusspositionRequest::Pflock(request) => Ok(Schussposition::Pflock(
             logandaim_core::domain::Farbe::neu(request.farbe.as_str()).map_err(|_| ())?,

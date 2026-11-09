@@ -16,8 +16,8 @@ use logandaim_core::{
     ErrorReportExt,
     application::uow::Versioned,
     domain::{
-        Erfasser, NeuerSchuss, RundeId, Schuss, SchussId, Schussdistanz, Schussposition,
-        Wertungszone, ZielId, konto::BenutzerId,
+        Abstand, Erfasser, NeuerSchuss, RundeId, Schuss, SchussId, Schussposition, Wertungszone,
+        ZielId, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, SchussRepository},
 };
@@ -51,7 +51,7 @@ fn schuss_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
     let position = match (distanz, pflock) {
         (Some(_), Some(_)) => return Err(RepositoryError::Data.into()),
         (Some(meter), None) => Some(Schussposition::Distanz(
-            Schussdistanz::neu(u32::try_from(meter).contextualize(RepositoryError::Data)?)
+            Abstand::neu(u32::try_from(meter).contextualize(RepositoryError::Data)?)
                 .contextualize(RepositoryError::Data)?,
         )),
         (None, Some(farbe)) => Some(Schussposition::Pflock(

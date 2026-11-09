@@ -10,8 +10,8 @@ use logandaim_core::{
     application::AuthContext,
     domain::{
         Abstand, AnlageAdresse, AnlageId, AnlageKontakt, EmailAdresse, Erfasser, Farbe, Ländercode,
-        NonEmptyString, ParkourId, Pflock, PflockId, Schussdistanz, Schussposition, Wertungszone,
-        ZielId, Zielplatzierung,
+        NonEmptyString, ParkourId, Pflock, PflockId, Schussposition, Wertungszone, ZielId,
+        Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
@@ -518,7 +518,7 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
                 runde_id: runde.id(),
                 ziel_id,
                 wertungszone: Wertungszone::Kill,
-                position: Some(Schussposition::Distanz(Schussdistanz::neu(35).unwrap())),
+                position: Some(Schussposition::Distanz(Abstand::neu(35).unwrap())),
             },
         )
         .await

@@ -10,7 +10,7 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::konto::BenutzerId;
-use crate::domain::common::Farbe;
+use crate::domain::{Abstand, common::Farbe};
 
 /// Identity of one physical Ziel.
 ///
@@ -103,11 +103,9 @@ impl Erfasser {
     }
 }
 
-pub use super::common::{Abstand as Schussdistanz, AbstandFehler as SchussdistanzFehler};
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Schussposition {
-    Distanz(Schussdistanz),
+    Distanz(Abstand),
     Pflock(Farbe),
 }
 
@@ -559,12 +557,6 @@ mod tests {
     }
 
     #[test_log::test]
-    fn schussdistanz_ist_positiv_und_ganzzahlig() {
-        assert_eq!(Schussdistanz::neu(35).unwrap().meter(), 35);
-        assert!(Schussdistanz::neu(0).is_err());
-    }
-
-    #[test_log::test]
     fn pfeil_luecke_wird_beim_loeschen_geschlossen() {
         let menge = mengen(&[(1, Spot), (2, Kill), (3, Body), (4, Miss)]);
         let verbleibend = menge.ohne_schuss(SchussId(Uuid::from_u128(2)));
@@ -619,7 +611,7 @@ mod tests {
 
     #[test_log::test]
     fn schussposition_hat_exklusiv_eine_der_beiden_formen() {
-        let distanz = Schussposition::Distanz(Schussdistanz::neu(35).unwrap());
+        let distanz = Schussposition::Distanz(Abstand::neu(35).unwrap());
         let pflock = Schussposition::Pflock(Farbe::neu("#c0392b").unwrap());
         assert_ne!(distanz, pflock);
 
@@ -642,7 +634,7 @@ mod tests {
 
     #[test_log::test]
     fn position_wird_beim_roundtrip_erhalten() {
-        let position = Some(Schussposition::Distanz(Schussdistanz::neu(35).unwrap()));
+        let position = Some(Schussposition::Distanz(Abstand::neu(35).unwrap()));
         let original = Schuss::neu(
             SchussId(Uuid::nil()),
             NeuerSchuss::neu(
