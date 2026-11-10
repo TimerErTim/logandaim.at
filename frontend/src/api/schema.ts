@@ -3136,8 +3136,7 @@ export interface components {
              * @description The Ziel that stands here.
              */
             zielId: string;
-            /** @description Whether this Ziel inherits the Parkour's Pflock order or replaces it with an explicit order. */
-            "pfl\u00F6cke": Omit<components["schemas"]["ZielPfl\u00F6cke"], "art"> & unknown;
+            "pfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke"];
             /** @description Distances by Pflock identity; a missing entry means no distance is configured. */
             "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
         };
