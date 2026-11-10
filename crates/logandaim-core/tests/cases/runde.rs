@@ -762,7 +762,7 @@ async fn parkour_mit_eigenem_satz_je_ziel(
     ];
 
     let platzierungen = vec![
-        Zielplatzierung::mit_eigenen_pflöcken(
+        Zielplatzierung::neu_mit_eigenen_pflöcken(
             erstes,
             eigene,
             vec![

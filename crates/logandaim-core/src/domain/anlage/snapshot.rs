@@ -46,10 +46,6 @@ pub enum ZielPflöckeSnapshot {
 }
 
 impl ZielPflöckeSnapshot {
-    pub fn ist_erbe(&self) -> bool {
-        matches!(self, Self::InheritFromParkour)
-    }
-
     /// The Ziel's own captured Pflöcke, `None` when it inherits the Parkour-wide order.
     pub fn eigene(&self) -> Option<&[PflockSnapshot]> {
         match self {
@@ -133,9 +129,8 @@ impl ZielSnapshot {
         &self.abstände
     }
 
-    /// Whether this Ziel's own captured Pflöcke hold `farbe`. `InheritFromParkour` is never a
-    /// match: it has no Pflöcke of its own to select.
-    pub fn hat_pflock(&self, farbe: Farbe) -> bool {
+    /// Whether this Ziel explicitly carries a captured Pflock of `farbe`.
+    pub fn hat_explizit_pflock(&self, farbe: Farbe) -> bool {
         self.pflöcke
             .eigene()
             .is_some_and(|eigene| eigene.iter().any(|pflock| pflock.farbe() == farbe))
@@ -439,7 +434,7 @@ mod tests {
                     vec![pflock(1, "#c0392b"), pflock(2, "#1b4f9c")],
                     vec![
                         // Own set: near-to-far, replaces the Parkour-wide order.
-                        Zielplatzierung::mit_eigenen_pflöcken(
+                        Zielplatzierung::neu_mit_eigenen_pflöcken(
                             ziel_id(10),
                             vec![pflock(11, "#1b4f9c"), pflock(12, "#e8b81c")],
                             vec![
@@ -463,17 +458,17 @@ mod tests {
         let snapshot = snapshot(&anlage.into(), parkour_id).unwrap();
 
         let eigenes = &snapshot.ziele()[0];
-        assert!(!eigenes.pflöcke().ist_erbe());
+        assert!(eigenes.pflöcke().eigene().is_some());
         let eigene = eigenes.pflöcke().eigene().expect("ein eigener Satz");
         assert_eq!(eigene.len(), 2);
         assert_eq!(eigene[0].farbe().to_hex(), "#1b4f9c");
         assert_eq!(eigene[0].position(), 0);
         assert_eq!(eigene[1].position(), 1);
         // Replacing, not merging: the Parkour-wide "#c0392b" is not in this Ziel's set.
-        assert!(!eigenes.hat_pflock(Farbe::neu("#c0392b").unwrap()));
+        assert!(!eigenes.hat_explizit_pflock(Farbe::neu("#c0392b").unwrap()));
 
         let erbe = &snapshot.ziele()[1];
-        assert!(erbe.pflöcke().ist_erbe());
+        assert!(erbe.pflöcke().eigene().is_none());
         assert!(erbe.pflöcke().eigene().is_none());
         assert_eq!(erbe.pflöcke().effektive(snapshot.pflöcke()).len(), 2);
     }
@@ -515,7 +510,7 @@ mod tests {
             )
             .unwrap();
 
-        assert!(!snapshot.ziele()[0].pflöcke().ist_erbe());
+        assert!(snapshot.ziele()[0].pflöcke().eigene().is_some());
         assert_eq!(
             snapshot.ziele()[0].pflöcke().eigene().unwrap().len(),
             2,

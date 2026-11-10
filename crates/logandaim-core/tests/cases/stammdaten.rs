@@ -1371,7 +1371,7 @@ fn parkour_setup_mit_eigenen(ziel: ZielId) -> (Vec<Pflock>, Vec<Pflock>, Vec<Zie
         Pflock::neu(eigen_nah, Farbe::neu("#1b4f9c").expect("gültig")),
         Pflock::neu(eigen_weit, Farbe::neu("#e8b81c").expect("gültig")),
     ];
-    let platzierung = Zielplatzierung::mit_eigenen_pflöcken(
+    let platzierung = Zielplatzierung::neu_mit_eigenen_pflöcken(
         ziel,
         eigene.clone(),
         vec![(eigen_nah, abstand(15)), (eigen_weit, abstand(45))],
@@ -1385,11 +1385,11 @@ async fn ziel_pfloecke_eigen_weist_leere_und_doppelte_farben_ab() {
     use logandaim_core::domain::{ParkourFehler, ZielPflöcke};
 
     assert!(matches!(
-        ZielPflöcke::eigen(Vec::new()),
+        ZielPflöcke::überschreibe(Vec::new()),
         Err(ParkourFehler::KeinePflöcke)
     ));
     assert!(matches!(
-        ZielPflöcke::eigen(vec![
+        ZielPflöcke::überschreibe(vec![
             Pflock::neu(
                 PflockId(uuid::Uuid::new_v4()),
                 Farbe::neu("#c0392b").expect("gültig")
@@ -1401,8 +1401,8 @@ async fn ziel_pfloecke_eigen_weist_leere_und_doppelte_farben_ab() {
         ]),
         Err(ParkourFehler::FarbeDoppelt)
     ));
-    let erbe = ZielPflöcke::erbe();
-    assert!(erbe.ist_erbe());
+    let erbe = ZielPflöcke::erbe_von_parkour();
+    assert!(erbe.eigene().is_none());
     assert!(erbe.eigene().is_none());
 }
 

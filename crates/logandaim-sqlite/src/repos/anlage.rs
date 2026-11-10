@@ -222,8 +222,13 @@ async fn lade_platzierungen(
         }
         let pflöcke = lade_ziel_pflöcke(tx, parkour_id, ziel_id).await?;
         platzierungen.push(
-            Zielplatzierung::mit_zielpflöcken(ziel_id, pflöcke, abstände, parkour_pflöcke)
-                .change_context(RepositoryError::Data)?,
+            Zielplatzierung::neu_mit_abständen_und_pflöcken(
+                ziel_id,
+                pflöcke,
+                abstände,
+                parkour_pflöcke,
+            )
+            .change_context(RepositoryError::Data)?,
         );
     }
     Ok(platzierungen)
@@ -261,9 +266,9 @@ async fn lade_ziel_pflöcke(
         ));
     }
     if pflöcke.is_empty() {
-        return Ok(ZielPflöcke::erbe());
+        return Ok(ZielPflöcke::erbe_von_parkour());
     }
-    ZielPflöcke::eigen(pflöcke).change_context(RepositoryError::Data)
+    ZielPflöcke::überschreibe(pflöcke).change_context(RepositoryError::Data)
 }
 
 async fn anlage_aus_zeile(tx: &Transaction, row: &Row) -> RepositoryResult<Versioned<Anlage>> {

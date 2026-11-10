@@ -153,8 +153,7 @@ pub struct Zielverwendung {
     pub parkour_id: Uuid,
     /// 0-based position in that Parkour' route.
     pub position: usize,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub pflöcke: Option<ZielPflöcke>,
+    pub pflöcke: ZielPflöcke,
     /// Pflock identity to metres, near to far.
     pub abstände: Vec<PflockAbstand>,
 }
@@ -177,7 +176,7 @@ pub struct PflockAbstand {
 // ------------------------------------------------------------------ Parkour
 
 /// One shooting position. Its colour identifies it; no label exists.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -189,18 +188,11 @@ pub struct Pflock {
     pub farbe: Farbe,
 }
 
-/// Whether one Ziel uses the Parkour-wide Pflock order or its own, tagged by `art`.
+/// Whether a Ziel uses the Parkour-wide Pflock order or its own.
 ///
-/// The wire shape is a tagged union, not a `Vec` with an empty-means-inherit sentinel, so
-/// "no own Pflöcke" and "not configured" cannot be confused. `InheritFromParkour` carries an
-/// empty object because `poem_openapi::Union` requires one object per variant; the
-/// discriminator alone says which variant it is.
-///
-/// Where this appears as a field it is optional, and an absent field means
-/// `InheritFromParkour`. The field carries no schema patch of its own: a field-level
-/// description or default would make poem wrap the reference in `allOf`, and
-/// `openapi-typescript` then strips the discriminator from the generated union.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
+/// near-to-far order that replaces it.
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Union))]
 #[cfg_attr(feature = "openapi", oai(discriminator_name = "art"))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -212,7 +204,7 @@ pub enum ZielPflöcke {
 
 /// The Parkour-wide order applies to this Ziel. Carries nothing; the discriminator is the
 /// whole message.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -221,7 +213,7 @@ pub struct InheritFromParkourPflöcke {}
 
 /// This Ziel's own near-to-far Pflock order, which replaces the Parkour-wide one. Never
 /// empty.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -246,8 +238,7 @@ impl Default for ZielPflöcke {
 pub struct Zielplatzierung {
     /// The Ziel that stands here.
     pub ziel_id: Uuid,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub pflöcke: Option<ZielPflöcke>,
+    pub pflöcke: ZielPflöcke,
     /// Distances by Pflock identity; a missing entry means no distance is configured.
     pub abstände: Vec<PflockAbstand>,
 }
@@ -461,7 +452,7 @@ impl From<domain::Zielplatzierung> for Zielplatzierung {
     fn from(platzierung: domain::Zielplatzierung) -> Self {
         Self {
             ziel_id: platzierung.ziel_id().0,
-            pflöcke: Some(platzierung.pflöcke().into()),
+            pflöcke: platzierung.pflöcke().into(),
             abstände: platzierung
                 .abstände()
                 .iter()
@@ -496,7 +487,7 @@ impl From<domain::Zielverwendung> for Zielverwendung {
         Self {
             parkour_id: verwendung.parkour_id.0,
             position: verwendung.position,
-            pflöcke: Some((&verwendung.pflöcke).into()),
+            pflöcke: (&verwendung.pflöcke).into(),
             abstände: verwendung
                 .abstände
                 .into_iter()

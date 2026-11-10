@@ -26,41 +26,6 @@ import type { paths } from "./schema";
 
 type JsonClient = ReturnType<typeof createClient<paths>>;
 
-function normalizeZielplatzierungen<T>(value: T): T {
-  if (Array.isArray(value)) {
-    return value.map(normalizeZielplatzierungen) as T;
-  }
-  if (typeof value !== "object" || value === null) return value;
-
-  const normalized: Record<string, unknown> = Object.fromEntries(
-    Object.entries(value).map(([key, entry]) => [
-      key,
-      normalizeZielplatzierungen(entry),
-    ]),
-  );
-  if (
-    (typeof normalized.zielId === "string" ||
-      typeof normalized.parkourId === "string") &&
-    !("tiername" in normalized) &&
-    Array.isArray(normalized.abstände)
-  ) {
-    const pflöcke = normalized.pflöcke;
-    if (Array.isArray(pflöcke)) {
-      normalized.pflöcke = pflöcke.length
-        ? { art: "Explicit", pflöcke }
-        : { art: "InheritFromParkour" };
-    } else if (typeof pflöcke !== "object" || pflöcke === null) {
-      normalized.pflöcke = { art: "InheritFromParkour" };
-    } else if (!("art" in pflöcke)) {
-      const legacy = pflöcke as Record<string, unknown>;
-      normalized.pflöcke = Array.isArray(legacy.pflöcke)
-        ? { art: "Explicit", pflöcke: legacy.pflöcke }
-        : { art: "InheritFromParkour" };
-    }
-  }
-  return normalized as T;
-}
-
 async function unwrap<T>(result: {
   data?: T;
   error?: unknown;
@@ -69,7 +34,7 @@ async function unwrap<T>(result: {
   if (result.error !== undefined) {
     throw ApiError.fromUnknown(result.error, result.response.status);
   }
-  return normalizeZielplatzierungen(result.data) as T;
+  return result.data as T;
 }
 
 /** HTTP implementation of the transport-neutral API. */
@@ -143,9 +108,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
       response: Response;
     }>,
   ): Promise<Anlage> {
-    return normalizeZielplatzierungen(
-      await this.authenticated(request),
-    ) as Anlage;
+    return this.authenticated(request) as Promise<Anlage>;
   }
 
   private async authenticated<T>(
@@ -226,7 +189,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
       if (result.data) {
         result.data = result.data.map((entry) => ({
           ...entry,
-          anlage: normalizeZielplatzierungen(entry.anlage),
+          anlage: entry.anlage,
         }));
       }
       return result;
@@ -382,7 +345,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     return this.anlageRequest(() =>
       this.client.POST("/anlagen/{anlage_id}/parkour", {
         params: { path: { anlage_id: anlageId } },
-        body: normalizeZielplatzierungen(parkour) as never,
+        body: parkour as never,
         headers: this.authorizationHeaders(),
       }),
     );
@@ -396,7 +359,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     return this.anlageRequest(() =>
       this.client.PUT("/anlagen/{anlage_id}/parkour/{parkour_id}/setup", {
         params: { path: { anlage_id: anlageId, parkour_id: parkourId } },
-        body: normalizeZielplatzierungen(setup) as never,
+        body: setup as never,
         headers: this.authorizationHeaders(),
       }),
     );

@@ -3077,31 +3077,17 @@ export interface components {
             verwendungen: components["schemas"]["Zielverwendung"][];
         };
         /**
-         * @description Whether one Ziel uses the Parkour-wide Pflock order or its own, tagged by `art`.
+         * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
          *
-         *     The wire shape is a tagged union, not a `Vec` with an empty-means-inherit sentinel, so
-         *     "no own Pflöcke" and "not configured" cannot be confused. `InheritFromParkour` carries an
-         *     empty object because `poem_openapi::Union` requires one object per variant; the
-         *     discriminator alone says which variant it is.
-         *
-         *     Where this appears as a field it is optional, and an absent field means
-         *     `InheritFromParkour`. The field carries no schema patch of its own: a field-level
-         *     description or default would make poem wrap the reference in `allOf`, and
-         *     `openapi-typescript` then strips the discriminator from the generated union.
+         *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
+         *     near-to-far order that replaces it.
          */
         "ZielPfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke_InheritFromParkourPfl\u00F6cke"] | components["schemas"]["ZielPfl\u00F6cke_ExplicitPfl\u00F6cke"];
         /**
-         * @description Whether one Ziel uses the Parkour-wide Pflock order or its own, tagged by `art`.
+         * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
          *
-         *     The wire shape is a tagged union, not a `Vec` with an empty-means-inherit sentinel, so
-         *     "no own Pflöcke" and "not configured" cannot be confused. `InheritFromParkour` carries an
-         *     empty object because `poem_openapi::Union` requires one object per variant; the
-         *     discriminator alone says which variant it is.
-         *
-         *     Where this appears as a field it is optional, and an absent field means
-         *     `InheritFromParkour`. The field carries no schema patch of its own: a field-level
-         *     description or default would make poem wrap the reference in `allOf`, and
-         *     `openapi-typescript` then strips the discriminator from the generated union.
+         *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
+         *     near-to-far order that replaces it.
          */
         "ZielPfl\u00F6cke_ExplicitPfl\u00F6cke": {
             /**
@@ -3111,17 +3097,10 @@ export interface components {
             art: ZielPflCke_ExplicitPflCkeArt;
         } & components["schemas"]["ExplicitPfl\u00F6cke"];
         /**
-         * @description Whether one Ziel uses the Parkour-wide Pflock order or its own, tagged by `art`.
+         * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
          *
-         *     The wire shape is a tagged union, not a `Vec` with an empty-means-inherit sentinel, so
-         *     "no own Pflöcke" and "not configured" cannot be confused. `InheritFromParkour` carries an
-         *     empty object because `poem_openapi::Union` requires one object per variant; the
-         *     discriminator alone says which variant it is.
-         *
-         *     Where this appears as a field it is optional, and an absent field means
-         *     `InheritFromParkour`. The field carries no schema patch of its own: a field-level
-         *     description or default would make poem wrap the reference in `allOf`, and
-         *     `openapi-typescript` then strips the discriminator from the generated union.
+         *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
+         *     near-to-far order that replaces it.
          */
         "ZielPfl\u00F6cke_InheritFromParkourPfl\u00F6cke": {
             /**
@@ -3157,7 +3136,8 @@ export interface components {
              * @description The Ziel that stands here.
              */
             zielId: string;
-            "pfl\u00F6cke"?: components["schemas"]["ZielPfl\u00F6cke"];
+            /** @description Whether this Ziel inherits the Parkour's Pflock order or replaces it with an explicit order. */
+            "pfl\u00F6cke": Omit<components["schemas"]["ZielPfl\u00F6cke"], "art"> & unknown;
             /** @description Distances by Pflock identity; a missing entry means no distance is configured. */
             "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
         };
@@ -3176,7 +3156,7 @@ export interface components {
              * @description 0-based position in that Parkour' route.
              */
             position: number;
-            "pfl\u00F6cke"?: components["schemas"]["ZielPfl\u00F6cke"];
+            "pfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke"];
             /** @description Pflock identity to metres, near to far. */
             "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
         };

@@ -79,6 +79,7 @@ async fn parkour_hinzufügen(
                 ],
                 "platzierungen": [{
                     "zielId": ziel_id,
+                    "pflöcke": { "art": "InheritFromParkour" },
                     "abstände": [
                         { "pflockId": nah, "meter": 20 },
                         { "pflockId": weit, "meter": 40 },
@@ -595,6 +596,7 @@ async fn ac6_und_ac7_ein_parkour_setup_ersetzt_die_ganze_aufstellung() {
                 "pflöcke": [{ "id": nah, "farbe": "#e8b81c" }],
                 "platzierungen": [{
                     "zielId": ziel_id,
+                    "pflöcke": { "art": "InheritFromParkour" },
                     "abstände": [{ "pflockId": nah, "meter": 15 }],
                 }],
             }),
@@ -1013,7 +1015,11 @@ async fn eine_platzierung_ohne_pfloecke_erbt_die_parkour_pfloecke() {
             json!({
                 "name": "Waldrunde",
                 "pflöcke": [pflock_json(Uuid::new_v4(), "#c0392b")],
-                "platzierungen": [{ "zielId": ziel_id, "abstände": [] }],
+                "platzierungen": [{
+                    "zielId": ziel_id,
+                    "pflöcke": { "art": "InheritFromParkour" },
+                    "abstände": []
+                }],
             }),
             &admin,
         )

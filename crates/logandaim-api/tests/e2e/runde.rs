@@ -58,6 +58,7 @@ async fn anlage_mit_parkour(harness: &E2eHarness) -> (String, String, String, St
                 "pflöcke": [{ "id": weit, "farbe": "#c0392b" }],
                 "platzierungen": [{
                     "zielId": ziel_id,
+                    "pflöcke": { "art": "InheritFromParkour" },
                     "abstände": [{ "pflockId": weit, "meter": 40 }],
                 }],
             }),
@@ -592,7 +593,11 @@ async fn anlage_mit_eigenem_satz(
                             { "pflockId": eigen_weit, "meter": 45 },
                         ],
                     },
-                    { "zielId": zweites, "abstände": [] },
+                    {
+                        "zielId": zweites,
+                        "pflöcke": { "art": "InheritFromParkour" },
+                        "abstände": []
+                    },
                 ],
             }),
             &admin,
