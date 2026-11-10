@@ -75,9 +75,9 @@ enum ZielPflöckeDto {
 
 impl ZielPflöckeDto {
     fn aus_snapshot(snapshot: &ZielPflöckeSnapshot) -> Self {
-        match snapshot.eigene() {
-            None => Self::InheritFromParkour,
-            Some(eigene) => Self::Explicit(
+        match snapshot {
+            ZielPflöckeSnapshot::InheritFromParkour => Self::InheritFromParkour,
+            ZielPflöckeSnapshot::Explicit(eigene) => Self::Explicit(
                 eigene
                     .iter()
                     .map(|pflock| PflockDto {

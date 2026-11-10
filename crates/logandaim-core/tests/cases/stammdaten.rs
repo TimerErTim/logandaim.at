@@ -11,7 +11,7 @@ use logandaim_core::{
     domain::{
         Abstand, Anlage, AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, EmailAdresse, Farbe,
         Ländercode, NeuerParkour, NonEmptyString, ParkourId, Pflock, PflockId, Wertungszone,
-        ZielId, Zielplatzierung,
+        ZielId, ZielPflöcke, Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
@@ -1402,8 +1402,7 @@ async fn ziel_pfloecke_eigen_weist_leere_und_doppelte_farben_ab() {
         Err(ParkourFehler::FarbeDoppelt)
     ));
     let erbe = ZielPflöcke::erbe_von_parkour();
-    assert!(erbe.eigene().is_none());
-    assert!(erbe.eigene().is_none());
+    assert!(matches!(erbe, ZielPflöcke::InheritFromParkour));
 }
 
 #[test_log::test(pollster::test)]
@@ -1607,14 +1606,16 @@ async fn ziel_eigene_pfloecke_bleiben_aus_anderen_zielen_heraus() {
     let geladen = anlage_laden(&harness, anlage_id).await;
     // The second Ziel inherits, so none of the first Ziel's own Pflöcke appear there.
     let verwendungen = geladen.ziel_verwendungen(zweites);
-    assert!(verwendungen[0].pflöcke.eigene().is_none());
+    assert!(matches!(
+        verwendungen[0].pflöcke,
+        ZielPflöcke::InheritFromParkour
+    ));
     let verwendungen = geladen.ziel_verwendungen(erstes);
     assert_eq!(
-        verwendungen[0]
-            .pflöcke
-            .eigene()
-            .expect("der eigene Satz")
-            .len(),
+        match &verwendungen[0].pflöcke {
+            ZielPflöcke::Explicit(eigene) => eigene.len(),
+            ZielPflöcke::InheritFromParkour => panic!("der eigene Satz"),
+        },
         eigene.len()
     );
 }

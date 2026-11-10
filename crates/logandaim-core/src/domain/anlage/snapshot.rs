@@ -46,14 +46,6 @@ pub enum ZielPflöckeSnapshot {
 }
 
 impl ZielPflöckeSnapshot {
-    /// The Ziel's own captured Pflöcke, `None` when it inherits the Parkour-wide order.
-    pub fn eigene(&self) -> Option<&[PflockSnapshot]> {
-        match self {
-            Self::InheritFromParkour => None,
-            Self::Explicit(eigene) => Some(eigene),
-        }
-    }
-
     /// The captured Pflöcke that actually apply to this Ziel.
     pub fn effektive<'a>(&'a self, parkour: &'a [PflockSnapshot]) -> &'a [PflockSnapshot] {
         match self {
@@ -64,9 +56,9 @@ impl ZielPflöckeSnapshot {
 
     /// Capture the domain enum, assigning each own Pflock its array position.
     fn aus_domain(pflöcke: &ZielPflöcke) -> Self {
-        match pflöcke.eigene() {
-            None => Self::InheritFromParkour,
-            Some(eigene) => Self::Explicit(
+        match pflöcke {
+            ZielPflöcke::InheritFromParkour => Self::InheritFromParkour,
+            ZielPflöcke::Explicit(eigene) => Self::Explicit(
                 eigene
                     .iter()
                     .enumerate()
@@ -131,9 +123,12 @@ impl ZielSnapshot {
 
     /// Whether this Ziel explicitly carries a captured Pflock of `farbe`.
     pub fn hat_explizit_pflock(&self, farbe: Farbe) -> bool {
-        self.pflöcke
-            .eigene()
-            .is_some_and(|eigene| eigene.iter().any(|pflock| pflock.farbe() == farbe))
+        match &self.pflöcke {
+            ZielPflöckeSnapshot::InheritFromParkour => false,
+            ZielPflöckeSnapshot::Explicit(eigene) => {
+                eigene.iter().any(|pflock| pflock.farbe() == farbe)
+            }
+        }
     }
 
     /// The captured distance for one Pflock colour, if one was configured.
@@ -458,8 +453,10 @@ mod tests {
         let snapshot = snapshot(&anlage.into(), parkour_id).unwrap();
 
         let eigenes = &snapshot.ziele()[0];
-        assert!(eigenes.pflöcke().eigene().is_some());
-        let eigene = eigenes.pflöcke().eigene().expect("ein eigener Satz");
+        let eigene = match eigenes.pflöcke() {
+            ZielPflöckeSnapshot::Explicit(eigene) => eigene,
+            ZielPflöckeSnapshot::InheritFromParkour => panic!("ein eigener Satz"),
+        };
         assert_eq!(eigene.len(), 2);
         assert_eq!(eigene[0].farbe().to_hex(), "#1b4f9c");
         assert_eq!(eigene[0].position(), 0);
@@ -468,8 +465,10 @@ mod tests {
         assert!(!eigenes.hat_explizit_pflock(Farbe::neu("#c0392b").unwrap()));
 
         let erbe = &snapshot.ziele()[1];
-        assert!(erbe.pflöcke().eigene().is_none());
-        assert!(erbe.pflöcke().eigene().is_none());
+        assert!(matches!(
+            erbe.pflöcke(),
+            ZielPflöckeSnapshot::InheritFromParkour
+        ));
         assert_eq!(erbe.pflöcke().effektive(snapshot.pflöcke()).len(), 2);
     }
 
@@ -510,9 +509,12 @@ mod tests {
             )
             .unwrap();
 
-        assert!(snapshot.ziele()[0].pflöcke().eigene().is_some());
+        let eigene = match snapshot.ziele()[0].pflöcke() {
+            ZielPflöckeSnapshot::Explicit(eigene) => eigene,
+            ZielPflöckeSnapshot::InheritFromParkour => panic!("ein eigener Satz"),
+        };
         assert_eq!(
-            snapshot.ziele()[0].pflöcke().eigene().unwrap().len(),
+            eigene.len(),
             2,
             "AC-9: ein späterer Satz ändert den gefrorenen Snapshot nicht"
         );

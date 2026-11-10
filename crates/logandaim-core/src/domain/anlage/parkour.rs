@@ -98,14 +98,6 @@ impl ZielPflöcke {
         Ok(Self::Explicit(pflöcke))
     }
 
-    /// The Ziel's own Pflöcke, `None` when it inherits the Parkour-wide set.
-    pub fn eigene(&self) -> Option<&[Pflock]> {
-        match self {
-            Self::InheritFromParkour => None,
-            Self::Explicit(eigene) => Some(eigene),
-        }
-    }
-
     /// The Pflöcke that actually apply to this Ziel: its own set when it has one, the
     /// Parkour-wide set otherwise.
     pub fn effektive<'a>(&'a self, parkour: &'a [Pflock]) -> &'a [Pflock] {
@@ -795,8 +787,7 @@ mod tests {
     #[test_log::test]
     fn zielpfloecke_erbe_carries_nothing() {
         let erbe = ZielPflöcke::erbe_von_parkour();
-        assert!(erbe.eigene().is_none());
-        assert!(erbe.eigene().is_none());
+        assert!(matches!(erbe, ZielPflöcke::InheritFromParkour));
         let parkour = drei_pflöcke();
         assert_eq!(erbe.effektive(&parkour).len(), 3);
     }
@@ -804,7 +795,7 @@ mod tests {
     #[test_log::test]
     fn ac6_eigene_pfloecke_ersetzen_die_parkourreihenfolge() {
         let (eigene, platzierung) = eigene_platzierung();
-        assert!(platzierung.pflöcke().eigene().is_some());
+        assert!(matches!(platzierung.pflöcke(), ZielPflöcke::Explicit(_)));
         assert_eq!(platzierung.effektive_pflöcke(&drei_pflöcke()), &eigene[..]);
 
         let parkour = Parkour::neu(
@@ -916,7 +907,7 @@ mod tests {
         .unwrap();
         parkour.platzierung_hinzufügen(hinzuzufügen).unwrap();
         let hinzugefügt = &parkour.platzierungen()[2];
-        assert!(hinzugefügt.pflöcke().eigene().is_some());
+        assert!(matches!(hinzugefügt.pflöcke(), ZielPflöcke::Explicit(_)));
         assert_eq!(hinzugefügt.abstände().len(), 1);
     }
 }

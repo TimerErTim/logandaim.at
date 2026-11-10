@@ -474,7 +474,7 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> RepositoryResult<(
 
             // A Ziel's own set, when it has one. Zero rows is `InheritFromParkour`, so the
             // set must be written as rows and nothing else records which variant it is.
-            if let Some(eigene) = platzierung.pflöcke().eigene() {
+            if let ZielPflöcke::Explicit(eigene) = platzierung.pflöcke() {
                 for (pflock_ordnung, pflock) in eigene.iter().enumerate() {
                     tx.execute(
                         r#"INSERT INTO "ziel_pflock_setups" (id, parkour_id, ziel_id, farbe, ordnung)

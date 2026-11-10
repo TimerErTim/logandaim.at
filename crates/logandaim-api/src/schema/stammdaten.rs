@@ -439,9 +439,11 @@ impl From<domain::Pflock> for Pflock {
 
 impl From<&domain::ZielPflöcke> for ZielPflöcke {
     fn from(pflöcke: &domain::ZielPflöcke) -> Self {
-        match pflöcke.eigene() {
-            None => Self::InheritFromParkour(InheritFromParkourPflöcke {}),
-            Some(eigene) => Self::Explicit(ExplicitPflöcke {
+        match pflöcke {
+            domain::ZielPflöcke::InheritFromParkour => {
+                Self::InheritFromParkour(InheritFromParkourPflöcke {})
+            }
+            domain::ZielPflöcke::Explicit(eigene) => Self::Explicit(ExplicitPflöcke {
                 pflöcke: eigene.iter().cloned().map(Into::into).collect(),
             }),
         }
