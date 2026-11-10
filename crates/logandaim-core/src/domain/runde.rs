@@ -483,7 +483,7 @@ impl Rundenwertung {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::anlage::{PflockSnapshot, ZielSnapshot};
+    use crate::domain::anlage::{PflockSnapshot, ZielPflöckeSnapshot, ZielSnapshot};
     use crate::domain::common::{Farbe, NonEmptyString};
     use crate::domain::schuss::{NeuerSchuss, SchussId, Wertungszone};
     use std::num::NonZeroU32;
@@ -505,6 +505,7 @@ mod tests {
                         ZielId(Uuid::from_u128(id)),
                         NonZeroU32::new(1).unwrap(),
                         name(tiername),
+                        ZielPflöckeSnapshot::InheritFromParkour,
                         Vec::new(),
                     )
                 })

@@ -20,7 +20,7 @@ use logandaim_core::{
     domain::{
         Anlage, AnlageAdresse, AnlageAktiv, AnlageArchiviert, AnlageId, AnlageKontakt,
         AnlageVerwaltung, AnlageVerwaltungRolle, Farbe, Ländercode, NeueAnlage, NonEmptyString,
-        Parkour, ParkourId, Pflock, PflockId, Ziel, ZielId, Zielplatzierung, Zustand,
+        Parkour, ParkourId, Pflock, PflockId, Ziel, ZielId, ZielPflöcke, Zielplatzierung, Zustand,
     },
     ports::{AnlageRepository, RepositoryError, RepositoryResult},
 };
@@ -131,7 +131,7 @@ async fn lade_parkour(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult
         let zustand: String = row.get(2).contextualize(RepositoryError::Data)?;
         let parkour_id = ParkourId(parse_uuid(&id)?);
         let pflöcke = lade_pflöcke(tx, parkour_id).await?;
-        let platzierungen = lade_platzierungen(tx, parkour_id).await?;
+        let platzierungen = lade_platzierungen(tx, parkour_id, &pflöcke).await?;
         parkour.push(
             Parkour::from_parts(
                 parkour_id,
@@ -175,6 +175,7 @@ async fn lade_pflöcke(tx: &Transaction, parkour_id: ParkourId) -> RepositoryRes
 async fn lade_platzierungen(
     tx: &Transaction,
     parkour_id: ParkourId,
+    parkour_pflöcke: &[Pflock],
 ) -> RepositoryResult<Vec<Zielplatzierung>> {
     let mut rows = tx
         .query(
@@ -219,10 +220,50 @@ async fn lade_platzierungen(
                     .change_context(RepositoryError::Data)?,
             ));
         }
-        platzierungen
-            .push(Zielplatzierung::neu(ziel_id, abstände).change_context(RepositoryError::Data)?);
+        let pflöcke = lade_ziel_pflöcke(tx, parkour_id, ziel_id).await?;
+        platzierungen.push(
+            Zielplatzierung::mit_zielpflöcken(ziel_id, pflöcke, abstände, parkour_pflöcke)
+                .change_context(RepositoryError::Data)?,
+        );
     }
     Ok(platzierungen)
+}
+
+/// The Ziel's own Pflock set, in `ordnung` order.
+///
+/// Zero rows is not a missing set: it is `InheritFromParkour`, the only way to say "the
+/// Parkour-wide order applies here".
+async fn lade_ziel_pflöcke(
+    tx: &Transaction,
+    parkour_id: ParkourId,
+    ziel_id: ZielId,
+) -> RepositoryResult<ZielPflöcke> {
+    let mut rows = tx
+        .query(
+            r#"SELECT id, farbe FROM "ziel_pflock_setups"
+               WHERE parkour_id = ?1 AND ziel_id = ?2 ORDER BY ordnung"#,
+            (parkour_id.0.to_string(), ziel_id.0.to_string()),
+        )
+        .await
+        .contextualize_with(libsql_error_to_persistence_error)?;
+
+    let mut pflöcke = Vec::new();
+    while let Some(row) = rows
+        .next()
+        .await
+        .contextualize_with(libsql_error_to_persistence_error)?
+    {
+        let id: String = row.get(0).contextualize(RepositoryError::Data)?;
+        let farbe: String = row.get(1).contextualize(RepositoryError::Data)?;
+        pflöcke.push(Pflock::neu(
+            PflockId(parse_uuid(&id)?),
+            Farbe::neu(&farbe).change_context(RepositoryError::Data)?,
+        ));
+    }
+    if pflöcke.is_empty() {
+        return Ok(ZielPflöcke::erbe());
+    }
+    ZielPflöcke::eigen(pflöcke).change_context(RepositoryError::Data)
 }
 
 async fn anlage_aus_zeile(tx: &Transaction, row: &Row) -> RepositoryResult<Versioned<Anlage>> {
@@ -327,21 +368,37 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> RepositoryResult<(
         .contextualize_with(libsql_error_to_persistence_error)?;
     }
 
-    // Children are removed and reinserted wholesale. The foreign keys cascade the grandchildren
-    // (`pflock_setups`, `zielplatzierungen`, and their distances).
-    for table in ["pflock_setups", "parkour", "ziele"] {
+    // Children are removed and reinserted wholesale. The foreign keys cascade the
+    // grandchildren (`pflock_setups`, `zielplatzierungen`, and their distances), but
+    // `ziel_pflock_setups` is deleted explicitly: a bulk `DELETE` must not depend on a
+    // cascade firing reliably, and it has to go before `parkour` and `ziele`.
+    for table in [
+        "ziel_pflock_setups",
+        "zielplatzierung_abstaende",
+        "zielplatzierungen",
+        "pflock_setups",
+        "parkour",
+        "ziele",
+    ] {
         let sql = match table {
+            "ziel_pflock_setups" => {
+                r#"DELETE FROM "ziel_pflock_setups" WHERE parkour_id IN
+                     (SELECT id FROM "parkour" WHERE anlage_id = ?1)"#
+            }
+            "zielplatzierung_abstaende" => {
+                r#"DELETE FROM "zielplatzierung_abstaende" WHERE parkour_id IN
+                     (SELECT id FROM "parkour" WHERE anlage_id = ?1)"#
+            }
+            "zielplatzierungen" => {
+                r#"DELETE FROM "zielplatzierungen" WHERE parkour_id IN
+                     (SELECT id FROM "parkour" WHERE anlage_id = ?1)"#
+            }
             "pflock_setups" => {
                 r#"DELETE FROM "pflock_setups" WHERE parkour_id IN
                      (SELECT id FROM "parkour" WHERE anlage_id = ?1)"#
             }
-            _ => {
-                if table == "parkour" {
-                    r#"DELETE FROM "parkour" WHERE anlage_id = ?1"#
-                } else {
-                    r#"DELETE FROM "ziele" WHERE anlage_id = ?1"#
-                }
-            }
+            "parkour" => r#"DELETE FROM "parkour" WHERE anlage_id = ?1"#,
+            _ => r#"DELETE FROM "ziele" WHERE anlage_id = ?1"#,
         };
         tx.execute(sql, [anlage_id.clone()])
             .await
@@ -410,6 +467,26 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> RepositoryResult<(
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;
 
+            // A Ziel's own set, when it has one. Zero rows is `InheritFromParkour`, so the
+            // set must be written as rows and nothing else records which variant it is.
+            if let Some(eigene) = platzierung.pflöcke().eigene() {
+                for (pflock_ordnung, pflock) in eigene.iter().enumerate() {
+                    tx.execute(
+                        r#"INSERT INTO "ziel_pflock_setups" (id, parkour_id, ziel_id, farbe, ordnung)
+                           VALUES (?1, ?2, ?3, ?4, ?5)"#,
+                        (
+                            pflock.id().0.to_string(),
+                            parkour_id.clone(),
+                            ziel_id.clone(),
+                            pflock.farbe().to_hex(),
+                            pflock_ordnung as i64,
+                        ),
+                    )
+                    .await
+                    .contextualize_with(libsql_error_to_persistence_error)?;
+                }
+            }
+
             for (pflock_id, abstand) in platzierung.abstände() {
                 tx.execute(
                     r#"INSERT INTO "zielplatzierung_abstaende" (parkour_id, ziel_id, pflock_id, meter)
@@ -431,6 +508,16 @@ async fn ersetze_kinder(tx: &Transaction, anlage: &Anlage) -> RepositoryResult<(
 
 fn kinder_loeschen_sql(anlage_id: &str) -> Vec<(&'static str, String)> {
     vec![
+        (
+            r#"DELETE FROM "ziel_pflock_setups" WHERE parkour_id IN
+                 (SELECT id FROM "parkour" WHERE anlage_id = ?1)"#,
+            anlage_id.to_owned(),
+        ),
+        (
+            r#"DELETE FROM "zielplatzierungen" WHERE parkour_id IN
+                 (SELECT id FROM "parkour" WHERE anlage_id = ?1)"#,
+            anlage_id.to_owned(),
+        ),
         (
             r#"DELETE FROM "ziele" WHERE anlage_id = ?1"#,
             anlage_id.to_owned(),

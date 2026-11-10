@@ -3,7 +3,7 @@ id: SPEC-runde
 title: Capture a Runde target by target, on phone and desktop
 status: PO-approved
 owner: TimerErTim
-issues: [11, 23]
+issues: [11, 23, 72]
 superseded_by: null
 ---
 
@@ -129,9 +129,15 @@ Rules:
    position control represented when the `Schuss` was registered. Whether that is a distance or a
    stake depends on the `Ziel`'s snapshot:
 
-   - When the `Ziel`'s `Pflöcke` carry configured `Distanzen`, the slider runs on a meter scale
-     spanning them from the farthest to the nearest ([`stammdaten.md`](stammdaten.md) rule 6). Its
-     position is the interpolated distance between the two adjacent `Pflöcke`, stored rounded to
+   - Every position resolves within the `Ziel`'s **effective** `Pflöcke`
+     ([`stammdaten.md`](stammdaten.md) rule 6): the `Ziel`'s own set when its snapshot carries one,
+     otherwise the `Parkour`-wide set. A `Ziel` with an own set is controlled by that set alone —
+     the slider, the offered stakes, and the validator never see the `Parkour`-wide set — while
+     every other `Ziel` keeps the `Parkour`-wide set. A stake or a configured `Distanz` outside the
+     effective set is not a valid position for that `Ziel`.
+   - When the `Ziel`'s effective `Pflöcke` carry configured `Distanzen`, the slider runs on a meter
+     scale spanning them from the farthest to the nearest ([`stammdaten.md`](stammdaten.md) rule 6).
+     Its position is the interpolated distance between the two adjacent `Pflöcke`, stored rounded to
      whole meters as a `Schussdistanz`. Moving it there stores a distance, including when it sits
      exactly on a `Pflock`: the stake's configured `Distanz` is stored as that distance.
    - When they carry no configured `Distanzen`, there is no meter scale. The slider offers the
@@ -140,18 +146,24 @@ Rules:
    - A `Ziel` with exactly one `Pflock` has no slider. A one-tap `Schuss` stores that `Pflock`,
      and an exact distance can still be typed.
 
-   An exact distance typed for a `Schuss` always stores a `Schussdistanz`, whatever the `Pflöcke`
-   configure, so a `Benutzer` who stepped somewhere off-stake records where they actually stood.
-   Registering or re-entering a position replaces the previous one, so a `Schuss` never carries
-   both forms and never carries two of the same form.
+   An exact distance typed for a `Schuss` always stores a `Schussdistanz`, whatever the effective
+   `Pflöcke` configure, so a `Benutzer` who stepped somewhere off-stake records where they
+   actually stood. Registering or re-entering a position replaces the previous one, so a `Schuss`
+   never carries both forms and never carries two of the same form.
 5. Distance display. The shot ledger shows the stored `Schussposition` of every `Schuss`: a
-   `Schussdistanz` as meters, a `Pflock` as that `Pflock`. The slider shows a meter value only on a
-   `Ziel` whose `Pflöcke` configure `Distanzen`, and no meter value at all on a `Pflock` that has
-   none ([`stammdaten.md`](stammdaten.md) AC-6). A `Schuss` that stored a `Schussdistanz` gets no
-   `Pflock` indicator, because a distance is not a stake; a `Schuss` that stored a `Pflock` shows
-   that stake and no meters. Interpolated and typed distances are both displayed as a bare meter
-   value ("35 m"); the stored position does not distinguish an estimate from a directly entered
-   value.
+   `Schussdistanz` as meters, a `Pflock` as that `Pflock`. The slider shows a meter value only on
+   a `Ziel` whose effective `Pflöcke` configure `Distanzen`, and no meter value at all on a
+   `Pflock` that has none ([`stammdaten.md`](stammdaten.md) AC-6). A `Schuss` that stored a
+   `Schussdistanz` gets no `Pflock` indicator, because a distance is not a stake; a `Schuss` that
+   stored a `Pflock` shows that stake and no meters. Interpolated and typed distances are both
+   displayed as a bare meter value ("35 m"); the stored position does not distinguish an
+   estimate from a directly entered value.
+
+   Every displayed `Pflock` and every meter value belongs to the `Ziel`'s **effective** set
+   (rule 4, [`stammdaten.md`](stammdaten.md) rule 6). A `Ziel` with its own `Pflöcke` therefore
+   displays that own set and its own `Distanzen`, and never the `Parkour`-wide set; a `Ziel`
+   without one displays the `Parkour`-wide set. The `Ziel` view names only the set that applies to
+   it, so a reader never has to decide which of two lists a shown stake came from.
 6. `Wertung` follows [`wertung.md`](wertung.md) unchanged: per `Ziel`, `Erster Treffer` and
    `Mehrschuss` computed from its `Schüsse`; a `Ziel` without `Schuss` has no result (not 0); each
    `Runde` total is the sum of its `Ziel` results per `Wertung`.
@@ -241,8 +253,8 @@ Rules:
 - FR-3: Log unlimited `Schüsse` per `Ziel` in shooting order, each with `Wertungszone` and
   `Schussposition` (rules 3–4).
 - FR-4: Set the `Schussposition` on a slider that stores a meter distance when the `Ziel`'s
-  `Pflöcke` configure `Distanzen` and clings to a `Pflock` when they do not, and accept an exact
-  `Schussdistanz` typed for a single `Schuss` (rules 4–5).
+  effective `Pflöcke` configure `Distanzen` and clings to a `Pflock` when they do not, and accept an
+  exact `Schussdistanz` typed for a single `Schuss` (rules 4–5).
 - FR-5: Show the `Wertung` per `Ziel` and the two `Runde` totals, computed per
   [`wertung.md`](wertung.md) (rule 6).
 - FR-6: Hold at most one `Runde` in progress per `Benutzer`, refuse a second start, and offer to
@@ -303,19 +315,26 @@ Rules:
 - AC-4: Given `Schüsse` at a `Ziel`, then its `Erster Treffer` and `Mehrschuss` equal the results
   defined by [`wertung.md`](wertung.md), and the `Runde` totals equal the sum of its `Ziel`
   results; a `Ziel` without `Schuss` contributes nothing and shows no result.
-- AC-5: Given a `Ziel` whose `Pflöcke` carry no configured `Distanzen`, when the slider is moved,
-  then it clings to a `Pflock`, the `Schuss` stores that `Pflock`, and redisplay shows the same
-  `Pflock`; no meter value is stored or shown. Given a `Ziel` whose `Pflöcke` do carry `Distanzen`,
-  moving the slider stores a positive whole-meter `Schussdistanz` and redisplay puts the slider at
-  the same place, and resting it on a `Pflock` stores that stake's configured `Distanz` rather than
-  the stake.
-- AC-6: Given adjacent `Pflöcke` with `Distanz` 40 m (farther) and 30 m (nearer), then a slider
-  position halfway between them stores 35 m and displays it as "35 m", while the stakes' own
-  40 m and 30 m show at their positions. A `Pflock` without a configured `Distanz` gets no meter
-  value, and a `Schuss` that stored a `Schussdistanz` shows no `Pflock` indicator.
-- AC-7: Given a `Ziel` with exactly one `Pflock`, then no slider is offered, a `Schuss` registered
-  by the `Wertungszone` group stores that `Pflock` as its `Schussposition`, and an exact
-  `Schussdistanz` can still be typed for a `Schuss` (AC-15).
+- AC-5: Given a `Ziel` whose effective `Pflöcke` carry no configured `Distanzen`, when the slider
+  is moved, then it clings to a `Pflock` of that set, the `Schuss` stores that `Pflock`, and
+  redisplay shows the same `Pflock`; no meter value is stored or shown. Given a `Ziel` whose
+  effective `Pflöcke` do carry `Distanzen`, moving the slider stores a positive whole-meter
+  `Schussdistanz` and redisplay puts the slider at the same place, and resting it on a `Pflock`
+  stores that stake's configured `Distanz` rather than the stake. A `Ziel` with its own `Pflöcke`
+  is judged by that own set alone: its slider and its stored `Pflock` never come from the
+  `Parkour`-wide set, and a `Pflock` or `Distanz` of the `Parkour`-wide set that the own set does
+  not carry is refused for it.
+- AC-6: Given adjacent effective `Pflöcke` with `Distanz` 40 m (farther) and 30 m (nearer), then
+  a slider position halfway between them stores 35 m and displays it as "35 m", while the stakes'
+  own 40 m and 30 m show at their positions. A `Pflock` without a configured `Distanz` gets no
+  meter value, and a `Schuss` that stored a `Schussdistanz` shows no `Pflock` indicator. When the
+  `Ziel` carries its own `Pflöcke`, the same holds for the own set's order and `Distanzen` even
+  where the `Parkour`-wide set configures different values for the same colour.
+- AC-7: Given a `Ziel` whose effective set holds exactly one `Pflock`, then no slider is offered, a
+  `Schuss` registered by the `Wertungszone` group stores that `Pflock` as its `Schussposition`, and
+  an exact `Schussdistanz` can still be typed for a `Schuss` (AC-15). A `Ziel` whose own set holds
+  one `Pflock` behaves the same, judged by its own set and not by the `Parkour`-wide one. A
+  `Ziel`'s own `Pflöcke` never appear on another `Ziel` of the same `Runde`.
 - AC-8: When a `Runde` is finished with unlogged `Ziele`, then those `Ziele` show no result and the
   totals cover only the logged `Ziele`; `Schüsse` added when the `Runde` is resumed later are
   included in the recomputed totals.
@@ -405,7 +424,8 @@ for that stake — the distance was never recorded for the shot, so it is not im
 
 Domain unit tests in the backend core cover the `Schussposition` value (the two exclusive forms of
 rule 4, the single-`Pflock` case, and rejection of a non-positive or fractional `Schussdistanz`),
-the `Pfeil` renumbering of rule 9, and the `Wertung` hand-off to [`wertung.md`](wertung.md).
+the effective per-`Ziel` `Pflöcke` set that a position resolves within, the `Pfeil` renumbering of
+rule 9, and the `Wertung` hand-off to [`wertung.md`](wertung.md).
 Use-case conformance tests cover start, walk, skip/revisit, finish, edit, and delete (AC-1 to
 AC-10), the one-running-`Runde` rule including a concurrent double start (AC-13), `Zielfortschritt`
 (AC-14), and the initial slider state (AC-15). API e2e tests cover ownership enforcement (AC-11)
@@ -437,6 +457,7 @@ use-case conformance test.
 | 2026-11-06 | Rule 16 is named "initial slider state": the derived value seeds the control, while what a `Schuss` stores is decided at registration. | Agent (Cursor) |
 | 2026-11-07 | Interpolated and typed distances use the same bare meter display (for example, "35 m"); no estimate label is shown because the single stored position cannot preserve that distinction. | TimerErTim (PO) |
 | 2026-11-07 | A closed `Runde` remains correctable: its `Schüsse` and `Datum` can be edited, but no new `Schuss` can be registered after completion. | TimerErTim (PO) |
+| 2026-11-10 | A `Ziel` may carry its own `Pflöcke` instead of the `Parkour`-wide set. The capture screen, the slider, and the stored `Schussposition` use the `Ziel`'s effective set (own set when present, otherwise the `Parkour`-wide set); a `Ziel`'s own `Pflöcke` are selectable only for that `Ziel` and never appear on another `Ziel` of the same `Runde`. | Agent (Cursor) |
 
 ## Revision history
 
@@ -448,6 +469,7 @@ use-case conformance test.
 | 2026-11-06 | Follow-up review: Q-1 resolved — a `Pflock`-form position is excluded from meter-based metrics rather than imputed from the stake's configured `Distanz`. No open questions remain. | Agent (Cursor) |
 | 2026-11-07 | Capture implementation decisions: use the bare meter display for interpolated distances, and preserve correction of `Schüsse` and `Datum` after a `Runde` is closed while refusing new `Schüsse`. | TimerErTim (PO) |
 | 2026-11-06 | Approved. Status set to `PO-approved` on the PO's explicit instruction; implementation is tracked in #86. | TimerErTim (PO) |
+| 2026-11-10 | Added the per-Ziel `Pflöcke` set (rules 4–5, AC-5 to AC-7): a `Schussposition` on a `Ziel` with its own set resolves within that set, the slider and the ledger use the effective set, and each `Ziel` displays only the set that applies to it. | Agent (Cursor) |
 
 ## Appendix A: implementation sketch (non-normative)
 

@@ -2,7 +2,6 @@
 
 import { Trash2 } from "lucide-react";
 import type {
-  RundePflock,
   RundeZiel,
   Schuss,
   SchusspositionInput,
@@ -23,14 +22,12 @@ const ZONEN = [
 
 export function SchussLedger({
   ziel,
-  pflöcke,
   reihenfolge,
   editable,
   onEdit,
   onDelete,
 }: {
   ziel: RundeZiel;
-  pflöcke: RundePflock[];
   reihenfolge: number;
   editable: boolean;
   onEdit: (
@@ -93,7 +90,6 @@ export function SchussLedger({
                   <SchussDistanzEditor
                     pfeil={schuss.pfeil}
                     ziel={ziel}
-                    pflöcke={pflöcke}
                     position={schuss.position as SchusspositionInput | null}
                     onCommit={(position) =>
                       onEdit(schuss.id, schuss.wertungszone, position)

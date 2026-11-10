@@ -25,9 +25,11 @@ pub mod ziel;
 pub use adresse::{AnlageAdresse, AnlageAdresseFehler};
 pub use kontaktdaten::{AnlageKontakt, WebsiteUrl, WebsiteUrlFehler};
 pub use parkour::{
-    NeuerParkour, Parkour, ParkourFehler, ParkourId, Pflock, PflockId, Zielplatzierung,
+    NeuerParkour, Parkour, ParkourFehler, ParkourId, Pflock, PflockId, ZielPflöcke, Zielplatzierung,
 };
-pub use snapshot::{ParkourSnapshot, PflockSnapshot, SnapshotFehler, ZielSnapshot};
+pub use snapshot::{
+    ParkourSnapshot, PflockSnapshot, SnapshotFehler, ZielPflöckeSnapshot, ZielSnapshot,
+};
 pub use ziel::{NeuesZiel, Ziel, ZielFehler, ZielId, Zustand, ZustandUnbekannt};
 
 use crate::domain::common::{Abstand, NonEmptyString};
@@ -289,6 +291,7 @@ impl<S> AnlageIn<S> {
                 Some(Zielverwendung {
                     parkour_id: parkour.id(),
                     position,
+                    pflöcke: platzierung.pflöcke().clone(),
                     abstände: platzierung.abstände().to_vec(),
                 })
             })
@@ -758,6 +761,9 @@ pub struct Zielverwendung {
     pub parkour_id: ParkourId,
     /// 0-based position of the Ziel in that Parkour's route.
     pub position: usize,
+    /// Which Pflock set applies to this Ziel in this Parkour: the Parkour-wide order or this
+    /// Ziel's own ordered set.
+    pub pflöcke: ZielPflöcke,
     /// Distance per Pflock, for the distances that are configured.
     pub abstände: Vec<(PflockId, Abstand)>,
 }

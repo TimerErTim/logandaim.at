@@ -3,7 +3,7 @@ id: SPEC-stammdaten
 title: Master data (Anlage, Parkour, Ziel, Pflock) and Anlage administration
 status: PO-approved
 owner: TimerErTim
-issues: [10, 73]
+issues: [10, 72, 73]
 superseded_by: null
 ---
 
@@ -44,7 +44,8 @@ master data never breaks recorded history.
 **In scope**
 
 - `Anlage` identity, structured address, contact details, lifecycle, and `AnlageVerwaltung`.
-- `Parkour`, physical `Ziel`, Parkour-specific Ziel placement, and Parkour-level Pflock setup.
+- `Parkour`, physical `Ziel`, Parkour-specific Ziel placement, Parkour-level Pflock setup, and a
+  Ziel's own Pflock set.
 - Admin-UI entry and maintenance; no file import or pilot-data seed task.
 - Immutable full shooting-setup snapshots on `Runden` and per-physical-Ziel history continuity.
 - Archiving history-referenced master data and removing it from future use.
@@ -66,8 +67,9 @@ master data never breaks recorded history.
    and optional contact details in the admin UI. The Anlage may temporarily have no
    `Administrator`; one can be assigned later.
 2. **Set up a Parkour.** An authorized staff member creates a Parkour, chooses the colour of
-   each Pflock and its near-to-far order, adds Ziele belonging to the same Anlage, sets any
-   per-Ziel distances for those Pflocks, and arranges the Ziele in route order.
+   each Pflock and its near-to-far order, adds Ziele belonging to the same Anlage, optionally gives
+   a Ziel its own Pflock set instead of the Parkour-wide one, sets any per-Ziel distances for the
+   effective Pflocks, and arranges the Ziele in route order.
 3. **Maintain a course.** Staff edit the route, Ziel details, Pflock setup, or distances. The edits
    apply to Runden started afterwards. A Runde already in progress and every completed Runde keep
    the setup captured when that Runde started.
@@ -84,10 +86,11 @@ master data never breaks recorded history.
 |------|---------|
 | `Anlage` | Physical site of a club or commercial operator. Has a name, structured address, optional contact details, Parkours, and `AnlageVerwaltungen`. |
 | `AnlageVerwaltung` | One Benutzer's role (`Administrator` or `Mitarbeiter`) inside one Anlage. |
-| `Parkour` | Named route at one Anlage, containing an ordered arrangement of that Anlage's physical Ziele and one Pflock setup. |
+| `Parkour` | Named route at one Anlage, containing an ordered arrangement of that Anlage's physical Ziele and one Parkour-wide Pflock setup. |
 | `Ziel` | One physical 3D target belonging to one Anlage, with an animal name and target group 1–4. |
-| `Zielplatzierung` | One physical Ziel's use in one Parkour. It carries optional distances for that Parkour's Pflock colours. |
-| `Pflock` | A shooting position in one Parkour's setup, identified by its colour and ordered near to far. The colour is chosen by Anlage staff and unique within the Parkour. |
+| `Zielplatzierung` | One physical Ziel's use in one Parkour. It carries either the Parkour-wide Pflock set or an own Pflock set, plus optional distances keyed by the effective set's Pflocks. |
+| `Pflock` | A shooting position in one Parkour-wide Pflock set or one Ziel's own Pflock set, identified by its colour and ordered near to far. The colour is chosen by Anlage staff and unique within its set. |
+| `Effektive Pflöcke` | The Pflock set that applies to one Zielplatzierung: its own set when it has one, otherwise the Parkour-wide set. Distances and positions resolve against it. |
 | `Parkour-Snapshot` | Immutable copy of the Parkour shooting setup captured when a Runde starts. |
 | `Archivierung` | Removal of history-referenced master data from current use while retaining its identity and historical references. It is not reversible. |
 
@@ -115,29 +118,44 @@ Rules:
    Ziel identity; it does not inherit the old target's history.
 6. Each Parkour defines its own Pflock colours and an explicit near-to-far order, the first
    Pflock being the nearest. A Pflock is identified by its colour alone — it carries no label —
-   and the colour must be unique within
-   the Parkour. A colour is a `#rrggbb` hex value; there is no product-wide fixed palette, and
-   order is never inferred from colour. Every Zielplatzierung may optionally define a distance in
-   meters for each Pflock of that Parkour. A missing distance is allowed and has no meter
-   estimate. Configured distances are positive and strictly increase from the nearest to the
-   furthest Pflock.
+   and a colour must be unique within its set. A colour is a `#rrggbb` hex value; there is no
+   product-wide fixed palette, and order is never inferred from colour.
+
+   Every Zielplatzierung carries its Pflöcke as one of two explicit alternatives: it inherits the
+   Parkour-wide Pflock set, or it has an own set. An own set **replaces** the Parkour-wide order
+   for that Ziel; the two are never merged and one is never appended to the other, so a Ziel with
+   an own set ignores the Parkour-wide order entirely. An own set is never empty — an empty own
+   set is refused, because inheriting is the only way to express "use the Parkour-wide set". The
+   own set has its own explicit near-to-far order, its colours are unique within it, and its
+   colours may repeat colours of the Parkour-wide set: uniqueness holds within each set, never
+   across the Parkour-wide set and a Ziel's own set.
+
+   The **effective** Pflock set of a Zielplatzierung is the own set when it has one, otherwise
+   the Parkour-wide set. Every Zielplatzierung may optionally define a distance in meters for
+   each Pflock of its effective set. Distances are keyed by the Pflock identity of that set,
+   never by position or colour; a distance for a Pflock outside the effective set is refused. A
+   missing distance is allowed and has no meter estimate. Configured distances are positive and
+   strictly increase from the nearest to the furthest Pflock of the effective order.
 7. Parkour edits after logged Runden are allowed. They affect only Runden started after the edit;
    the edit does not rewrite any existing or in-progress Runde snapshot. A Parkour version is the
    effective setup at a point in time; versions are not separately managed objects.
 8. When a Runde starts, its immutable snapshot contains the Parkour identity and name and, in
-   route order, each Ziel identity, animal name, target group, and its Parkour-specific Pflock
-   colours/order and optional distances. The snapshot is the source for displaying that
-   Runde's setup even if current master data later changes or is archived.
+   route order, each Ziel identity, animal name, target group, and that Ziel's effective Pflock
+   colours/order and optional distances. The snapshot records, per Ziel, whether the Parkour-wide
+   Pflock set applies or the Ziel has its own set, so it captures each Ziel's own set where one
+   exists; a later change of the Parkour-wide set or of a Ziel's own set never alters it. The
+   snapshot is the source for displaying that Runde's setup even if current master data later
+   changes or is archived.
 9. A Ziel's Schüsse refer to its physical Ziel identity, not its position in a route. Per-Ziel
    history and progress therefore continue across Runden, route edits, and Parkours at the same
    Anlage. A Ziel in multiple Parkours has a separate Zielplatzierung and distance configuration
-   in each Parkour. A configured distance belongs to a Pflock of that Parkour, so it is keyed
-   by the Pflock and not by its colour's position in the order.
+   in each Parkour. A configured distance belongs to a Pflock of that Zielplatzierung's effective
+   set, so it is keyed by the Pflock and not by its colour's position in the order.
 10. Only a `Systemadministrator`, an `Administrator`, or a `Mitarbeiter` of that Anlage may create,
-    edit, reorder, or remove its Parkour, Ziel, Zielplatzierung, and Pflock setup. Only a
-    `Systemadministrator` or that Anlage's `Administrator` may create or edit the Anlage's
-    descriptive fields, deactivate it, or manage its `AnlageVerwaltungen`. Staff authority never
-    crosses Anlagen.
+    edit, reorder, or remove its Parkour, Ziel, Zielplatzierung, Parkour-wide Pflock setup, and
+    each Ziel's own Pflock set. Only a `Systemadministrator` or that Anlage's `Administrator` may
+    create or edit the Anlage's descriptive fields, deactivate it, or manage its
+    `AnlageVerwaltungen`. Staff authority never crosses Anlagen.
 11. Deactivation removes an Anlage and all its Parkours from active listings and prevents new
    Runden there. An archived Anlage is readable only by a `Systemadministrator`: its staff and
    every other Benutzer receive 403, and it is absent from every list. Existing Runden remain
@@ -159,8 +177,9 @@ Rules:
   (rules 2–3).
 - FR-2: Grant, change, and revoke per-Anlage `AnlageVerwaltungen`, preserving at least one
   Administrator after the first is assigned (rule 2).
-- FR-3: Create and maintain Parkours, ordered Zielplatzierungen, physical Ziele, and Parkour-level
-  Pflock colours/order and per-placement distances (rules 4–6, 10).
+- FR-3: Create and maintain Parkours, ordered Zielplatzierungen, physical Ziele, Parkour-level
+  Pflock colours/order, a Ziel's own Pflock set, and per-placement distances against the effective
+  set (rules 4–6, 10).
 - FR-4: Record an immutable full Parkour-Snapshot when each Runde starts (rules 7–8).
 - FR-5: Preserve per-physical-Ziel shot history across Parkours and edits at the same Anlage
   (rules 5 and 9).
@@ -199,20 +218,21 @@ Rules:
 - AC-5: A Ziel requires a non-empty animal name and target group 1–4; a missing animal name or a
   target group outside that range is rejected. Replacing the physical target creates a new identity;
   editing details or route placement preserves identity and history continuity.
-- AC-6: Each Parkour stores Pflock colours that are unique within it and an explicit near-to-far
-  order independent of colour. A Pflock has no label; a value that is not a `#rrggbb` hex colour is
-  rejected. Each Zielplatzierung may configure distinct distances for those Pflocks. Missing
-  distances are accepted; configured distances must be positive and strictly increase from the
-  nearest to the furthest Pflock.
+- AC-6: Each Parkour stores Pflock colours that are unique within its Parkour-wide set and an
+  explicit near-to-far order independent of colour. A Pflock has no label; a value that is not a
+  `#rrggbb` hex colour is rejected. Each Zielplatzierung may configure distinct distances for the
+  Pflocks of its effective set. Missing distances are accepted; configured distances must be
+  positive and strictly increase from the nearest to the furthest Pflock of that set.
 - AC-7: Given a Runde started under setup L1, when staff reorder its Parkours, edit Ziel details,
   change Pflock colours/order, or change distances, then the existing and in-progress Runde still
   display L1 exactly; a Runde started after the edit captures the new setup L2.
 - AC-8: When one physical Ziel appears in Runden from different Parkours or setup versions, its
   Schüsse remain linked to that Ziel and per-Ziel history remains continuous. A Ziel in a second
-  Parkour has that Parkour's own distances.
+  Parkour has that Parkour's own Zielplatzierung with its own distances.
 - AC-9: When an archer views a Runde, it displays the captured Parkour identity/name, ordered
-  Ziele, animal names, target groups, Pflock colours/order, and optional distances as they were
-  when the Runde started, regardless of later master-data edits.
+  Ziele, animal names, target groups, each Ziel's captured Pflock colours/order (its effective set),
+  and optional distances as they were when the Runde started, regardless of later master-data
+  edits.
 - AC-10: When a `Systemadministrator` or that Anlage's `Administrator` deactivates an Anlage, it
   and its Parkours disappear from active selection and new Runden are refused; old Runden remain
   readable with their snapshots. After that, only a `Systemadministrator` can read the archived
@@ -228,11 +248,30 @@ Rules:
   Benutzer's Runden or Schüsse. A Systemadministrator can act across Anlagen.
 - AC-14: No master-data import endpoint or file-import path exists; pilot data is entered in the
   admin UI.
+- AC-15: A Zielplatzierung either inherits the Parkour-wide Pflock set or carries an own set with
+  its own near-to-far order. Staff can add, edit, reorder, and remove Pflocks of an own set,
+  subject to rules 6 and 10. An own set replaces the Parkour-wide order for that Ziel instead of
+  extending it. An empty own set is refused, and switching back to the Parkour-wide set removes
+  the own set.
+- AC-16: An own set's colours are unique within that set; a colour may repeat a colour of the
+  Parkour-wide set. A duplicate colour inside one set is rejected, and such a rejection leaves the
+  stored setup unchanged.
+- AC-17: Distances are keyed by the Pflock identities of the Zielplatzierung's effective set: an
+  own-set Ziel accepts distances for its own Pflocks and refuses those of the Parkour-wide set it
+  does not carry, while an inheriting Ziel accepts those of the Parkour-wide set. The admin UI
+  offers a distance field for every Pflock of the effective set, not only for Pflocks that already
+  hold a distance. Configured distances are positive and strictly increase in the effective
+  near-to-far order; a zero, negative, or out-of-order value is rejected.
+- AC-18: A Runde snapshot records each Ziel's effective Pflock set and its distances. After staff
+  replace an own set, switch a Ziel back to the Parkour-wide set, or change the Parkour-wide set,
+  every existing and in-progress Runde still displays the setup captured at its start; a Runde
+  started afterwards reflects the new setup.
 
 ## Verification
 
 Domain unit tests cover Zielgruppe validation, Parkour membership, route uniqueness/order,
-Pflock ordering and distance invariants, and lifecycle transitions. Shared use-case conformance
+Pflock ordering and distance invariants, the per-Ziel Pflock set and its replace semantics,
+colour uniqueness within a set, and lifecycle transitions. Shared use-case conformance
 tests cover role checks, Anlage and master-data CRUD, snapshot immutability at Runde start,
 per-Ziel identity/history continuity, deactivation, archiving, and refusal of new use on archived
 data. API e2e tests cover 401/403 authorization paths and readable active Parkours. The absence of
@@ -291,6 +330,9 @@ Open PO questions:
 | 2026-10-29 | A Pflock is identified by its colour alone: the label is dropped, the stored value is a validated lowercase `#rrggbb`, and order remains explicit and never derived from colour. | TimerErTim (PO) |
 | 2026-10-29 | M1 pilot Anlagen are Breitenstein and Wallhalla Pregarten; enter their master data in the admin UI, with no seed task. | TimerErTim (PO) |
 | 2026-10-29 | Anlage requests are post-MVP (#68), outside this slice. Only a `Systemadministrator` creates an Anlage; acceptance of a request grants the requester its first `Administrator` `AnlageVerwaltung`. | TimerErTim (PO) |
+| 2026-11-10 | A Ziel may carry its own Pflock set instead of the Parkour-wide one. The own set **replaces** the Parkour-wide order for that Ziel; the two are never merged, and inheriting from the Parkour is the only way to say "use the Parkour-wide set". The own set is modelled as an explicit alternative, never as an empty list sentinel, and an empty own set is refused. | Agent (Cursor) |
+| 2026-11-10 | Colour uniqueness holds within each set: a Ziel's own set may reuse colours of the Parkour-wide set. Duplicate colours inside one set stay refused. This relaxes the earlier "unique within the Parkour" wording of rule 6 and AC-6. | Agent (Cursor) |
+| 2026-11-10 | Distances are keyed by the Pflock identities of the Zielplatzierung's effective set (own set when present, otherwise the Parkour-wide set) and must be positive and strictly increasing in that set's near-to-far order. The snapshot records each Ziel's effective set. | Agent (Cursor) |
 
 ## Revision history
 
@@ -300,3 +342,4 @@ Open PO questions:
 | 2026-10-29 | Synced with the current charter/konto role model and interactively respecified the data model, full Runde snapshot, Ziel identity, Pflock configuration, authorization, Anlage lifecycle, and history retention; clarified deactivation authority and post-MVP Anlage requests. | Agent (Cursor) |
 | 2026-10-29 | Archived Anlagen become readable only by a `Systemadministrator` (rule 11, AC-10), and the Pflock label is replaced by a unique `#rrggbb` colour (rule 6, AC-6). | Agent (Cursor) |
 | 2026-10-29 | Added the Draft "Anlagen-Verzeichnis" section for the public directory endpoint, with no contact data pending a PO decision. | Agent (Cursor) |
+| 2026-11-10 | Added the per-Ziel own Pflock set (rule 6, rule 8, AC-6, AC-15 to AC-18): an explicit alternative that replaces the Parkour-wide order, colour uniqueness within each set, and distances keyed by the effective set. | Agent (Cursor) |

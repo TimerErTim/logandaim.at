@@ -53,6 +53,9 @@ pub struct RundeZiel {
     pub tiername: String,
     /// 1-based ordinal as captured, distinguishing duplicate animal names.
     pub zielnummer: u32,
+    /// The Pflöcke that apply to this Ziel as captured, near to far: the Ziel's own set when
+    /// it had one, the Parkour-wide set otherwise.
+    pub pflöcke: Vec<RundePflock>,
     /// The distances as captured.
     pub abstände: Vec<Abstand>,
     /// The Wertung of this Ziel; absent while no Schuss has been logged at it.
@@ -146,6 +149,7 @@ pub struct RundeBasic {
 impl Runde {
     pub fn gelesen(runde: domain::Runde, schüsse: Vec<domain::Schuss>) -> Self {
         let wertungen = runde.ziel_wertungen(schüsse.iter().cloned());
+        let pflöcke = runde.snapshot().pflöcke();
         let ziele = runde
             .snapshot()
             .ziele()
@@ -155,6 +159,7 @@ impl Runde {
                 ziel_id: ziel.ziel_id().0,
                 tiername: ziel.tiername().to_string(),
                 zielnummer: ziel.zielnummer().get(),
+                pflöcke: effective_pflöcke(ziel, pflöcke),
                 abstände: ziel
                     .abstände()
                     .iter()
@@ -191,12 +196,31 @@ fn zustand(runde: &domain::Runde) -> RundeZustand {
     }
 }
 
+/// The Pflöcke that apply to one captured Ziel, near to far: its own set when it was
+/// captured with one, the Parkour-wide captured set otherwise.
+fn effective_pflöcke(
+    ziel: &domain::ZielSnapshot,
+    parkour: &[domain::PflockSnapshot],
+) -> Vec<RundePflock> {
+    // The captured snapshot already assigns each Pflock its position from the array order,
+    // so either set renders as it was captured.
+    ziel.pflöcke()
+        .effektive(parkour)
+        .iter()
+        .map(|pflock| RundePflock {
+            farbe: pflock.farbe().into(),
+            position: pflock.position(),
+        })
+        .collect()
+}
+
 /// A freshly started or freshly closed Runde, before any Wertung is folded.
 ///
 /// `RundeStarten` and `RundeAbschliessen` answer the aggregate, not a read model, so this
 /// impl renders the captured route exactly and leaves every Wertung empty.
 impl From<domain::Runde> for Runde {
     fn from(runde: domain::Runde) -> Self {
+        let pflöcke = runde.snapshot().pflöcke();
         let ziele = runde
             .snapshot()
             .ziele()
@@ -205,6 +229,7 @@ impl From<domain::Runde> for Runde {
                 ziel_id: ziel.ziel_id().0,
                 tiername: ziel.tiername().to_string(),
                 zielnummer: ziel.zielnummer().get(),
+                pflöcke: effective_pflöcke(ziel, pflöcke),
                 abstände: ziel
                     .abstände()
                     .iter()

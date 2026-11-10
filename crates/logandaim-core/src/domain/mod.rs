@@ -40,6 +40,8 @@ pub use anlage::WebsiteUrl;
 pub use anlage::Ziel;
 pub use anlage::ZielFehler;
 pub use anlage::ZielId;
+pub use anlage::ZielPflöcke;
+pub use anlage::ZielPflöckeSnapshot;
 pub use anlage::ZielSnapshot;
 pub use anlage::Zielplatzierung;
 pub use anlage::Zielverwendung;

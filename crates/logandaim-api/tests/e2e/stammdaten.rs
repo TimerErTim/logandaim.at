@@ -920,3 +920,162 @@ async fn ein_pflock_verlangt_eine_hex_farbe() {
         "eine Wort-Farbe ist keine gültige Hex-Farbe"
     );
 }
+
+// ------------------------------------------------------------------------- #72: per-Ziel Pflöcke
+
+/// One Pflock spec plus its distance, as the wire.
+fn pflock_json(id: Uuid, farbe: &str) -> Value {
+    json!({ "id": id, "farbe": farbe })
+}
+
+#[test_log::test(pollster::test)]
+async fn ein_ziel_traegt_seine_eigenen_pfloecke_mit_abstaenden() {
+    let harness = E2eHarness::new().await;
+    let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
+    let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+    let ziel_id = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
+
+    let geteilt = Uuid::new_v4();
+    let eigen_nah = Uuid::new_v4();
+    let eigen_weit = Uuid::new_v4();
+
+    // A colour duplicated across the Parkour-wide set and the Ziel's own set is allowed;
+    // the distances key into the *own* Pflock ids.
+    let (status, body) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/parkour"),
+            json!({
+                "name": "Waldrunde",
+                "pflöcke": [pflock_json(geteilt, "#c0392b")],
+                "platzierungen": [{
+                    "zielId": ziel_id,
+                    "pflöcke": {
+                        "art": "Explicit",
+                        "pflöcke": [
+                            pflock_json(eigen_nah, "#c0392b"),
+                            pflock_json(eigen_weit, "#e8b81c"),
+                        ],
+                    },
+                    "abstände": [
+                        { "pflockId": eigen_nah, "meter": 15 },
+                        { "pflockId": eigen_weit, "meter": 45 },
+                    ],
+                }],
+            }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "#72: parkour anlegen: {body}");
+
+    let (status, body) = harness
+        .client
+        .get_json_auth(&format!("/api/anlagen/{anlage_id}"), &admin)
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    // The Parkour round-trips the union as sent.
+    let pflöcke = &body["parkour"][0]["platzierungen"][0]["pflöcke"];
+    assert_eq!(pflöcke["art"], "Explicit");
+    assert_eq!(
+        pflöcke["pflöcke"].as_array().expect("pflöcke").len(),
+        2,
+        "#72: der eigene Satz hat zwei Pflöcke"
+    );
+    assert_eq!(pflöcke["pflöcke"][0]["id"], eigen_nah.to_string());
+    assert_eq!(pflöcke["pflöcke"][0]["farbe"], "#c0392b");
+
+    // ...and the Ziel's usages carry the enum plus the distances keyed by its own ids.
+    let verwendung = &body["ziele"][0]["verwendungen"][0];
+    assert_eq!(verwendung["pflöcke"]["art"], "Explicit");
+    let abstände = verwendung["abstände"].as_array().expect("abstände");
+    assert_eq!(abstände.len(), 2);
+    assert_eq!(abstände[0]["pflockId"], eigen_nah.to_string());
+    assert_eq!(abstände[0]["meter"], 15);
+    assert_eq!(abstände[1]["pflockId"], eigen_weit.to_string());
+    assert_eq!(abstände[1]["meter"], 45);
+}
+
+#[test_log::test(pollster::test)]
+async fn eine_platzierung_ohne_pfloecke_erbt_die_parkour_pfloecke() {
+    let harness = E2eHarness::new().await;
+    let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
+    let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+    let ziel_id = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
+
+    // The field is absent, which the wire must read as `InheritFromParkour`.
+    let (status, body) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/parkour"),
+            json!({
+                "name": "Waldrunde",
+                "pflöcke": [pflock_json(Uuid::new_v4(), "#c0392b")],
+                "platzierungen": [{ "zielId": ziel_id, "abstände": [] }],
+            }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        body["parkour"][0]["platzierungen"][0]["pflöcke"]["art"], "InheritFromParkour",
+        "#72: ein fehlendes Feld bedeutet Erben"
+    );
+
+    // The explicit form is accepted too, and reads back the same way.
+    let (status, body) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/parkour"),
+            json!({
+                "name": "Feldrunde",
+                "pflöcke": [pflock_json(Uuid::new_v4(), "#c0392b")],
+                "platzierungen": [{
+                    "zielId": ziel_id,
+                    "pflöcke": { "art": "InheritFromParkour" },
+                    "abstände": [],
+                }],
+            }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        body["parkour"][1]["platzierungen"][0]["pflöcke"]["art"],
+        "InheritFromParkour"
+    );
+}
+
+#[test_log::test(pollster::test)]
+async fn ein_leerer_eigener_satz_wird_abgelehnt() {
+    let harness = E2eHarness::new().await;
+    let (admin, _) = neuer_benutzer(&harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(&harness, "admin@muster.at").await;
+    let anlage_id = anlage_erstellen(&harness, &admin, "Breitenstein").await;
+    let ziel_id = ziel_hinzufügen(&harness, &admin, &anlage_id).await;
+
+    // `Explicit([])` is not the way to say "inherit": that is refused as an invalid request.
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/parkour"),
+            json!({
+                "name": "Waldrunde",
+                "pflöcke": [pflock_json(Uuid::new_v4(), "#c0392b")],
+                "platzierungen": [{
+                    "zielId": ziel_id,
+                    "pflöcke": { "art": "Explicit", "pflöcke": [] },
+                    "abstände": [],
+                }],
+            }),
+            &admin,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "#72: ein leerer eigener Satz ist keine gültige Anfrage"
+    );
+}

@@ -33,6 +33,7 @@ import type {
   Parkour,
   ParkourSetupInput,
   Pflock,
+  ZielPflöcke,
   Zielplatzierung,
 } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
@@ -166,6 +167,15 @@ function ParkourInhalt({
     pflöcke: parkour.pflöcke.map((pflock) => ({ ...pflock })),
     platzierungen: parkour.platzierungen.map((platzierung) => ({
       zielId: platzierung.zielId,
+      pflöcke:
+        platzierung.pflöcke.art === "Explicit"
+          ? {
+              art: "Explicit",
+              pflöcke: platzierung.pflöcke.pflöcke.map((pflock) => ({
+                ...pflock,
+              })),
+            }
+          : { art: "InheritFromParkour" },
       abstände: platzierung.abstände.map((abstand) => ({ ...abstand })),
     })),
   }));
@@ -184,8 +194,22 @@ function ParkourInhalt({
 
   /** One Pflock cannot be removed: the domain refuses a setup without any (`KeinePflöcke`). */
   const letzterPflock = setup.pflöcke.length <= 1;
-  /** No vocabulary colour is left for a new row, so the user must pick a custom one. */
+  /** No vocabulary colour is left for a new shared row, so the user must pick a custom one. */
   const keineFreieFarbe = freiePflockFarbe(setup.pflöcke) === null;
+
+  function effektivePflöcke(platzierung: Zielplatzierung): Pflock[] {
+    return platzierung.pflöcke.art === "Explicit"
+      ? platzierung.pflöcke.pflöcke
+      : setup.pflöcke;
+  }
+
+  function abständeBereinigen(
+    abstände: Zielplatzierung["abstände"],
+    pflöcke: readonly Pflock[],
+  ) {
+    const ids = new Set(pflöcke.map((pflock) => pflock.id));
+    return abstände.filter((abstand) => ids.has(abstand.pflockId));
+  }
 
   function pflockFarbeAendern(id: string, farbe: string) {
     setSetup((bisher) => ({
@@ -242,12 +266,23 @@ function ParkourInhalt({
       return {
         ...bisher,
         pflöcke: bisher.pflöcke.filter((pflock) => pflock.id !== id),
-        platzierungen: bisher.platzierungen.map((platzierung) => ({
-          ...platzierung,
-          abstände: platzierung.abstände.filter(
-            (abstand) => abstand.pflockId !== id,
-          ),
-        })),
+        platzierungen: bisher.platzierungen.map((platzierung) => {
+          const eigene =
+            platzierung.pflöcke.art === "Explicit"
+              ? platzierung.pflöcke.pflöcke.filter((pflock) => pflock.id !== id)
+              : null;
+          const pflöcke = eigene
+            ? ({ art: "Explicit", pflöcke: eigene } satisfies ZielPflöcke)
+            : platzierung.pflöcke;
+          const nächstePlatzierung = { ...platzierung, pflöcke };
+          return {
+            ...nächstePlatzierung,
+            abstände: abständeBereinigen(
+              platzierung.abstände.filter((abstand) => abstand.pflockId !== id),
+              effektivePflöcke(nächstePlatzierung),
+            ),
+          };
+        }),
       };
     });
     pflockMeldung.melden("Pflock entfernt.");
@@ -268,9 +303,128 @@ function ParkourInhalt({
         platzierung.zielId === zielId
           ? {
               ...platzierung,
-              abstände: platzierung.abstände.map((abstand) =>
-                abstand.pflockId === pflockId ? { ...abstand, meter } : abstand,
-              ),
+              abstände: effektivePflöcke(platzierung).map((pflock) => {
+                const bisheriger = platzierung.abstände.find(
+                  (abstand) => abstand.pflockId === pflock.id,
+                );
+                return {
+                  pflockId: pflock.id,
+                  meter: pflock.id === pflockId ? meter : bisheriger?.meter,
+                };
+              }),
+            }
+          : platzierung,
+      ),
+    }));
+  }
+
+  function zielPflöckeAendern(zielId: string, pflöcke: ZielPflöcke) {
+    setSetup((bisher) => ({
+      ...bisher,
+      platzierungen: bisher.platzierungen.map((platzierung) => {
+        if (platzierung.zielId !== zielId) return platzierung;
+        const bisherigePflöcke =
+          platzierung.pflöcke.art === "Explicit"
+            ? platzierung.pflöcke.pflöcke
+            : bisher.pflöcke;
+        const nächstePflöcke =
+          pflöcke.art === "Explicit" ? pflöcke.pflöcke : bisher.pflöcke;
+        const abstände = nächstePflöcke.flatMap((pflock) => {
+          const bisheriger =
+            platzierung.abstände.find(
+              (abstand) => abstand.pflockId === pflock.id,
+            ) ??
+            (() => {
+              const farbe = bisherigePflöcke.find(
+                (eintrag) => eintrag.farbe === pflock.farbe,
+              );
+              return farbe
+                ? platzierung.abstände.find(
+                    (abstand) => abstand.pflockId === farbe.id,
+                  )
+                : undefined;
+            })();
+          return bisheriger
+            ? [{ pflockId: pflock.id, meter: bisheriger.meter }]
+            : [];
+        });
+        return { ...platzierung, pflöcke, abstände };
+      }),
+    }));
+  }
+
+  function zielPflockFarbeAendern(zielId: string, id: string, farbe: string) {
+    setSetup((bisher) => ({
+      ...bisher,
+      platzierungen: bisher.platzierungen.map((platzierung) => {
+        if (
+          platzierung.zielId !== zielId ||
+          platzierung.pflöcke.art !== "Explicit"
+        )
+          return platzierung;
+        const pflöcke = platzierung.pflöcke.pflöcke.map((pflock) =>
+          pflock.id === id ? { ...pflock, farbe } : pflock,
+        );
+        return { ...platzierung, pflöcke: { art: "Explicit", pflöcke } };
+      }),
+    }));
+  }
+
+  function zielPflockHinzufuegen(zielId: string) {
+    setSetup((bisher) => ({
+      ...bisher,
+      platzierungen: bisher.platzierungen.map((platzierung) => {
+        if (
+          platzierung.zielId !== zielId ||
+          platzierung.pflöcke.art !== "Explicit"
+        )
+          return platzierung;
+        const pflöcke = platzierung.pflöcke.pflöcke;
+        if (freiePflockFarbe(pflöcke) === null) return platzierung;
+        return {
+          ...platzierung,
+          pflöcke: {
+            art: "Explicit",
+            pflöcke: [...pflöcke, neuerPflock(pflöcke)],
+          },
+        };
+      }),
+    }));
+  }
+
+  function zielPflockEntfernen(zielId: string, pflockId: string) {
+    setSetup((bisher) => ({
+      ...bisher,
+      platzierungen: bisher.platzierungen.map((platzierung) => {
+        if (
+          platzierung.zielId !== zielId ||
+          platzierung.pflöcke.art !== "Explicit"
+        )
+          return platzierung;
+        const pflöcke = platzierung.pflöcke.pflöcke.filter(
+          (pflock) => pflock.id !== pflockId,
+        );
+        if (pflöcke.length === 0) return platzierung;
+        return {
+          ...platzierung,
+          pflöcke: { art: "Explicit", pflöcke },
+          abstände: abständeBereinigen(platzierung.abstände, pflöcke),
+        };
+      }),
+    }));
+  }
+
+  function zielPflockVerschieben(zielId: string, von: number, nach: number) {
+    setSetup((bisher) => ({
+      ...bisher,
+      platzierungen: bisher.platzierungen.map((platzierung) =>
+        platzierung.zielId === zielId && platzierung.pflöcke.art === "Explicit"
+          ? {
+              ...platzierung,
+              pflöcke: {
+                art: "Explicit",
+                pflöcke: arrayMove(platzierung.pflöcke.pflöcke, von, nach),
+              },
             }
           : platzierung,
       ),
@@ -490,6 +644,11 @@ function ParkourInhalt({
                     gesperrt={gesperrt}
                     pflöcke={setup.pflöcke}
                     onAbstandAendern={abstandAendern}
+                    onZielPflöckeAendern={zielPflöckeAendern}
+                    onZielPflockFarbeAendern={zielPflockFarbeAendern}
+                    onZielPflockHinzufuegen={zielPflockHinzufuegen}
+                    onZielPflockEntfernen={zielPflockEntfernen}
+                    onZielPflockVerschieben={zielPflockVerschieben}
                   />
                 );
               })}
@@ -633,6 +792,11 @@ function SortablePlatzierung({
   gesperrt,
   pflöcke,
   onAbstandAendern,
+  onZielPflöckeAendern,
+  onZielPflockFarbeAendern,
+  onZielPflockHinzufuegen,
+  onZielPflockEntfernen,
+  onZielPflockVerschieben,
 }: {
   platzierung: Zielplatzierung;
   index: number;
@@ -644,6 +808,11 @@ function SortablePlatzierung({
     pflockId: string,
     meter: number | undefined,
   ) => void;
+  onZielPflöckeAendern: (zielId: string, pflöcke: ZielPflöcke) => void;
+  onZielPflockFarbeAendern: (zielId: string, id: string, farbe: string) => void;
+  onZielPflockHinzufuegen: (zielId: string) => void;
+  onZielPflockEntfernen: (zielId: string, pflockId: string) => void;
+  onZielPflockVerschieben: (zielId: string, von: number, nach: number) => void;
 }) {
   const {
     attributes,
@@ -653,12 +822,19 @@ function SortablePlatzierung({
     transition,
     isDragging,
   } = useSortable({ id: platzierung.zielId });
+  const zielPflockSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
-  // Distances follow the Pflock list, so a reordered setup reads near to far here too.
-  const abständeInReihenfolge = [...platzierung.abstände].sort(
-    (a, b) =>
-      pflöcke.findIndex((pflock) => pflock.id === a.pflockId) -
-      pflöcke.findIndex((pflock) => pflock.id === b.pflockId),
+  const effektive =
+    platzierung.pflöcke.art === "Explicit"
+      ? platzierung.pflöcke.pflöcke
+      : pflöcke;
+  const abstandById = new Map(
+    platzierung.abstände.map((abstand) => [abstand.pflockId, abstand.meter]),
   );
 
   return (
@@ -691,40 +867,128 @@ function SortablePlatzierung({
           {platzierung.zielId}
         </span>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {abständeInReihenfolge.map((abstand) => {
-          const pflock = pflöcke.find(
-            (eintrag) => eintrag.id === abstand.pflockId,
-          );
-          const nummer = pflöcke.findIndex(
-            (eintrag) => eintrag.id === abstand.pflockId,
-          );
-          return (
-            <Field
-              key={abstand.pflockId}
-              label={`Abstand Pflock ${nummer + 1} · ${pflock?.farbe ?? ""}`}
-              hint="Meter, leer = nicht erfasst"
+      <fieldset className="space-y-2">
+        <legend className="text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
+          Pflöcke für dieses Ziel
+        </legend>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            className={
+              platzierung.pflöcke.art === "InheritFromParkour"
+                ? "border-primary bg-primary-subtle"
+                : undefined
+            }
+            size="sm"
+            aria-pressed={platzierung.pflöcke.art === "InheritFromParkour"}
+            disabled={gesperrt}
+            onClick={() =>
+              onZielPflöckeAendern(platzierung.zielId, {
+                art: "InheritFromParkour",
+              })
+            }
+          >
+            Parkour-Pflöcke
+          </Button>
+          <Button
+            type="button"
+            variant={
+              platzierung.pflöcke.art === "Explicit" ? "primary" : "secondary"
+            }
+            size="sm"
+            aria-pressed={platzierung.pflöcke.art === "Explicit"}
+            disabled={gesperrt}
+            onClick={() => {
+              if (platzierung.pflöcke.art === "Explicit") return;
+              onZielPflöckeAendern(platzierung.zielId, {
+                art: "Explicit",
+                pflöcke: effektive.map((pflock) => ({
+                  ...pflock,
+                  id: crypto.randomUUID(),
+                })),
+              });
+            }}
+          >
+            Eigene Pflöcke
+          </Button>
+        </div>
+        {platzierung.pflöcke.art === "Explicit" ? (
+          <DndContext
+            sensors={zielPflockSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={({ active, over }) => {
+              if (!over || active.id === over.id) return;
+              const von = effektive.findIndex(
+                (pflock) => pflock.id === active.id,
+              );
+              const nach = effektive.findIndex(
+                (pflock) => pflock.id === over.id,
+              );
+              if (von >= 0 && nach >= 0)
+                onZielPflockVerschieben(platzierung.zielId, von, nach);
+            }}
+          >
+            <SortableContext
+              items={effektive.map((pflock) => pflock.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <Input
-                type="number"
-                min={1}
-                value={abstand.meter ?? ""}
-                onChange={(event) => {
-                  const eingabe = event.target.value;
-                  const meter = eingabe === "" ? undefined : Number(eingabe);
-                  onAbstandAendern(
-                    platzierung.zielId,
-                    abstand.pflockId,
-                    meter !== undefined && Number.isFinite(meter)
-                      ? meter
-                      : undefined,
-                  );
-                }}
-                disabled={gesperrt}
-              />
-            </Field>
-          );
-        })}
+              {effektive.map((pflock, pflockIndex) => (
+                <SortablePflock
+                  key={pflock.id}
+                  pflock={pflock}
+                  index={pflockIndex}
+                  gesperrt={gesperrt}
+                  onFarbeAendern={(id, farbe) =>
+                    onZielPflockFarbeAendern(platzierung.zielId, id, farbe)
+                  }
+                  onEntfernen={(id) =>
+                    onZielPflockEntfernen(platzierung.zielId, id)
+                  }
+                  entfernenGesperrt={effektive.length <= 1}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        ) : null}
+        {platzierung.pflöcke.art === "Explicit" ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => onZielPflockHinzufuegen(platzierung.zielId)}
+            disabled={gesperrt || freiePflockFarbe(effektive) === null}
+          >
+            <Plus /> Pflock hinzufügen
+          </Button>
+        ) : null}
+      </fieldset>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {effektive.map((pflock, nummer) => (
+          <Field
+            key={pflock.id}
+            label={`Abstand Pflock ${nummer + 1} · ${pflock.farbe}`}
+            hint="Meter, leer = nicht erfasst"
+          >
+            <Input
+              type="number"
+              min={1}
+              value={abstandById.get(pflock.id) ?? ""}
+              onChange={(event) => {
+                const eingabe = event.target.value;
+                const meter = eingabe === "" ? undefined : Number(eingabe);
+                onAbstandAendern(
+                  platzierung.zielId,
+                  pflock.id,
+                  meter !== undefined && Number.isFinite(meter)
+                    ? meter
+                    : undefined,
+                );
+              }}
+              disabled={gesperrt}
+            />
+          </Field>
+        ))}
       </div>
     </div>
   );

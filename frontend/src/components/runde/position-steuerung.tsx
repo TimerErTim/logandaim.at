@@ -3,11 +3,7 @@
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type {
-  RundePflock,
-  RundeZiel,
-  SchusspositionInput,
-} from "@/api/logandaim-api";
+import type { RundeZiel, SchusspositionInput } from "@/api/logandaim-api";
 import { PflockSwatch } from "@/components/stammdaten/pflock-swatch";
 import {
   type Checkpoint,
@@ -20,16 +16,15 @@ import { PflockPlatzhalter } from "./pflock-platzhalter";
 
 export function PositionSteuerung({
   ziel,
-  pflöcke,
   value,
   onChange,
 }: {
   ziel: RundeZiel;
-  pflöcke: RundePflock[];
   value: SchusspositionInput | null;
   onChange: (position: SchusspositionInput | null) => void;
 }) {
-  const modus = positionsModus(ziel, pflöcke.length);
+  const effektivePflöcke = ziel.pflöcke;
+  const modus = positionsModus(ziel, effektivePflöcke.length);
   const abstandByFarbe = useMemo(
     () =>
       new Map(ziel.abstände.map((abstand) => [abstand.pflock, abstand.meter])),
@@ -37,14 +32,13 @@ export function PositionSteuerung({
   );
   const checkpoints = useMemo<Checkpoint[]>(
     () =>
-      [...pflöcke]
-        .sort((a, b) => a.position - b.position)
+      effektivePflöcke
         .map((pflock, index) => ({
-          id: `${pflock.position}-${pflock.farbe}`,
+          id: `${index}-${pflock.farbe}`,
           wert:
             modus === "meter"
               ? (abstandByFarbe.get(pflock.farbe) ?? index + 1)
-              : pflock.position + 1,
+              : index + 1,
           farbe: pflock.farbe,
           label: pflock.farbe,
           anzeige:
@@ -53,7 +47,7 @@ export function PositionSteuerung({
               : undefined,
         }))
         .sort((a, b) => a.wert - b.wert),
-    [pflöcke, modus, abstandByFarbe],
+    [effektivePflöcke, modus, abstandByFarbe],
   );
   const min =
     modus === "meter"
@@ -62,10 +56,10 @@ export function PositionSteuerung({
   const max =
     modus === "meter"
       ? Math.max(...checkpoints.map((checkpoint) => checkpoint.wert))
-      : Math.max(1, pflöcke.length);
+      : Math.max(1, effektivePflöcke.length);
   const positionPflock =
     value && "Pflock" in value
-      ? pflöcke.find((pflock) => pflock.farbe === value.Pflock.farbe)
+      ? effektivePflöcke.find((pflock) => pflock.farbe === value.Pflock.farbe)
       : undefined;
   const meterFürPflock = positionPflock
     ? abstandByFarbe.get(positionPflock.farbe)
@@ -81,7 +75,9 @@ export function PositionSteuerung({
       ? Math.min(max, Math.max(min, aktuellerMeter ?? min))
       : positionPflock
         ? (checkpoints.find((checkpoint) =>
-            checkpoint.id.endsWith(`-${positionPflock.farbe}`),
+            checkpoint.id.startsWith(
+              `${effektivePflöcke.indexOf(positionPflock)}-`,
+            ),
           )?.wert ?? 1)
         : 1;
   const sliderAuflösbar =
@@ -135,10 +131,13 @@ export function PositionSteuerung({
                 setLetzteEingabe(nächsteEingabe);
               } else {
                 const pflock =
-                  pflöcke[
+                  effektivePflöcke[
                     Math.max(
                       0,
-                      Math.min(pflöcke.length - 1, Math.round(next) - 1),
+                      Math.min(
+                        effektivePflöcke.length - 1,
+                        Math.round(next) - 1,
+                      ),
                     )
                   ];
                 if (pflock) {

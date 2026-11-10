@@ -26,7 +26,8 @@ use logandaim_core::{
 };
 
 use crate::schema::{
-    AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, Farbe, Ländercode, Pflock, Zielplatzierung,
+    AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, Farbe, Ländercode, Pflock, ZielPflöcke,
+    Zielplatzierung,
 };
 
 fn name(wert: String) -> Result<NonEmptyString, Report<StammdatenFehler>> {
@@ -92,6 +93,15 @@ fn pflock(wert: Pflock) -> Result<domain::Pflock, Report<StammdatenFehler>> {
     Ok(domain::Pflock::neu(PflockId(wert.id), farbe(wert.farbe)?))
 }
 
+fn ziel_pflöcke(wert: ZielPflöcke) -> Result<domain::ZielPflöcke, Report<StammdatenFehler>> {
+    match wert {
+        ZielPflöcke::InheritFromParkour(_) => Ok(domain::ZielPflöcke::erbe()),
+        ZielPflöcke::Explicit(explicit) => domain::ZielPflöcke::eigen(pflöcke(explicit.pflöcke)?)
+            .change_context(StammdatenFehler::UngültigeAnfrage)
+            .attach("Ziel: eigene Pflöcke"),
+    }
+}
+
 fn platzierung(wert: Zielplatzierung) -> Result<domain::Zielplatzierung, Report<StammdatenFehler>> {
     // An absent distance is simply not configured for that Pflock.
     let abstände = wert
@@ -107,7 +117,12 @@ fn platzierung(wert: Zielplatzierung) -> Result<domain::Zielplatzierung, Report<
             ))
         })
         .collect::<Result<Vec<_>, Report<StammdatenFehler>>>()?;
-    domain::Zielplatzierung::neu(ZielId(wert.ziel_id), abstände)
+    // An absent union means the Parkour-wide order applies.
+    let pflöcke = match wert.pflöcke {
+        Some(pflöcke) => ziel_pflöcke(pflöcke)?,
+        None => domain::ZielPflöcke::erbe(),
+    };
+    domain::Zielplatzierung::mit_zielpflöcken(ZielId(wert.ziel_id), pflöcke, abstände, &[])
         .change_context(StammdatenFehler::UngültigeAnfrage)
         .attach(format!("Ziel {}", wert.ziel_id))
 }

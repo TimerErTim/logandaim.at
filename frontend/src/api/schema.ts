@@ -2471,6 +2471,21 @@ export interface components {
             Benutzer: components["schemas"]["BenutzerErfasser"];
         };
         /**
+         * ExplicitPflöcke
+         * @description This Ziel's own near-to-far Pflock order, which replaces the Parkour-wide one. Never
+         *     empty.
+         */
+        "ExplicitPfl\u00F6cke": {
+            /** @description The own Pflöcke, near to far. */
+            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+        };
+        /**
+         * InheritFromParkourPflöcke
+         * @description The Parkour-wide order applies to this Ziel. Carries nothing; the discriminator is the
+         *     whole message.
+         */
+        "InheritFromParkourPfl\u00F6cke": Record<string, unknown>;
+        /**
          * @description Country codes currently accepted for Anlage addresses.
          * @enum {string}
          */
@@ -2908,6 +2923,11 @@ export interface components {
              * @description 1-based ordinal as captured, distinguishing duplicate animal names.
              */
             zielnummer: number;
+            /**
+             * @description The Pflöcke that apply to this Ziel as captured, near to far: the Ziel's own set when
+             *     it had one, the Parkour-wide set otherwise.
+             */
+            "pfl\u00F6cke": components["schemas"]["RundePflock"][];
             /** @description The distances as captured. */
             "abst\u00E4nde": components["schemas"]["Abstand"][];
             /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
@@ -3057,6 +3077,60 @@ export interface components {
             verwendungen: components["schemas"]["Zielverwendung"][];
         };
         /**
+         * @description Whether one Ziel uses the Parkour-wide Pflock order or its own, tagged by `art`.
+         *
+         *     The wire shape is a tagged union, not a `Vec` with an empty-means-inherit sentinel, so
+         *     "no own Pflöcke" and "not configured" cannot be confused. `InheritFromParkour` carries an
+         *     empty object because `poem_openapi::Union` requires one object per variant; the
+         *     discriminator alone says which variant it is.
+         *
+         *     Where this appears as a field it is optional, and an absent field means
+         *     `InheritFromParkour`. The field carries no schema patch of its own: a field-level
+         *     description or default would make poem wrap the reference in `allOf`, and
+         *     `openapi-typescript` then strips the discriminator from the generated union.
+         */
+        "ZielPfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke_InheritFromParkourPfl\u00F6cke"] | components["schemas"]["ZielPfl\u00F6cke_ExplicitPfl\u00F6cke"];
+        /**
+         * @description Whether one Ziel uses the Parkour-wide Pflock order or its own, tagged by `art`.
+         *
+         *     The wire shape is a tagged union, not a `Vec` with an empty-means-inherit sentinel, so
+         *     "no own Pflöcke" and "not configured" cannot be confused. `InheritFromParkour` carries an
+         *     empty object because `poem_openapi::Union` requires one object per variant; the
+         *     discriminator alone says which variant it is.
+         *
+         *     Where this appears as a field it is optional, and an absent field means
+         *     `InheritFromParkour`. The field carries no schema patch of its own: a field-level
+         *     description or default would make poem wrap the reference in `allOf`, and
+         *     `openapi-typescript` then strips the discriminator from the generated union.
+         */
+        "ZielPfl\u00F6cke_ExplicitPfl\u00F6cke": {
+            /**
+             * @example Explicit
+             * @enum {string}
+             */
+            art: ZielPflCke_ExplicitPflCkeArt;
+        } & components["schemas"]["ExplicitPfl\u00F6cke"];
+        /**
+         * @description Whether one Ziel uses the Parkour-wide Pflock order or its own, tagged by `art`.
+         *
+         *     The wire shape is a tagged union, not a `Vec` with an empty-means-inherit sentinel, so
+         *     "no own Pflöcke" and "not configured" cannot be confused. `InheritFromParkour` carries an
+         *     empty object because `poem_openapi::Union` requires one object per variant; the
+         *     discriminator alone says which variant it is.
+         *
+         *     Where this appears as a field it is optional, and an absent field means
+         *     `InheritFromParkour`. The field carries no schema patch of its own: a field-level
+         *     description or default would make poem wrap the reference in `allOf`, and
+         *     `openapi-typescript` then strips the discriminator from the generated union.
+         */
+        "ZielPfl\u00F6cke_InheritFromParkourPfl\u00F6cke": {
+            /**
+             * @example InheritFromParkour
+             * @enum {string}
+             */
+            art: ZielPflCke_InheritFromParkourPflCkeArt;
+        } & components["schemas"]["InheritFromParkourPfl\u00F6cke"];
+        /**
          * ZielRequest
          * @description Add or edit a Ziel.
          */
@@ -3083,6 +3157,7 @@ export interface components {
              * @description The Ziel that stands here.
              */
             zielId: string;
+            "pfl\u00F6cke"?: components["schemas"]["ZielPfl\u00F6cke"];
             /** @description Distances by Pflock identity; a missing entry means no distance is configured. */
             "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
         };
@@ -3101,6 +3176,7 @@ export interface components {
              * @description 0-based position in that Parkour' route.
              */
             position: number;
+            "pfl\u00F6cke"?: components["schemas"]["ZielPfl\u00F6cke"];
             /** @description Pflock identity to metres, near to far. */
             "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
         };
@@ -3170,5 +3246,11 @@ export enum Wertungszone {
     Kill = "Kill",
     Body = "Body",
     Miss = "Miss"
+}
+export enum ZielPflCke_ExplicitPflCkeArt {
+    Explicit = "Explicit"
+}
+export enum ZielPflCke_InheritFromParkourPflCkeArt {
+    InheritFromParkour = "InheritFromParkour"
 }
 export type operations = Record<string, never>;

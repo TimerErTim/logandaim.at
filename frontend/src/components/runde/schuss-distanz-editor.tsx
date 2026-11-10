@@ -3,11 +3,7 @@
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type {
-  RundePflock,
-  RundeZiel,
-  SchusspositionInput,
-} from "@/api/logandaim-api";
+import type { RundeZiel, SchusspositionInput } from "@/api/logandaim-api";
 import {
   type Checkpoint,
   CheckpointSlider,
@@ -20,26 +16,22 @@ import { PflockPlatzhalter } from "./pflock-platzhalter";
 export function SchussDistanzEditor({
   pfeil,
   ziel,
-  pflöcke,
   position,
   onCommit,
 }: {
   pfeil: number;
   ziel: RundeZiel;
-  pflöcke: RundePflock[];
   position: SchusspositionInput | null;
   onCommit: (position: SchusspositionInput) => void;
 }) {
-  const modus = positionsModus(ziel, pflöcke.length);
+  const effektivePflöcke = ziel.pflöcke;
+  const modus = positionsModus(ziel, effektivePflöcke.length);
   const abstände = useMemo(
     () =>
       new Map(ziel.abstände.map((abstand) => [abstand.pflock, abstand.meter])),
     [ziel.abstände],
   );
-  const sortedPflöcke = useMemo(
-    () => [...pflöcke].sort((a, b) => a.position - b.position),
-    [pflöcke],
-  );
+  const sortedPflöcke = useMemo(() => effektivePflöcke, [effektivePflöcke]);
   const checkpoints = useMemo<Checkpoint[]>(
     () =>
       sortedPflöcke

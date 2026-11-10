@@ -7,7 +7,7 @@
 use std::num::NonZeroU32;
 
 use super::Anlage;
-use super::parkour::{Parkour, ParkourId};
+use super::parkour::{Parkour, ParkourId, ZielPflöcke};
 use super::ziel::{Ziel, ZielId};
 use crate::domain::common::{Abstand, Farbe, NonEmptyString};
 
@@ -33,12 +33,63 @@ impl PflockSnapshot {
     }
 }
 
-/// One Ziel as captured: identity, ordinal, animal name, and per-Pflock distances.
+/// The immutable mirror of [`ZielPflöcke`]: which Pflock order a Ziel was captured with.
+///
+/// Positions are assigned from the array order, so a snapshot never carries a position and
+/// an array index that disagree.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ZielPflöckeSnapshot {
+    /// The Parkour-wide captured order applies to this Ziel.
+    InheritFromParkour,
+    /// This Ziel's own captured order, near to far.
+    Explicit(Vec<PflockSnapshot>),
+}
+
+impl ZielPflöckeSnapshot {
+    pub fn ist_erbe(&self) -> bool {
+        matches!(self, Self::InheritFromParkour)
+    }
+
+    /// The Ziel's own captured Pflöcke, `None` when it inherits the Parkour-wide order.
+    pub fn eigene(&self) -> Option<&[PflockSnapshot]> {
+        match self {
+            Self::InheritFromParkour => None,
+            Self::Explicit(eigene) => Some(eigene),
+        }
+    }
+
+    /// The captured Pflöcke that actually apply to this Ziel.
+    pub fn effektive<'a>(&'a self, parkour: &'a [PflockSnapshot]) -> &'a [PflockSnapshot] {
+        match self {
+            Self::InheritFromParkour => parkour,
+            Self::Explicit(eigene) => eigene,
+        }
+    }
+
+    /// Capture the domain enum, assigning each own Pflock its array position.
+    fn aus_domain(pflöcke: &ZielPflöcke) -> Self {
+        match pflöcke.eigene() {
+            None => Self::InheritFromParkour,
+            Some(eigene) => Self::Explicit(
+                eigene
+                    .iter()
+                    .enumerate()
+                    .map(|(position, pflock)| PflockSnapshot::neu(pflock.farbe(), position))
+                    .collect(),
+            ),
+        }
+    }
+}
+
+/// One Ziel as captured: identity, ordinal, animal name, its Pflock order, and per-Pflock
+/// distances.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZielSnapshot {
     ziel_id: ZielId,
     zielnummer: NonZeroU32,
     tiername: NonEmptyString,
+    /// Which captured Pflock order applies to this Ziel.
+    pflöcke: ZielPflöckeSnapshot,
     /// Pflock colour to metres, for the distances that were configured.
     abstände: Vec<(Farbe, Abstand)>,
 }
@@ -48,12 +99,14 @@ impl ZielSnapshot {
         ziel_id: ZielId,
         zielnummer: NonZeroU32,
         tiername: NonEmptyString,
+        pflöcke: ZielPflöckeSnapshot,
         abstände: Vec<(Farbe, Abstand)>,
     ) -> Self {
         Self {
             ziel_id,
             zielnummer,
             tiername,
+            pflöcke,
             abstände,
         }
     }
@@ -71,8 +124,21 @@ impl ZielSnapshot {
         &self.tiername
     }
 
+    /// Whether this Ziel inherits the Parkour-wide captured order or carries its own.
+    pub fn pflöcke(&self) -> &ZielPflöckeSnapshot {
+        &self.pflöcke
+    }
+
     pub fn abstände(&self) -> &[(Farbe, Abstand)] {
         &self.abstände
+    }
+
+    /// Whether this Ziel's own captured Pflöcke hold `farbe`. `InheritFromParkour` is never a
+    /// match: it has no Pflöcke of its own to select.
+    pub fn hat_pflock(&self, farbe: Farbe) -> bool {
+        self.pflöcke
+            .eigene()
+            .is_some_and(|eigene| eigene.iter().any(|pflock| pflock.farbe() == farbe))
     }
 
     /// The captured distance for one Pflock colour, if one was configured.
@@ -149,6 +215,20 @@ impl ParkourSnapshot {
     pub fn hat_pflock(&self, farbe: Farbe) -> bool {
         self.pflöcke.iter().any(|pflock| pflock.farbe() == farbe)
     }
+
+    /// Whether `farbe` is selectable at `ziel_id`: the Ziel's own captured set when it has
+    /// one, the Parkour-wide captured set otherwise.
+    ///
+    /// An unknown `ziel_id` is never a match. A colour that exists only in the Parkour-wide
+    /// set does not select on a Ziel whose own set replaces it.
+    pub fn hat_pflock_am_ziel(&self, ziel_id: ZielId, farbe: Farbe) -> bool {
+        self.ziel(ziel_id).is_some_and(|ziel| {
+            ziel.pflöcke()
+                .effektive(&self.pflöcke)
+                .iter()
+                .any(|pflock| pflock.farbe() == farbe)
+        })
+    }
 }
 
 /// Capture one Parkour's current setup, resolving every Pflock id to its colour so the
@@ -181,10 +261,12 @@ pub(crate) fn snapshot_aus_parkour<'a>(
                 .abstände()
                 .iter()
                 .map(|(pflock_id, abstand)| {
-                    // A placement's distances are validated against this Parkour's Pflöcke,
+                    // A placement's distances are validated against its effective Pflock set,
                     // so an unknown id here is corruption, not a user error.
-                    let farbe = parkour
-                        .pflock(*pflock_id)
+                    let farbe = platzierung
+                        .effektive_pflöcke(parkour.pflöcke())
+                        .iter()
+                        .find(|pflock| pflock.id() == *pflock_id)
                         .ok_or(SnapshotFehler::ZielNichtGefunden)?
                         .farbe();
                     Ok((farbe, *abstand))
@@ -194,6 +276,7 @@ pub(crate) fn snapshot_aus_parkour<'a>(
                 ziel.id(),
                 ziel.zielnummer(),
                 ziel.tiername().clone(),
+                ZielPflöckeSnapshot::aus_domain(platzierung.pflöcke()),
                 abstände,
             ))
         })
@@ -332,5 +415,111 @@ mod tests {
         );
         assert_eq!(snapshot.ziele()[0].zielnummer().get(), 1);
         let _ = Zustand::Aktiv;
+    }
+
+    /// An Anlage whose one Ziel carries its own Pflock set, plus a second Ziel that
+    /// inherits the Parkour-wide set.
+    fn anlage_mit_eigenem_satz() -> (AnlageAktiv, ParkourId) {
+        let mut anlage = AnlageAktiv::neu(
+            AnlageId(Uuid::nil()),
+            NeueAnlage::neu(
+                name("Breitenstein"),
+                AnlageAdresse::neu("Waldweg 1", "3100", "St. Pölten", Ländercode::AT).unwrap(),
+                AnlageKontakt::leer(),
+            ),
+        );
+        anlage.ziel_hinzufügen(ziel_id(10), name("Keiler"));
+        anlage.ziel_hinzufügen(ziel_id(11), name("Reh"));
+        let parkour_id = ParkourId(Uuid::from_u128(7));
+        anlage
+            .parkour_hinzufügen(
+                parkour_id,
+                NeuerParkour::neu(
+                    name("Waldrunde"),
+                    vec![pflock(1, "#c0392b"), pflock(2, "#1b4f9c")],
+                    vec![
+                        // Own set: near-to-far, replaces the Parkour-wide order.
+                        Zielplatzierung::mit_eigenen_pflöcken(
+                            ziel_id(10),
+                            vec![pflock(11, "#1b4f9c"), pflock(12, "#e8b81c")],
+                            vec![
+                                (PflockId(Uuid::from_u128(11)), Abstand::neu(15).unwrap()),
+                                (PflockId(Uuid::from_u128(12)), Abstand::neu(45).unwrap()),
+                            ],
+                        )
+                        .unwrap(),
+                        Zielplatzierung::neu(ziel_id(11), Vec::new()).unwrap(),
+                    ],
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        (anlage, parkour_id)
+    }
+
+    #[test_log::test]
+    fn ac6_der_snapshot_traegt_die_zielpfloecke() {
+        let (anlage, parkour_id) = anlage_mit_eigenem_satz();
+        let snapshot = snapshot(&anlage.into(), parkour_id).unwrap();
+
+        let eigenes = &snapshot.ziele()[0];
+        assert!(!eigenes.pflöcke().ist_erbe());
+        let eigene = eigenes.pflöcke().eigene().expect("ein eigener Satz");
+        assert_eq!(eigene.len(), 2);
+        assert_eq!(eigene[0].farbe().to_hex(), "#1b4f9c");
+        assert_eq!(eigene[0].position(), 0);
+        assert_eq!(eigene[1].position(), 1);
+        // Replacing, not merging: the Parkour-wide "#c0392b" is not in this Ziel's set.
+        assert!(!eigenes.hat_pflock(Farbe::neu("#c0392b").unwrap()));
+
+        let erbe = &snapshot.ziele()[1];
+        assert!(erbe.pflöcke().ist_erbe());
+        assert!(erbe.pflöcke().eigene().is_none());
+        assert_eq!(erbe.pflöcke().effektive(snapshot.pflöcke()).len(), 2);
+    }
+
+    #[test_log::test]
+    fn ac6_hat_pflock_am_ziel_fragt_die_effektive_menge() {
+        let (anlage, parkour_id) = anlage_mit_eigenem_satz();
+        let snapshot = snapshot(&anlage.into(), parkour_id).unwrap();
+        let eigen_blau = Farbe::neu("#1b4f9c").unwrap();
+        let eigen_gelb = Farbe::neu("#e8b81c").unwrap();
+        let parkour_rot = Farbe::neu("#c0392b").unwrap();
+
+        // The own-set Ziel sees both colours of its own set, not the Parkour-wide one.
+        assert!(snapshot.hat_pflock_am_ziel(ziel_id(10), eigen_blau));
+        assert!(!snapshot.hat_pflock_am_ziel(ziel_id(10), parkour_rot));
+        // The inheriting Ziel still sees the Parkour-wide set only.
+        assert!(snapshot.hat_pflock_am_ziel(ziel_id(11), parkour_rot));
+        // ...and a colour that exists only as another Ziel's own Pflock is not selectable
+        // there, even though it sits outside every captured Parkour-wide set.
+        assert!(!snapshot.hat_pflock_am_ziel(ziel_id(11), eigen_gelb));
+        // An unknown Ziel never matches.
+        assert!(!snapshot.hat_pflock_am_ziel(ziel_id(99), parkour_rot));
+    }
+
+    #[test_log::test]
+    fn ac6_der_snapshot_bleibt_von_einer_spaeteren_satzänderung_unberuehrt() {
+        let (mut anlage, parkour_id) = anlage_mit_eigenem_satz();
+        let snapshot = snapshot(&anlage.clone().into(), parkour_id).unwrap();
+
+        // Swap the Ziel's own set for the inherited one after capture.
+        anlage
+            .parkour_setup_ändern(
+                parkour_id,
+                vec![pflock(1, "#c0392b"), pflock(2, "#1b4f9c")],
+                vec![
+                    Zielplatzierung::neu(ziel_id(10), Vec::new()).unwrap(),
+                    Zielplatzierung::neu(ziel_id(11), Vec::new()).unwrap(),
+                ],
+            )
+            .unwrap();
+
+        assert!(!snapshot.ziele()[0].pflöcke().ist_erbe());
+        assert_eq!(
+            snapshot.ziele()[0].pflöcke().eigene().unwrap().len(),
+            2,
+            "AC-9: ein späterer Satz ändert den gefrorenen Snapshot nicht"
+        );
     }
 }

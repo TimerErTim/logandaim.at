@@ -96,7 +96,6 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
           <PositionSteuerung
             key={selected.zielId}
             ziel={selected}
-            pflöcke={runde.pflöcke}
             value={
               positionen[selected.zielId] ??
               anfangsPosition(selected, selected.schüsse)
@@ -123,7 +122,6 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
         <div className="pt-1">
           <SchussLedger
             ziel={selected}
-            pflöcke={runde.pflöcke}
             reihenfolge={index + 1}
             editable={
               runde.zustand === "InBearbeitung" ||
