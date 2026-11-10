@@ -41,6 +41,7 @@ function normalizeZielplatzierungen<T>(value: T): T {
   if (
     (typeof normalized.zielId === "string" ||
       typeof normalized.parkourId === "string") &&
+    !("tiername" in normalized) &&
     Array.isArray(normalized.abstände)
   ) {
     const pflöcke = normalized.pflöcke;
