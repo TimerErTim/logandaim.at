@@ -111,6 +111,32 @@ export function useStammdatenMutations() {
         });
       },
     }),
+    freieRundeStarten: useMutation({
+      mutationFn: (name: string) => api.freieRundeStarten(name),
+      onSuccess: (runde) => {
+        void queryClient.invalidateQueries({
+          queryKey: logandaimKeys.runden.all(),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: logandaimKeys.runden.detail(runde.id),
+        });
+      },
+    }),
+    freiesZielHinzufuegen: useMutation({
+      mutationFn: (vars: { rundeId: string; name?: string }) =>
+        api.freiesZielHinzufuegen(vars.rundeId, vars.name),
+      onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
+    }),
+    freiesZielUmbenennen: useMutation({
+      mutationFn: (vars: { rundeId: string; zielId: string; name: string }) =>
+        api.freiesZielUmbenennen(vars.rundeId, vars.zielId, vars.name),
+      onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
+    }),
+    freiesZielEntfernen: useMutation({
+      mutationFn: (vars: { rundeId: string; zielId: string }) =>
+        api.freiesZielEntfernen(vars.rundeId, vars.zielId),
+      onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
+    }),
     rundeLoeschen: useMutation({
       mutationFn: (id: string) => api.rundeLoeschen(id),
       onSuccess: () => {

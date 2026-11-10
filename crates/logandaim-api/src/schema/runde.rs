@@ -1,8 +1,13 @@
 //! Outbound schemas of a Runde: the captured route, its per-Ziel results, and the totals.
 //!
 //! A Runde read is the only place a Wertung is served: there is no `/wertung` endpoint
-//! (SPEC-wertung rule 6). The snapshot fields are copied verbatim from what was captured,
+//! (SPEC-wertung rule 6). The captured fields are copied verbatim from what was captured,
 //! never re-read from master data (AC-7, AC-9).
+//!
+//! The setup is told by one field, `herkunft`: an object holding the whole Anlage/Parkour pair,
+//! or absent for a `Freie Runde`. One optional object rather than two optional ids, so a client
+//! cannot receive a pair that names two different Parkours, and `herkunft === null` is the
+//! discriminator a capture screen branches on.
 
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -10,6 +15,30 @@ use uuid::Uuid;
 use logandaim_core::domain;
 
 use crate::schema::{Erfasser, Farbe, Schuss, Zielwertung};
+
+/// The master-data identities a Runde was started from, as one object.
+///
+/// Both ids or neither: the pair is what "this is a Parkour round" means.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RundeHerkunft {
+    /// The Anlage the Parkour belongs to.
+    pub anlage_id: Uuid,
+    /// The Parkour this Runde was started on.
+    pub parkour_id: Uuid,
+}
+
+impl From<&domain::RundeOutgoingReferences> for RundeHerkunft {
+    fn from(referenzen: &domain::RundeOutgoingReferences) -> Self {
+        Self {
+            anlage_id: referenzen.anlage_id().0,
+            parkour_id: referenzen.parkour_id().0,
+        }
+    }
+}
 
 /// One Pflock of this Runde' captured route, in near-to-far order.
 ///
@@ -41,6 +70,9 @@ pub struct Abstand {
 }
 
 /// One Ziel as this Runde captured it: identity, animal name, ordinal, distances, Wertung.
+///
+/// A `Freies Ziel` fills the same shape: its name is "Ziel N", its number the ordinal, and its
+/// Pflock and distance lists are empty because a free round configures none.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
@@ -49,14 +81,14 @@ pub struct Abstand {
 pub struct RundeZiel {
     /// Identity of the Ziel as captured.
     pub ziel_id: Uuid,
-    /// Animal name as captured.
+    /// Animal name as captured, or the free Ziel's own name.
     pub tiername: String,
     /// 1-based ordinal as captured, distinguishing duplicate animal names.
     pub zielnummer: u32,
     /// The Pflöcke that apply to this Ziel as captured, near to far: the Ziel's own set when
-    /// it had one, the Parkour-wide set otherwise.
+    /// it had one, the Parkour-wide set otherwise. Always empty on a free round.
     pub pflöcke: Vec<RundePflock>,
-    /// The distances as captured.
+    /// The distances as captured. Always empty on a free round.
     pub abstände: Vec<Abstand>,
     /// The Wertung of this Ziel; absent while no Schuss has been logged at it.
     pub wertung: Option<Zielwertung>,
@@ -84,12 +116,10 @@ pub enum RundeZustand {
 pub struct Runde {
     /// Identity of the Runde.
     pub id: Uuid,
-    /// The Anlage the Parkour belongs to.
-    pub anlage_id: Uuid,
-    /// The Parkour this Runde was started on.
-    pub parkour_id: Uuid,
-    /// The Parkour' name as captured at the start, not its current name.
-    pub parkour_name: String,
+    /// The Anlage/Parkour pair; absent on a `Freie Runde`.
+    pub herkunft: Option<RundeHerkunft>,
+    /// The round's name: the captured Parkour's, or the free round's own.
+    pub name: String,
     /// Who the Runde belongs to.
     pub erfasst_von: Erfasser,
     /// Whether it is still open or already closed.
@@ -98,7 +128,7 @@ pub struct Runde {
     pub begonnen_am: DateTime<Utc>,
     /// End of the Runde; absent while it is open.
     pub abgeschlossen_am: Option<DateTime<Utc>>,
-    /// The captured Pflöcke' colours, near to far.
+    /// The captured Pflöcke' colours, near to far; empty on a free round.
     pub pflöcke: Vec<RundePflock>,
     /// The Ziele as captured, with their results.
     pub ziele: Vec<RundeZiel>,
@@ -122,12 +152,10 @@ pub struct Runde {
 pub struct RundeBasic {
     /// Identity of the Runde.
     pub id: Uuid,
-    /// The Anlage the Parkour belongs to.
-    pub anlage_id: Uuid,
-    /// The Parkour this Runde was started on.
-    pub parkour_id: Uuid,
-    /// The Parkour' name as captured at the start.
-    pub parkour_name: String,
+    /// The Anlage/Parkour pair; absent on a `Freie Runde`.
+    pub herkunft: Option<RundeHerkunft>,
+    /// The round's name: the captured Parkour's, or the free round's own.
+    pub name: String,
     /// Number of Ziele in the captured route.
     pub anzahl_ziele: usize,
     /// Number of Ziele with a recorded shot.
@@ -149,17 +177,15 @@ pub struct RundeBasic {
 impl Runde {
     pub fn gelesen(runde: domain::Runde, schüsse: Vec<domain::Schuss>) -> Self {
         let wertungen = runde.ziel_wertungen(schüsse.iter().cloned());
-        let pflöcke = runde.snapshot().pflöcke();
+        let pflöcke = runde.pflöcke();
         let ziele = runde
-            .snapshot()
             .ziele()
-            .iter()
             .zip(wertungen)
             .map(|(ziel, wertung)| RundeZiel {
                 ziel_id: ziel.ziel_id().0,
-                tiername: ziel.tiername().to_string(),
-                zielnummer: ziel.zielnummer().get(),
-                pflöcke: effective_pflöcke(ziel, pflöcke),
+                tiername: ziel.name().to_string(),
+                zielnummer: ziel.ordinal().get(),
+                pflöcke: effective_pflöcke(&ziel, pflöcke),
                 abstände: ziel
                     .abstände()
                     .iter()
@@ -171,7 +197,7 @@ impl Runde {
                 wertung: wertung.map(Into::into),
                 schüsse: schüsse
                     .iter()
-                    .filter(|schuss| schuss.ziel_id().0 == ziel.ziel_id().0)
+                    .filter(|schuss| schuss.ziel_id() == ziel.ziel_id())
                     .cloned()
                     .map(Into::into)
                     .collect(),
@@ -198,10 +224,16 @@ fn zustand(runde: &domain::Runde) -> RundeZustand {
 
 /// The Pflöcke that apply to one captured Ziel, near to far: its own set when it was
 /// captured with one, the Parkour-wide captured set otherwise.
+///
+/// A `Freies Ziel` captured no Pflock set and its round has no Parkour-wide set, so the answer
+/// is empty — the two lists it could inherit from do not exist.
 fn effective_pflöcke(
-    ziel: &domain::ZielSnapshot,
+    ziel: &domain::ZielRef<'_>,
     parkour: &[domain::PflockSnapshot],
 ) -> Vec<RundePflock> {
+    let domain::ZielRef::Parkour(ziel) = ziel else {
+        return Vec::new();
+    };
     // The captured snapshot already assigns each Pflock its position from the array order,
     // so either set renders as it was captured.
     ziel.pflöcke()
@@ -214,45 +246,44 @@ fn effective_pflöcke(
         .collect()
 }
 
+fn ziele_von(runde: &domain::Runde) -> Vec<RundeZiel> {
+    let pflöcke = runde.pflöcke();
+    runde
+        .ziele()
+        .map(|ziel| RundeZiel {
+            ziel_id: ziel.ziel_id().0,
+            tiername: ziel.name().to_string(),
+            zielnummer: ziel.ordinal().get(),
+            pflöcke: effective_pflöcke(&ziel, pflöcke),
+            abstände: ziel
+                .abstände()
+                .iter()
+                .map(|(farbe, abstand)| Abstand {
+                    pflock: (*farbe).into(),
+                    meter: abstand.meter(),
+                })
+                .collect(),
+            wertung: None,
+            schüsse: Vec::new(),
+        })
+        .collect()
+}
+
 /// A freshly started or freshly closed Runde, before any Wertung is folded.
 ///
 /// `RundeStarten` and `RundeAbschliessen` answer the aggregate, not a read model, so this
 /// impl renders the captured route exactly and leaves every Wertung empty.
 impl From<domain::Runde> for Runde {
     fn from(runde: domain::Runde) -> Self {
-        let pflöcke = runde.snapshot().pflöcke();
-        let ziele = runde
-            .snapshot()
-            .ziele()
-            .iter()
-            .map(|ziel| RundeZiel {
-                ziel_id: ziel.ziel_id().0,
-                tiername: ziel.tiername().to_string(),
-                zielnummer: ziel.zielnummer().get(),
-                pflöcke: effective_pflöcke(ziel, pflöcke),
-                abstände: ziel
-                    .abstände()
-                    .iter()
-                    .map(|(farbe, abstand)| Abstand {
-                        pflock: (*farbe).into(),
-                        meter: abstand.meter(),
-                    })
-                    .collect(),
-                wertung: None,
-                schüsse: Vec::new(),
-            })
-            .collect();
         Self {
             id: runde.id().0,
-            anlage_id: runde.anlage_id().0,
-            parkour_id: runde.parkour_id().0,
-            parkour_name: runde.snapshot().parkour_name().to_string(),
+            herkunft: runde.referenzen().map(RundeHerkunft::from),
+            name: runde.name().to_string(),
             erfasst_von: runde.erfasst_von().into(),
             zustand: zustand(&runde),
             begonnen_am: runde.begonnen_am(),
             abgeschlossen_am: runde.abgeschlossen_am(),
             pflöcke: runde
-                .snapshot()
                 .pflöcke()
                 .iter()
                 .map(|pflock| RundePflock {
@@ -260,7 +291,7 @@ impl From<domain::Runde> for Runde {
                     position: pflock.position(),
                 })
                 .collect(),
-            ziele,
+            ziele: ziele_von(&runde),
             gesamt_erster_treffer: 0,
             gesamt_mehrschuss: 0,
             ziele_mit_wertung: 0,
@@ -272,10 +303,9 @@ impl From<domain::Runde> for RundeBasic {
     fn from(runde: domain::Runde) -> Self {
         Self {
             id: runde.id().0,
-            anlage_id: runde.anlage_id().0,
-            parkour_id: runde.parkour_id().0,
-            parkour_name: runde.snapshot().parkour_name().to_string(),
-            anzahl_ziele: runde.snapshot().ziele().len(),
+            herkunft: runde.referenzen().map(RundeHerkunft::from),
+            name: runde.name().to_string(),
+            anzahl_ziele: runde.ziele().count(),
             anzahl_erfasste_ziele: 0,
             zustand: zustand(&runde),
             begonnen_am: runde.begonnen_am(),

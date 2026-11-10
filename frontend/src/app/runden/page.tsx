@@ -2,16 +2,26 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "@/api/auth-provider";
 import { apiErrorMessage } from "@/api/errors";
-import { useRundenQuery } from "@/api/hooks";
+import { useRundenQuery, useStammdatenMutations } from "@/api/hooks";
 import type { RundeBasic } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { HatchBand, SheetNumber, StampMark } from "@/components/ui/paper-rule";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -52,6 +62,7 @@ export default function RundenPage() {
         register={["Logbuch", "Historie"]}
         title="Historie"
         description="Jede Runde hält die Aufstellung fest, mit der sie begonnen wurde. Spätere Änderungen an den Stammdaten verändern sie nicht."
+        actions={alle.length > 0 ? <FreieRundeStartenButton /> : undefined}
       />
 
       {runden.isError ? (
@@ -130,7 +141,7 @@ function RundenAbschnitt({
         <Table>
           <TableHead>
             <TableRow>
-              <TableHeader>Parkour</TableHeader>
+              <TableHeader>Runde</TableHeader>
               <TableHeader>Begonnen</TableHeader>
               <TableHeader>
                 <span className="sr-only">Status</span>
@@ -143,9 +154,7 @@ function RundenAbschnitt({
           <TableBody>
             {runden.map((runde) => (
               <TableRow key={runde.id}>
-                <TableCell className="font-medium">
-                  {runde.parkourName}
-                </TableCell>
+                <TableCell className="font-medium">{runde.name}</TableCell>
                 <TableCell className="tabular-nums text-secondary">
                   {new Date(runde.begonnenAm).toLocaleString("de-AT")}
                 </TableCell>
@@ -176,7 +185,69 @@ function RundenAbschnitt({
   );
 }
 
-/** The next action for an empty history is to pick an Anlage and start a Runde. */
+function FreieRundeStartenButton() {
+  const router = useRouter();
+  const { freieRundeStarten } = useStammdatenMutations();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const start = () => {
+    const roundName = name.trim();
+    if (!roundName) {
+      setError("Bitte geben Sie einen Namen für die Runde ein.");
+      return;
+    }
+    setError(null);
+    freieRundeStarten.mutate(roundName, {
+      onSuccess: (runde) =>
+        router.push(`${paths.rundenErfassen}?id=${runde.id}`),
+      onError: (cause) =>
+        setError(
+          apiErrorMessage(cause, {
+            fallback: "Die freie Runde konnte nicht gestartet werden.",
+          }),
+        ),
+    });
+  };
+
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Freie Runde</Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Freie Runde starten</DialogTitle>
+            <DialogDescription>
+              Vergeben Sie einen Namen für die Runde ohne Parkour.
+            </DialogDescription>
+          </DialogHeader>
+          <Field label="Name der Runde">
+            <Input
+              autoFocus
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") start();
+              }}
+            />
+          </Field>
+          {error ? <Alert variant="error">{error}</Alert> : null}
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button disabled={freieRundeStarten.isPending} onClick={start}>
+              Runde starten
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/** The next action for an empty history is to start a Runde. */
 function Leerzustand() {
   return (
     <div className="space-y-4">
@@ -184,9 +255,12 @@ function Leerzustand() {
         Noch keine Runde begonnen. Wählen Sie im Anlagen-Verzeichnis einen
         Parkour, um die erste Runde zu starten.
       </p>
-      <Button asChild>
-        <Link href={paths.anlagen}>Zu den Anlagen</Link>
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <FreieRundeStartenButton />
+        <Button variant="secondary" asChild>
+          <Link href={paths.anlagen}>Zu den Anlagen</Link>
+        </Button>
+      </div>
     </div>
   );
 }

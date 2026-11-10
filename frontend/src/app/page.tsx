@@ -149,7 +149,7 @@ function LetzteRundeZeile({ runde }: { runde: RundeBasic }) {
 
   return (
     <TableRow>
-      <TableCell className="font-medium">{runde.parkourName}</TableCell>
+      <TableCell className="font-medium">{runde.name}</TableCell>
       <TableCell className="tabular-nums text-secondary">
         {new Date(runde.begonnenAm).toLocaleString("de-AT")}
       </TableCell>
@@ -200,7 +200,7 @@ function AktiveRunde({ runde }: { runde: RundeBasic }) {
     >
       <div className="flex flex-wrap items-center gap-3">
         <SheetNumber>Offen</SheetNumber>
-        <h2 className="text-sm font-semibold text-ink">{runde.parkourName}</h2>
+        <h2 className="text-sm font-semibold text-ink">{runde.name}</h2>
         <span className="text-xs text-secondary tabular-nums">
           begonnen {new Date(runde.begonnenAm).toLocaleString("de-AT")}
         </span>

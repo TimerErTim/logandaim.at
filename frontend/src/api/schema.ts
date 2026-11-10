@@ -1255,6 +1255,236 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runden/frei": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a `Freie Runde`: no Anlage, no Parkour, and its own name.
+         * @description The reply carries `herkunft: null`, which is how a client tells this round from a
+         *     Parkour round without guessing from an empty list.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["FreieRundeStartenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}/ziele": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Append one `Freies Ziel` to the caller's own open `Freie Runde`.
+         * @description A Parkour round answers 409: its Ziel list is its captured snapshot.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielHinzufuegenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}/ziele/{ziel_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Rename one `Freies Ziel` in a running free Runde.
+         * @description Whitespace-only names are refused with 400. A completed or Parkour round answers 409.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielUmbenennenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Remove one `Freies Ziel` from a free Runde.
+         * @description Its Schüsse go with it, in the same transaction, and the reply is the updated Runde.
+         *     A Parkour round answers 409, and a Ziel this round does not hold answers 404.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runden/{runde_id}": {
         parameters: {
             query?: never;
@@ -2480,6 +2710,14 @@ export interface components {
             "pfl\u00F6cke": components["schemas"]["Pflock"][];
         };
         /**
+         * FreieRundeStartenRequest
+         * @description Start a `Freie Runde`: no Anlage, no Parkour, and its own name.
+         */
+        FreieRundeStartenRequest: {
+            /** @description What the archer calls this round; it is the round's own name, not a Parkour's. */
+            name: string;
+        };
+        /**
          * InheritFromParkourPflöcke
          * @description The Parkour-wide order applies to this Ziel. Carries nothing; the discriminator is the
          *     whole message.
@@ -2782,18 +3020,10 @@ export interface components {
              * @description Identity of the Runde.
              */
             id: string;
-            /**
-             * Format: uuid
-             * @description The Anlage the Parkour belongs to.
-             */
-            anlageId: string;
-            /**
-             * Format: uuid
-             * @description The Parkour this Runde was started on.
-             */
-            parkourId: string;
-            /** @description The Parkour' name as captured at the start, not its current name. */
-            parkourName: string;
+            /** @description The Anlage/Parkour pair; absent on a `Freie Runde`. */
+            herkunft?: components["schemas"]["RundeHerkunft"] & unknown;
+            /** @description The round's name: the captured Parkour's, or the free round's own. */
+            name: string;
             /** @description Who the Runde belongs to. */
             erfasstVon: components["schemas"]["Erfasser"] & unknown;
             /** @description Whether it is still open or already closed. */
@@ -2808,7 +3038,7 @@ export interface components {
              * @description End of the Runde; absent while it is open.
              */
             abgeschlossenAm?: string;
-            /** @description The captured Pflöcke' colours, near to far. */
+            /** @description The captured Pflöcke' colours, near to far; empty on a free round. */
             "pfl\u00F6cke": components["schemas"]["RundePflock"][];
             /** @description The Ziele as captured, with their results. */
             ziele: components["schemas"]["RundeZiel"][];
@@ -2841,18 +3071,10 @@ export interface components {
              * @description Identity of the Runde.
              */
             id: string;
-            /**
-             * Format: uuid
-             * @description The Anlage the Parkour belongs to.
-             */
-            anlageId: string;
-            /**
-             * Format: uuid
-             * @description The Parkour this Runde was started on.
-             */
-            parkourId: string;
-            /** @description The Parkour' name as captured at the start. */
-            parkourName: string;
+            /** @description The Anlage/Parkour pair; absent on a `Freie Runde`. */
+            herkunft?: components["schemas"]["RundeHerkunft"] & unknown;
+            /** @description The round's name: the captured Parkour's, or the free round's own. */
+            name: string;
             /**
              * Format: uint64
              * @description Number of Ziele in the captured route.
@@ -2875,6 +3097,24 @@ export interface components {
              * @description End of the Runde; absent while it is open.
              */
             abgeschlossenAm?: string;
+        };
+        /**
+         * RundeHerkunft
+         * @description The master-data identities a Runde was started from, as one object.
+         *
+         *     Both ids or neither: the pair is what "this is a Parkour round" means.
+         */
+        RundeHerkunft: {
+            /**
+             * Format: uuid
+             * @description The Anlage the Parkour belongs to.
+             */
+            anlageId: string;
+            /**
+             * Format: uuid
+             * @description The Parkour this Runde was started on.
+             */
+            parkourId: string;
         };
         /**
          * RundePflock
@@ -2909,6 +3149,9 @@ export interface components {
         /**
          * RundeZiel
          * @description One Ziel as this Runde captured it: identity, animal name, ordinal, distances, Wertung.
+         *
+         *     A `Freies Ziel` fills the same shape: its name is "Ziel N", its number the ordinal, and its
+         *     Pflock and distance lists are empty because a free round configures none.
          */
         RundeZiel: {
             /**
@@ -2916,7 +3159,7 @@ export interface components {
              * @description Identity of the Ziel as captured.
              */
             zielId: string;
-            /** @description Animal name as captured. */
+            /** @description Animal name as captured, or the free Ziel's own name. */
             tiername: string;
             /**
              * Format: uint32
@@ -2925,10 +3168,10 @@ export interface components {
             zielnummer: number;
             /**
              * @description The Pflöcke that apply to this Ziel as captured, near to far: the Ziel's own set when
-             *     it had one, the Parkour-wide set otherwise.
+             *     it had one, the Parkour-wide set otherwise. Always empty on a free round.
              */
             "pfl\u00F6cke": components["schemas"]["RundePflock"][];
-            /** @description The distances as captured. */
+            /** @description The distances as captured. Always empty on a free round. */
             "abst\u00E4nde": components["schemas"]["Abstand"][];
             /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
             wertung?: components["schemas"]["Zielwertung"] & unknown;
@@ -3077,6 +3320,14 @@ export interface components {
             verwendungen: components["schemas"]["Zielverwendung"][];
         };
         /**
+         * ZielHinzufuegenRequest
+         * @description Append one `Freies Ziel` to a free Runde.
+         */
+        ZielHinzufuegenRequest: {
+            /** @description The Ziel's name; absent means "Ziel N" from its ordinal. */
+            name?: string;
+        };
+        /**
          * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
          *
          *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
@@ -3125,6 +3376,13 @@ export interface components {
              *     the user's own act.
              */
             zielnummer?: number;
+        };
+        /**
+         * ZielUmbenennenRequest
+         * @description Rename one free Ziel inside its Runde.
+         */
+        ZielUmbenennenRequest: {
+            name: string;
         };
         /**
          * Zielplatzierung

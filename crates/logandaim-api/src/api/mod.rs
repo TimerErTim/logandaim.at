@@ -19,7 +19,10 @@ use error_stack::{IntoReport, Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
-    domain::{AnlageId, EmailAdresse, ParkourId, RundeId, SchussId, ZielId, konto::BenutzerId},
+    domain::{
+        AnlageId, EmailAdresse, ParkourId, Runde as DomainRunde, RundeId, SchussId, ZielId,
+        konto::BenutzerId,
+    },
     ports::{ClientKey, RepositoryError, ThrottleAction},
     service::{
         Abmeldung, AbmeldungFehler, AnlageBeschreibendeDatenÄndern, AnlageDeaktivieren,
@@ -29,10 +32,12 @@ use logandaim_core::{
         PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen,
         PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
         RegistrierungStarten, RegistrierungStartenFehler, RundeAbschliessen,
-        RundeAbschliessenFehler, RundeStarten, RundeStartenFehler, SchussLöschen,
-        SchussLöschenFehler, SchussRegistrieren, SchussRegistrierenFehler, SchussÄndernFehler,
-        SessionAusgestellt, StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen,
-        ZielÄndern, darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
+        RundeAbschliessenFehler, RundeStarten, RundeStartenFehler, RundeZielEntfernen,
+        RundeZielEntfernenFehler, RundeZielHinzufügen, RundeZielHinzufügenFehler,
+        RundeZielUmbenennen, RundeZielUmbenennenFehler, SchussLöschen, SchussLöschenFehler,
+        SchussRegistrieren, SchussRegistrierenFehler, SchussÄndernFehler, SessionAusgestellt,
+        StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern,
+        darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
     },
 };
 use tracing::warn;
@@ -459,6 +464,85 @@ impl LogandaimAppApi {
     ) -> ResultReport<Runde, RundeStartenFehler> {
         let runde = self.app.execute(auth, RundeStarten::from(anfrage)).await?;
         Ok(runde.into())
+    }
+
+    /// Start a `Freie Runde`; the use case was already built and validated at the boundary.
+    pub async fn runde_starten_frei(
+        &self,
+        auth: AuthContext,
+        use_case: RundeStarten,
+    ) -> ResultReport<Runde, RundeStartenFehler> {
+        let runde = self.app.execute(auth, use_case).await?;
+        Ok(runde.into())
+    }
+
+    /// Append one `Freies Ziel` to a free Runde and answer the updated read model.
+    pub async fn runde_ziel_hinzufuegen(
+        &self,
+        auth: AuthContext,
+        use_case: RundeZielHinzufügen,
+    ) -> ResultReport<Runde, RundeZielHinzufügenFehler> {
+        let runde_id = use_case.runde_id;
+        let runde = self.app.execute(auth, use_case).await?;
+        self.runde_mit_schuessen(runde, runde_id, || RundeZielHinzufügenFehler::RundeLaden)
+            .await
+    }
+
+    /// Rename one `Freies Ziel` and answer the updated read model.
+    pub async fn runde_ziel_umbenennen(
+        &self,
+        auth: AuthContext,
+        use_case: RundeZielUmbenennen,
+    ) -> ResultReport<Runde, RundeZielUmbenennenFehler> {
+        let runde_id = use_case.runde_id;
+        let runde = self.app.execute(auth, use_case).await?;
+        self.runde_mit_schuessen(runde, runde_id, || RundeZielUmbenennenFehler::RundeLaden)
+            .await
+    }
+
+    /// Remove one `Freies Ziel`, with its Schüsse, and answer the updated read model.
+    pub async fn runde_ziel_entfernen(
+        &self,
+        auth: AuthContext,
+        use_case: RundeZielEntfernen,
+    ) -> ResultReport<Runde, RundeZielEntfernenFehler> {
+        let runde_id = use_case.runde_id;
+        let runde = self.app.execute(auth, use_case).await?;
+        self.runde_mit_schuessen(runde, runde_id, || RundeZielEntfernenFehler::RundeLaden)
+            .await
+    }
+
+    /// Render a Runde a write answered as the full read model, folding its Schüsse.
+    ///
+    /// A Ziel edit changes *which* Schüsse belong to the round, so a bare aggregate would
+    /// answer empty Wertungen and an empty ledger; a caller must see the round as it now
+    /// stands. The read is owner-free because the write already proved the caller may see it.
+    async fn runde_mit_schuessen<E>(
+        &self,
+        runde: DomainRunde,
+        runde_id: RundeId,
+        ladefehler: impl Fn() -> E + Send + Sync,
+    ) -> ResultReport<Runde, E>
+    where
+        E: logandaim_core::ThreadSafeError + Send + Sync,
+    {
+        let schüsse = self
+            .app
+            .execute_fn(AuthContext::Anonymous, async |ctx| {
+                let uow = ctx.enter().await.change_context(ladefehler())?;
+                let schüsse = uow
+                    .schüsse()
+                    .find_by_runde(runde_id)
+                    .await
+                    .map_err(IntoReport::into_report)
+                    .change_context(ladefehler())?
+                    .into_iter()
+                    .map(|schuss| schuss.into_data())
+                    .collect();
+                uow.finish(Ok::<_, Report<E>>(schüsse), ladefehler()).await
+            })
+            .await?;
+        Ok(Runde::gelesen(runde, schüsse))
     }
 
     /// One Runde with both Wertungen; owner or Systemadministrator (AC-9, AC-13).

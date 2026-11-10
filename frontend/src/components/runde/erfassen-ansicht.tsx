@@ -148,7 +148,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
       <div className="sticky top-0 z-40 -mx-6 flex flex-col gap-2 border-y border-subtle bg-surface px-6 py-3">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
           <p className="truncate font-medium text-ink font-serif">
-            {runde.parkourName}
+            {runde.name}
           </p>
           <WertungAnzeige
             ersterTreffer={runde.gesamtErsterTreffer}

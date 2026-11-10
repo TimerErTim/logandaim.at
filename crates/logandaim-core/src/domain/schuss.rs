@@ -103,6 +103,11 @@ impl Erfasser {
     }
 }
 
+/// Where a Schuss was shot from. Exactly one of the two forms is stored (SPEC-runde rule 4).
+///
+/// `Pflock` is the stake's colour on a Parkour round. A `Freie Runde` configures no Pflöcke,
+/// so there the same form carries the colour the archer picked for that shot (rule 19); no
+/// third variant is needed, because both are "a colour, not a distance".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Schussposition {
     Distanz(Abstand),

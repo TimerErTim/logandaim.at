@@ -320,7 +320,7 @@ impl RundeRepository for FakeRundeRepository {
             .datastore
             .runden()
             .values()
-            .any(|runde| runde.anlage_id() == id))
+            .any(|runde| runde.anlage_id() == Some(id)))
     }
 
     async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool> {
@@ -328,7 +328,7 @@ impl RundeRepository for FakeRundeRepository {
             .datastore
             .runden()
             .values()
-            .any(|runde| runde.parkour_id() == id))
+            .any(|runde| runde.parkour_id() == Some(id)))
     }
 
     async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool> {

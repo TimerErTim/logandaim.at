@@ -83,6 +83,14 @@ export interface LogandaimApi {
   // ---------------------------------------------------------------- Runden
   rundenAnzeigen(): Promise<RundeBasic[]>;
   rundeStarten(parkourId: string): Promise<Runde>;
+  freieRundeStarten(name: string): Promise<Runde>;
+  freiesZielHinzufuegen(rundeId: string, name?: string): Promise<Runde>;
+  freiesZielUmbenennen(
+    rundeId: string,
+    zielId: string,
+    name: string,
+  ): Promise<Runde>;
+  freiesZielEntfernen(rundeId: string, zielId: string): Promise<Runde>;
   rundeLoeschen(id: string): Promise<void>;
   rundeAnzeigen(id: string): Promise<Runde>;
   rundeAbschliessen(id: string): Promise<Runde>;
@@ -157,13 +165,29 @@ export type Parkour = Omit<Schemas["Parkour"], "platzierungen"> & {
 export type ParkourÖffentlich = Schemas["ParkourÖffentlich"];
 export type AnlageÖffentlich = Schemas["AnlageÖffentlich"];
 export type ParkourKurz = Schemas["ParkourKurz"];
-export type RundeBasic = Schemas["RundeBasic"];
+export type RundeHerkunft = { anlageId: string; parkourId: string };
+type RundeWire<T> = Omit<
+  T,
+  "anlageId" | "parkourId" | Extract<keyof T, `parkour${string}`>
+>;
+export type RundeBasic = Omit<
+  RundeWire<Schemas["RundeBasic"]>,
+  "name" | "herkunft"
+> & {
+  name: string;
+  herkunft: RundeHerkunft | null;
+};
 export type RundePflock = Schemas["RundePflock"];
 export type Abstand = Schemas["Abstand"];
 export type RundeZiel = Omit<Schemas["RundeZiel"], "pflöcke"> & {
   pflöcke: RundePflock[];
 };
-export type Runde = Omit<Schemas["Runde"], "ziele"> & {
+export type Runde = Omit<
+  RundeWire<Schemas["Runde"]>,
+  "ziele" | "name" | "herkunft"
+> & {
+  name: string;
+  herkunft: RundeHerkunft | null;
   ziele: RundeZiel[];
 };
 export type Schuss = Schemas["Schuss"];
@@ -183,8 +207,8 @@ export type ParkourSetupInput = Omit<
 > & { platzierungen: Zielplatzierung[] };
 
 export type SchusspositionInput =
-  | { Distanz: { meter: number } }
-  | { Pflock: { farbe: string } };
+  | Schemas["SchusspositionRequest"]
+  | Schemas["Schussposition"];
 
 export type SchussErstellungInput = {
   zielId: string;

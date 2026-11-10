@@ -6,6 +6,7 @@ import { useAuth } from "@/api/auth-provider";
 import { apiErrorMessage } from "@/api/errors";
 import { useRundeQuery } from "@/api/hooks";
 import { ErfassenAnsicht } from "@/components/runde/erfassen-ansicht";
+import { FreieErfassenAnsicht } from "@/components/runde/freie-erfassen-ansicht";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQueryParam } from "@/lib/use-query-param";
@@ -45,5 +46,9 @@ export default function RundeErfassenPage() {
         </Alert>
       </div>
     );
-  return <ErfassenAnsicht runde={runde.data} />;
+  return runde.data.herkunft === null ? (
+    <FreieErfassenAnsicht runde={runde.data} />
+  ) : (
+    <ErfassenAnsicht runde={runde.data} />
+  );
 }

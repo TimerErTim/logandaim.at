@@ -140,10 +140,10 @@ function RundeInhalt({ runde }: { runde: Runde }) {
     <div className="flex min-h-full flex-col">
       {/* The bottom padding keeps the last Ziel clear of the sticky action bar. */}
       <div className="flex-1 space-y-6 p-6 pb-24">
-        <SetBreadcrumbLabel label={runde.parkourName} />
+        <SetBreadcrumbLabel label={runde.name} />
         <PageHeader
           register={["Logbuch", "Historie"]}
-          title={runde.parkourName}
+          title={runde.name}
           plate={runde.id.slice(0, 8)}
           description="Aufstellung zum Start der Runde. Spätere Änderungen an den Stammdaten ändern diese Runde nicht."
           actions={

@@ -8,6 +8,7 @@ use logandaim_core::service::{
     AbmeldungFehler, AnmeldungFehler, BenutzerLöschenFehler, ErneuerungFehler,
     PasswortVergessenFehler, PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler,
     RegistrierungStartenFehler, RundeAbschliessenFehler, RundeLöschenFehler, RundeStartenFehler,
+    RundeZielEntfernenFehler, RundeZielHinzufügenFehler, RundeZielUmbenennenFehler,
     SchussLöschenFehler, SchussRegistrierenFehler, SchussÄndernFehler, SessionPrüfenFehler,
     StammdatenFehler, SystemadministratorBefördernFehler,
 };
@@ -175,11 +176,46 @@ http_status!(StammdatenFehler {
 
 http_status!(RundeStartenFehler {
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    UngültigeAnfrage => StatusCode::BAD_REQUEST,
     NichtGefunden => StatusCode::NOT_FOUND,
     NichtAktiv => StatusCode::CONFLICT,
     RundeLaeuft => StatusCode::CONFLICT,
     AnlageLaden => StatusCode::INTERNAL_SERVER_ERROR,
     Starten => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
+http_status!(RundeZielHinzufügenFehler {
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    RundeIstKeineFreieRunde => StatusCode::CONFLICT,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
+    RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
+    Speichern => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
+http_status!(RundeZielUmbenennenFehler {
+    UngültigeAnfrage => StatusCode::BAD_REQUEST,
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    ZielNichtGefunden => StatusCode::NOT_FOUND,
+    RundeIstKeineFreieRunde => StatusCode::CONFLICT,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
+    RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
+    Speichern => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
+http_status!(RundeZielEntfernenFehler {
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    // A Ziel that is not in this round is as absent as a round that does not exist.
+    ZielNichtGefunden => StatusCode::NOT_FOUND,
+    RundeIstKeineFreieRunde => StatusCode::CONFLICT,
+    RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
+    Entfernen => StatusCode::INTERNAL_SERVER_ERROR,
+    Speichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
 http_status!(RundeAnzeigenFehler {

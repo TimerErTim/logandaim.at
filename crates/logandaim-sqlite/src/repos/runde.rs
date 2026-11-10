@@ -1,9 +1,15 @@
-//! `Runde` rows, with the captured `ParkourSnapshot` stored as an adapter-local JSON document.
+//! `Runde` rows, with the captured setup stored as an adapter-local JSON document.
 //!
-//! The snapshot is serialised here and nowhere else: the domain has no serde dependency, and a
-//! snapshot's shape is a storage detail. The history index (`runden_referenzen`) is written in
-//! the same statement batch, so "does a Runde still reference this master data?" never needs to
-//! parse a snapshot.
+//! The setup is serialised here and nowhere else: the domain has no serde dependency, and a
+//! setup's shape is a storage detail. The document is an **untagged** enum, so a Parkour round
+//! stores its Anlage and Parkour ids inside one object and a free round stores neither — the
+//! JSON itself cannot hold "parkour without anlage", and the read path takes both ids from the
+//! document, never from the denormalised columns (SPEC-runde rule 17).
+//!
+//! The `runden.anlage_id`/`parkour_id` columns are written **from** that document and are only
+//! a read projection for ad-hoc SQL; a hand-edited column therefore cannot produce a pair the
+//! application would believe. The history index (`runden_referenzen`) is written in the same
+//! statement batch, so "does a Runde still reference this master data?" never parses a document.
 
 use std::sync::Arc;
 
@@ -17,9 +23,10 @@ use logandaim_core::{
     ErrorReportExt,
     application::uow::Versioned,
     domain::{
-        Abstand, AnlageId, Erfasser, Farbe, NeueRunde, NonEmptyString, ParkourId, ParkourSnapshot,
-        PflockSnapshot, Runde, RundeId, RundeInBearbeitung, ZielId, ZielPflöckeSnapshot,
-        ZielSnapshot, konto::BenutzerId,
+        Abstand, AnlageId, Erfasser, Farbe, FreieRunde, FreiesZiel, NeueRunde, NonEmptyString,
+        ParkourId, ParkourSnapshot, PflockSnapshot, Runde, RundeId, RundeInBearbeitung,
+        RundeOutgoingReferences, Rundenaufbau, ZielId, ZielPflöckeSnapshot, ZielSnapshot,
+        konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
 };
@@ -33,15 +40,35 @@ use crate::{
 };
 
 // ---------------------------------------------------------------------------------------
-// Snapshot DTO
+// Setup DTO
 // ---------------------------------------------------------------------------------------
 
+/// The stored setup: one object for a Parkour round, one for a free round.
+///
+/// Untagged, so the document itself is the discriminant: a Parkour round's JSON carries the
+/// Anlage and Parkour pair in a single object (`parkour_id` present implies `anlage_id`), and a
+/// free round's JSON carries neither. No field can disagree with another.
 #[derive(Debug, Serialize, Deserialize)]
-struct SnapshotDto {
-    parkour_id: Uuid,
-    parkour_name: String,
-    pflöcke: Vec<PflockDto>,
-    ziele: Vec<ZielDto>,
+#[serde(untagged)]
+enum RundenaufbauDto {
+    Parkour {
+        anlage_id: Uuid,
+        parkour_id: Uuid,
+        parkour_name: String,
+        pflöcke: Vec<PflockDto>,
+        ziele: Vec<ZielDto>,
+    },
+    Freie {
+        name: String,
+        ziele: Vec<FreiesZielDto>,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct FreiesZielDto {
+    ziel_id: Uuid,
+    name: String,
+    ordinal: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -55,17 +82,13 @@ struct ZielDto {
     ziel_id: Uuid,
     tiername: String,
     zielnummer: u32,
-    /// Absent in a snapshot written before per-Ziel sets existed; such a snapshot inherits
-    /// the Parkour-wide order, which is exactly what `Default` says.
-    #[serde(default)]
     pflöcke: ZielPflöckeDto,
     abstände: Vec<(String, u32)>,
 }
 
 /// The stored mirror of `ZielPflöckeSnapshot`, externally tagged by serde.
 ///
-/// `Default` is `InheritFromParkour`, so an old snapshot without the field keeps working and
-/// reads back as the Parkour-wide set.
+/// `Default` is `InheritFromParkour` for constructing new DTOs where applicable.
 #[derive(Debug, Serialize, Deserialize, Default)]
 enum ZielPflöckeDto {
     #[default]
@@ -90,8 +113,9 @@ impl ZielPflöckeDto {
     }
 }
 
-fn snapshot_to_json(snapshot: &ParkourSnapshot) -> RepositoryResult<String> {
-    let dto = SnapshotDto {
+fn parkour_to_dto(anlage_id: AnlageId, snapshot: &ParkourSnapshot) -> RundenaufbauDto {
+    RundenaufbauDto::Parkour {
+        anlage_id: anlage_id.0,
         parkour_id: snapshot.parkour_id().0,
         parkour_name: snapshot.parkour_name().to_string(),
         pflöcke: snapshot
@@ -117,74 +141,187 @@ fn snapshot_to_json(snapshot: &ParkourSnapshot) -> RepositoryResult<String> {
                     .collect(),
             })
             .collect(),
+    }
+}
+
+fn freie_to_dto(freie: &FreieRunde) -> RundenaufbauDto {
+    RundenaufbauDto::Freie {
+        name: freie.name().to_string(),
+        ziele: freie
+            .ziele()
+            .iter()
+            .map(|ziel| FreiesZielDto {
+                ziel_id: ziel.ziel_id().0,
+                name: ziel.name().to_string(),
+                ordinal: ziel.ordinal().get(),
+            })
+            .collect(),
+    }
+}
+
+fn aufbau_to_json(aufbau: &Rundenaufbau) -> RepositoryResult<String> {
+    let dto = match aufbau {
+        Rundenaufbau::Parkour {
+            referenzen,
+            snapshot,
+        } => parkour_to_dto(referenzen.anlage_id(), snapshot),
+        Rundenaufbau::Freie(freie) => freie_to_dto(freie),
     };
     serde_json::to_string(&dto).contextualize(RepositoryError::Data)
 }
 
-fn snapshot_from_json(json: &str) -> RepositoryResult<ParkourSnapshot> {
-    let dto: SnapshotDto = serde_json::from_str(json).contextualize(RepositoryError::Data)?;
-    let pflöcke = dto
-        .pflöcke
-        .into_iter()
-        .map(|pflock| {
-            Ok(PflockSnapshot::neu(
-                (Farbe::neu(&pflock.farbe)).contextualize(RepositoryError::Data)?,
-                pflock.position,
-            ))
-        })
-        .collect::<RepositoryResult<Vec<_>>>()?;
-    let ziele = dto
-        .ziele
-        .into_iter()
-        .map(|ziel| {
-            let abstände = ziel
-                .abstände
+/// The two denormalised projection columns, derived from the setup document.
+///
+/// `None` for both on a free round: SQL that filters by Anlage must not see one.
+fn projizierte_ids(aufbau: &Rundenaufbau) -> (Option<String>, Option<String>) {
+    match aufbau.referenzen() {
+        Some(referenzen) => (
+            Some(referenzen.anlage_id().0.to_string()),
+            Some(referenzen.parkour_id().0.to_string()),
+        ),
+        None => (None, None),
+    }
+}
+
+fn aufbau_from_json(json: &str) -> RepositoryResult<Rundenaufbau> {
+    let dto: RundenaufbauDto = serde_json::from_str(json).contextualize(RepositoryError::Data)?;
+    match dto {
+        RundenaufbauDto::Parkour {
+            anlage_id,
+            parkour_id,
+            parkour_name,
+            pflöcke,
+            ziele,
+        } => {
+            let pflöcke = pflöcke
                 .into_iter()
-                .map(|(farbe, meter)| {
-                    Ok((
-                        (Farbe::neu(&farbe)).contextualize(RepositoryError::Data)?,
-                        (Abstand::neu(meter)).contextualize(RepositoryError::Data)?,
+                .map(|pflock| {
+                    Ok(PflockSnapshot::neu(
+                        (Farbe::neu(&pflock.farbe)).contextualize(RepositoryError::Data)?,
+                        pflock.position,
                     ))
                 })
                 .collect::<RepositoryResult<Vec<_>>>()?;
-            let pflöcke = match ziel.pflöcke {
-                ZielPflöckeDto::InheritFromParkour => ZielPflöckeSnapshot::InheritFromParkour,
-                ZielPflöckeDto::Explicit(eigene) => ZielPflöckeSnapshot::Explicit(
-                    eigene
+            let ziele = ziele
+                .into_iter()
+                .map(|ziel| {
+                    let abstände = ziel
+                        .abstände
                         .into_iter()
-                        .map(|pflock| {
-                            Ok(PflockSnapshot::neu(
-                                (Farbe::neu(&pflock.farbe)).contextualize(RepositoryError::Data)?,
-                                pflock.position,
+                        .map(|(farbe, meter)| {
+                            Ok((
+                                (Farbe::neu(&farbe)).contextualize(RepositoryError::Data)?,
+                                (Abstand::neu(meter)).contextualize(RepositoryError::Data)?,
                             ))
                         })
-                        .collect::<RepositoryResult<Vec<_>>>()?,
-                ),
-            };
-            Ok(ZielSnapshot::neu(
-                ZielId(ziel.ziel_id),
-                std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?,
-                (NonEmptyString::neu(&ziel.tiername)).contextualize(RepositoryError::Data)?,
-                pflöcke,
-                abstände,
-            ))
-        })
-        .collect::<RepositoryResult<Vec<_>>>()?;
+                        .collect::<RepositoryResult<Vec<_>>>()?;
+                    let pflöcke = match ziel.pflöcke {
+                        ZielPflöckeDto::InheritFromParkour => {
+                            ZielPflöckeSnapshot::InheritFromParkour
+                        }
+                        ZielPflöckeDto::Explicit(eigene) => ZielPflöckeSnapshot::Explicit(
+                            eigene
+                                .into_iter()
+                                .map(|pflock| {
+                                    Ok(PflockSnapshot::neu(
+                                        (Farbe::neu(&pflock.farbe))
+                                            .contextualize(RepositoryError::Data)?,
+                                        pflock.position,
+                                    ))
+                                })
+                                .collect::<RepositoryResult<Vec<_>>>()?,
+                        ),
+                    };
+                    Ok(ZielSnapshot::neu(
+                        ZielId(ziel.ziel_id),
+                        std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?,
+                        (NonEmptyString::neu(&ziel.tiername))
+                            .contextualize(RepositoryError::Data)?,
+                        pflöcke,
+                        abstände,
+                    ))
+                })
+                .collect::<RepositoryResult<Vec<_>>>()?;
 
-    Ok(ParkourSnapshot::from_parts(
-        ParkourId(dto.parkour_id),
-        (NonEmptyString::neu(&dto.parkour_name)).contextualize(RepositoryError::Data)?,
-        pflöcke,
-        ziele,
-    ))
+            let snapshot = ParkourSnapshot::from_parts(
+                ParkourId(parkour_id),
+                (NonEmptyString::neu(&parkour_name)).contextualize(RepositoryError::Data)?,
+                pflöcke,
+                ziele,
+            );
+            // The pair is rebuilt from the one document, so it always names one Parkour.
+            Ok(Rundenaufbau::Parkour {
+                referenzen: RundeOutgoingReferences::from_parts(
+                    AnlageId(anlage_id),
+                    ParkourId(parkour_id),
+                ),
+                snapshot,
+            })
+        }
+        RundenaufbauDto::Freie { name, ziele } => {
+            let ziele = ziele
+                .into_iter()
+                .map(|ziel| {
+                    Ok(FreiesZiel::from_parts(
+                        ZielId(ziel.ziel_id),
+                        (NonEmptyString::neu(&ziel.name)).contextualize(RepositoryError::Data)?,
+                        std::num::NonZeroU32::new(ziel.ordinal).ok_or(RepositoryError::Data)?,
+                    ))
+                })
+                .collect::<RepositoryResult<Vec<_>>>()?;
+            Ok(Rundenaufbau::Freie(FreieRunde::from_parts(
+                (NonEmptyString::neu(&name)).contextualize(RepositoryError::Data)?,
+                ziele,
+            )))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ac21_snapshot_mit_anlage_und_parkour_ist_lesbar() {
+        let snapshot = r#"{
+            "anlage_id":"00000000-0000-0000-0000-000000000001",
+            "parkour_id":"00000000-0000-0000-0000-000000000002",
+            "parkour_name":"Wald",
+            "pflöcke":[],
+            "ziele":[]
+        }"#;
+
+        let aufbau = aufbau_from_json(snapshot).unwrap();
+        let referenzen = aufbau.referenzen().unwrap();
+        assert_eq!(
+            referenzen.anlage_id().0.to_string(),
+            "00000000-0000-0000-0000-000000000001"
+        );
+        assert_eq!(
+            referenzen.parkour_id().0.to_string(),
+            "00000000-0000-0000-0000-000000000002"
+        );
+    }
+
+    #[test]
+    fn ac21_legacy_snapshot_without_embedded_anlage_id_is_rejected() {
+        let legacy_snapshot = r#"{
+            "parkour_id":"00000000-0000-0000-0000-000000000002",
+            "parkour_name":"Wald",
+            "pflöcke":[],
+            "ziele":[]
+        }"#;
+
+        assert!(aufbau_from_json(legacy_snapshot).is_err());
+    }
 }
 
 // ---------------------------------------------------------------------------------------
 // Row mapping
 // ---------------------------------------------------------------------------------------
 
-const SELECT: &str = r#"SELECT id, anlage_id, parkour_id, snapshot, benutzer_id, anonymisiert_am,
-            zustand, begonnen_am, abgeschlossen_am, _version
+const SELECT: &str = r#"SELECT id, snapshot, benutzer_id, anonymisiert_am, zustand,
+            begonnen_am, abgeschlossen_am, _version
        FROM "runden""#;
 
 fn zuordnung_aus_zeile(
@@ -204,23 +341,21 @@ fn zuordnung_aus_zeile(
 
 fn runde_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Runde>> {
     let id_raw: String = row.get(0).contextualize(RepositoryError::Data)?;
-    let anlage_id_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
-    let snapshot_raw: String = row.get(3).contextualize(RepositoryError::Data)?;
-    let benutzer_id: Option<String> = row.get(4).contextualize(RepositoryError::Data)?;
-    let anonymisiert_am: Option<String> = row.get(5).contextualize(RepositoryError::Data)?;
-    let begonnen_am_raw: String = row.get(7).contextualize(RepositoryError::Data)?;
-    let abgeschlossen_am: Option<String> = row.get(8).contextualize(RepositoryError::Data)?;
+    let snapshot_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
+    let benutzer_id: Option<String> = row.get(2).contextualize(RepositoryError::Data)?;
+    let anonymisiert_am: Option<String> = row.get(3).contextualize(RepositoryError::Data)?;
+    let begonnen_am_raw: String = row.get(5).contextualize(RepositoryError::Data)?;
+    let abgeschlossen_am: Option<String> = row.get(6).contextualize(RepositoryError::Data)?;
 
     let runde = Runde::from_parts(
         RundeId(parse_uuid(&id_raw)?),
-        AnlageId(parse_uuid(&anlage_id_raw)?),
         zuordnung_aus_zeile(benutzer_id, anonymisiert_am)?,
-        snapshot_from_json(&snapshot_raw)?,
+        aufbau_from_json(&snapshot_raw)?,
         parse_datetime(&begonnen_am_raw)?,
         abgeschlossen_am.map(|am| parse_datetime(&am)).transpose()?,
     );
 
-    Ok(Versioned::new(parse_version(row, 9)?, runde))
+    Ok(Versioned::new(parse_version(row, 7)?, runde))
 }
 
 // ---------------------------------------------------------------------------------------
@@ -230,7 +365,8 @@ fn runde_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Runde>> {
 /// Record the master-data identities one Runde leans on, so AC-11/AC-12 is an index read.
 ///
 /// `art` names the kind of reference; the ids are the snapshot's own copies, which is exactly
-/// what "may this master data be deleted?" has to ask.
+/// what "may this master data be deleted?" has to ask. A free round references nothing but its
+/// own Ziele, so its Ziel identities stay indexed while its Anlage and Parkour rows do not exist.
 async fn ersetze_referenzen(tx: &Transaction, runde: &Runde) -> RepositoryResult<()> {
     let runde_id = runde.id().0.to_string();
     tx.execute(
@@ -240,11 +376,12 @@ async fn ersetze_referenzen(tx: &Transaction, runde: &Runde) -> RepositoryResult
     .await
     .contextualize_with(libsql_error_to_persistence_error)?;
 
-    let mut referenzen: Vec<(&'static str, String)> = vec![
-        ("anlage", runde.anlage_id().0.to_string()),
-        ("parkour", runde.parkour_id().0.to_string()),
-    ];
-    for ziel in runde.snapshot().ziele() {
+    let mut referenzen: Vec<(&'static str, String)> = Vec::new();
+    if let Some(referenzen_ids) = runde.referenzen() {
+        referenzen.push(("anlage", referenzen_ids.anlage_id().0.to_string()));
+        referenzen.push(("parkour", referenzen_ids.parkour_id().0.to_string()));
+    }
+    for ziel in runde.ziele() {
         referenzen.push(("ziel", ziel.ziel_id().0.to_string()));
     }
 
@@ -280,14 +417,18 @@ impl SQLiteRundeRepository {
             Erfasser::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
             Erfasser::Anonymisiert { am } => (None, Some(format_datetime(am))),
         };
-        let snapshot = snapshot_to_json(runde.snapshot())?;
+        let snapshot = aufbau_to_json(runde.aufbau())?;
+        let (anlage_id, parkour_id) = projizierte_ids(runde.aufbau());
         update_versioned(
             tx,
-            r#"UPDATE "runden" SET snapshot = ?2, benutzer_id = ?3, anonymisiert_am = ?4,
-                   zustand = ?5, abgeschlossen_am = ?6, _version = ?7 + 1
-               WHERE id = ?1 AND _version = ?7"#,
+            r#"UPDATE "runden" SET anlage_id = ?2, parkour_id = ?3, snapshot = ?4,
+                   benutzer_id = ?5, anonymisiert_am = ?6, zustand = ?7, abgeschlossen_am = ?8,
+                   _version = ?9 + 1
+               WHERE id = ?1 AND _version = ?9"#,
             (
                 runde.id().0.to_string(),
+                anlage_id,
+                parkour_id,
                 snapshot,
                 benutzer_id,
                 anonymisiert_am,
@@ -314,6 +455,7 @@ impl RundeRepository for SQLiteRundeRepository {
             Erfasser::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
             Erfasser::Anonymisiert { am } => (None, Some(format_datetime(am))),
         };
+        let (anlage_id, parkour_id) = projizierte_ids(domain.aufbau());
 
         tx.execute(
             r#"INSERT INTO "runden" (id, anlage_id, parkour_id, snapshot, benutzer_id,
@@ -322,9 +464,9 @@ impl RundeRepository for SQLiteRundeRepository {
                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, 0)"#,
             (
                 id.0.to_string(),
-                domain.anlage_id().0.to_string(),
-                domain.parkour_id().0.to_string(),
-                snapshot_to_json(domain.snapshot())?,
+                anlage_id,
+                parkour_id,
+                aufbau_to_json(domain.aufbau())?,
                 benutzer_id,
                 anonymisiert_am,
                 domain.zustand(),

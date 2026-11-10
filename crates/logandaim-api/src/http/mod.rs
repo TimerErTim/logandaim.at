@@ -18,7 +18,8 @@ use logandaim_core::{
     application::AuthContext,
     domain::{AnlageId, ParkourId, RundeId, ZielId, konto::BenutzerId},
     service::{
-        AbmeldungFehler, BenutzerLöschenFehler, PasswortWiederherstellenFehler, StammdatenFehler,
+        AbmeldungFehler, BenutzerLöschenFehler, PasswortWiederherstellenFehler, RundeStarten,
+        StammdatenFehler,
     },
 };
 use poem::web::RealIp;
@@ -44,11 +45,12 @@ use crate::{
         LogandaimAppApi,
         requests::{
             AnlageErstellungRequest, AnlageVerwaltungRequest, AnlageÄnderungRequest,
-            AnmeldungRequest, BenutzerLöschungRequest, ParkourErstellungRequest,
-            ParkourSetupRequest, ParkourUmbenennenRequest, PasswortVergessenRequest,
-            PasswortWiederherstellenRequest, RegistrierungAbschlussRequest,
-            RegistrierungStartRequest, RundeStartenRequest, SchussErstellungRequest,
-            SchussÄnderungRequest, ZielRequest,
+            AnmeldungRequest, BenutzerLöschungRequest, FreieRundeStartenRequest,
+            ParkourErstellungRequest, ParkourSetupRequest, ParkourUmbenennenRequest,
+            PasswortVergessenRequest, PasswortWiederherstellenRequest,
+            RegistrierungAbschlussRequest, RegistrierungStartRequest, RundeStartenRequest,
+            SchussErstellungRequest, SchussÄnderungRequest, ZielHinzufuegenRequest, ZielRequest,
+            ZielUmbenennenRequest, ziel_entfernen_in_use_case,
         },
     },
     schema::{
@@ -644,6 +646,105 @@ impl LogandaimApiSpec {
             .unwrap_or(AuthContext::Anonymous);
         let ergebnis = self.app_api.runden_anzeigen(auth).await;
         ergebnis.into()
+    }
+
+    /// Start a `Freie Runde`: no Anlage, no Parkour, and its own name.
+    ///
+    /// The reply carries `herkunft: null`, which is how a client tells this round from a
+    /// Parkour round without guessing from an empty list.
+    #[oai(path = "/runden/frei", method = "post", tag = "ApiTag::Runden")]
+    async fn runde_starten_frei(
+        &self,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
+        body: Json<FreieRundeStartenRequest>,
+    ) -> TypicalJsonResponse<Runde> {
+        // A missing or unusable token is anonymous here; the use case answers 401.
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = match RundeStarten::try_from(body.0) {
+            Ok(use_case) => self.app_api.runde_starten_frei(auth, use_case).await,
+            Err(fehler) => Err(fehler),
+        };
+        ergebnis.into()
+    }
+
+    /// Append one `Freies Ziel` to the caller's own open `Freie Runde`.
+    ///
+    /// A Parkour round answers 409: its Ziel list is its captured snapshot.
+    #[oai(
+        path = "/runden/:runde_id/ziele",
+        method = "post",
+        tag = "ApiTag::Runden"
+    )]
+    async fn runde_ziel_hinzufuegen(
+        &self,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
+        runde_id: Path<Uuid>,
+        body: Json<ZielHinzufuegenRequest>,
+    ) -> TypicalJsonResponse<Runde> {
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let use_case = body.0.in_use_case(RundeId(runde_id.0));
+        self.app_api
+            .runde_ziel_hinzufuegen(auth, use_case)
+            .await
+            .into()
+    }
+
+    /// Rename one `Freies Ziel` in a running free Runde.
+    ///
+    /// Whitespace-only names are refused with 400. A completed or Parkour round answers 409.
+    #[oai(
+        path = "/runden/:runde_id/ziele/:ziel_id",
+        method = "put",
+        tag = "ApiTag::Runden"
+    )]
+    async fn runde_ziel_umbenennen(
+        &self,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
+        runde_id: Path<Uuid>,
+        ziel_id: Path<Uuid>,
+        body: Json<ZielUmbenennenRequest>,
+    ) -> TypicalJsonResponse<Runde> {
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let ergebnis = match body.0.in_use_case(RundeId(runde_id.0), ZielId(ziel_id.0)) {
+            Ok(use_case) => self.app_api.runde_ziel_umbenennen(auth, use_case).await,
+            Err(fehler) => Err(fehler),
+        };
+        ergebnis.into()
+    }
+
+    /// Remove one `Freies Ziel` from a free Runde.
+    ///
+    /// Its Schüsse go with it, in the same transaction, and the reply is the updated Runde.
+    /// A Parkour round answers 409, and a Ziel this round does not hold answers 404.
+    #[oai(
+        path = "/runden/:runde_id/ziele/:ziel_id",
+        method = "delete",
+        tag = "ApiTag::Runden"
+    )]
+    async fn runde_ziel_entfernen(
+        &self,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
+        runde_id: Path<Uuid>,
+        ziel_id: Path<Uuid>,
+    ) -> TypicalJsonResponse<Runde> {
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        let use_case = ziel_entfernen_in_use_case(runde_id.0, ziel_id.0);
+        self.app_api
+            .runde_ziel_entfernen(auth, use_case)
+            .await
+            .into()
     }
 
     /// Read one Runde with its whole snapshot and both Wertungen.

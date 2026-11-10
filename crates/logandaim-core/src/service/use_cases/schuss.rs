@@ -96,10 +96,13 @@ impl UseCase<Schuss> for SchussRegistrieren {
                 return Err(Report::new(SchussRegistrierenFehler::ZielNichtImSnapshot));
             }
 
-            // AC-9: a Schuss may only name a Pflock the Runde captured at this Ziel. A Ziel
-            // with its own Pflock set selects only there, never from the Parkour-wide set.
-            if let Some(Schussposition::Pflock(farbe)) = self.position
-                && !runde.snapshot().hat_pflock_am_ziel(self.ziel_id, farbe)
+            // AC-9: a Schuss may only name a Pflock the Runde captured at this Ziel, or —
+            // on a Freie Runde — any colour at all. The setup owns the question, so this use
+            // case never asks which setup it is holding (SPEC-runde rule 19).
+            if runde
+                .aufbau()
+                .pruefe_position(self.ziel_id, self.position)
+                .is_err()
             {
                 return Err(Report::new(SchussRegistrierenFehler::PflockNichtImSnapshot));
             }
@@ -223,10 +226,12 @@ impl UseCase<Schuss> for SchussÄndern {
                     });
                 }
             };
-            // The Pflock must belong to this Ziel's effective set, which is only known once
-            // the Schuss names its Ziel.
-            if let Some(Schussposition::Pflock(farbe)) = self.position
-                && !runde.snapshot().hat_pflock_am_ziel(schuss.ziel_id(), farbe)
+            // The Ziel's effective set decides a Parkour round's Pflock; a Freie Runde
+            // accepts any colour. Both go through the setup's one validation seam.
+            if runde
+                .aufbau()
+                .pruefe_position(schuss.ziel_id(), self.position)
+                .is_err()
             {
                 return Err(Report::new(SchussÄndernFehler::PflockNichtImSnapshot));
             }
