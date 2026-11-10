@@ -503,6 +503,7 @@ function ParkourListe({
       // A new Parkour has no distances yet, so every placement starts empty.
       platzierungen: ausgewaehlteZiele.map((zielId) => ({
         zielId,
+        pflöcke: { art: "InheritFromParkour" },
         abstände: [],
       })),
     };

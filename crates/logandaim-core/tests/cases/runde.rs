@@ -20,8 +20,8 @@ use logandaim_core::{
         AnlageDeaktivieren, AnlageErstellen, ParkourEntfernen, ParkourHinzufügen,
         RegistrierungAbschließen, RegistrierungStarten, RundeAbschliessen, RundeAbschliessenFehler,
         RundeLöschen, RundeStarten, RundeStartenFehler, SchussLöschen, SchussRegistrieren,
-        SchussRegistrierenFehler, SchussÄndern, SessionAusgestellt, SystemadministratorBefördern,
-        ZielHinzufügen,
+        SchussRegistrierenFehler, SchussÄndern, SchussÄndernFehler, SessionAusgestellt,
+        SystemadministratorBefördern, ZielHinzufügen,
     },
 };
 
@@ -696,3 +696,273 @@ async fn eine_fremde_runde_wird_nicht_abgeschlossen() {
 // The list read and its newest-first order live at the HTTP edge
 // (`e2e/runde.rs::die_rundenliste_zeigt_die_eigenen_runden_neueste_zuerst`), because
 // `RundenAnzeigen` is no longer a use case.
+
+// --------------------------------------------------------------------------- #72: per-Ziel Pflöcke
+
+/// One Anlage with two Ziele: `erstes` carries its own Pflock set, `zweites` inherits the
+/// Parkour-wide one. Returns `(ziel_id with own set, ziel_id inheriting, parkour_id, own colours)`.
+async fn parkour_mit_eigenem_satz_je_ziel(
+    harness: &Harness,
+    auth: AuthContext,
+) -> (ZielId, ZielId, ParkourId, Vec<Farbe>) {
+    let anlage = harness
+        .app()
+        .execute(
+            auth,
+            AnlageErstellen {
+                name: NonEmptyString::neu("Breitenstein").expect("gültig"),
+                adresse: AnlageAdresse::neu("Waldweg 1", "3100", "St. Pölten", Ländercode::AT)
+                    .expect("gültig"),
+                kontakt: AnlageKontakt::leer(),
+            },
+        )
+        .await
+        .expect("die Anlage entsteht");
+    let anlage_id = anlage.id();
+
+    let mit_zielen = harness
+        .app()
+        .execute(
+            auth,
+            ZielHinzufügen {
+                anlage_id,
+                tiername: NonEmptyString::neu("Keiler").expect("gültig"),
+            },
+        )
+        .await
+        .expect("das erste Ziel entsteht");
+    let erstes = mit_zielen.ziele().last().expect("ein Ziel").id();
+    let mit_zielen = harness
+        .app()
+        .execute(
+            auth,
+            ZielHinzufügen {
+                anlage_id,
+                tiername: NonEmptyString::neu("Reh").expect("gültig"),
+            },
+        )
+        .await
+        .expect("das zweite Ziel entsteht");
+    let zweites = mit_zielen.ziele().last().expect("ein Ziel").id();
+
+    let weit = PflockId(uuid::Uuid::new_v4());
+    let nah = PflockId(uuid::Uuid::new_v4());
+    let pflöcke = vec![
+        Pflock::neu(nah, Farbe::neu("#1b4f9c").expect("gültig")),
+        Pflock::neu(weit, Farbe::neu("#c0392b").expect("gültig")),
+    ];
+
+    let eigen_nah = PflockId(uuid::Uuid::new_v4());
+    let eigen_weit = PflockId(uuid::Uuid::new_v4());
+    let eigen_nah_farbe = Farbe::neu("#2e8b57").expect("gültig");
+    let eigen_weit_farbe = Farbe::neu("#e8b81c").expect("gültig");
+    let eigene = vec![
+        Pflock::neu(eigen_nah, eigen_nah_farbe),
+        Pflock::neu(eigen_weit, eigen_weit_farbe),
+    ];
+
+    let platzierungen = vec![
+        Zielplatzierung::neu_mit_eigenen_pflöcken(
+            erstes,
+            eigene,
+            vec![
+                (eigen_nah, Abstand::neu(15).expect("positiv")),
+                (eigen_weit, Abstand::neu(45).expect("positiv")),
+            ],
+        )
+        .expect("#72: der eigene Satz ist gültig"),
+        Zielplatzierung::neu(zweites, Vec::new()).expect("gültig"),
+    ];
+
+    let anlage = harness
+        .app()
+        .execute(
+            auth,
+            ParkourHinzufügen {
+                anlage_id,
+                name: NonEmptyString::neu("Waldrunde").expect("gültig"),
+                pflöcke,
+                platzierungen,
+            },
+        )
+        .await
+        .expect("der Parkour entsteht");
+    let parkour_id = anlage.parkour().last().expect("ein Parkour").id();
+
+    (
+        erstes,
+        zweites,
+        parkour_id,
+        vec![eigen_nah_farbe, eigen_weit_farbe],
+    )
+}
+
+#[test_log::test(pollster::test)]
+async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
+    let harness = harness().await;
+    let admin = systemadministrator(&harness, "admin@muster.at").await;
+    let (erstes, zweites, parkour_id, eigene) =
+        parkour_mit_eigenem_satz_je_ziel(&harness, admin).await;
+    let runde = harness
+        .app()
+        .execute(admin, RundeStarten { parkour_id })
+        .await
+        .expect("die Runde startet");
+
+    // The Ziel with its own set accepts a Pflock of that set...
+    harness
+        .app()
+        .execute(
+            admin,
+            SchussRegistrieren {
+                runde_id: runde.id(),
+                ziel_id: erstes,
+                wertungszone: Wertungszone::Kill,
+                position: Some(Schussposition::Pflock(eigene[0])),
+            },
+        )
+        .await
+        .expect("#72: der eigene Pflock gilt an seinem Ziel");
+
+    // ...while the inheriting Ziel refuses the same colour: it does not have that Pflock.
+    let fehler = harness
+        .app()
+        .execute(
+            admin,
+            SchussRegistrieren {
+                runde_id: runde.id(),
+                ziel_id: zweites,
+                wertungszone: Wertungszone::Kill,
+                position: Some(Schussposition::Pflock(eigene[0])),
+            },
+        )
+        .await
+        .expect_err("#72: ein eigener Pflock gilt nicht an einem anderen Ziel");
+    assert!(matches!(
+        fehler.current_context(),
+        SchussRegistrierenFehler::PflockNichtImSnapshot
+    ));
+
+    // The Parkour-wide colour stays selectable where the set is inherited...
+    harness
+        .app()
+        .execute(
+            admin,
+            SchussRegistrieren {
+                runde_id: runde.id(),
+                ziel_id: zweites,
+                wertungszone: Wertungszone::Kill,
+                position: Some(Schussposition::Pflock(Farbe::neu("#c0392b").unwrap())),
+            },
+        )
+        .await
+        .expect("der Parkour-Pflock gilt am erbenden Ziel");
+
+    // ...but not at the Ziel whose own set replaced it.
+    let fehler = harness
+        .app()
+        .execute(
+            admin,
+            SchussRegistrieren {
+                runde_id: runde.id(),
+                ziel_id: erstes,
+                wertungszone: Wertungszone::Kill,
+                position: Some(Schussposition::Pflock(Farbe::neu("#c0392b").unwrap())),
+            },
+        )
+        .await
+        .expect_err("#72: ein ersetzter Parkour-Pflock gilt nicht mehr");
+    assert!(matches!(
+        fehler.current_context(),
+        SchussRegistrierenFehler::PflockNichtImSnapshot
+    ));
+}
+
+#[test_log::test(pollster::test)]
+async fn ac9_eine_korrektur_prueft_den_pflock_gegen_das_ziel_des_schusses() {
+    let harness = harness().await;
+    let admin = systemadministrator(&harness, "admin@muster.at").await;
+    let (erstes, zweites, parkour_id, eigene) =
+        parkour_mit_eigenem_satz_je_ziel(&harness, admin).await;
+    let runde = harness
+        .app()
+        .execute(admin, RundeStarten { parkour_id })
+        .await
+        .expect("die Runde startet");
+
+    // A Schuss at the inheriting Ziel: it may only ever name that Ziel's effective set.
+    let schuss = harness
+        .app()
+        .execute(
+            admin,
+            SchussRegistrieren {
+                runde_id: runde.id(),
+                ziel_id: zweites,
+                wertungszone: Wertungszone::Kill,
+                position: None,
+            },
+        )
+        .await
+        .expect("Schuss am erbenden Ziel");
+
+    let fehler = harness
+        .app()
+        .execute(
+            admin,
+            SchussÄndern {
+                runde_id: runde.id(),
+                schuss_id: schuss.id(),
+                wertungszone: Wertungszone::Spot,
+                position: Some(Schussposition::Pflock(eigene[1])),
+            },
+        )
+        .await
+        .expect_err("#72: die Korrektur prüft gegen das Ziel des Schusses");
+    assert!(matches!(
+        fehler.current_context(),
+        SchussÄndernFehler::PflockNichtImSnapshot
+    ));
+
+    // The Parkour-wide colour is accepted there.
+    harness
+        .app()
+        .execute(
+            admin,
+            SchussÄndern {
+                runde_id: runde.id(),
+                schuss_id: schuss.id(),
+                wertungszone: Wertungszone::Spot,
+                position: Some(Schussposition::Pflock(Farbe::neu("#1b4f9c").unwrap())),
+            },
+        )
+        .await
+        .expect("der Parkour-Pflock wird angenommen");
+
+    // And a correction at the own-set Ziel accepts its own colour.
+    let eigener = harness
+        .app()
+        .execute(
+            admin,
+            SchussRegistrieren {
+                runde_id: runde.id(),
+                ziel_id: erstes,
+                wertungszone: Wertungszone::Kill,
+                position: None,
+            },
+        )
+        .await
+        .expect("Schuss am eigenen Ziel");
+    harness
+        .app()
+        .execute(
+            admin,
+            SchussÄndern {
+                runde_id: runde.id(),
+                schuss_id: eigener.id(),
+                wertungszone: Wertungszone::Kill,
+                position: Some(Schussposition::Pflock(eigene[0])),
+            },
+        )
+        .await
+        .expect("der eigene Pflock wird angenommen");
+}

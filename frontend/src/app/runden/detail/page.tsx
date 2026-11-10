@@ -426,24 +426,36 @@ function Zielabschnitt({
         <SheetNumber>{ziel.zielId.slice(0, 8)}</SheetNumber>
       </div>
 
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
-        {ziel.abstände.length === 0 ? (
-          <span className="text-secondary">Keine Abstände erfasst.</span>
+      <div className="space-y-2">
+        <h4 className="text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
+          Pflöcke für dieses Ziel
+        </h4>
+        {ziel.pflöcke.length === 0 ? (
+          <p className="text-sm text-secondary">Keine Pflöcke erfasst.</p>
         ) : (
-          ziel.abstände.map((abstand) => (
-            <span
-              key={abstand.pflock}
-              className="inline-flex items-baseline gap-1.5"
-            >
-              <span className="text-secondary">{abstand.pflock}</span>
-              <span aria-hidden="true" className="text-secondary">
-                ·
-              </span>
-              <span className="font-medium tabular-nums text-ink">
-                {abstand.meter} m
-              </span>
-            </span>
-          ))
+          <ol className="flex flex-wrap gap-3 text-sm">
+            {ziel.pflöcke.map((pflock, index) => {
+              const abstand = ziel.abstände.find(
+                (eintrag) => eintrag.pflock === pflock.farbe,
+              );
+              return (
+                <li
+                  key={`${pflock.position}-${pflock.farbe}`}
+                  className="inline-flex items-baseline gap-1.5"
+                >
+                  <SheetNumber>{index + 1}</SheetNumber>
+                  <PflockMarker farbe={pflock.farbe} />
+                  {abstand ? (
+                    <span className="font-medium tabular-nums text-ink">
+                      {abstand.meter} m
+                    </span>
+                  ) : (
+                    <span className="text-secondary">Kein Abstand</span>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
         )}
       </div>
 

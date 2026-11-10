@@ -26,7 +26,8 @@ use logandaim_core::{
 };
 
 use crate::schema::{
-    AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, Farbe, Ländercode, Pflock, Zielplatzierung,
+    AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, Farbe, Ländercode, Pflock, ZielPflöcke,
+    Zielplatzierung,
 };
 
 fn name(wert: String) -> Result<NonEmptyString, Report<StammdatenFehler>> {
@@ -92,24 +93,47 @@ fn pflock(wert: Pflock) -> Result<domain::Pflock, Report<StammdatenFehler>> {
     Ok(domain::Pflock::neu(PflockId(wert.id), farbe(wert.farbe)?))
 }
 
-fn platzierung(wert: Zielplatzierung) -> Result<domain::Zielplatzierung, Report<StammdatenFehler>> {
-    // An absent distance is simply not configured for that Pflock.
-    let abstände = wert
-        .abstände
-        .into_iter()
-        .filter_map(|abstand| abstand.meter.map(|meter| (abstand.pflock_id, meter)))
-        .map(|(pflock_id, meter)| {
-            Ok((
-                PflockId(pflock_id),
-                domain::Abstand::neu(meter)
-                    .change_context(StammdatenFehler::UngültigeAnfrage)
-                    .attach(format!("Ziel: Abstand für Pflock {pflock_id:?}"))?,
-            ))
-        })
-        .collect::<Result<Vec<_>, Report<StammdatenFehler>>>()?;
-    domain::Zielplatzierung::neu(ZielId(wert.ziel_id), abstände)
+impl TryFrom<ZielPflöcke> for domain::ZielPflöcke {
+    type Error = Report<StammdatenFehler>;
+
+    fn try_from(wert: ZielPflöcke) -> Result<Self, Self::Error> {
+        match wert {
+            ZielPflöcke::InheritFromParkour(_) => Ok(Self::InheritFromParkour),
+            ZielPflöcke::Explicit(explicit) => Self::überschreibe(pflöcke(explicit.pflöcke)?)
+                .change_context(StammdatenFehler::UngültigeAnfrage)
+                .attach("Ziel: eigene Pflöcke"),
+        }
+    }
+}
+
+impl TryFrom<Zielplatzierung> for domain::Zielplatzierung {
+    type Error = Report<StammdatenFehler>;
+
+    fn try_from(wert: Zielplatzierung) -> Result<Self, Self::Error> {
+        // An absent distance is simply not configured for that Pflock.
+        let abstände = wert
+            .abstände
+            .into_iter()
+            .filter_map(|abstand| abstand.meter.map(|meter| (abstand.pflock_id, meter)))
+            .map(|(pflock_id, meter)| {
+                Ok((
+                    PflockId(pflock_id),
+                    domain::Abstand::neu(meter)
+                        .change_context(StammdatenFehler::UngültigeAnfrage)
+                        .attach(format!("Ziel: Abstand für Pflock {pflock_id:?}"))?,
+                ))
+            })
+            .collect::<Result<Vec<_>, Report<StammdatenFehler>>>()?;
+        let pflöcke = wert.pflöcke.try_into()?;
+        domain::Zielplatzierung::neu_mit_abständen_und_pflöcken(
+            ZielId(wert.ziel_id),
+            pflöcke,
+            abstände,
+            &[],
+        )
         .change_context(StammdatenFehler::UngültigeAnfrage)
         .attach(format!("Ziel {}", wert.ziel_id))
+    }
 }
 
 fn anlage_kontext(anlage_id: AnlageId) -> String {
@@ -130,7 +154,9 @@ fn platzierungen(
     werte
         .into_iter()
         .enumerate()
-        .map(|(index, wert)| platzierung(wert).attach(format!("Parkour: Platzierung {index}")))
+        .map(|(index, wert)| {
+            domain::Zielplatzierung::try_from(wert).attach(format!("Parkour: Platzierung {index}"))
+        })
         .collect()
 }
 

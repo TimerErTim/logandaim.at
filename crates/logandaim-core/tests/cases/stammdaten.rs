@@ -11,7 +11,7 @@ use logandaim_core::{
     domain::{
         Abstand, Anlage, AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, EmailAdresse, Farbe,
         Ländercode, NeuerParkour, NonEmptyString, ParkourId, Pflock, PflockId, Wertungszone,
-        ZielId, Zielplatzierung,
+        ZielId, ZielPflöcke, Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
@@ -1348,4 +1348,274 @@ async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
         "der Schuss überlebt, ohne den Benutzer zu nennen"
     );
     assert_eq!(geladen.wertung(schüsse).erster_treffer(), 18);
+}
+
+// --------------------------------------------------------------------------- #72: per-Ziel Pflöcke
+
+/// One Parkour over `ziel_id` whose placement carries its own Pflock set.
+///
+/// Returns `(parkour-wide pflöcke, own pflöcke, platzierungen)`.
+fn parkour_setup_mit_eigenen(ziel: ZielId) -> (Vec<Pflock>, Vec<Pflock>, Vec<Zielplatzierung>) {
+    let nah = PflockId(uuid::Uuid::new_v4());
+    let weit = PflockId(uuid::Uuid::new_v4());
+    let eigen_nah = PflockId(uuid::Uuid::new_v4());
+    let eigen_weit = PflockId(uuid::Uuid::new_v4());
+
+    let pflöcke = vec![
+        Pflock::neu(nah, Farbe::neu("#1b4f9c").expect("gültig")),
+        Pflock::neu(weit, Farbe::neu("#c0392b").expect("gültig")),
+    ];
+    // Colour duplicates across the two sets are allowed; over their own order the distances
+    // increase near to far.
+    let eigene = vec![
+        Pflock::neu(eigen_nah, Farbe::neu("#1b4f9c").expect("gültig")),
+        Pflock::neu(eigen_weit, Farbe::neu("#e8b81c").expect("gültig")),
+    ];
+    let platzierung = Zielplatzierung::neu_mit_eigenen_pflöcken(
+        ziel,
+        eigene.clone(),
+        vec![(eigen_nah, abstand(15)), (eigen_weit, abstand(45))],
+    )
+    .expect("#72: eine eigene Platzierung ist gültig");
+    (pflöcke, eigene, vec![platzierung])
+}
+
+#[test_log::test(pollster::test)]
+async fn ziel_pfloecke_eigen_weist_leere_und_doppelte_farben_ab() {
+    use logandaim_core::domain::{ParkourFehler, ZielPflöcke};
+
+    assert!(matches!(
+        ZielPflöcke::überschreibe(Vec::new()),
+        Err(ParkourFehler::KeinePflöcke)
+    ));
+    assert!(matches!(
+        ZielPflöcke::überschreibe(vec![
+            Pflock::neu(
+                PflockId(uuid::Uuid::new_v4()),
+                Farbe::neu("#c0392b").expect("gültig")
+            ),
+            Pflock::neu(
+                PflockId(uuid::Uuid::new_v4()),
+                Farbe::neu("#C0392B").expect("gültig")
+            ),
+        ]),
+        Err(ParkourFehler::FarbeDoppelt)
+    ));
+    let erbe = ZielPflöcke::erbe_von_parkour();
+    assert!(matches!(erbe, ZielPflöcke::InheritFromParkour));
+}
+
+#[test_log::test(pollster::test)]
+async fn ziel_eigene_pfloecke_ueberleben_den_speicher_und_ersetzen_die_parkourfolge() {
+    use logandaim_core::domain::ZielPflöcke;
+
+    let harness = harness().await;
+    let admin = systemadministrator(&harness, "admin@muster.at").await;
+    let anlage = anlage_erstellen(&harness, admin, "Breitenstein").await;
+    let anlage_id = anlage.id();
+    let mit_ziel = harness
+        .app()
+        .execute(
+            admin,
+            ZielHinzufügen {
+                anlage_id,
+                tiername: tiername("Keiler"),
+            },
+        )
+        .await
+        .expect("Ziel anlegen");
+    let ziel_id = mit_ziel.ziele().last().expect("ein Ziel").id();
+
+    let (pflöcke, eigene, platzierungen) = parkour_setup_mit_eigenen(ziel_id);
+    let erstellt = harness
+        .app()
+        .execute(
+            admin,
+            ParkourHinzufügen {
+                anlage_id,
+                name: NonEmptyString::neu("Waldrunde").expect("gültig"),
+                pflöcke,
+                platzierungen,
+            },
+        )
+        .await
+        .expect("#72: ein Parkour mit eigenem Satz entsteht");
+    let parkour_id = erstellt.parkour().last().expect("ein Parkour").id();
+
+    // Read back through the aggregate, so this also proves the stored rows reload.
+    let geladen = anlage_laden(&harness, anlage_id).await;
+    let parkour = geladen.parkour_mit_id(parkour_id).expect("der Parkour");
+    let platzierung = &parkour.platzierungen()[0];
+
+    let ZielPflöcke::Explicit(gelesen) = platzierung.pflöcke() else {
+        panic!("#72: der eigene Satz wird als Explicit gelesen");
+    };
+    assert_eq!(
+        gelesen
+            .iter()
+            .map(|pflock| pflock.farbe())
+            .collect::<Vec<_>>(),
+        eigene
+            .iter()
+            .map(|pflock| pflock.farbe())
+            .collect::<Vec<_>>(),
+        "#72: Farbe und Reihenfolge bleiben erhalten"
+    );
+    // Replace semantics: the Parkour-wide Pflock is not addressable here.
+    assert_eq!(platzierung.abstand_für(parkour.pflöcke()[0].id()), None);
+    assert_eq!(platzierung.abstand_für(eigene[0].id()), Some(abstand(15)));
+    assert_eq!(platzierung.abstand_für(eigene[1].id()), Some(abstand(45)));
+}
+
+#[test_log::test(pollster::test)]
+async fn ziel_ohne_eigenen_satz_erbt_die_parkourpfloecke() {
+    use logandaim_core::domain::ZielPflöcke;
+
+    let harness = harness().await;
+    let admin = systemadministrator(&harness, "admin@muster.at").await;
+    let (anlage, _, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
+
+    let geladen = anlage_laden(&harness, anlage.id()).await;
+    let parkour = geladen.parkour_mit_id(parkour_id).expect("der Parkour");
+    let platzierung = &parkour.platzierungen()[0];
+    assert!(matches!(
+        platzierung.pflöcke(),
+        ZielPflöcke::InheritFromParkour
+    ));
+    // The inherited set is the effective set.
+    assert_eq!(
+        platzierung.effektive_pflöcke(parkour.pflöcke()),
+        parkour.pflöcke()
+    );
+    assert_eq!(platzierung.abstände().len(), 2);
+}
+
+#[test_log::test(pollster::test)]
+async fn ziel_der_eigene_satz_wird_beim_ersetzen_des_setups_geleert() {
+    use logandaim_core::domain::ZielPflöcke;
+
+    let harness = harness().await;
+    let admin = systemadministrator(&harness, "admin@muster.at").await;
+    let anlage = anlage_erstellen(&harness, admin, "Breitenstein").await;
+    let anlage_id = anlage.id();
+    let mit_ziel = harness
+        .app()
+        .execute(
+            admin,
+            ZielHinzufügen {
+                anlage_id,
+                tiername: tiername("Keiler"),
+            },
+        )
+        .await
+        .expect("Ziel anlegen");
+    let ziel_id = mit_ziel.ziele().last().expect("ein Ziel").id();
+
+    let (pflöcke, _, platzierungen) = parkour_setup_mit_eigenen(ziel_id);
+    let erstellt = harness
+        .app()
+        .execute(
+            admin,
+            ParkourHinzufügen {
+                anlage_id,
+                name: NonEmptyString::neu("Waldrunde").expect("gültig"),
+                pflöcke,
+                platzierungen,
+            },
+        )
+        .await
+        .expect("#72: der Parkour entsteht");
+    let parkour_id = erstellt.parkour().last().expect("ein Parkour").id();
+
+    // Replace the whole setup with an inheriting placement.
+    let (pflöcke, platzierungen) = parkour_setup(ziel_id, None);
+    harness
+        .app()
+        .execute(
+            admin,
+            ParkourSetupÄndern {
+                anlage_id,
+                parkour_id,
+                pflöcke,
+                platzierungen,
+            },
+        )
+        .await
+        .expect("Parkour-Setup ändern");
+
+    // No stale own-set rows survive: the placement reads as inheriting again.
+    let geladen = anlage_laden(&harness, anlage_id).await;
+    let parkour = geladen.parkour_mit_id(parkour_id).expect("der Parkour");
+    assert!(
+        matches!(
+            parkour.platzierungen()[0].pflöcke(),
+            ZielPflöcke::InheritFromParkour
+        ),
+        "#72: beim Ersetzen bleibt kein alter eigener Satz zurück"
+    );
+}
+
+#[test_log::test(pollster::test)]
+async fn ziel_eigene_pfloecke_bleiben_aus_anderen_zielen_heraus() {
+    let harness = harness().await;
+    let admin = systemadministrator(&harness, "admin@muster.at").await;
+    let anlage = anlage_erstellen(&harness, admin, "Breitenstein").await;
+    let anlage_id = anlage.id();
+
+    let mit_zielen = harness
+        .app()
+        .execute(
+            admin,
+            ZielHinzufügen {
+                anlage_id,
+                tiername: tiername("Keiler"),
+            },
+        )
+        .await
+        .expect("erstes Ziel");
+    let erstes = mit_zielen.ziele().last().expect("ein Ziel").id();
+    let mit_zielen = harness
+        .app()
+        .execute(
+            admin,
+            ZielHinzufügen {
+                anlage_id,
+                tiername: tiername("Reh"),
+            },
+        )
+        .await
+        .expect("zweites Ziel");
+    let zweites = mit_zielen.ziele().last().expect("ein Ziel").id();
+
+    let (pflöcke, eigene, mut platzierungen) = parkour_setup_mit_eigenen(erstes);
+    platzierungen.push(Zielplatzierung::neu(zweites, Vec::new()).expect("gültige Platzierung"));
+    harness
+        .app()
+        .execute(
+            admin,
+            ParkourHinzufügen {
+                anlage_id,
+                name: NonEmptyString::neu("Waldrunde").expect("gültig"),
+                pflöcke,
+                platzierungen,
+            },
+        )
+        .await
+        .expect("der Parkour entsteht");
+
+    let geladen = anlage_laden(&harness, anlage_id).await;
+    // The second Ziel inherits, so none of the first Ziel's own Pflöcke appear there.
+    let verwendungen = geladen.ziel_verwendungen(zweites);
+    assert!(matches!(
+        verwendungen[0].pflöcke,
+        ZielPflöcke::InheritFromParkour
+    ));
+    let verwendungen = geladen.ziel_verwendungen(erstes);
+    assert_eq!(
+        match &verwendungen[0].pflöcke {
+            ZielPflöcke::Explicit(eigene) => eigene.len(),
+            ZielPflöcke::InheritFromParkour => panic!("der eigene Satz"),
+        },
+        eigene.len()
+    );
 }

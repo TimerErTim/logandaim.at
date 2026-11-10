@@ -2471,6 +2471,21 @@ export interface components {
             Benutzer: components["schemas"]["BenutzerErfasser"];
         };
         /**
+         * ExplicitPflöcke
+         * @description This Ziel's own near-to-far Pflock order, which replaces the Parkour-wide one. Never
+         *     empty.
+         */
+        "ExplicitPfl\u00F6cke": {
+            /** @description The own Pflöcke, near to far. */
+            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+        };
+        /**
+         * InheritFromParkourPflöcke
+         * @description The Parkour-wide order applies to this Ziel. Carries nothing; the discriminator is the
+         *     whole message.
+         */
+        "InheritFromParkourPfl\u00F6cke": Record<string, unknown>;
+        /**
          * @description Country codes currently accepted for Anlage addresses.
          * @enum {string}
          */
@@ -2908,6 +2923,11 @@ export interface components {
              * @description 1-based ordinal as captured, distinguishing duplicate animal names.
              */
             zielnummer: number;
+            /**
+             * @description The Pflöcke that apply to this Ziel as captured, near to far: the Ziel's own set when
+             *     it had one, the Parkour-wide set otherwise.
+             */
+            "pfl\u00F6cke": components["schemas"]["RundePflock"][];
             /** @description The distances as captured. */
             "abst\u00E4nde": components["schemas"]["Abstand"][];
             /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
@@ -3057,6 +3077,39 @@ export interface components {
             verwendungen: components["schemas"]["Zielverwendung"][];
         };
         /**
+         * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
+         *
+         *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
+         *     near-to-far order that replaces it.
+         */
+        "ZielPfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke_InheritFromParkourPfl\u00F6cke"] | components["schemas"]["ZielPfl\u00F6cke_ExplicitPfl\u00F6cke"];
+        /**
+         * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
+         *
+         *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
+         *     near-to-far order that replaces it.
+         */
+        "ZielPfl\u00F6cke_ExplicitPfl\u00F6cke": {
+            /**
+             * @example Explicit
+             * @enum {string}
+             */
+            art: ZielPflCke_ExplicitPflCkeArt;
+        } & components["schemas"]["ExplicitPfl\u00F6cke"];
+        /**
+         * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
+         *
+         *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
+         *     near-to-far order that replaces it.
+         */
+        "ZielPfl\u00F6cke_InheritFromParkourPfl\u00F6cke": {
+            /**
+             * @example InheritFromParkour
+             * @enum {string}
+             */
+            art: ZielPflCke_InheritFromParkourPflCkeArt;
+        } & components["schemas"]["InheritFromParkourPfl\u00F6cke"];
+        /**
          * ZielRequest
          * @description Add or edit a Ziel.
          */
@@ -3083,6 +3136,7 @@ export interface components {
              * @description The Ziel that stands here.
              */
             zielId: string;
+            "pfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke"];
             /** @description Distances by Pflock identity; a missing entry means no distance is configured. */
             "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
         };
@@ -3101,6 +3155,7 @@ export interface components {
              * @description 0-based position in that Parkour' route.
              */
             position: number;
+            "pfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke"];
             /** @description Pflock identity to metres, near to far. */
             "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
         };
@@ -3170,5 +3225,11 @@ export enum Wertungszone {
     Kill = "Kill",
     Body = "Body",
     Miss = "Miss"
+}
+export enum ZielPflCke_ExplicitPflCkeArt {
+    Explicit = "Explicit"
+}
+export enum ZielPflCke_InheritFromParkourPflCkeArt {
+    InheritFromParkour = "InheritFromParkour"
 }
 export type operations = Record<string, never>;

@@ -153,6 +153,7 @@ pub struct Zielverwendung {
     pub parkour_id: Uuid,
     /// 0-based position in that Parkour' route.
     pub position: usize,
+    pub pflöcke: ZielPflöcke,
     /// Pflock identity to metres, near to far.
     pub abstände: Vec<PflockAbstand>,
 }
@@ -187,6 +188,47 @@ pub struct Pflock {
     pub farbe: Farbe,
 }
 
+/// Whether a Ziel uses the Parkour-wide Pflock order or its own.
+///
+/// `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
+/// near-to-far order that replaces it.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Union))]
+#[cfg_attr(feature = "openapi", oai(discriminator_name = "art"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(tag = "art")]
+pub enum ZielPflöcke {
+    InheritFromParkour(InheritFromParkourPflöcke),
+    Explicit(ExplicitPflöcke),
+}
+
+/// The Parkour-wide order applies to this Ziel. Carries nothing; the discriminator is the
+/// whole message.
+#[derive(Debug, Clone, Default)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InheritFromParkourPflöcke {}
+
+/// This Ziel's own near-to-far Pflock order, which replaces the Parkour-wide one. Never
+/// empty.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExplicitPflöcke {
+    /// The own Pflöcke, near to far.
+    pub pflöcke: Vec<Pflock>,
+}
+
+impl Default for ZielPflöcke {
+    fn default() -> Self {
+        Self::InheritFromParkour(InheritFromParkourPflöcke {})
+    }
+}
+
 /// One Ziel's place in a Parkour, with its distances keyed by Pflock identity.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
@@ -196,6 +238,7 @@ pub struct Pflock {
 pub struct Zielplatzierung {
     /// The Ziel that stands here.
     pub ziel_id: Uuid,
+    pub pflöcke: ZielPflöcke,
     /// Distances by Pflock identity; a missing entry means no distance is configured.
     pub abstände: Vec<PflockAbstand>,
 }
@@ -394,10 +437,24 @@ impl From<domain::Pflock> for Pflock {
     }
 }
 
+impl From<&domain::ZielPflöcke> for ZielPflöcke {
+    fn from(pflöcke: &domain::ZielPflöcke) -> Self {
+        match pflöcke {
+            domain::ZielPflöcke::InheritFromParkour => {
+                Self::InheritFromParkour(InheritFromParkourPflöcke {})
+            }
+            domain::ZielPflöcke::Explicit(eigene) => Self::Explicit(ExplicitPflöcke {
+                pflöcke: eigene.iter().cloned().map(Into::into).collect(),
+            }),
+        }
+    }
+}
+
 impl From<domain::Zielplatzierung> for Zielplatzierung {
     fn from(platzierung: domain::Zielplatzierung) -> Self {
         Self {
             ziel_id: platzierung.ziel_id().0,
+            pflöcke: platzierung.pflöcke().into(),
             abstände: platzierung
                 .abstände()
                 .iter()
@@ -432,6 +489,7 @@ impl From<domain::Zielverwendung> for Zielverwendung {
         Self {
             parkour_id: verwendung.parkour_id.0,
             position: verwendung.position,
+            pflöcke: (&verwendung.pflöcke).into(),
             abstände: verwendung
                 .abstände
                 .into_iter()

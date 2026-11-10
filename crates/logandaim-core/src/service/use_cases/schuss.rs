@@ -96,8 +96,10 @@ impl UseCase<Schuss> for SchussRegistrieren {
                 return Err(Report::new(SchussRegistrierenFehler::ZielNichtImSnapshot));
             }
 
+            // AC-9: a Schuss may only name a Pflock the Runde captured at this Ziel. A Ziel
+            // with its own Pflock set selects only there, never from the Parkour-wide set.
             if let Some(Schussposition::Pflock(farbe)) = self.position
-                && !runde.snapshot().hat_pflock(farbe)
+                && !runde.snapshot().hat_pflock_am_ziel(self.ziel_id, farbe)
             {
                 return Err(Report::new(SchussRegistrierenFehler::PflockNichtImSnapshot));
             }
@@ -210,11 +212,6 @@ impl UseCase<Schuss> for SchussÄndern {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(SchussÄndernFehler::NichtErlaubt));
             }
-            if let Some(Schussposition::Pflock(farbe)) = self.position
-                && !runde.snapshot().hat_pflock(farbe)
-            {
-                return Err(Report::new(SchussÄndernFehler::PflockNichtImSnapshot));
-            }
 
             let mut schuss = match uow.schüsse().find_by_id(self.schuss_id).await {
                 Ok(schuss) if schuss.runde_id() == self.runde_id => schuss,
@@ -226,6 +223,13 @@ impl UseCase<Schuss> for SchussÄndern {
                     });
                 }
             };
+            // The Pflock must belong to this Ziel's effective set, which is only known once
+            // the Schuss names its Ziel.
+            if let Some(Schussposition::Pflock(farbe)) = self.position
+                && !runde.snapshot().hat_pflock_am_ziel(schuss.ziel_id(), farbe)
+            {
+                return Err(Report::new(SchussÄndernFehler::PflockNichtImSnapshot));
+            }
             schuss.set_data(
                 schuss
                     .cloned_data()

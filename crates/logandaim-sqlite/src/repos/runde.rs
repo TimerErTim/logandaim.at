@@ -18,8 +18,8 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Abstand, AnlageId, Erfasser, Farbe, NeueRunde, NonEmptyString, ParkourId, ParkourSnapshot,
-        PflockSnapshot, Runde, RundeId, RundeInBearbeitung, ZielId, ZielSnapshot,
-        konto::BenutzerId,
+        PflockSnapshot, Runde, RundeId, RundeInBearbeitung, ZielId, ZielPflöckeSnapshot,
+        ZielSnapshot, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
 };
@@ -55,7 +55,39 @@ struct ZielDto {
     ziel_id: Uuid,
     tiername: String,
     zielnummer: u32,
+    /// Absent in a snapshot written before per-Ziel sets existed; such a snapshot inherits
+    /// the Parkour-wide order, which is exactly what `Default` says.
+    #[serde(default)]
+    pflöcke: ZielPflöckeDto,
     abstände: Vec<(String, u32)>,
+}
+
+/// The stored mirror of `ZielPflöckeSnapshot`, externally tagged by serde.
+///
+/// `Default` is `InheritFromParkour`, so an old snapshot without the field keeps working and
+/// reads back as the Parkour-wide set.
+#[derive(Debug, Serialize, Deserialize, Default)]
+enum ZielPflöckeDto {
+    #[default]
+    InheritFromParkour,
+    Explicit(Vec<PflockDto>),
+}
+
+impl ZielPflöckeDto {
+    fn aus_snapshot(snapshot: &ZielPflöckeSnapshot) -> Self {
+        match snapshot {
+            ZielPflöckeSnapshot::InheritFromParkour => Self::InheritFromParkour,
+            ZielPflöckeSnapshot::Explicit(eigene) => Self::Explicit(
+                eigene
+                    .iter()
+                    .map(|pflock| PflockDto {
+                        farbe: pflock.farbe().to_hex(),
+                        position: pflock.position(),
+                    })
+                    .collect(),
+            ),
+        }
+    }
 }
 
 fn snapshot_to_json(snapshot: &ParkourSnapshot) -> RepositoryResult<String> {
@@ -77,6 +109,7 @@ fn snapshot_to_json(snapshot: &ParkourSnapshot) -> RepositoryResult<String> {
                 ziel_id: ziel.ziel_id().0,
                 tiername: ziel.tiername().to_string(),
                 zielnummer: ziel.zielnummer().get(),
+                pflöcke: ZielPflöckeDto::aus_snapshot(ziel.pflöcke()),
                 abstände: ziel
                     .abstände()
                     .iter()
@@ -114,10 +147,25 @@ fn snapshot_from_json(json: &str) -> RepositoryResult<ParkourSnapshot> {
                     ))
                 })
                 .collect::<RepositoryResult<Vec<_>>>()?;
+            let pflöcke = match ziel.pflöcke {
+                ZielPflöckeDto::InheritFromParkour => ZielPflöckeSnapshot::InheritFromParkour,
+                ZielPflöckeDto::Explicit(eigene) => ZielPflöckeSnapshot::Explicit(
+                    eigene
+                        .into_iter()
+                        .map(|pflock| {
+                            Ok(PflockSnapshot::neu(
+                                (Farbe::neu(&pflock.farbe)).contextualize(RepositoryError::Data)?,
+                                pflock.position,
+                            ))
+                        })
+                        .collect::<RepositoryResult<Vec<_>>>()?,
+                ),
+            };
             Ok(ZielSnapshot::neu(
                 ZielId(ziel.ziel_id),
                 std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?,
                 (NonEmptyString::neu(&ziel.tiername)).contextualize(RepositoryError::Data)?,
+                pflöcke,
                 abstände,
             ))
         })

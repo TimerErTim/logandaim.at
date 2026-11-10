@@ -58,6 +58,7 @@ async fn anlage_mit_parkour(harness: &E2eHarness) -> (String, String, String, St
                 "pflöcke": [{ "id": weit, "farbe": "#c0392b" }],
                 "platzierungen": [{
                     "zielId": ziel_id,
+                    "pflöcke": { "art": "InheritFromParkour" },
                     "abstände": [{ "pflockId": weit, "meter": 40 }],
                 }],
             }),
@@ -511,6 +512,217 @@ async fn ac5_schussposition_ist_exklusiv_ganzzahlig_und_wird_beim_lesen_erhalten
     assert_eq!(
         body["ziele"][0]["schüsse"][1]["position"]["Pflock"]["farbe"],
         "#c0392b"
+    );
+}
+
+// ------------------------------------------------------------------------- #72: per-Ziel Pflöcke
+
+/// One Anlage with two Ziele: the first carries its own Pflock set, the second inherits.
+/// Returns `(admin, anlage_id, own-set ziel, inheriting ziel, parkour_id, own colour)`.
+async fn anlage_mit_eigenem_satz(
+    harness: &E2eHarness,
+) -> (String, String, String, String, String, String) {
+    let (admin, _) = neuer_benutzer(harness, "admin@muster.at").await;
+    befördere_zum_systemadministrator(harness, "admin@muster.at").await;
+
+    let (status, anlage) = harness
+        .client
+        .post_json_auth(
+            "/api/anlagen",
+            json!({
+                "name": "Breitenstein",
+                "adresse": {
+                    "straße": "Waldweg 1",
+                    "postleitzahl": "3100",
+                    "ort": "St. Pölten",
+                    "ländercode": "AT",
+                },
+                "kontakt": {},
+            }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "die Anlage wird angelegt: {anlage}");
+    let anlage_id = anlage["id"].as_str().expect("id").to_owned();
+
+    let (status, anlage) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/ziele"),
+            json!({ "tiername": "Keiler" }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "das erste Ziel: {anlage}");
+    let erstes = anlage["ziele"][0]["id"].as_str().expect("id").to_owned();
+
+    let (status, anlage) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/ziele"),
+            json!({ "tiername": "Reh" }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "das zweite Ziel: {anlage}");
+    let zweites = anlage["ziele"][1]["id"].as_str().expect("id").to_owned();
+
+    let geteilt = Uuid::new_v4();
+    let eigen_nah = Uuid::new_v4();
+    let eigen_weit = Uuid::new_v4();
+    let eigen_nah_farbe = "#2e8b57";
+    let (status, anlage) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/anlagen/{anlage_id}/parkour"),
+            json!({
+                "name": "Waldrunde",
+                "pflöcke": [{ "id": geteilt, "farbe": "#c0392b" }],
+                "platzierungen": [
+                    {
+                        "zielId": erstes,
+                        "pflöcke": {
+                            "art": "Explicit",
+                            "pflöcke": [
+                                { "id": eigen_nah, "farbe": eigen_nah_farbe },
+                                { "id": eigen_weit, "farbe": "#e8b81c" },
+                            ],
+                        },
+                        "abstände": [
+                            { "pflockId": eigen_nah, "meter": 15 },
+                            { "pflockId": eigen_weit, "meter": 45 },
+                        ],
+                    },
+                    {
+                        "zielId": zweites,
+                        "pflöcke": { "art": "InheritFromParkour" },
+                        "abstände": []
+                    },
+                ],
+            }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "der Parkour: {anlage}");
+    let parkour_id = anlage["parkour"][0]["id"].as_str().expect("id").to_owned();
+
+    (
+        admin,
+        anlage_id,
+        erstes,
+        zweites,
+        parkour_id,
+        eigen_nah_farbe.to_owned(),
+    )
+}
+
+#[test_log::test(pollster::test)]
+async fn ac9_ein_runde_ziel_traegt_die_effektive_pflockmenge() {
+    let harness = E2eHarness::new().await;
+    let (admin, _, erstes, zweites, parkour_id, eigene_farbe) =
+        anlage_mit_eigenem_satz(&harness).await;
+    let runde_id = runde_starten(&harness, &admin, &parkour_id).await;
+
+    let (status, body) = harness
+        .client
+        .get_json_auth(&format!("/api/runden/{runde_id}"), &admin)
+        .await;
+    assert_eq!(status, StatusCode::OK, "die Runde wird gelesen: {body}");
+
+    let ziele = body["ziele"].as_array().expect("ziele");
+    assert_eq!(ziele[0]["zielId"], erstes);
+    assert_eq!(
+        ziele[0]["pflöcke"].as_array().expect("pflöcke").len(),
+        2,
+        "#72: das eigene Ziel trägt seinen eigenen Satz"
+    );
+    assert_eq!(ziele[0]["pflöcke"][0]["farbe"], eigene_farbe);
+    assert_eq!(ziele[0]["pflöcke"][0]["position"], 0);
+    assert_eq!(ziele[0]["pflöcke"][1]["position"], 1);
+
+    assert_eq!(ziele[1]["zielId"], zweites);
+    assert_eq!(
+        ziele[1]["pflöcke"].as_array().expect("pflöcke").len(),
+        1,
+        "#72: das erbende Ziel trägt die Parkour-Pflöcke"
+    );
+    assert_eq!(ziele[1]["pflöcke"][0]["farbe"], "#c0392b");
+
+    // The Parkour-wide list on the Runde stays the Parkour-wide list.
+    assert_eq!(
+        body["pflöcke"].as_array().expect("pflöcke").len(),
+        1,
+        "#72: die Runde führt weiterhin die Parkour-Pflöcke"
+    );
+}
+
+#[test_log::test(pollster::test)]
+async fn ac9_eine_schussposition_wird_je_ziel_geprueft() {
+    let harness = E2eHarness::new().await;
+    let (admin, _, erstes, zweites, parkour_id, eigene_farbe) =
+        anlage_mit_eigenem_satz(&harness).await;
+    let runde_id = runde_starten(&harness, &admin, &parkour_id).await;
+
+    let eigene_position = json!({ "Pflock": { "farbe": eigene_farbe } });
+    let (status, body) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/runden/{runde_id}/schuesse"),
+            json!({ "zielId": erstes, "wertungszone": "Kill", "position": eigene_position }),
+            &admin,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "#72: der eigene Pflock gilt an seinem Ziel: {body}"
+    );
+
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/runden/{runde_id}/schuesse"),
+            json!({ "zielId": zweites, "wertungszone": "Kill", "position": eigene_position }),
+            &admin,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "#72: derselbe Pflock gilt nicht an einem anderen Ziel"
+    );
+
+    // The Parkour-wide colour is the other way round.
+    let (status, body) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/runden/{runde_id}/schuesse"),
+            json!({
+                "zielId": zweites,
+                "wertungszone": "Spot",
+                "position": { "Pflock": { "farbe": "#c0392b" } },
+            }),
+            &admin,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/runden/{runde_id}/schuesse"),
+            json!({
+                "zielId": erstes,
+                "wertungszone": "Spot",
+                "position": { "Pflock": { "farbe": "#c0392b" } },
+            }),
+            &admin,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "#72: der ersetzte Parkour-Pflock gilt am eigenen Ziel nicht mehr"
     );
 }
 

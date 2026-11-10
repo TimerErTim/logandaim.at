@@ -127,7 +127,9 @@ type Schemas = components["schemas"];
 export type Benutzer = Schemas["Benutzer"];
 /** The authenticated caller: the only shape that carries a `rolle`. */
 export type AuthenticatedBenutzer = Schemas["AuthenticatedBenutzer"];
-export type Anlage = Schemas["Anlage"];
+export type Anlage = Omit<Schemas["Anlage"], "parkour"> & {
+  parkour: Parkour[];
+};
 export type AnlageZugriff = Schemas["AnlageZugriff"];
 export type AnlageAdresse = Schemas["AnlageAdresse"];
 export type AnlageKontakt = Schemas["AnlageKontakt"];
@@ -138,23 +140,47 @@ export type Ziel = Schemas["Ziel"];
 export type Zielverwendung = Schemas["Zielverwendung"];
 export type Pflock = Schemas["Pflock"];
 export type PflockAbstand = Schemas["PflockAbstand"];
-export type Zielplatzierung = Schemas["Zielplatzierung"];
-export type Parkour = Schemas["Parkour"];
+/** The Ziel-specific ordered set, or the Parkour-wide set when inherited. */
+export type ZielPflöcke =
+  | { art: "InheritFromParkour"; [key: string]: unknown }
+  | { art: "Explicit"; pflöcke: Pflock[]; [key: string]: unknown };
+export type Zielplatzierung = Omit<
+  Schemas["Zielplatzierung"],
+  "pflöcke" | "abstände"
+> & {
+  pflöcke: ZielPflöcke;
+  abstände: PflockAbstand[];
+};
+export type Parkour = Omit<Schemas["Parkour"], "platzierungen"> & {
+  platzierungen: Zielplatzierung[];
+};
 export type ParkourÖffentlich = Schemas["ParkourÖffentlich"];
 export type AnlageÖffentlich = Schemas["AnlageÖffentlich"];
 export type ParkourKurz = Schemas["ParkourKurz"];
-export type Runde = Schemas["Runde"];
 export type RundeBasic = Schemas["RundeBasic"];
 export type RundePflock = Schemas["RundePflock"];
-export type RundeZiel = Schemas["RundeZiel"];
+export type Abstand = Schemas["Abstand"];
+export type RundeZiel = Omit<Schemas["RundeZiel"], "pflöcke"> & {
+  pflöcke: RundePflock[];
+};
+export type Runde = Omit<Schemas["Runde"], "ziele"> & {
+  ziele: RundeZiel[];
+};
 export type Schuss = Schemas["Schuss"];
 export type Zielwertung = Schemas["Zielwertung"];
 export type Erfasser = Schemas["Erfasser"];
 
 export type AnlageErstellungInput = Schemas["AnlageErstellungRequest"];
 export type ZielInput = Schemas["ZielRequest"];
-export type ParkourInput = Schemas["ParkourErstellungRequest"];
-export type ParkourSetupInput = Schemas["ParkourSetupRequest"];
+type ParkourErstellungRequest = Omit<
+  Schemas["ParkourErstellungRequest"],
+  "platzierungen"
+> & { platzierungen: Zielplatzierung[] };
+export type ParkourInput = ParkourErstellungRequest;
+export type ParkourSetupInput = Omit<
+  Schemas["ParkourSetupRequest"],
+  "platzierungen"
+> & { platzierungen: Zielplatzierung[] };
 
 export type SchusspositionInput =
   | { Distanz: { meter: number } }

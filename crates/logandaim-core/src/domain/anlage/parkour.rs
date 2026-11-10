@@ -62,38 +62,111 @@ impl Pflock {
     }
 }
 
+/// Whether one Ziel uses the Parkour-wide Pflock order or its own.
+///
+/// The enum *is* the field: there is no `Vec<Pflock>` with an empty-means-inherit sentinel,
+/// so "this Ziel has no Pflöcke of its own" cannot be confused with "this Ziel has not been
+/// configured". An `Explicit` set always has at least one Pflock and replaces the
+/// Parkour-wide order for that Ziel alone (SPEC-stammdaten rule 6).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ZielPflöcke {
+    /// The Parkour's own near-to-far Pflock order applies to this Ziel.
+    InheritFromParkour,
+    /// This Ziel's own near-to-far order; always non-empty and replaces the Parkour order.
+    Explicit(Vec<Pflock>),
+}
+
+impl ZielPflöcke {
+    /// This Ziel uses the Parkour-wide order.
+    pub fn erbe_von_parkour() -> Self {
+        Self::InheritFromParkour
+    }
+
+    /// Replace the Parkour-wide order with this Ziel's own non-empty set.
+    pub fn überschreibe(pflöcke: Vec<Pflock>) -> Result<Self, ParkourFehler> {
+        if pflöcke.is_empty() {
+            return Err(ParkourFehler::KeinePflöcke);
+        }
+        for (index, pflock) in pflöcke.iter().enumerate() {
+            if pflöcke[..index]
+                .iter()
+                .any(|früher| früher.farbe == pflock.farbe)
+            {
+                return Err(ParkourFehler::FarbeDoppelt);
+            }
+        }
+        Ok(Self::Explicit(pflöcke))
+    }
+
+    /// The Pflöcke that actually apply to this Ziel: its own set when it has one, the
+    /// Parkour-wide set otherwise.
+    pub fn effektive<'a>(&'a self, parkour: &'a [Pflock]) -> &'a [Pflock] {
+        match self {
+            Self::InheritFromParkour => parkour,
+            Self::Explicit(eigene) => eigene,
+        }
+    }
+}
+
 /// One Ziel's use in one Parkour, with an optional distance per Pflock.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Zielplatzierung {
     ziel_id: ZielId,
-    /// Near to far, matching the Parkour's Pflock order. A missing entry is a missing
-    /// distance, not a zero.
+    /// Which Pflock order applies to this Ziel: the Parkour-wide one or its own.
+    pflöcke: ZielPflöcke,
+    /// Near to far in the effective Pflock order. A missing entry is a missing distance,
+    /// not a zero.
     abstände: Vec<(PflockId, Abstand)>,
 }
 
 impl Zielplatzierung {
+    /// A placement that inherits the Parkour-wide Pflock order.
     pub fn neu(
         ziel_id: ZielId, abstände: Vec<(PflockId, Abstand)>
     ) -> Result<Self, ParkourFehler> {
-        Self::mit_pflöcken(ziel_id, abstände, &[])
+        Self::neu_mit_abständen_und_pflöcken(
+            ziel_id,
+            ZielPflöcke::InheritFromParkour,
+            abstände,
+            &[],
+        )
     }
 
-    /// Validate the distances against the Parkour's Pflock list: every key must be a
-    /// Pflock of this Parkour, and the configured metres must strictly increase.
-    fn mit_pflöcken(
+    /// A placement with its own near-to-far Pflock order, which replaces the Parkour's.
+    pub fn neu_mit_eigenen_pflöcken(
         ziel_id: ZielId,
-        mut abstände: Vec<(PflockId, Abstand)>,
-        pflöcke: &[Pflock],
+        pflöcke: Vec<Pflock>,
+        abstände: Vec<(PflockId, Abstand)>,
     ) -> Result<Self, ParkourFehler> {
-        if !pflöcke.is_empty() {
+        Self::neu_mit_abständen_und_pflöcken(
+            ziel_id,
+            ZielPflöcke::überschreibe(pflöcke)?,
+            abstände,
+            &[],
+        )
+    }
+
+    /// Validate distances against the effective Pflock set and store them in its order.
+    pub fn neu_mit_abständen_und_pflöcken(
+        ziel_id: ZielId,
+        pflöcke: ZielPflöcke,
+        mut abstände: Vec<(PflockId, Abstand)>,
+        parkour_pflöcke: &[Pflock],
+    ) -> Result<Self, ParkourFehler> {
+        let pflöcke = match pflöcke {
+            ZielPflöcke::InheritFromParkour => ZielPflöcke::InheritFromParkour,
+            ZielPflöcke::Explicit(eigene) => ZielPflöcke::überschreibe(eigene)?,
+        };
+        let effektive = pflöcke.effektive(parkour_pflöcke);
+        if !effektive.is_empty() {
             for (pflock_id, _) in &abstände {
-                if !pflöcke.iter().any(|pflock| pflock.id == *pflock_id) {
+                if !effektive.iter().any(|pflock| pflock.id == *pflock_id) {
                     return Err(ParkourFehler::PflockNichtImParkour);
                 }
             }
             // Near to far: strictly increasing in Pflock order. Only configured
             // distances participate, because a missing one has no estimate.
-            let reihe: Vec<u32> = pflöcke
+            let reihe: Vec<u32> = effektive
                 .iter()
                 .filter_map(|pflock| {
                     abstände
@@ -105,18 +178,32 @@ impl Zielplatzierung {
             if reihe.windows(2).any(|paar| paar[0] >= paar[1]) {
                 return Err(ParkourFehler::AbständeNichtSteigend);
             }
-            // Normalise to the Parkour's own near-to-far Pflock order, so the list always
+            // Normalise to the effective set's own near-to-far order, so the list always
             // reads first Pflock first whatever order the caller supplied.
-            abstände = pflöcke
+            abstände = effektive
                 .iter()
                 .filter_map(|pflock| abstände.iter().find(|(id, _)| *id == pflock.id).copied())
                 .collect();
         }
-        Ok(Self { ziel_id, abstände })
+        Ok(Self {
+            ziel_id,
+            pflöcke,
+            abstände,
+        })
     }
 
     pub fn ziel_id(&self) -> ZielId {
         self.ziel_id
+    }
+
+    /// Whether this Ziel inherits the Parkour-wide Pflock order or carries its own.
+    pub fn pflöcke(&self) -> &ZielPflöcke {
+        &self.pflöcke
+    }
+
+    /// Which Pflock order applies to this Ziel (see [`ZielPflöcke::effektive`]).
+    pub fn effektive_pflöcke<'a>(&'a self, parkour: &'a [Pflock]) -> &'a [Pflock] {
+        self.pflöcke.effektive(parkour)
     }
 
     pub fn abstände(&self) -> &[(PflockId, Abstand)] {
@@ -131,13 +218,18 @@ impl Zielplatzierung {
             .map(|(_, abstand)| *abstand)
     }
 
-    /// Replace the distance map, re-validating against `pflöcke`.
+    /// Replace the distance map, re-validating against the effective set.
     fn setze_abstände(
         &mut self,
         abstände: Vec<(PflockId, Abstand)>,
-        pflöcke: &[Pflock],
+        parkour_pflöcke: &[Pflock],
     ) -> Result<(), ParkourFehler> {
-        let neu = Self::mit_pflöcken(self.ziel_id, abstände, pflöcke)?;
+        let neu = Self::neu_mit_abständen_und_pflöcken(
+            self.ziel_id,
+            self.pflöcke.clone(),
+            abstände,
+            parkour_pflöcke,
+        )?;
         self.abstände = neu.abstände;
         Ok(())
     }
@@ -180,6 +272,10 @@ impl NeuerParkour {
 
     /// Validate the placements and return them re-expressed in Pflock order, so the stored
     /// list reads first Pflock first whatever order the caller supplied.
+    ///
+    /// Each placement is re-validated against its **effective** set: its own when it carries
+    /// one (which is also checked for unique colours within itself), the Parkour-wide set
+    /// otherwise.
     fn pruefe_platzierungen(
         pflöcke: &[Pflock],
         platzierungen: Vec<Zielplatzierung>,
@@ -193,9 +289,10 @@ impl NeuerParkour {
                 return Err(ParkourFehler::ZielDoppelt);
             }
             // Re-validate: a caller may hand in a placement built with `neu` that never
-            // saw the Pflock list.
-            geprüft.push(Zielplatzierung::mit_pflöcken(
+            // saw the Pflock list, or one whose enum was built by hand.
+            geprüft.push(Zielplatzierung::neu_mit_abständen_und_pflöcken(
                 platzierung.ziel_id,
+                platzierung.pflöcke.clone(),
                 platzierung.abstände.clone(),
                 pflöcke,
             )?);
@@ -330,8 +427,9 @@ impl Parkour {
         {
             return Err(ParkourFehler::ZielDoppelt);
         }
-        let geprüft = Zielplatzierung::mit_pflöcken(
+        let geprüft = Zielplatzierung::neu_mit_abständen_und_pflöcken(
             platzierung.ziel_id,
+            platzierung.pflöcke,
             platzierung.abstände,
             &self.pflöcke,
         )?;
@@ -656,5 +754,160 @@ mod tests {
         )
         .unwrap();
         assert_eq!(original, geladen);
+    }
+
+    fn eigene_platzierung() -> (Vec<Pflock>, Zielplatzierung) {
+        // Colours deliberately reused from the Parkour-wide set: allowed across sets.
+        let eigene = vec![pflock(11, "#1b4f9c"), pflock(12, "#e8b81c")];
+        let platzierung = Zielplatzierung::neu_mit_eigenen_pflöcken(
+            ziel(10),
+            eigene.clone(),
+            vec![
+                (PflockId(Uuid::from_u128(11)), Abstand::neu(15).unwrap()),
+                (PflockId(Uuid::from_u128(12)), Abstand::neu(45).unwrap()),
+            ],
+        )
+        .unwrap();
+        (eigene, platzierung)
+    }
+
+    #[test_log::test]
+    fn zielpfloecke_eigen_refuses_empty_and_duplicate_colours() {
+        assert!(matches!(
+            ZielPflöcke::überschreibe(Vec::new()),
+            Err(ParkourFehler::KeinePflöcke)
+        ));
+        assert!(matches!(
+            ZielPflöcke::überschreibe(vec![pflock(1, "#c0392b"), pflock(2, "#C0392B")]),
+            Err(ParkourFehler::FarbeDoppelt)
+        ));
+        assert!(ZielPflöcke::überschreibe(vec![pflock(1, "#c0392b")]).is_ok());
+    }
+
+    #[test_log::test]
+    fn zielpfloecke_erbe_carries_nothing() {
+        let erbe = ZielPflöcke::erbe_von_parkour();
+        assert!(matches!(erbe, ZielPflöcke::InheritFromParkour));
+        let parkour = drei_pflöcke();
+        assert_eq!(erbe.effektive(&parkour).len(), 3);
+    }
+
+    #[test_log::test]
+    fn ac6_eigene_pfloecke_ersetzen_die_parkourreihenfolge() {
+        let (eigene, platzierung) = eigene_platzierung();
+        assert!(matches!(platzierung.pflöcke(), ZielPflöcke::Explicit(_)));
+        assert_eq!(platzierung.effektive_pflöcke(&drei_pflöcke()), &eigene[..]);
+
+        let parkour = Parkour::neu(
+            ParkourId(Uuid::nil()),
+            NeuerParkour::neu(name("Waldrunde"), drei_pflöcke(), vec![platzierung]).unwrap(),
+        );
+        let gespeichert = &parkour.platzierungen()[0];
+        // Replace semantics: the Parkour-wide order does not appear in this Ziel's distances.
+        assert_eq!(
+            gespeichert.abstand_für(PflockId(Uuid::from_u128(1))),
+            None,
+            "ein eigener Pflock-Satz ignoriert die Parkour-Pflöcke"
+        );
+        assert_eq!(
+            gespeichert.abstand_für(PflockId(Uuid::from_u128(11))),
+            Some(Abstand::neu(15).unwrap())
+        );
+        assert_eq!(gespeichert.abstände().len(), 2);
+    }
+
+    #[test_log::test]
+    fn ac6_eigene_pfloecke_validieren_abstaende_gegen_ihre_eigene_reihenfolge() {
+        // 45 m at the second own Pflock but 15 m at the first: increasing, accepted.
+        let (_, gueltig) = eigene_platzierung();
+        assert!(NeuerParkour::neu(name("Waldrunde"), drei_pflöcke(), vec![gueltig]).is_ok());
+
+        // The Parkour-wide Pflock is not part of this Ziel's own set, so the distance is
+        // refused at construction already.
+        let fremd = Zielplatzierung::neu_mit_eigenen_pflöcken(
+            ziel(10),
+            vec![pflock(11, "#1b4f9c")],
+            vec![(PflockId(Uuid::from_u128(2)), Abstand::neu(20).unwrap())],
+        );
+        assert!(matches!(fremd, Err(ParkourFehler::PflockNichtImParkour)));
+
+        // Falling own order is refused just like the inherited one — at construction, since
+        // the own set is its own effective set.
+        let fallend = Zielplatzierung::neu_mit_eigenen_pflöcken(
+            ziel(10),
+            vec![pflock(11, "#1b4f9c"), pflock(12, "#e8b81c")],
+            vec![
+                (PflockId(Uuid::from_u128(11)), Abstand::neu(40).unwrap()),
+                (PflockId(Uuid::from_u128(12)), Abstand::neu(30).unwrap()),
+            ],
+        );
+        assert!(matches!(fallend, Err(ParkourFehler::AbständeNichtSteigend)));
+    }
+
+    #[test_log::test]
+    fn ac6_gleiche_farbe_ueber_saetze_hinweg_ist_erlaubt() {
+        // "#1b4f9c" is both the Parkour-wide second Pflock and the first own one.
+        let (_, platzierung) = eigene_platzierung();
+        assert!(NeuerParkour::neu(name("Waldrunde"), drei_pflöcke(), vec![platzierung]).is_ok());
+    }
+
+    #[test_log::test]
+    fn ac6_ein_handgebauter_leerer_satz_wird_abgelehnt() {
+        // The variant is public, so every constructor path re-asserts the invariant.
+        let leer = Zielplatzierung::neu_mit_abständen_und_pflöcken(
+            ziel(10),
+            ZielPflöcke::Explicit(Vec::new()),
+            Vec::new(),
+            &drei_pflöcke(),
+        );
+        assert!(matches!(leer, Err(ParkourFehler::KeinePflöcke)));
+    }
+
+    #[test_log::test]
+    fn abstände_setzen_prueft_die_effektive_liste() {
+        let (_, mit_eigene) = eigene_platzierung();
+        let mut parkour = Parkour::neu(
+            ParkourId(Uuid::nil()),
+            NeuerParkour::neu(
+                name("Waldrunde"),
+                drei_pflöcke(),
+                vec![mit_eigene, platzierung(ziel(11), &[])],
+            )
+            .unwrap(),
+        );
+        // An inherited-set Pflock is not part of the own set.
+        assert!(matches!(
+            parkour.abstände_setzen(
+                ziel(10),
+                vec![(PflockId(Uuid::from_u128(1)), Abstand::neu(10).unwrap())]
+            ),
+            Err(ParkourFehler::PflockNichtImParkour)
+        ));
+        parkour
+            .abstände_setzen(
+                ziel(10),
+                vec![(PflockId(Uuid::from_u128(12)), Abstand::neu(25).unwrap())],
+            )
+            .unwrap();
+        assert_eq!(
+            parkour.platzierungen()[0].abstand_für(PflockId(Uuid::from_u128(12))),
+            Some(Abstand::neu(25).unwrap())
+        );
+    }
+
+    #[test_log::test]
+    fn platzierung_hinzufuegen_validiert_gegen_den_eigenen_satz() {
+        let mut parkour = parkour();
+        let eigene = vec![pflock(11, "#1b4f9c"), pflock(12, "#e8b81c")];
+        let hinzuzufügen = Zielplatzierung::neu_mit_eigenen_pflöcken(
+            ziel(12),
+            eigene,
+            vec![(PflockId(Uuid::from_u128(11)), Abstand::neu(15).unwrap())],
+        )
+        .unwrap();
+        parkour.platzierung_hinzufügen(hinzuzufügen).unwrap();
+        let hinzugefügt = &parkour.platzierungen()[2];
+        assert!(matches!(hinzugefügt.pflöcke(), ZielPflöcke::Explicit(_)));
+        assert_eq!(hinzugefügt.abstände().len(), 1);
     }
 }

@@ -111,21 +111,21 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     const token = this.accessToken;
     const result = await request();
     if (result.response.status !== 401 || !token) {
-      return unwrap(result);
+      return unwrap<T>(result);
     }
-    if (this.accessToken !== token) return unwrap(await request());
+    if (this.accessToken !== token) return unwrap<T>(await request());
 
     try {
       await this.renewSession();
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         this.setAccessToken(null);
-        return unwrap(result);
+        return unwrap<T>(result);
       }
       throw error;
     }
-    if (this.accessToken === token) return unwrap(result);
-    return unwrap(await request());
+    if (this.accessToken === token) return unwrap<T>(result);
+    return unwrap<T>(await request());
   }
 
   private async renewSession(): Promise<void> {
@@ -172,13 +172,22 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   // ---------------------------------------------------------------- master data
 
   async anlagenAnzeigen(): Promise<AnlageZugriff[]> {
-    return this.authenticated(() =>
-      this.client.GET("/anlagen", { headers: this.authorizationHeaders() }),
-    );
+    return this.authenticated(async () => {
+      const result = await this.client.GET("/anlagen", {
+        headers: this.authorizationHeaders(),
+      });
+      if (result.data) {
+        result.data = result.data.map((entry) => ({
+          ...entry,
+          anlage: entry.anlage,
+        }));
+      }
+      return result;
+    });
   }
 
   async anlageAnzeigen(id: string): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.GET("/anlagen/{anlage_id}", {
         params: { path: { anlage_id: id } },
         headers: this.authorizationHeaders(),
@@ -187,7 +196,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   }
 
   async anlageErstellen(anlage: AnlageErstellungInput): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.POST("/anlagen", {
         body: anlage,
         headers: this.authorizationHeaders(),
@@ -199,7 +208,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     id: string,
     anlage: AnlageErstellungInput,
   ): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.PUT("/anlagen/{anlage_id}", {
         params: { path: { anlage_id: id } },
         body: anlage,
@@ -209,7 +218,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   }
 
   async anlageDeaktivieren(id: string): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.POST("/anlagen/{anlage_id}/deaktivierung", {
         params: { path: { anlage_id: id } },
         headers: this.authorizationHeaders(),
@@ -237,7 +246,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     benutzerId: string,
     rolle: AnlageVerwaltungRolle,
   ): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.POST("/anlagen/{anlage_id}/verwaltungen", {
         params: { path: { anlage_id: anlageId } },
         body: { benutzerId, rolle },
@@ -251,7 +260,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     benutzerId: string,
     rolle: AnlageVerwaltungRolle,
   ): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.PUT("/anlagen/{anlage_id}/verwaltungen/{benutzer_id}", {
         params: { path: { anlage_id: anlageId, benutzer_id: benutzerId } },
         body: { benutzerId, rolle },
@@ -264,7 +273,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     anlageId: string,
     benutzerId: string,
   ): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.DELETE("/anlagen/{anlage_id}/verwaltungen/{benutzer_id}", {
         params: { path: { anlage_id: anlageId, benutzer_id: benutzerId } },
         headers: this.authorizationHeaders(),
@@ -273,7 +282,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   }
 
   async zielHinzufuegen(anlageId: string, ziel: ZielInput): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.POST("/anlagen/{anlage_id}/ziele", {
         params: { path: { anlage_id: anlageId } },
         body: ziel,
@@ -287,7 +296,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     zielId: string,
     ziel: ZielInput,
   ): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.PUT("/anlagen/{anlage_id}/ziele/{ziel_id}", {
         params: { path: { anlage_id: anlageId, ziel_id: zielId } },
         body: ziel,
@@ -301,7 +310,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     zielId: string,
     ziel: ZielInput,
   ): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.POST("/anlagen/{anlage_id}/ziele/{ziel_id}/ersatz", {
         params: { path: { anlage_id: anlageId, ziel_id: zielId } },
         body: ziel,
@@ -311,7 +320,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   }
 
   async zielEntfernen(anlageId: string, zielId: string): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.DELETE("/anlagen/{anlage_id}/ziele/{ziel_id}", {
         params: { path: { anlage_id: anlageId, ziel_id: zielId } },
         headers: this.authorizationHeaders(),
@@ -323,10 +332,10 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     anlageId: string,
     parkour: ParkourInput,
   ): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.POST("/anlagen/{anlage_id}/parkour", {
         params: { path: { anlage_id: anlageId } },
-        body: parkour,
+        body: parkour as never,
         headers: this.authorizationHeaders(),
       }),
     );
@@ -337,10 +346,10 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     parkourId: string,
     setup: ParkourSetupInput,
   ): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.PUT("/anlagen/{anlage_id}/parkour/{parkour_id}/setup", {
         params: { path: { anlage_id: anlageId, parkour_id: parkourId } },
-        body: setup,
+        body: setup as never,
         headers: this.authorizationHeaders(),
       }),
     );
@@ -351,7 +360,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     parkourId: string,
     name: string,
   ): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.PUT("/anlagen/{anlage_id}/parkour/{parkour_id}", {
         params: { path: { anlage_id: anlageId, parkour_id: parkourId } },
         body: { name },
@@ -361,7 +370,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   }
 
   async parkourEntfernen(anlageId: string, parkourId: string): Promise<Anlage> {
-    return this.authenticated(() =>
+    return this.authenticated<Anlage>(() =>
       this.client.DELETE("/anlagen/{anlage_id}/parkour/{parkour_id}", {
         params: { path: { anlage_id: anlageId, parkour_id: parkourId } },
         headers: this.authorizationHeaders(),
