@@ -14,7 +14,7 @@ use tracing::{info, instrument};
 use crate::{
     application::ExecutionContext,
     domain::{
-        Erfasser, FreiesZielId, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId, Rundenaufbau,
+        Erfasser, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId, RundenZielId, Rundenaufbau,
     },
     ports::RepositoryError,
     service::UseCase,
@@ -159,7 +159,7 @@ impl UseCase<Runde> for RundeStarten {
             id = ?runde.id(),
             parkour_id = ?match runde.aufbau() {
                 Rundenaufbau::Parkour { parkour_id, .. } => Some(parkour_id),
-                Rundenaufbau::Freie(_) => None,
+                Rundenaufbau::Freie { .. } => None,
             },
             "runde gestartet"
         );
@@ -221,14 +221,16 @@ impl UseCase<Runde> for RundeZielHinzufügen {
                     RundeZielHinzufügenFehler::RundeNichtInBearbeitung,
                 ));
             }
-            // The `Option` *is* the type check: a Parkour round has no free setup, so it
-            // answers 409 without comparing a flag (SPEC-runde rule 18).
-            let Rundenaufbau::Freie(freie) = runde.aufbau_mut() else {
+            if !runde.ist_freie_runde() {
                 return Err(Report::new(
                     RundeZielHinzufügenFehler::RundeIstKeineFreieRunde,
                 ));
-            };
-            freie.ziel_hinzufügen(FreiesZielId(uuid::Uuid::new_v4()), self.name);
+            }
+            if !runde.ziel_hinzufügen(RundenZielId(uuid::Uuid::new_v4()), self.name) {
+                return Err(Report::new(
+                    RundeZielHinzufügenFehler::RundeIstKeineFreieRunde,
+                ));
+            }
 
             uow.runden()
                 .update(&mut runde)
@@ -261,6 +263,8 @@ pub enum RundeZielEntfernenFehler {
     RundeIstKeineFreieRunde,
     #[error("die Runde konnte nicht geladen werden")]
     RundeLaden,
+    #[error("die Runde ist nicht mehr in Bearbeitung")]
+    RundeNichtInBearbeitung,
     #[error("das Ziel konnte nicht entfernt werden")]
     Entfernen,
     #[error("die Runde konnte nicht gespeichert werden")]
@@ -271,7 +275,7 @@ pub enum RundeZielEntfernenFehler {
 #[derive(Debug, Clone)]
 pub struct RundeZielEntfernen {
     pub runde_id: RundeId,
-    pub ziel_id: FreiesZielId,
+    pub ziel_id: RundenZielId,
 }
 
 #[async_trait]
@@ -294,12 +298,17 @@ impl UseCase<Runde> for RundeZielEntfernen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielEntfernenFehler::NichtErlaubt));
             }
-            let Rundenaufbau::Freie(freie) = runde.aufbau_mut() else {
+            if !runde.ist_freie_runde() {
                 return Err(Report::new(
                     RundeZielEntfernenFehler::RundeIstKeineFreieRunde,
                 ));
-            };
-            if freie.ziel_entfernen(self.ziel_id).is_none() {
+            }
+            if !runde.ist_in_bearbeitung() {
+                return Err(Report::new(
+                    RundeZielEntfernenFehler::RundeNichtInBearbeitung,
+                ));
+            }
+            if runde.ziel_entfernen(self.ziel_id).is_none() {
                 return Err(Report::new(RundeZielEntfernenFehler::ZielNichtGefunden));
             }
 
@@ -390,7 +399,7 @@ pub enum RundeZielUmbenennenFehler {
 #[derive(Debug, Clone)]
 pub struct RundeZielUmbenennen {
     pub runde_id: RundeId,
-    pub ziel_id: FreiesZielId,
+    pub ziel_id: RundenZielId,
     pub name: NonEmptyString,
 }
 
@@ -414,20 +423,19 @@ impl UseCase<Runde> for RundeZielUmbenennen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielUmbenennenFehler::NichtErlaubt));
             }
+            if !runde.ist_freie_runde() {
+                return Err(Report::new(
+                    RundeZielUmbenennenFehler::RundeIstKeineFreieRunde,
+                ));
+            }
             if !runde.ist_in_bearbeitung() {
                 return Err(Report::new(
                     RundeZielUmbenennenFehler::RundeNichtInBearbeitung,
                 ));
             }
-            let Rundenaufbau::Freie(freie) = runde.aufbau_mut() else {
-                return Err(Report::new(
-                    RundeZielUmbenennenFehler::RundeIstKeineFreieRunde,
-                ));
-            };
-            let Some(ziel) = freie.ziel_mut(self.ziel_id) else {
+            if !runde.ziel_umbenennen(self.ziel_id, self.name) {
                 return Err(Report::new(RundeZielUmbenennenFehler::ZielNichtGefunden));
-            };
-            ziel.umbenennen(self.name);
+            }
 
             uow.runden()
                 .update(&mut runde)

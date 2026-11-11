@@ -1,7 +1,7 @@
 ---
 id: SPEC-runde
 title: Capture a Runde target by target, on phone and desktop
-status: In delivery
+status: Draft
 owner: TimerErTim
 issues: [11, 23, 72, 93]
 superseded_by: null
@@ -258,16 +258,20 @@ Rules:
     The origin is fixed at the start in both variants: a wrong `Parkour` is fixed by deleting the
     `Runde` and logging it again, and a `Freie Runde`'s name cannot be turned into a `Parkour`'
     `Anlage`.
-18. A `Freie Runde` has no `Parkour`, no `Parkour-Snapshot`, and no `Pflöcke`. Its `Ziele` are the
-    `Freies Ziel` it currently holds, in the order they were added. They are added and removed
-    just in time while shooting:
+18. A `Freie Runde` has no `Parkour`, no Anlage identity, and no `Pflöcke`. Its route is a
+round-owned snapshot of targets with neutral round-local identities, in the order they were added.
+While the `Runde` is in progress, targets are added and removed just in time while shooting.
+Completing the `Runde` freezes this route as historical data; completed targets and names cannot
+be added, removed, or renamed afterwards:
 
     - Adding a `Freies Ziel` appends it with the next ordinal and gives it the next unused name
       "Ziel N"; an explicit name replaces that default.
     - Removing a `Freies Ziel` deletes its `Schüsse` with it, in the same write, after explicit
       confirmation that names how many `Schüsse` go with it (rule 10's irreversibility applies).
     - The `Ziele` of a `Parkour` round are its snapshot's `Ziele` and never change (rule 2); only
-      a `Freie Runde` may have a `Ziel` added or removed.
+      a `Freie Runde` may have a `Ziel` added or removed while it is in progress.
+    - Completing a `Freie Runde` freezes its route. Its targets, names, and order remain as a
+      historical snapshot and cannot be added, removed, or renamed afterwards.
 19. `Schussposition` on a `Freie Runde`. Rule 4 still holds exactly: one exclusive value, a
     `Schussdistanz` or a `Pflock`. A `Freie Runde` configures no `Pflöcke`, so the `Pflock` form
     means the colour the `Benutzer` picked for that shot, and its only validity rule is that the
@@ -326,8 +330,9 @@ Rules:
   the nearest `Pflock` when it has none — and an opened ledger row at that row's own position
   (rule 16).
 - FR-16: Start a `Freie Runde` with no `Anlage` and no `Parkour`, under a name (rule 17).
-- FR-17: Add a `Freies Ziel` just in time with the next ordinal and its default or given name, and
-  remove one after a confirmation that names the `Schüsse` it takes with it (rule 18).
+- FR-17: Add a round-local `Ziel` just in time with the next ordinal and its default or given name,
+  and remove one after a confirmation that names the `Schüsse` it takes with it while the `Runde`
+  is in progress; completion freezes the route (rule 18).
 - FR-18: Set a `Freie Runde`'s `Schussposition` as one exclusive value — a picked colour or an
   exact positive whole-meter `Schussdistanz` — with no slider (rule 19). Present the colour palette
   and meter field together, in both new-shot entry and per-shot editing; selecting one form clears
@@ -447,10 +452,12 @@ Rules:
   name and no `Parkour`, then it opens with that name, no `Anlage` and no `Parkour` at all, no
   `Pflöcke`, and no `Ziel`; the one-running-`Runde` rule holds against a `Parkour` round in
   progress the same way round.
-- AC-22: Given a running `Freie Runde`, when a `Freies Ziel` is added without a name, then it is
-  appended with the next ordinal and named "Ziel N" from that ordinal, an explicit name replaces
+- AC-22: Given a running `Freie Runde`, when a round-local `Ziel` is added without a name, then it
+  is appended with the next ordinal and named "Ziel N" from that ordinal, an explicit name replaces
   that default, and when one is removed after confirmation its `Schüsse` are gone from the `Runde`
-  and from the ledger in the same write; removing a `Ziel` from a `Parkour` round is refused.
+  and from the ledger in the same write; removing a `Ziel` from a `Parkour` or completed round is
+  refused. Completing a `Freie Runde` freezes its target list and names as the round's historical
+  snapshot.
 - AC-23: Given a `Freies Ziel`, when a `Schuss` is registered with a colour, then its stored
   `Schussposition` is that `Pflock` colour and holds no distance, and when one is registered with
   an exact distance, then it stores that positive whole-meter `Schussdistanz` and holds no colour;
@@ -463,9 +470,9 @@ Rules:
 - AC-25: Given a running `Freie Runde`, then the `Rundenübersicht` band and the `Runden` list name
   it by its own name, and the band and capture screen show the same `Zielfortschritt` as for a
   `Parkour` round, counted over the `Freie Runde`'s current `Ziele`.
-- AC-26: Given an owned running `Freie Runde` and one of its `Freie Ziele`, when the owner gives
-  that `Ziel` a non-empty name, then the name is persisted and shown in capture; renaming is
-  refused for a completed `Runde`, a `Parkour` round, or a `Ziel` not in that `Runde`, and the
+- AC-26: Given an owned running `Freie Runde` and one of its round-local targets, when the owner
+  gives that target a non-empty name, then the name is persisted and shown in capture; renaming is
+  refused for a completed `Runde`, a `Parkour` round, or a target not in that `Runde`, and the
   existing ownership and authentication rules apply.
 - AC-27: Given a running `Freie Runde`, when the user focuses a `Freies Ziel` name in its card
   header, then the plain name smoothly becomes an input; when focus leaves after a changed,
@@ -542,6 +549,8 @@ check of focus/blur and shot-row editing on a phone-sized viewport.
 ## Decision log
 
 | Date | Decision | By |
+|------|----------|----|
+| 2026-11-12 | A `Freie Runde` route uses neutral round-local target identities and is frozen on completion. Completed targets and names are historical and cannot be edited. | TimerErTim (PO) |
 |------|----------|----|
 | 2026-10-23 | ~~Slider storage: `Anteil` fraction 0..1 between the two adjacent `Pflöcke`; meter estimate shown when `Pflock` `Distanzen` exist.~~ Superseded 2026-11-06 by the single optional distance. | TimerErTim (PO) |
 | 2026-10-23 | Bow class per `Runde` is not in MVP; deferred and tracked in issue #23. | TimerErTim (PO) |

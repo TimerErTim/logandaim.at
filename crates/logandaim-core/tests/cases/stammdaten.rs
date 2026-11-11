@@ -754,7 +754,7 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
         .expect("AC-7: eine Runde startet");
     let vorher = match runde.aufbau() {
         logandaim_core::domain::Rundenaufbau::Parkour { snapshot, .. } => snapshot.clone(),
-        logandaim_core::domain::Rundenaufbau::Freie(_) => panic!("Parkour-Aufbau"),
+        logandaim_core::domain::Rundenaufbau::Freie { .. } => panic!("Parkour-Aufbau"),
     };
     let anlage_id = anlage.id();
 
@@ -794,8 +794,8 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
     };
     assert_eq!(snapshot, &vorher);
     let ziel = &snapshot.ziele()[0];
-    assert_eq!(ziel.tiername().as_str(), "Keiler");
-    assert_eq!(ziel.zielnummer().get(), 1);
+    assert_eq!(ziel.name().as_str(), "Keiler");
+    assert_eq!(ziel.ordinal().get(), 1);
     assert_eq!(
         ziel.abstände(),
         &[
@@ -804,7 +804,7 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
         ]
     );
     assert_eq!(
-        snapshot.parkour_name().as_str(),
+        gelesen.aufbau().name().as_str(),
         "Waldrunde",
         "AC-9: der Name ist Teil des Schnappschusses"
     );
@@ -830,7 +830,7 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
     let logandaim_core::domain::Rundenaufbau::Parkour { snapshot: neu, .. } = neue.aufbau() else {
         panic!("Parkour-Aufbau");
     };
-    assert_eq!(neu.ziele()[0].tiername().as_str(), "Reh");
+    assert_eq!(neu.ziele()[0].name().as_str(), "Reh");
     assert_ne!(neu, &vorher);
 }
 
@@ -847,13 +847,14 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die erste Runde startet");
+    let erstes_ziel_id = erste.aufbau().ziele().next().expect("ein Ziel").id();
     harness
         .app()
         .execute(
             admin,
             SchussRegistrieren {
                 runde_id: erste.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: erstes_ziel_id.0,
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -898,13 +899,14 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
         .execute(admin, RundeStarten::mit_parkour(zweiter_parkour))
         .await
         .expect("die zweite Runde startet");
+    let zweites_ziel_id = zweite.aufbau().ziele().next().expect("ein Ziel").id();
     harness
         .app()
         .execute(
             admin,
             SchussRegistrieren {
                 runde_id: zweite.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: zweites_ziel_id.0,
                 wertungszone: Wertungszone::Spot,
                 position: None,
             },
@@ -929,8 +931,8 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
     else {
         panic!("Parkour-Aufbau");
     };
-    assert_eq!(eine_snapshot.ziele()[0].ziel_id(), ziel_id);
-    assert_eq!(andere_snapshot.ziele()[0].ziel_id(), ziel_id);
+    assert_eq!(eine_snapshot.ziele()[0].anlage_ziel_id(), Some(ziel_id));
+    assert_eq!(andere_snapshot.ziele()[0].anlage_ziel_id(), Some(ziel_id));
     assert_eq!(eine.wertung(eine_schüsse).erster_treffer(), 18);
     assert_eq!(andere.wertung(andere_schüsse).erster_treffer(), 20);
     assert_eq!(
@@ -1322,20 +1324,21 @@ async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
     let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
-    let (_, ziel_id, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
+    let (_, _ziel_id, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
 
     let runde = harness
         .app()
         .execute(anna, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("Anna startet eine Runde");
+    let runden_ziel_id = runde.aufbau().ziele().next().expect("ein Ziel").id();
     harness
         .app()
         .execute(
             anna,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: runden_ziel_id.0,
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },

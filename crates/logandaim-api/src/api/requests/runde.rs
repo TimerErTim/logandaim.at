@@ -12,7 +12,7 @@ use uuid::Uuid;
 use error_stack::{Report, ResultExt};
 
 use logandaim_core::{
-    domain::{FreiesZielId, NonEmptyString, ParkourId, RundeId},
+    domain::{NonEmptyString, ParkourId, RundeId, RundenZielId},
     service::{
         RundeStarten, RundeStartenFehler, RundeZielEntfernen, RundeZielHinzufügen,
         RundeZielUmbenennen, RundeZielUmbenennenFehler,
@@ -99,7 +99,7 @@ impl ZielUmbenennenRequest {
     ) -> Result<RundeZielUmbenennen, Report<RundeZielUmbenennenFehler>> {
         Ok(RundeZielUmbenennen {
             runde_id,
-            ziel_id: FreiesZielId(ziel_id),
+            ziel_id: RundenZielId(ziel_id),
             name: NonEmptyString::neu(self.name.trim())
                 .change_context(RundeZielUmbenennenFehler::UngültigeAnfrage)
                 .attach("Freies Ziel: Name")?,
@@ -111,6 +111,6 @@ impl ZielUmbenennenRequest {
 pub fn ziel_entfernen_in_use_case(runde_id: Uuid, ziel_id: Uuid) -> RundeZielEntfernen {
     RundeZielEntfernen {
         runde_id: RundeId(runde_id),
-        ziel_id: FreiesZielId(ziel_id),
+        ziel_id: RundenZielId(ziel_id),
     }
 }

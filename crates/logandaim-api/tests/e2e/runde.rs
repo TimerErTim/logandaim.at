@@ -89,6 +89,24 @@ async fn runde_starten(harness: &E2eHarness, bearer: &str, parkour_id: &str) -> 
     body["id"].as_str().expect("id im Body").to_owned()
 }
 
+/// Read a round-local target identity from the captured route.
+async fn runden_ziel_id(
+    harness: &E2eHarness,
+    bearer: &str,
+    runde_id: &str,
+    index: usize,
+) -> String {
+    let (status, body) = harness
+        .client
+        .get_json_auth(&format!("/api/runden/{runde_id}"), bearer)
+        .await;
+    assert_eq!(status, StatusCode::OK, "die Runde wird gelesen: {body}");
+    body["ziele"][index]["zielId"]
+        .as_str()
+        .expect("round-local Ziel-ID")
+        .to_owned()
+}
+
 /// Log one arrow. Returns the whole `(status, body)` so a case can assert on either.
 async fn schuss(
     harness: &E2eHarness,
@@ -207,15 +225,16 @@ async fn ac9_ein_schuss_ausserhalb_des_snapshots_antwortet_409() {
 #[test_log::test(pollster::test)]
 async fn ac9_nicht_positive_schussdistanz_ist_bad_request() {
     let harness = E2eHarness::new().await;
-    let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
+    let (_, _, _ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
     let runde_id = runde_starten(&harness, &benutzer, &parkour_id).await;
+    let runden_ziel = runden_ziel_id(&harness, &benutzer, &runde_id, 0).await;
 
     let (status, _) = harness
         .client
         .post_json_auth(
             &format!("/api/runden/{runde_id}/schuesse"),
-            json!({"zielId":ziel_id,"wertungszone":"Kill","position":{"Distanz":{"meter":0}}}),
+            json!({"zielId":runden_ziel,"wertungszone":"Kill","position":{"Distanz":{"meter":0}}}),
             &benutzer,
         )
         .await;
@@ -229,12 +248,13 @@ async fn ac9_nicht_positive_schussdistanz_ist_bad_request() {
 #[test_log::test(pollster::test)]
 async fn ac9_ein_schuss_in_eine_fremde_runde_antwortet_403() {
     let harness = E2eHarness::new().await;
-    let (admin, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
+    let (admin, _, _ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (eigner, _) = neuer_benutzer(&harness, "anna@muster.at").await;
     let (fremder, _) = neuer_benutzer(&harness, "bea@muster.at").await;
     let runde_id = runde_starten(&harness, &eigner, &parkour_id).await;
+    let runden_ziel = runden_ziel_id(&harness, &eigner, &runde_id, 0).await;
 
-    let (status, _) = schuss(&harness, &fremder, &runde_id, &ziel_id, 1, "Kill").await;
+    let (status, _) = schuss(&harness, &fremder, &runde_id, &runden_ziel, 1, "Kill").await;
     assert_eq!(
         status,
         StatusCode::FORBIDDEN,
@@ -263,12 +283,14 @@ async fn ac9_ein_schuss_in_eine_fremde_runde_antwortet_403() {
 #[test_log::test(pollster::test)]
 async fn ac9_eine_runde_zeigt_beide_wertungen_und_den_snapshot() {
     let harness = E2eHarness::new().await;
-    let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
+    let (_, _, _ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
     let runde_id = runde_starten(&harness, &benutzer, &parkour_id).await;
+    let runden_ziel = runden_ziel_id(&harness, &benutzer, &runde_id, 0).await;
 
     for (pfeil, zone) in [(1, "Kill"), (2, "Kill"), (3, "Spot")] {
-        let (status, body) = schuss(&harness, &benutzer, &runde_id, &ziel_id, pfeil, zone).await;
+        let (status, body) =
+            schuss(&harness, &benutzer, &runde_id, &runden_ziel, pfeil, zone).await;
         assert_eq!(status, StatusCode::OK, "AC-9: schuss {pfeil}: {body}");
     }
 
@@ -301,9 +323,10 @@ async fn ac9_eine_runde_zeigt_beide_wertungen_und_den_snapshot() {
 #[test_log::test(pollster::test)]
 async fn ac9_eine_beendete_runde_nimmt_keinen_schuss_mehr_an() {
     let harness = E2eHarness::new().await;
-    let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
+    let (_, _, _ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
     let runde_id = runde_starten(&harness, &benutzer, &parkour_id).await;
+    let runden_ziel = runden_ziel_id(&harness, &benutzer, &runde_id, 0).await;
 
     let (status, body) = harness
         .client
@@ -320,7 +343,7 @@ async fn ac9_eine_beendete_runde_nimmt_keinen_schuss_mehr_an() {
     );
     assert_eq!(body["zustand"], "Abgeschlossen");
 
-    let (status, _) = schuss(&harness, &benutzer, &runde_id, &ziel_id, 1, "Kill").await;
+    let (status, _) = schuss(&harness, &benutzer, &runde_id, &runden_ziel, 1, "Kill").await;
     assert_eq!(
         status,
         StatusCode::CONFLICT,
@@ -354,11 +377,12 @@ async fn ac9_die_rundenliste_zeigt_nur_eigene_runden() {
 #[test_log::test(pollster::test)]
 async fn ac11_runden_und_schuesse_sind_nur_fuer_eigentuemer_aenderbar() {
     let harness = E2eHarness::new().await;
-    let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
+    let (_, _, _ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (eigner, _) = neuer_benutzer(&harness, "anna@muster.at").await;
     let (fremder, _) = neuer_benutzer(&harness, "bea@muster.at").await;
     let runde_id = runde_starten(&harness, &eigner, &parkour_id).await;
-    let (status, shot) = schuss(&harness, &eigner, &runde_id, &ziel_id, 1, "Kill").await;
+    let runden_ziel = runden_ziel_id(&harness, &eigner, &runde_id, 0).await;
+    let (status, shot) = schuss(&harness, &eigner, &runde_id, &runden_ziel, 1, "Kill").await;
     assert_eq!(status, StatusCode::OK);
     let schuss_id = shot["id"].as_str().unwrap();
     let runde_path = format!("/api/runden/{runde_id}");
@@ -381,7 +405,7 @@ async fn ac11_runden_und_schuesse_sind_nur_fuer_eigentuemer_aenderbar() {
         StatusCode::FORBIDDEN
     );
     assert_eq!(
-        schuss(&harness, &fremder, &runde_id, &ziel_id, 2, "Spot")
+        schuss(&harness, &fremder, &runde_id, &runden_ziel, 2, "Spot")
             .await
             .0,
         StatusCode::FORBIDDEN
@@ -482,14 +506,15 @@ async fn ac13_zweiter_start_wird_abgelehnt_und_nach_abschluss_wieder_freigegeben
 #[test_log::test(pollster::test)]
 async fn ac5_schussposition_ist_exklusiv_ganzzahlig_und_wird_beim_lesen_erhalten() {
     let harness = E2eHarness::new().await;
-    let (_, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
+    let (_, _, _ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
     let (benutzer, _) = neuer_benutzer(&harness, "anna@muster.at").await;
     let runde_id = runde_starten(&harness, &benutzer, &parkour_id).await;
+    let runden_ziel = runden_ziel_id(&harness, &benutzer, &runde_id, 0).await;
     let (status, body) = harness
         .client
         .post_json_auth(
             &format!("/api/runden/{runde_id}/schuesse"),
-            json!({"zielId":ziel_id,"wertungszone":"Kill","position":{"Distanz":{"meter":35}}}),
+            json!({"zielId":runden_ziel,"wertungszone":"Kill","position":{"Distanz":{"meter":35}}}),
             &benutzer,
         )
         .await;
@@ -498,7 +523,7 @@ async fn ac5_schussposition_ist_exklusiv_ganzzahlig_und_wird_beim_lesen_erhalten
 
     let (status, body) = harness.client.post_json_auth(
         &format!("/api/runden/{runde_id}/schuesse"),
-        json!({"zielId":ziel_id,"wertungszone":"Spot","position":{"Pflock":{"farbe":"#c0392b"}}}),
+        json!({"zielId":runden_ziel,"wertungszone":"Spot","position":{"Pflock":{"farbe":"#c0392b"}}}),
         &benutzer,
     ).await;
     assert_eq!(status, StatusCode::OK, "Pflockposition: {body}");
@@ -508,7 +533,7 @@ async fn ac5_schussposition_ist_exklusiv_ganzzahlig_und_wird_beim_lesen_erhalten
         .client
         .post_json_auth(
             &format!("/api/runden/{runde_id}/schuesse"),
-            json!({"zielId":ziel_id,"wertungszone":"Body","position":{"distanz":{"meter":35.5}}}),
+            json!({"zielId":runden_ziel,"wertungszone":"Body","position":{"distanz":{"meter":35.5}}}),
             &benutzer,
         )
         .await;
@@ -622,7 +647,6 @@ async fn anlage_mit_eigenem_satz(
         .await;
     assert_eq!(status, StatusCode::OK, "der Parkour: {anlage}");
     let parkour_id = anlage["parkour"][0]["id"].as_str().expect("id").to_owned();
-
     (
         admin,
         anlage_id,
@@ -647,17 +671,19 @@ async fn ac9_ein_runde_ziel_traegt_die_effektive_pflockmenge() {
     assert_eq!(status, StatusCode::OK, "die Runde wird gelesen: {body}");
 
     let ziele = body["ziele"].as_array().expect("ziele");
-    assert_eq!(ziele[0]["zielId"], erstes);
+    assert_ne!(ziele[0]["zielId"], erstes);
+    assert_eq!(ziele[0]["zielnummer"], 1);
     assert_eq!(
         ziele[0]["pflöcke"].as_array().expect("pflöcke").len(),
         2,
-        "#72: das eigene Ziel trägt seinen eigenen Satz"
+        "#72: das eigene Ziel trägt seinen eigenen Satz: {body}; eigene Farbe: {eigene_farbe}"
     );
     assert_eq!(ziele[0]["pflöcke"][0]["farbe"], eigene_farbe);
     assert_eq!(ziele[0]["pflöcke"][0]["position"], 0);
     assert_eq!(ziele[0]["pflöcke"][1]["position"], 1);
 
-    assert_eq!(ziele[1]["zielId"], zweites);
+    assert_ne!(ziele[1]["zielId"], zweites);
+    assert_eq!(ziele[1]["zielnummer"], 1);
     assert_eq!(
         ziele[1]["pflöcke"].as_array().expect("pflöcke").len(),
         1,
@@ -676,16 +702,18 @@ async fn ac9_ein_runde_ziel_traegt_die_effektive_pflockmenge() {
 #[test_log::test(pollster::test)]
 async fn ac9_eine_schussposition_wird_je_ziel_geprueft() {
     let harness = E2eHarness::new().await;
-    let (admin, _, erstes, zweites, parkour_id, eigene_farbe) =
+    let (admin, _, _erstes, _zweites, parkour_id, eigene_farbe) =
         anlage_mit_eigenem_satz(&harness).await;
     let runde_id = runde_starten(&harness, &admin, &parkour_id).await;
+    let erstes_runden_ziel = runden_ziel_id(&harness, &admin, &runde_id, 0).await;
+    let zweites_runden_ziel = runden_ziel_id(&harness, &admin, &runde_id, 1).await;
 
     let eigene_position = json!({ "Pflock": { "farbe": eigene_farbe } });
     let (status, body) = harness
         .client
         .post_json_auth(
             &format!("/api/runden/{runde_id}/schuesse"),
-            json!({ "zielId": erstes, "wertungszone": "Kill", "position": eigene_position }),
+            json!({ "zielId": erstes_runden_ziel, "wertungszone": "Kill", "position": eigene_position }),
             &admin,
         )
         .await;
@@ -699,7 +727,7 @@ async fn ac9_eine_schussposition_wird_je_ziel_geprueft() {
         .client
         .post_json_auth(
             &format!("/api/runden/{runde_id}/schuesse"),
-            json!({ "zielId": zweites, "wertungszone": "Kill", "position": eigene_position }),
+            json!({ "zielId": zweites_runden_ziel, "wertungszone": "Kill", "position": eigene_position }),
             &admin,
         )
         .await;
@@ -715,7 +743,7 @@ async fn ac9_eine_schussposition_wird_je_ziel_geprueft() {
         .post_json_auth(
             &format!("/api/runden/{runde_id}/schuesse"),
             json!({
-                "zielId": zweites,
+                "zielId": zweites_runden_ziel,
                 "wertungszone": "Spot",
                 "position": { "Pflock": { "farbe": "#c0392b" } },
             }),
@@ -729,7 +757,7 @@ async fn ac9_eine_schussposition_wird_je_ziel_geprueft() {
         .post_json_auth(
             &format!("/api/runden/{runde_id}/schuesse"),
             json!({
-                "zielId": erstes,
+                "zielId": erstes_runden_ziel,
                 "wertungszone": "Spot",
                 "position": { "Pflock": { "farbe": "#c0392b" } },
             }),

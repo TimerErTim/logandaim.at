@@ -69,21 +69,21 @@ pub struct Abstand {
     pub meter: u32,
 }
 
-/// One Ziel as this Runde captured it: identity, animal name, ordinal, distances, Wertung.
+/// One target in this Runde's captured route: identity, name, ordinal, distances, and Wertung.
 ///
-/// A `Freies Ziel` fills the same shape: its name is "Ziel N", its number the ordinal, and its
-/// Pflock and distance lists are empty because a free round configures none.
+/// A free-round target fills the same shape; its Pflock and distance lists are empty because a
+/// free round configures none.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RundeZiel {
-    /// Identity of the Ziel as captured.
+    /// Identity of the target within this Runde.
     pub ziel_id: Uuid,
-    /// Animal name as captured, or the free Ziel's own name.
+    /// Name captured in the route.
     pub tiername: String,
-    /// 1-based ordinal as captured, distinguishing duplicate animal names.
+    /// 1-based route ordinal.
     pub zielnummer: u32,
     /// The Pflöcke that apply to this Ziel as captured, near to far: the Ziel's own set when
     /// it had one, the Parkour-wide set otherwise. Always empty on a free round.
@@ -177,29 +177,17 @@ pub struct RundeBasic {
 impl Runde {
     pub fn gelesen(runde: domain::Runde, schüsse: Vec<domain::Schuss>) -> Self {
         let wertungen = runde.ziel_wertungen(schüsse.iter().cloned());
-        let (pflöcke, ziele): (&[domain::PflockSnapshot], Vec<domain::ZielRef<'_>>) =
-            match runde.aufbau() {
-                domain::Rundenaufbau::Parkour { snapshot, .. } => (
-                    snapshot.pflöcke(),
-                    snapshot
-                        .ziele()
-                        .iter()
-                        .map(domain::ZielRef::Parkour)
-                        .collect(),
-                ),
-                domain::Rundenaufbau::Freie(freie) => (
-                    &[],
-                    freie.ziele().iter().map(domain::ZielRef::Freie).collect(),
-                ),
-            };
+        let snapshot = runde.aufbau().snapshot();
+        let pflöcke = snapshot.pflöcke();
+        let ziele = snapshot.ziele();
         let ziele = ziele
             .into_iter()
             .zip(wertungen)
             .map(|(ziel, wertung)| RundeZiel {
-                ziel_id: ziel.ziel_id().as_uuid(),
+                ziel_id: ziel.id().as_uuid(),
                 tiername: ziel.name().to_string(),
                 zielnummer: ziel.ordinal().get(),
-                pflöcke: effective_pflöcke(&ziel, pflöcke),
+                pflöcke: effective_pflöcke(ziel, pflöcke),
                 abstände: ziel
                     .abstände()
                     .iter()
@@ -211,7 +199,7 @@ impl Runde {
                 wertung: wertung.map(Into::into),
                 schüsse: schüsse
                     .iter()
-                    .filter(|schuss| schuss.ziel_id() == ziel.ziel_id().as_schuss_ziel_id())
+                    .filter(|schuss| schuss.ziel_id() == ziel.id().as_schuss_ziel_id())
                     .cloned()
                     .map(Into::into)
                     .collect(),
@@ -242,12 +230,9 @@ fn zustand(runde: &domain::Runde) -> RundeZustand {
 /// A `Freies Ziel` captured no Pflock set and its round has no Parkour-wide set, so the answer
 /// is empty — the two lists it could inherit from do not exist.
 fn effective_pflöcke(
-    ziel: &domain::ZielRef<'_>,
+    ziel: &domain::RundenZiel,
     parkour: &[domain::PflockSnapshot],
 ) -> Vec<RundePflock> {
-    let domain::ZielRef::Parkour(ziel) = ziel else {
-        return Vec::new();
-    };
     // The captured snapshot already assigns each Pflock its position from the array order,
     // so either set renders as it was captured.
     ziel.pflöcke()
@@ -266,32 +251,21 @@ fn effective_pflöcke(
 /// impl renders the captured route exactly and leaves every Wertung empty.
 impl From<domain::Runde> for Runde {
     fn from(runde: domain::Runde) -> Self {
-        let (herkunft, name, pflöcke, ziele) = match runde.aufbau() {
+        let (herkunft, name) = match runde.aufbau() {
             domain::Rundenaufbau::Parkour {
                 anlage_id,
                 parkour_id,
-                snapshot,
+                parkour_name,
+                ..
             } => (
                 Some(RundeHerkunft::from((*anlage_id, *parkour_id))),
-                snapshot.parkour_name().to_string(),
-                snapshot.pflöcke(),
-                snapshot
-                    .ziele()
-                    .iter()
-                    .map(domain::ZielRef::Parkour)
-                    .collect::<Vec<_>>(),
+                parkour_name.to_string(),
             ),
-            domain::Rundenaufbau::Freie(freie) => (
-                None,
-                freie.name().to_string(),
-                &[][..],
-                freie
-                    .ziele()
-                    .iter()
-                    .map(domain::ZielRef::Freie)
-                    .collect::<Vec<_>>(),
-            ),
+            domain::Rundenaufbau::Freie { name, .. } => (None, name.to_string()),
         };
+        let snapshot = runde.aufbau().snapshot();
+        let pflöcke = snapshot.pflöcke();
+        let ziele = snapshot.ziele();
         Self {
             id: runde.id().0,
             herkunft,
@@ -310,10 +284,10 @@ impl From<domain::Runde> for Runde {
             ziele: ziele
                 .into_iter()
                 .map(|ziel| RundeZiel {
-                    ziel_id: ziel.ziel_id().as_uuid(),
+                    ziel_id: ziel.id().as_uuid(),
                     tiername: ziel.name().to_string(),
                     zielnummer: ziel.ordinal().get(),
-                    pflöcke: effective_pflöcke(&ziel, pflöcke),
+                    pflöcke: effective_pflöcke(ziel, pflöcke),
                     abstände: ziel
                         .abstände()
                         .iter()
@@ -335,20 +309,19 @@ impl From<domain::Runde> for Runde {
 
 impl From<domain::Runde> for RundeBasic {
     fn from(runde: domain::Runde) -> Self {
-        let (herkunft, name, anzahl_ziele) = match runde.aufbau() {
+        let (herkunft, name) = match runde.aufbau() {
             domain::Rundenaufbau::Parkour {
                 anlage_id,
                 parkour_id,
-                snapshot,
+                parkour_name,
+                ..
             } => (
                 Some(RundeHerkunft::from((*anlage_id, *parkour_id))),
-                snapshot.parkour_name().to_string(),
-                snapshot.ziele().len(),
+                parkour_name.to_string(),
             ),
-            domain::Rundenaufbau::Freie(freie) => {
-                (None, freie.name().to_string(), freie.ziele().len())
-            }
+            domain::Rundenaufbau::Freie { name, .. } => (None, name.to_string()),
         };
+        let anzahl_ziele = runde.aufbau().snapshot().ziele().len();
         Self {
             id: runde.id().0,
             herkunft,

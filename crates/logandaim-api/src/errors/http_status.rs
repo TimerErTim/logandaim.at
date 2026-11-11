@@ -213,6 +213,7 @@ http_status!(RundeZielEntfernenFehler {
     // A Ziel that is not in this round is as absent as a round that does not exist.
     ZielNichtGefunden => StatusCode::NOT_FOUND,
     RundeIstKeineFreieRunde => StatusCode::CONFLICT,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
     RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
     Entfernen => StatusCode::INTERNAL_SERVER_ERROR,
     Speichern => StatusCode::INTERNAL_SERVER_ERROR,

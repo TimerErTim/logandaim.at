@@ -14,19 +14,12 @@ use crate::domain::{Abstand, common::Farbe};
 
 /// A neutral UUID identity persisted at the shared Schuss boundary.
 ///
-/// The owning Runde's setup preserves whether this UUID identifies `AnlageZielId` or
-/// `FreiesZielId`; no discriminator is persisted with the Schuss.
+/// The owning Runde's setup maps this UUID to its neutral round-local target identity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SchussZielId(pub Uuid);
 
-impl From<super::anlage::AnlageZielId> for SchussZielId {
-    fn from(id: super::anlage::AnlageZielId) -> Self {
-        Self(id.0)
-    }
-}
-
-impl From<super::runde::FreiesZielId> for SchussZielId {
-    fn from(id: super::runde::FreiesZielId) -> Self {
+impl From<super::runde::RundenZielId> for SchussZielId {
+    fn from(id: super::runde::RundenZielId) -> Self {
         Self(id.0)
     }
 }
@@ -442,7 +435,7 @@ mod tests {
     }
 
     fn runden_ziel() -> crate::domain::RundenZielId {
-        crate::domain::RundenZielId::Anlage(crate::domain::AnlageZielId(Uuid::from_u128(1)))
+        crate::domain::RundenZielId(Uuid::from_u128(1))
     }
 
     fn schuss(pfeil: usize, zone: Wertungszone) -> Schuss {

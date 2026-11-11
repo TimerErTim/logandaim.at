@@ -332,11 +332,12 @@ impl RundeRepository for FakeRundeRepository {
     }
 
     async fn exists_referencing_ziel(&self, id: AnlageZielId) -> RepositoryResult<bool> {
-        Ok(self
-            .datastore
-            .runden()
-            .values()
-            .any(|runde| runde.enthält_ziel(logandaim_core::domain::RundenZielId::Anlage(id))))
+        Ok(self.datastore.runden().values().any(|runde| {
+            runde
+                .aufbau()
+                .ziele()
+                .any(|ziel| ziel.anlage_ziel_id() == Some(id))
+        }))
     }
 }
 

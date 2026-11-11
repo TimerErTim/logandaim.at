@@ -10,8 +10,8 @@ use logandaim_core::{
     application::AuthContext,
     domain::{
         Abstand, AnlageAdresse, AnlageId, AnlageKontakt, AnlageZielId, EmailAdresse, Erfasser,
-        Farbe, Ländercode, NonEmptyString, ParkourId, Pflock, PflockId, RundeId, RundenZielId,
-        Schussposition, Wertungszone, Zielplatzierung,
+        Farbe, Ländercode, NonEmptyString, ParkourId, Pflock, PflockId, RundeId, Schussposition,
+        Wertungszone, Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
@@ -37,6 +37,20 @@ fn client_key(ip: u8) -> ClientKey {
 
 fn adresse(wert: &str) -> EmailAdresse {
     EmailAdresse::normalisiert(wert).expect("Testadresse ist gültig")
+}
+
+fn runden_ziel_id(runde: &logandaim_core::domain::Runde, id: uuid::Uuid) -> uuid::Uuid {
+    runde
+        .aufbau()
+        .ziele()
+        .find(|ziel| {
+            ziel.id().0 == id
+                || ziel
+                    .anlage_ziel_id()
+                    .is_some_and(|anlage_id| anlage_id.0 == id)
+        })
+        .map(|ziel| ziel.id().0)
+        .unwrap_or(id)
 }
 
 async fn harness() -> Harness {
@@ -268,12 +282,13 @@ async fn schuesse_zaehlen_nur_in_der_eigenen_offenen_runde() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
     let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
-    let (_, ziel_id, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
+    let (_, _ziel_id, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     let runde = harness
         .app()
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die Runde des Systemadministrators");
+    let runden_ziel = runde.aufbau().ziele().next().expect("ein Ziel").id();
 
     let fehler = harness
         .app()
@@ -281,7 +296,7 @@ async fn schuesse_zaehlen_nur_in_der_eigenen_offenen_runde() {
             anna,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: runden_ziel.0,
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -328,12 +343,13 @@ async fn ein_schuss_auf_ein_ziel_ausserhalb_des_snapshots_wird_abgelehnt() {
 async fn eine_abgeschlossene_runde_nimmt_keine_schuesse_mehr_an() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
-    let (_, ziel_id, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
+    let (_, _anlage_ziel_id, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
     let runde = harness
         .app()
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die Runde startet");
+    let ziel_id = runde.aufbau().ziele().next().expect("ein Ziel").id();
     harness
         .app()
         .execute(
@@ -351,7 +367,7 @@ async fn eine_abgeschlossene_runde_nimmt_keine_schuesse_mehr_an() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: runden_ziel_id(&runde, ziel_id.0),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -385,7 +401,7 @@ async fn schuesse_erhalten_ihre_pfeilnummer_in_registrierungsreihenfolge() {
                 admin,
                 SchussRegistrieren {
                     runde_id: runde.id(),
-                    ziel_id: ziel_id.0,
+                    ziel_id: runden_ziel_id(&runde, ziel_id.0),
                     wertungszone: zone,
                     position: None,
                 },
@@ -415,7 +431,7 @@ async fn ein_schuss_traegt_den_angemeldeten_benutzer_als_eigentuemer() {
             anna,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: runden_ziel_id(&runde, ziel_id.0),
                 wertungszone: Wertungszone::Spot,
                 position: None,
             },
@@ -424,7 +440,10 @@ async fn ein_schuss_traegt_den_angemeldeten_benutzer_als_eigentuemer() {
         .expect("der Schuss wird registriert");
     assert_eq!(schuss.erfasser(), Erfasser::Benutzer(anna_id));
     assert_eq!(schuss.runde_id(), runde.id());
-    assert_eq!(schuss.ziel_id(), ziel_id.into());
+    assert_eq!(
+        schuss.ziel_id().0,
+        runde.aufbau().ziele().next().unwrap().id().0
+    );
 }
 
 // --------------------------------------------------------------------------- AC-13
@@ -518,7 +537,7 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
         .expect("die Runde startet");
     let snapshot = match runde.aufbau() {
         logandaim_core::domain::Rundenaufbau::Parkour { snapshot, .. } => Some(snapshot.clone()),
-        logandaim_core::domain::Rundenaufbau::Freie(_) => None,
+        logandaim_core::domain::Rundenaufbau::Freie { .. } => None,
     };
     let erster = harness
         .app()
@@ -526,7 +545,7 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: runden_ziel_id(&runde, ziel_id.0),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Distanz(Abstand::neu(35).unwrap())),
             },
@@ -539,7 +558,7 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: runden_ziel_id(&runde, ziel_id.0),
                 wertungszone: Wertungszone::Spot,
                 position: None,
             },
@@ -568,7 +587,7 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
     assert_eq!(
         match geladen_nach_aenderung.aufbau() {
             logandaim_core::domain::Rundenaufbau::Parkour { snapshot, .. } => Some(snapshot),
-            logandaim_core::domain::Rundenaufbau::Freie(_) => None,
+            logandaim_core::domain::Rundenaufbau::Freie { .. } => None,
         },
         snapshot.as_ref()
     );
@@ -595,7 +614,7 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
     assert_eq!(
         match geladen.aufbau() {
             logandaim_core::domain::Rundenaufbau::Parkour { snapshot, .. } => Some(snapshot),
-            logandaim_core::domain::Rundenaufbau::Freie(_) => None,
+            logandaim_core::domain::Rundenaufbau::Freie { .. } => None,
         },
         snapshot.as_ref()
     );
@@ -620,7 +639,7 @@ async fn ac10_runde_loeschen_entfernt_alle_schuesse() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: runden_ziel_id(&runde, ziel_id.0),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -830,6 +849,9 @@ async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die Runde startet");
+    let ziel_ids: Vec<_> = runde.aufbau().ziele().map(|ziel| ziel.id()).collect();
+    assert_ne!(ziel_ids[0].0, erstes.0, "RundenZielId is round-local");
+    assert_ne!(ziel_ids[1].0, zweites.0, "RundenZielId is round-local");
 
     // The Ziel with its own set accepts a Pflock of that set...
     harness
@@ -838,7 +860,7 @@ async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: erstes.0,
+                ziel_id: runden_ziel_id(&runde, erstes.0),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Pflock(eigene[0])),
             },
@@ -853,7 +875,7 @@ async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: zweites.0,
+                ziel_id: runden_ziel_id(&runde, zweites.0),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Pflock(eigene[0])),
             },
@@ -872,7 +894,7 @@ async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: zweites.0,
+                ziel_id: runden_ziel_id(&runde, zweites.0),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Pflock(Farbe::neu("#c0392b").unwrap())),
             },
@@ -887,7 +909,7 @@ async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: erstes.0,
+                ziel_id: runden_ziel_id(&runde, erstes.0),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Pflock(Farbe::neu("#c0392b").unwrap())),
             },
@@ -919,7 +941,7 @@ async fn ac9_eine_korrektur_prueft_den_pflock_gegen_das_ziel_des_schusses() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: zweites.0,
+                ziel_id: runden_ziel_id(&runde, zweites.0),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -967,7 +989,7 @@ async fn ac9_eine_korrektur_prueft_den_pflock_gegen_das_ziel_des_schusses() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: erstes.0,
+                ziel_id: runden_ziel_id(&runde, erstes.0),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -1014,19 +1036,19 @@ async fn ac21_eine_freie_runde_startet_ohne_parkour() {
     let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
 
     let runde = freie_runde(&harness, anna, "Wiese daheim").await;
-    let logandaim_core::domain::Rundenaufbau::Freie(frei) = runde.aufbau() else {
+    let logandaim_core::domain::Rundenaufbau::Freie { name, snapshot } = runde.aufbau() else {
         panic!("die Runde ist frei");
     };
-    assert_eq!(frei.name().as_str(), "Wiese daheim");
-    assert!(frei.ziele().is_empty());
+    assert_eq!(name.as_str(), "Wiese daheim");
+    assert!(snapshot.ziele().is_empty());
 
     // The stored setup survives a round trip through either repository.
     let (geladen, schüsse) = super::helpers::runde_laden(&harness, runde.id()).await;
     assert_eq!(geladen.id(), runde.id());
-    let logandaim_core::domain::Rundenaufbau::Freie(frei) = geladen.aufbau() else {
+    let logandaim_core::domain::Rundenaufbau::Freie { name, .. } = geladen.aufbau() else {
         panic!("die Runde bleibt frei");
     };
-    assert_eq!(frei.name().as_str(), "Wiese daheim");
+    assert_eq!(name.as_str(), "Wiese daheim");
     assert!(schüsse.is_empty());
 }
 
@@ -1120,7 +1142,7 @@ async fn ac21_starten_und_ziel_editieren_brauchen_eine_anmeldung() {
             AuthContext::Anonymous,
             RundeZielEntfernen {
                 runde_id: runde.id(),
-                ziel_id: logandaim_core::domain::FreiesZielId(uuid::Uuid::new_v4()),
+                ziel_id: logandaim_core::domain::RundenZielId(uuid::Uuid::new_v4()),
             },
         )
         .await
@@ -1152,9 +1174,7 @@ async fn ac22_freie_ziele_werden_jit_hinzugefuegt_und_entfernt() {
     assert_eq!(ziele.len(), 1);
     assert_eq!(ziele[0].name().as_str(), "Ziel 1");
     assert_eq!(ziele[0].ordinal().get(), 1);
-    let RundenZielId::Frei(erstes) = ziele[0].ziel_id() else {
-        panic!("freie Ziele haben freie Identitäten");
-    };
+    let erstes = ziele[0].ziel_id();
 
     let mit_zwei = harness
         .app()
@@ -1227,9 +1247,7 @@ async fn ac26_freie_ziele_lassen_sich_waehrend_der_runde_umbenennen() {
         )
         .await
         .expect("das Ziel wird angelegt");
-    let RundenZielId::Frei(ziel_id) = angelegt.aufbau().ziele().next().unwrap().ziel_id() else {
-        panic!("freie Ziele haben freie Identitäten");
-    };
+    let ziel_id = angelegt.aufbau().ziele().next().unwrap().ziel_id();
 
     let umbenannt = harness
         .app()
@@ -1272,9 +1290,7 @@ async fn ac26_freie_ziele_koennen_nur_in_eigenen_laufenden_freien_runden_umbenan
         )
         .await
         .unwrap();
-    let RundenZielId::Frei(ziel_id) = angelegt.aufbau().ziele().next().unwrap().ziel_id() else {
-        panic!("freie Ziele haben freie Identitäten");
-    };
+    let ziel_id = angelegt.aufbau().ziele().next().unwrap().ziel_id();
 
     let fehler = harness
         .app()
@@ -1316,7 +1332,7 @@ async fn ac26_freie_ziele_koennen_nur_in_eigenen_laufenden_freien_runden_umbenan
             anna,
             RundeZielUmbenennen {
                 runde_id: runde.id(),
-                ziel_id: logandaim_core::domain::FreiesZielId(uuid::Uuid::new_v4()),
+                ziel_id: logandaim_core::domain::RundenZielId(uuid::Uuid::new_v4()),
                 name: name("Fehlt"),
             },
         )
@@ -1360,7 +1376,7 @@ async fn ac22_ein_parkour_aufbau_nimmt_keine_freien_ziele_an() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
     let (_, _, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
-    let ziel_id = logandaim_core::domain::FreiesZielId(uuid::Uuid::new_v4());
+    let ziel_id = logandaim_core::domain::RundenZielId(uuid::Uuid::new_v4());
     let runde = harness
         .app()
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
@@ -1445,12 +1461,8 @@ async fn ac22_das_entfernen_eines_ziels_nimmt_seine_schuesse_mit() {
         .await
         .expect("das zweite Ziel entsteht");
     let ziele: Vec<_> = mit_zielen.aufbau().ziele().collect();
-    let logandaim_core::domain::RundenZielId::Frei(erstes) = ziele[0].ziel_id() else {
-        panic!("freie Identität");
-    };
-    let logandaim_core::domain::RundenZielId::Frei(zweites) = ziele[1].ziel_id() else {
-        panic!("freie Identität");
-    };
+    let erstes = ziele[0].ziel_id();
+    let zweites = ziele[1].ziel_id();
 
     for ziel_id in [erstes, erstes, zweites] {
         harness
@@ -1459,7 +1471,7 @@ async fn ac22_das_entfernen_eines_ziels_nimmt_seine_schuesse_mit() {
                 anna,
                 SchussRegistrieren {
                     runde_id: runde.id(),
-                    ziel_id: ziel_id.0,
+                    ziel_id: runden_ziel_id(&runde, ziel_id.0),
                     wertungszone: Wertungszone::Kill,
                     position: None,
                 },
@@ -1553,15 +1565,12 @@ async fn ac23_eine_freie_runde_nimmt_jede_farbe_und_jede_distanz() {
         )
         .await
         .expect("das Ziel entsteht");
-    let logandaim_core::domain::RundenZielId::Frei(ziel_id) = mit_ziel
+    let ziel_id = mit_ziel
         .aufbau()
         .ziele()
         .next()
         .expect("ein Ziel")
-        .ziel_id()
-    else {
-        panic!("freie Ziele haben freie Identitäten");
-    };
+        .ziel_id();
 
     // A colour the archer chose, and one the round has never seen: both are positions.
     for hex in ["#c0392b", "#1b4f9c", "#abc123"] {
@@ -1571,7 +1580,7 @@ async fn ac23_eine_freie_runde_nimmt_jede_farbe_und_jede_distanz() {
                 anna,
                 SchussRegistrieren {
                     runde_id: runde.id(),
-                    ziel_id: ziel_id.0,
+                    ziel_id: runden_ziel_id(&runde, ziel_id.0),
                     wertungszone: Wertungszone::Kill,
                     position: Some(Schussposition::Pflock(Farbe::neu(hex).unwrap())),
                 },
@@ -1590,7 +1599,7 @@ async fn ac23_eine_freie_runde_nimmt_jede_farbe_und_jede_distanz() {
             anna,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: runden_ziel_id(&runde, ziel_id.0),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Distanz(Abstand::neu(35).unwrap())),
             },
@@ -1651,7 +1660,7 @@ async fn ac23_eine_unbekannte_farbe_ist_nur_auf_einem_parkour_abgelehnt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: ziel_id.0,
+                ziel_id: runden_ziel_id(&runde, ziel_id.0),
                 wertungszone: Wertungszone::Kill,
                 // Not one of the Parkour's two captured colours.
                 position: Some(Schussposition::Pflock(Farbe::neu("#abc123").unwrap())),
@@ -1693,12 +1702,8 @@ async fn ac24_die_wertung_faltet_ueber_die_freien_ziele() {
         .await
         .expect("das zweite Ziel entsteht");
     let ziele: Vec<_> = mit_zielen.aufbau().ziele().collect();
-    let logandaim_core::domain::RundenZielId::Frei(erstes) = ziele[0].ziel_id() else {
-        panic!("freie Identität");
-    };
-    let logandaim_core::domain::RundenZielId::Frei(zweites) = ziele[1].ziel_id() else {
-        panic!("freie Identität");
-    };
+    let erstes = ziele[0].ziel_id();
+    let zweites = ziele[1].ziel_id();
 
     for (ziel_id, zone) in [
         (erstes, Wertungszone::Kill),
@@ -1711,7 +1716,7 @@ async fn ac24_die_wertung_faltet_ueber_die_freien_ziele() {
                 anna,
                 SchussRegistrieren {
                     runde_id: runde.id(),
-                    ziel_id: ziel_id.0,
+                    ziel_id: runden_ziel_id(&runde, ziel_id.0),
                     wertungszone: zone,
                     position: None,
                 },

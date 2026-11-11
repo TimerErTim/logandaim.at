@@ -3164,22 +3164,22 @@ export interface components {
         };
         /**
          * RundeZiel
-         * @description One Ziel as this Runde captured it: identity, animal name, ordinal, distances, Wertung.
+         * @description One target in this Runde's captured route: identity, name, ordinal, distances, and Wertung.
          *
-         *     A `Freies Ziel` fills the same shape: its name is "Ziel N", its number the ordinal, and its
-         *     Pflock and distance lists are empty because a free round configures none.
+         *     A free-round target fills the same shape; its Pflock and distance lists are empty because a
+         *     free round configures none.
          */
         RundeZiel: {
             /**
              * Format: uuid
-             * @description Identity of the Ziel as captured.
+             * @description Identity of the target within this Runde.
              */
             zielId: string;
-            /** @description Animal name as captured, or the free Ziel's own name. */
+            /** @description Name captured in the route. */
             tiername: string;
             /**
              * Format: uint32
-             * @description 1-based ordinal as captured, distinguishing duplicate animal names.
+             * @description 1-based route ordinal.
              */
             zielnummer: number;
             /**
