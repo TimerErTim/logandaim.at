@@ -502,8 +502,8 @@ impl From<domain::Zielverwendung> for Zielverwendung {
     }
 }
 
-impl From<domain::Ziel> for Ziel {
-    fn from(ziel: domain::Ziel) -> Self {
+impl From<domain::AnlageZiel> for Ziel {
+    fn from(ziel: domain::AnlageZiel) -> Self {
         Self {
             id: ziel.id().0,
             tiername: ziel.tiername().as_str().to_owned(),
@@ -540,7 +540,7 @@ impl From<domain::Anlage> for Anlage {
                     // The admin page renders where each Ziel stands, so the read attaches it.
                     let mut ziel: Ziel = ziel.clone().into();
                     ziel.verwendungen = anlage
-                        .ziel_verwendungen(domain::ZielId(ziel.id))
+                        .ziel_verwendungen(domain::AnlageZielId(ziel.id))
                         .into_iter()
                         .map(Into::into)
                         .collect();

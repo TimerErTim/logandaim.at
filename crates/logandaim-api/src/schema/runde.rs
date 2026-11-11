@@ -31,11 +31,11 @@ pub struct RundeHerkunft {
     pub parkour_id: Uuid,
 }
 
-impl From<&domain::RundeOutgoingReferences> for RundeHerkunft {
-    fn from(referenzen: &domain::RundeOutgoingReferences) -> Self {
+impl From<(domain::AnlageId, domain::ParkourId)> for RundeHerkunft {
+    fn from((anlage_id, parkour_id): (domain::AnlageId, domain::ParkourId)) -> Self {
         Self {
-            anlage_id: referenzen.anlage_id().0,
-            parkour_id: referenzen.parkour_id().0,
+            anlage_id: anlage_id.0,
+            parkour_id: parkour_id.0,
         }
     }
 }
@@ -177,12 +177,26 @@ pub struct RundeBasic {
 impl Runde {
     pub fn gelesen(runde: domain::Runde, schüsse: Vec<domain::Schuss>) -> Self {
         let wertungen = runde.ziel_wertungen(schüsse.iter().cloned());
-        let pflöcke = runde.pflöcke();
-        let ziele = runde
-            .ziele()
+        let (pflöcke, ziele): (&[domain::PflockSnapshot], Vec<domain::ZielRef<'_>>) =
+            match runde.aufbau() {
+                domain::Rundenaufbau::Parkour { snapshot, .. } => (
+                    snapshot.pflöcke(),
+                    snapshot
+                        .ziele()
+                        .iter()
+                        .map(domain::ZielRef::Parkour)
+                        .collect(),
+                ),
+                domain::Rundenaufbau::Freie(freie) => (
+                    &[],
+                    freie.ziele().iter().map(domain::ZielRef::Freie).collect(),
+                ),
+            };
+        let ziele = ziele
+            .into_iter()
             .zip(wertungen)
             .map(|(ziel, wertung)| RundeZiel {
-                ziel_id: ziel.ziel_id().0,
+                ziel_id: ziel.ziel_id().as_uuid(),
                 tiername: ziel.name().to_string(),
                 zielnummer: ziel.ordinal().get(),
                 pflöcke: effective_pflöcke(&ziel, pflöcke),
@@ -197,7 +211,7 @@ impl Runde {
                 wertung: wertung.map(Into::into),
                 schüsse: schüsse
                     .iter()
-                    .filter(|schuss| schuss.ziel_id() == ziel.ziel_id())
+                    .filter(|schuss| schuss.ziel_id() == ziel.ziel_id().as_schuss_ziel_id())
                     .cloned()
                     .map(Into::into)
                     .collect(),
@@ -246,52 +260,72 @@ fn effective_pflöcke(
         .collect()
 }
 
-fn ziele_von(runde: &domain::Runde) -> Vec<RundeZiel> {
-    let pflöcke = runde.pflöcke();
-    runde
-        .ziele()
-        .map(|ziel| RundeZiel {
-            ziel_id: ziel.ziel_id().0,
-            tiername: ziel.name().to_string(),
-            zielnummer: ziel.ordinal().get(),
-            pflöcke: effective_pflöcke(&ziel, pflöcke),
-            abstände: ziel
-                .abstände()
-                .iter()
-                .map(|(farbe, abstand)| Abstand {
-                    pflock: (*farbe).into(),
-                    meter: abstand.meter(),
-                })
-                .collect(),
-            wertung: None,
-            schüsse: Vec::new(),
-        })
-        .collect()
-}
-
 /// A freshly started or freshly closed Runde, before any Wertung is folded.
 ///
 /// `RundeStarten` and `RundeAbschliessen` answer the aggregate, not a read model, so this
 /// impl renders the captured route exactly and leaves every Wertung empty.
 impl From<domain::Runde> for Runde {
     fn from(runde: domain::Runde) -> Self {
+        let (herkunft, name, pflöcke, ziele) = match runde.aufbau() {
+            domain::Rundenaufbau::Parkour {
+                anlage_id,
+                parkour_id,
+                snapshot,
+            } => (
+                Some(RundeHerkunft::from((*anlage_id, *parkour_id))),
+                snapshot.parkour_name().to_string(),
+                snapshot.pflöcke(),
+                snapshot
+                    .ziele()
+                    .iter()
+                    .map(domain::ZielRef::Parkour)
+                    .collect::<Vec<_>>(),
+            ),
+            domain::Rundenaufbau::Freie(freie) => (
+                None,
+                freie.name().to_string(),
+                &[][..],
+                freie
+                    .ziele()
+                    .iter()
+                    .map(domain::ZielRef::Freie)
+                    .collect::<Vec<_>>(),
+            ),
+        };
         Self {
             id: runde.id().0,
-            herkunft: runde.referenzen().map(RundeHerkunft::from),
-            name: runde.name().to_string(),
+            herkunft,
+            name,
             erfasst_von: runde.erfasst_von().into(),
             zustand: zustand(&runde),
             begonnen_am: runde.begonnen_am(),
             abgeschlossen_am: runde.abgeschlossen_am(),
-            pflöcke: runde
-                .pflöcke()
+            pflöcke: pflöcke
                 .iter()
                 .map(|pflock| RundePflock {
                     farbe: pflock.farbe().into(),
                     position: pflock.position(),
                 })
                 .collect(),
-            ziele: ziele_von(&runde),
+            ziele: ziele
+                .into_iter()
+                .map(|ziel| RundeZiel {
+                    ziel_id: ziel.ziel_id().as_uuid(),
+                    tiername: ziel.name().to_string(),
+                    zielnummer: ziel.ordinal().get(),
+                    pflöcke: effective_pflöcke(&ziel, pflöcke),
+                    abstände: ziel
+                        .abstände()
+                        .iter()
+                        .map(|(farbe, abstand)| Abstand {
+                            pflock: (*farbe).into(),
+                            meter: abstand.meter(),
+                        })
+                        .collect(),
+                    wertung: None,
+                    schüsse: Vec::new(),
+                })
+                .collect(),
             gesamt_erster_treffer: 0,
             gesamt_mehrschuss: 0,
             ziele_mit_wertung: 0,
@@ -301,11 +335,25 @@ impl From<domain::Runde> for Runde {
 
 impl From<domain::Runde> for RundeBasic {
     fn from(runde: domain::Runde) -> Self {
+        let (herkunft, name, anzahl_ziele) = match runde.aufbau() {
+            domain::Rundenaufbau::Parkour {
+                anlage_id,
+                parkour_id,
+                snapshot,
+            } => (
+                Some(RundeHerkunft::from((*anlage_id, *parkour_id))),
+                snapshot.parkour_name().to_string(),
+                snapshot.ziele().len(),
+            ),
+            domain::Rundenaufbau::Freie(freie) => {
+                (None, freie.name().to_string(), freie.ziele().len())
+            }
+        };
         Self {
             id: runde.id().0,
-            herkunft: runde.referenzen().map(RundeHerkunft::from),
-            name: runde.name().to_string(),
-            anzahl_ziele: runde.ziele().count(),
+            herkunft,
+            name,
+            anzahl_ziele,
             anzahl_erfasste_ziele: 0,
             zustand: zustand(&runde),
             begonnen_am: runde.begonnen_am(),

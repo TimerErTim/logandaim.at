@@ -6,32 +6,36 @@ import {
   PFLOCK_FARBE_STANDARD,
   PFLOCK_FARBEN,
 } from "@/components/stammdaten/pflock-farbe-feld";
-import { PflockMarker } from "@/components/stammdaten/pflock-swatch";
-
 export function FreieFarbeFeld({
   farben,
   value,
   onChange,
   disabled = false,
+  label = "Farbe",
 }: {
   farben: string[];
   value: string | null;
   onChange: (farbe: string) => void;
   disabled?: boolean;
+  label?: string;
 }) {
   const options = [
-    ...new Set([...PFLOCK_FARBEN.map(({ farbe }) => farbe), ...farben]),
+    ...new Set(
+      [...PFLOCK_FARBEN.map(({ farbe }) => farbe), ...farben].map((farbe) =>
+        farbe.toLowerCase(),
+      ),
+    ),
   ];
   const current = value ?? PFLOCK_FARBE_STANDARD;
 
   return (
     <fieldset className="min-w-0 space-y-1.5">
       <legend className="min-h-[18px] text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
-        Farbe
+        {label}
       </legend>
       <div className="flex flex-wrap items-center gap-2">
         {options.map((farbe) => {
-          const selected = value === farbe;
+          const selected = value?.toLowerCase() === farbe;
           const name = PFLOCK_FARBEN.find(
             (entry) => entry.farbe === farbe,
           )?.name;
@@ -69,11 +73,6 @@ export function FreieFarbeFeld({
           <span className="text-xs text-secondary">Eigene Farbe</span>
         </label>
       </div>
-      {value ? (
-        <PflockMarker farbe={value} />
-      ) : (
-        <p className="text-xs text-secondary">Noch keine Farbe gewählt.</p>
-      )}
     </fieldset>
   );
 }

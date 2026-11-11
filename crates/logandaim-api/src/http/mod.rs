@@ -16,7 +16,7 @@ use error_stack::{IntoReport, Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
-    domain::{AnlageId, ParkourId, RundeId, ZielId, konto::BenutzerId},
+    domain::{AnlageId, AnlageZielId, ParkourId, RundeId, konto::BenutzerId},
     service::{
         AbmeldungFehler, BenutzerLöschenFehler, PasswortWiederherstellenFehler, RundeStarten,
         StammdatenFehler,
@@ -48,9 +48,9 @@ use crate::{
             AnmeldungRequest, BenutzerLöschungRequest, FreieRundeStartenRequest,
             ParkourErstellungRequest, ParkourSetupRequest, ParkourUmbenennenRequest,
             PasswortVergessenRequest, PasswortWiederherstellenRequest,
-            RegistrierungAbschlussRequest, RegistrierungStartRequest, RundeStartenRequest,
-            SchussErstellungRequest, SchussÄnderungRequest, ZielHinzufuegenRequest, ZielRequest,
-            ZielUmbenennenRequest, ziel_entfernen_in_use_case,
+            RegistrierungAbschlussRequest, RegistrierungStartRequest,
+            RundeMitParkourStartenRequest, SchussErstellungRequest, SchussÄnderungRequest,
+            ZielHinzufuegenRequest, ZielRequest, ZielUmbenennenRequest, ziel_entfernen_in_use_case,
         },
     },
     schema::{
@@ -421,7 +421,7 @@ impl LogandaimApiSpec {
             .unwrap_or(AuthContext::Anonymous);
         let ergebnis = {
             self.app_api
-                .ziel_ändern(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0), body.0)
+                .ziel_ändern(auth, AnlageId(anlage_id.0), AnlageZielId(ziel_id.0), body.0)
                 .await
         };
         ergebnis.into()
@@ -449,7 +449,7 @@ impl LogandaimApiSpec {
             .unwrap_or(AuthContext::Anonymous);
         let ergebnis = {
             self.app_api
-                .ziel_ersetzen(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0), body.0)
+                .ziel_ersetzen(auth, AnlageId(anlage_id.0), AnlageZielId(ziel_id.0), body.0)
                 .await
         };
         ergebnis.into()
@@ -477,7 +477,7 @@ impl LogandaimApiSpec {
             .unwrap_or(AuthContext::Anonymous);
         let ergebnis = {
             self.app_api
-                .ziel_entfernen(auth, AnlageId(anlage_id.0), ZielId(ziel_id.0))
+                .ziel_entfernen(auth, AnlageId(anlage_id.0), AnlageZielId(ziel_id.0))
                 .await
         };
         ergebnis.into()
@@ -616,18 +616,18 @@ impl LogandaimApiSpec {
     ///
     /// The setup is captured as a snapshot in the same transaction, so a later change to the
     /// Parkour cannot alter this Runde.
-    #[oai(path = "/runden", method = "post", tag = "ApiTag::Runden")]
+    #[oai(path = "/runden/mit-parkour", method = "post", tag = "ApiTag::Runden")]
     async fn runde_starten(
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
-        body: Json<RundeStartenRequest>,
+        body: Json<RundeMitParkourStartenRequest>,
     ) -> TypicalJsonResponse<Runde> {
         // A missing or unusable token is anonymous here; the use case answers 401.
         let auth = self
             .auth_context(authorization.0.as_deref())
             .await
             .unwrap_or(AuthContext::Anonymous);
-        let ergebnis = self.app_api.runde_starten(auth, body.0).await;
+        let ergebnis = self.app_api.runde_mit_parkour_starten(auth, body.0).await;
         ergebnis.into()
     }
 
@@ -664,7 +664,7 @@ impl LogandaimApiSpec {
             .await
             .unwrap_or(AuthContext::Anonymous);
         let ergebnis = match RundeStarten::try_from(body.0) {
-            Ok(use_case) => self.app_api.runde_starten_frei(auth, use_case).await,
+            Ok(use_case) => self.app_api.freie_runde_starten(auth, use_case).await,
             Err(fehler) => Err(fehler),
         };
         ergebnis.into()
@@ -714,7 +714,7 @@ impl LogandaimApiSpec {
             .auth_context(authorization.0.as_deref())
             .await
             .unwrap_or(AuthContext::Anonymous);
-        let ergebnis = match body.0.in_use_case(RundeId(runde_id.0), ZielId(ziel_id.0)) {
+        let ergebnis = match body.0.in_use_case(RundeId(runde_id.0), ziel_id.0) {
             Ok(use_case) => self.app_api.runde_ziel_umbenennen(auth, use_case).await,
             Err(fehler) => Err(fehler),
         };

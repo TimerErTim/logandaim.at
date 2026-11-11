@@ -79,7 +79,11 @@ async fn anlage_mit_parkour(harness: &E2eHarness) -> (String, String, String, St
 async fn runde_starten(harness: &E2eHarness, bearer: &str, parkour_id: &str) -> String {
     let (status, body) = harness
         .client
-        .post_json_auth("/api/runden", json!({ "parkourId": parkour_id }), bearer)
+        .post_json_auth(
+            "/api/runden/mit-parkour",
+            json!({ "parkourId": parkour_id }),
+            bearer,
+        )
         .await;
     assert_eq!(status, StatusCode::OK, "AC-7: die Runde startet: {body}");
     body["id"].as_str().expect("id im Body").to_owned()
@@ -113,7 +117,10 @@ async fn ac7_eine_runde_startet_nur_angemeldet() {
 
     let (status, _) = harness
         .client
-        .post_json("/api/runden", json!({ "parkourId": parkour_id }))
+        .post_json(
+            "/api/runden/mit-parkour",
+            json!({ "parkourId": parkour_id }),
+        )
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "AC-7: 401 ohne Token");
 }
@@ -126,7 +133,7 @@ async fn ac7_ein_unbekannter_parkour_antwortet_404() {
     let (status, _) = harness
         .client
         .post_json_auth(
-            "/api/runden",
+            "/api/runden/mit-parkour",
             json!({ "parkourId": Uuid::new_v4() }),
             &benutzer,
         )
@@ -159,7 +166,11 @@ async fn ac7_ein_archivierter_parkour_startet_keine_runde() {
 
     let (status, _) = harness
         .client
-        .post_json_auth("/api/runden", json!({ "parkourId": parkour_id }), &benutzer)
+        .post_json_auth(
+            "/api/runden/mit-parkour",
+            json!({ "parkourId": parkour_id }),
+            &benutzer,
+        )
         .await;
     assert_eq!(
         status,
@@ -433,7 +444,11 @@ async fn ac13_zweiter_start_wird_abgelehnt_und_nach_abschluss_wieder_freigegeben
     let erste = runde_starten(&harness, &benutzer, &parkour_id).await;
     let (status, _) = harness
         .client
-        .post_json_auth("/api/runden", json!({"parkourId":parkour_id}), &benutzer)
+        .post_json_auth(
+            "/api/runden/mit-parkour",
+            json!({"parkourId":parkour_id}),
+            &benutzer,
+        )
         .await;
     assert_eq!(
         status,

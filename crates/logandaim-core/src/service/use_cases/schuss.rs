@@ -11,8 +11,8 @@ use tracing::{info, instrument};
 use crate::{
     application::ExecutionContext,
     domain::{
-        Erfasser, NeuerSchuss, RundeId, Schuss, SchussFehler, SchussId, Schussposition,
-        Wertungszone, ZielId, ZielSchüsse,
+        Erfasser, NeuerSchuss, RundeId, Schuss, SchussFehler, SchussId, SchussZielId,
+        Schussposition, Wertungszone, ZielSchüsse,
     },
     ports::RepositoryError,
     service::UseCase,
@@ -22,7 +22,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct SchussRegistrieren {
     pub runde_id: RundeId,
-    pub ziel_id: ZielId,
+    pub ziel_id: uuid::Uuid,
     pub wertungszone: Wertungszone,
     pub position: Option<Schussposition>,
 }
@@ -92,16 +92,19 @@ impl UseCase<Schuss> for SchussRegistrieren {
                 ));
             }
             // AC-9: a Schuss may only name a Ziel the Runde captured.
-            if !runde.enthält_ziel(self.ziel_id) {
+            let Some(ziel_id) = runde
+                .aufbau()
+                .ziel_id_für_schuss(SchussZielId(self.ziel_id))
+            else {
                 return Err(Report::new(SchussRegistrierenFehler::ZielNichtImSnapshot));
-            }
+            };
 
             // AC-9: a Schuss may only name a Pflock the Runde captured at this Ziel, or —
             // on a Freie Runde — any colour at all. The setup owns the question, so this use
             // case never asks which setup it is holding (SPEC-runde rule 19).
             if runde
                 .aufbau()
-                .pruefe_position(self.ziel_id, self.position)
+                .pruefe_position(ziel_id, self.position)
                 .is_err()
             {
                 return Err(Report::new(SchussRegistrierenFehler::PflockNichtImSnapshot));
@@ -114,15 +117,17 @@ impl UseCase<Schuss> for SchussRegistrieren {
                 .change_context(SchussRegistrierenFehler::Speichern)?
                 .into_iter()
                 .map(|schuss| schuss.into_data())
-                .filter(|schuss| schuss.ziel_id() == self.ziel_id)
+                .filter(|schuss| {
+                    runde.aufbau().ziel_id_für_schuss(schuss.ziel_id()) == Some(ziel_id)
+                })
                 .collect();
-            let ziel_schüsse = ZielSchüsse::für_ziel(self.ziel_id, vorhandene)
+            let ziel_schüsse = ZielSchüsse::für_ziel(ziel_id, vorhandene)
                 .expect("all filtered Schüsse belong to this Ziel");
             let pfeil = ziel_schüsse.nächster_pfeil().get();
             let neu = NeuerSchuss::neu(
                 self.runde_id,
                 Erfasser::Benutzer(benutzer_id),
-                self.ziel_id,
+                ziel_id.as_schuss_ziel_id(),
                 pfeil,
                 self.wertungszone,
                 self.position,
@@ -230,7 +235,13 @@ impl UseCase<Schuss> for SchussÄndern {
             // accepts any colour. Both go through the setup's one validation seam.
             if runde
                 .aufbau()
-                .pruefe_position(schuss.ziel_id(), self.position)
+                .pruefe_position(
+                    runde
+                        .aufbau()
+                        .ziel_id_für_schuss(schuss.ziel_id())
+                        .ok_or_else(|| Report::new(SchussÄndernFehler::NichtGefunden))?,
+                    self.position,
+                )
                 .is_err()
             {
                 return Err(Report::new(SchussÄndernFehler::PflockNichtImSnapshot));
@@ -316,7 +327,10 @@ impl UseCase<()> for SchussLöschen {
                     });
                 }
             };
-            let ziel_id = schuss.ziel_id();
+            let ziel_id = runde
+                .aufbau()
+                .ziel_id_für_schuss(schuss.ziel_id())
+                .expect("persisted shot target belongs to its round");
             let ziel_schüsse = uow
                 .schüsse()
                 .find_by_runde(self.runde_id)
@@ -325,7 +339,7 @@ impl UseCase<()> for SchussLöschen {
                 .change_context(SchussLöschenFehler::Laden)?
                 .into_iter()
                 .map(|row| row.into_data())
-                .filter(|row| row.ziel_id() == ziel_id)
+                .filter(|row| runde.aufbau().ziel_id_für_schuss(row.ziel_id()) == Some(ziel_id))
                 .collect::<Vec<_>>();
             let verbleibend = ZielSchüsse::für_ziel(ziel_id, ziel_schüsse)
                 .expect("the target's shot list contains only that target")

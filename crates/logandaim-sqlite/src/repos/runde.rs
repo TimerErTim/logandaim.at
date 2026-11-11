@@ -23,10 +23,9 @@ use logandaim_core::{
     ErrorReportExt,
     application::uow::Versioned,
     domain::{
-        Abstand, AnlageId, Erfasser, Farbe, FreieRunde, FreiesZiel, NeueRunde, NonEmptyString,
-        ParkourId, ParkourSnapshot, PflockSnapshot, Runde, RundeId, RundeInBearbeitung,
-        RundeOutgoingReferences, Rundenaufbau, ZielId, ZielPflöckeSnapshot, ZielSnapshot,
-        konto::BenutzerId,
+        Abstand, AnlageId, AnlageZielId, Erfasser, Farbe, FreieRunde, FreiesZiel, FreiesZielId,
+        NeueRunde, NonEmptyString, ParkourId, ParkourSnapshot, PflockSnapshot, Runde, RundeId,
+        RundeInBearbeitung, Rundenaufbau, ZielPflöckeSnapshot, ZielSnapshot, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
 };
@@ -162,9 +161,10 @@ fn freie_to_dto(freie: &FreieRunde) -> RundenaufbauDto {
 fn aufbau_to_json(aufbau: &Rundenaufbau) -> RepositoryResult<String> {
     let dto = match aufbau {
         Rundenaufbau::Parkour {
-            referenzen,
+            anlage_id,
             snapshot,
-        } => parkour_to_dto(referenzen.anlage_id(), snapshot),
+            ..
+        } => parkour_to_dto(*anlage_id, snapshot),
         Rundenaufbau::Freie(freie) => freie_to_dto(freie),
     };
     serde_json::to_string(&dto).contextualize(RepositoryError::Data)
@@ -174,12 +174,16 @@ fn aufbau_to_json(aufbau: &Rundenaufbau) -> RepositoryResult<String> {
 ///
 /// `None` for both on a free round: SQL that filters by Anlage must not see one.
 fn projizierte_ids(aufbau: &Rundenaufbau) -> (Option<String>, Option<String>) {
-    match aufbau.referenzen() {
-        Some(referenzen) => (
-            Some(referenzen.anlage_id().0.to_string()),
-            Some(referenzen.parkour_id().0.to_string()),
+    match aufbau {
+        Rundenaufbau::Parkour {
+            anlage_id,
+            parkour_id,
+            ..
+        } => (
+            Some(anlage_id.0.to_string()),
+            Some(parkour_id.0.to_string()),
         ),
-        None => (None, None),
+        Rundenaufbau::Freie(_) => (None, None),
     }
 }
 
@@ -233,7 +237,7 @@ fn aufbau_from_json(json: &str) -> RepositoryResult<Rundenaufbau> {
                         ),
                     };
                     Ok(ZielSnapshot::neu(
-                        ZielId(ziel.ziel_id),
+                        AnlageZielId(ziel.ziel_id),
                         std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?,
                         (NonEmptyString::neu(&ziel.tiername))
                             .contextualize(RepositoryError::Data)?,
@@ -251,10 +255,8 @@ fn aufbau_from_json(json: &str) -> RepositoryResult<Rundenaufbau> {
             );
             // The pair is rebuilt from the one document, so it always names one Parkour.
             Ok(Rundenaufbau::Parkour {
-                referenzen: RundeOutgoingReferences::from_parts(
-                    AnlageId(anlage_id),
-                    ParkourId(parkour_id),
-                ),
+                anlage_id: AnlageId(anlage_id),
+                parkour_id: ParkourId(parkour_id),
                 snapshot,
             })
         }
@@ -263,7 +265,7 @@ fn aufbau_from_json(json: &str) -> RepositoryResult<Rundenaufbau> {
                 .into_iter()
                 .map(|ziel| {
                     Ok(FreiesZiel::from_parts(
-                        ZielId(ziel.ziel_id),
+                        FreiesZielId(ziel.ziel_id),
                         (NonEmptyString::neu(&ziel.name)).contextualize(RepositoryError::Data)?,
                         std::num::NonZeroU32::new(ziel.ordinal).ok_or(RepositoryError::Data)?,
                     ))
@@ -292,13 +294,20 @@ mod tests {
         }"#;
 
         let aufbau = aufbau_from_json(snapshot).unwrap();
-        let referenzen = aufbau.referenzen().unwrap();
+        let Rundenaufbau::Parkour {
+            anlage_id,
+            parkour_id,
+            ..
+        } = &aufbau
+        else {
+            panic!("parkour setup");
+        };
         assert_eq!(
-            referenzen.anlage_id().0.to_string(),
+            anlage_id.0.to_string(),
             "00000000-0000-0000-0000-000000000001"
         );
         assert_eq!(
-            referenzen.parkour_id().0.to_string(),
+            parkour_id.0.to_string(),
             "00000000-0000-0000-0000-000000000002"
         );
     }
@@ -377,12 +386,23 @@ async fn ersetze_referenzen(tx: &Transaction, runde: &Runde) -> RepositoryResult
     .contextualize_with(libsql_error_to_persistence_error)?;
 
     let mut referenzen: Vec<(&'static str, String)> = Vec::new();
-    if let Some(referenzen_ids) = runde.referenzen() {
-        referenzen.push(("anlage", referenzen_ids.anlage_id().0.to_string()));
-        referenzen.push(("parkour", referenzen_ids.parkour_id().0.to_string()));
-    }
-    for ziel in runde.ziele() {
-        referenzen.push(("ziel", ziel.ziel_id().0.to_string()));
+    match runde.aufbau() {
+        Rundenaufbau::Parkour {
+            anlage_id,
+            parkour_id,
+            snapshot,
+        } => {
+            referenzen.push(("anlage", anlage_id.0.to_string()));
+            referenzen.push(("parkour", parkour_id.0.to_string()));
+            for ziel in snapshot.ziele() {
+                referenzen.push(("ziel", ziel.ziel_id().0.to_string()));
+            }
+        }
+        Rundenaufbau::Freie(freie) => {
+            for ziel in freie.ziele() {
+                referenzen.push(("ziel", ziel.ziel_id().0.to_string()));
+            }
+        }
     }
 
     for (art, ref_id) in referenzen {
@@ -591,7 +611,7 @@ impl RundeRepository for SQLiteRundeRepository {
         self.hat_referenz("parkour", &id.0.to_string()).await
     }
 
-    async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool> {
+    async fn exists_referencing_ziel(&self, id: AnlageZielId) -> RepositoryResult<bool> {
         self.hat_referenz("ziel", &id.0.to_string()).await
     }
 }

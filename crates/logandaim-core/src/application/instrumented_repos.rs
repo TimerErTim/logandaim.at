@@ -16,8 +16,8 @@ use crate::domain::konto::{
     PasswortWiederherstellung, PasswortWiederherstellungId, SecretTokenHash, Session, SessionId,
 };
 use crate::domain::{
-    Anlage, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId, Runde, RundeId,
-    Schuss, SchussId, ZielId,
+    Anlage, AnlageId, AnlageZielId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId,
+    Runde, RundeId, Schuss, SchussId, SchussZielId,
 };
 use crate::ports::{
     AnlageRepository, BenutzerRepository, EmailBestätigungRepository, KontoRepository,
@@ -114,7 +114,7 @@ impl_instrumented_repo!(
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
         fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool>;
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
-        fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool>;
+        fn exists_referencing_ziel(&self, id: AnlageZielId) -> RepositoryResult<bool>;
     ]
 );
 
@@ -130,7 +130,7 @@ impl_instrumented_repo!(
         #[instrument(skip(self, runde_id), fields(runde_id = ?runde_id), level = "trace", err(Debug))]
         fn find_by_runde(&self, runde_id: RundeId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
         #[instrument(skip(self, ziel_id), fields(ziel_id = ?ziel_id), level = "trace", err(Debug))]
-        fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+        fn find_by_ziel(&self, ziel_id: SchussZielId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
         #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
         fn find_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
         #[instrument(skip(self, schuss), level = "debug", err(Debug))]

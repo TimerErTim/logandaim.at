@@ -8,7 +8,7 @@ use std::num::NonZeroU32;
 
 use super::Anlage;
 use super::parkour::{Parkour, ParkourId, ZielPflöcke};
-use super::ziel::{Ziel, ZielId};
+use super::ziel::{AnlageZiel, AnlageZielId};
 use crate::domain::common::{Abstand, Farbe, NonEmptyString};
 
 /// One Pflock as captured: its colour and its position in the near-to-far order.
@@ -73,7 +73,7 @@ impl ZielPflöckeSnapshot {
 /// distances.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZielSnapshot {
-    ziel_id: ZielId,
+    ziel_id: AnlageZielId,
     zielnummer: NonZeroU32,
     tiername: NonEmptyString,
     /// Which captured Pflock order applies to this Ziel.
@@ -84,7 +84,7 @@ pub struct ZielSnapshot {
 
 impl ZielSnapshot {
     pub fn neu(
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
         zielnummer: NonZeroU32,
         tiername: NonEmptyString,
         pflöcke: ZielPflöckeSnapshot,
@@ -99,7 +99,7 @@ impl ZielSnapshot {
         }
     }
 
-    pub fn ziel_id(&self) -> ZielId {
+    pub fn ziel_id(&self) -> AnlageZielId {
         self.ziel_id
     }
 
@@ -193,12 +193,12 @@ impl ParkourSnapshot {
     }
 
     /// The captured Ziel with this identity, if it was part of the route.
-    pub fn ziel(&self, ziel_id: ZielId) -> Option<&ZielSnapshot> {
+    pub fn ziel(&self, ziel_id: AnlageZielId) -> Option<&ZielSnapshot> {
         self.ziele.iter().find(|ziel| ziel.ziel_id == ziel_id)
     }
 
     /// Whether this identity was part of the captured route.
-    pub fn enthält_ziel(&self, ziel_id: ZielId) -> bool {
+    pub fn enthält_ziel(&self, ziel_id: AnlageZielId) -> bool {
         self.ziel(ziel_id).is_some()
     }
 
@@ -211,7 +211,7 @@ impl ParkourSnapshot {
     ///
     /// An unknown `ziel_id` is never a match. A colour that exists only in the Parkour-wide
     /// set does not select on a Ziel whose own set replaces it.
-    pub fn hat_pflock_am_ziel(&self, ziel_id: ZielId, farbe: Farbe) -> bool {
+    pub fn hat_pflock_am_ziel(&self, ziel_id: AnlageZielId, farbe: Farbe) -> bool {
         self.ziel(ziel_id).is_some_and(|ziel| {
             ziel.pflöcke()
                 .effektive(&self.pflöcke)
@@ -233,7 +233,7 @@ pub fn snapshot(anlage: &Anlage, parkour_id: ParkourId) -> Result<ParkourSnapsho
 /// The capture rule once the Parkour is known, shared with the active typestate.
 pub(crate) fn snapshot_aus_parkour<'a>(
     parkour: &Parkour,
-    ziel: impl Fn(ZielId) -> Option<&'a Ziel>,
+    ziel: impl Fn(AnlageZielId) -> Option<&'a AnlageZiel>,
 ) -> Result<ParkourSnapshot, SnapshotFehler> {
     let pflöcke = parkour
         .pflöcke()
@@ -294,8 +294,8 @@ mod tests {
         NonEmptyString::neu(wert).unwrap()
     }
 
-    fn ziel_id(id: u128) -> ZielId {
-        ZielId(Uuid::from_u128(id))
+    fn ziel_id(id: u128) -> AnlageZielId {
+        AnlageZielId(Uuid::from_u128(id))
     }
 
     fn pflock(id: u128, farbe: &str) -> Pflock {

@@ -10,8 +10,8 @@ Keep these domain-agnostic rules when replacing domain types. Examples use place
 
 - One file per aggregate or value-object family, named after the German domain term
   (`schuss.rs`, `runde.rs`), never after a technical role (`model.rs`, `types.rs`).
-- `mod.rs` declares the modules and re-exports the public types (`pub use ziel::Ziel;`), so callers
-  write `crate::domain::Ziel`.
+- `mod.rs` declares the modules and re-exports the public types (for example,
+  `pub use anlage::AnlageZiel;`), so callers write `crate::domain::AnlageZiel`.
 - The domain depends on nothing outside `crate` except value libraries (`uuid`, `chrono`,
   `rust_decimal`, `thiserror`, `error_stack`). No serde, OpenAPI, SQL, or HTTP types.
 - Domain types and services may use ports from `application::ports` (for example `Clock`)

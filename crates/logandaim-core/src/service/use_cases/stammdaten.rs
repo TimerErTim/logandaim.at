@@ -18,8 +18,8 @@ use crate::{
     application::ExecutionContext,
     domain::{
         Anlage, AnlageAdresse, AnlageFehler, AnlageId, AnlageKontakt, AnlageVerwaltungRolle,
-        NeueAnlage, NeuerParkour, NonEmptyString, ParkourFehler, ParkourId, Pflock, ZielFehler,
-        ZielId, Zielplatzierung, konto::BenutzerId,
+        AnlageZielId, NeueAnlage, NeuerParkour, NonEmptyString, ParkourFehler, ParkourId, Pflock,
+        ZielFehler, Zielplatzierung, konto::BenutzerId,
     },
     ports::RepositoryError,
     service::{UseCase, darf_anlage_verwalten, darf_masterdaten_pflegen},
@@ -477,7 +477,7 @@ impl UseCase<Anlage> for ZielHinzufügen {
             let Anlage::Aktiv(aktiv) = &mut *anlage else {
                 return Err(Report::new(StammdatenFehler::Archiviert));
             };
-            aktiv.ziel_hinzufügen(ZielId(Uuid::new_v4()), self.tiername);
+            aktiv.ziel_hinzufügen(AnlageZielId(Uuid::new_v4()), self.tiername);
 
             uow.anlagen()
                 .update(&mut anlage)
@@ -497,7 +497,7 @@ impl UseCase<Anlage> for ZielHinzufügen {
 #[derive(Debug, Clone)]
 pub struct ZielÄndern {
     pub anlage_id: AnlageId,
-    pub ziel_id: ZielId,
+    pub ziel_id: AnlageZielId,
     pub tiername: NonEmptyString,
     /// 1-based ordinal; `NonZero` because "Ziel 0" cannot be printed or referred to.
     pub zielnummer: NonZeroU32,
@@ -562,7 +562,7 @@ impl UseCase<Anlage> for ZielÄndern {
 #[derive(Debug, Clone)]
 pub struct ZielErsetzen {
     pub anlage_id: AnlageId,
-    pub ziel_id: ZielId,
+    pub ziel_id: AnlageZielId,
     pub tiername: NonEmptyString,
 }
 
@@ -601,7 +601,7 @@ impl UseCase<Anlage> for ZielErsetzen {
                 return Err(Report::new(StammdatenFehler::Archiviert));
             };
             aktiv
-                .ziel_ersetzen(self.ziel_id, ZielId(Uuid::new_v4()), self.tiername)
+                .ziel_ersetzen(self.ziel_id, AnlageZielId(Uuid::new_v4()), self.tiername)
                 .change_context(StammdatenFehler::UngültigeAnfrage)?;
 
             uow.anlagen()
@@ -622,7 +622,7 @@ impl UseCase<Anlage> for ZielErsetzen {
 #[derive(Debug, Clone)]
 pub struct ZielEntfernen {
     pub anlage_id: AnlageId,
-    pub ziel_id: ZielId,
+    pub ziel_id: AnlageZielId,
 }
 
 #[async_trait]

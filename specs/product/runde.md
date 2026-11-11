@@ -273,7 +273,18 @@ Rules:
     means the colour the `Benutzer` picked for that shot, and its only validity rule is that the
     colour is a well-formed colour (rule 4's effective-set rule has no set to resolve in). A
     `Schussdistanz` behaves exactly as on a `Parkour` round. There is no slider on a `Freie Runde`.
-20. Every rule above that speaks of a `Runde`'s setup — the one-running-`Runde` rule (rule 7), the
+    The capture position control presents both choices together: a selectable colour palette and a
+    numeric exact-meter field. Selecting a colour clears the meter; entering a valid positive whole
+    meter clears the colour. The field visually shows the selected colour swatch when colour is the
+    active form, otherwise it shows the exact meter value. An expanded shot row uses the same
+    control, initially showing that shot's stored colour or meter value; it offers the colour
+    palette rather than a slider, and edits only that shot.
+20. During capture of a running `Freie Runde`, the `Freies Ziel` name in its card header is directly
+    editable. Focusing the displayed name smoothly transitions it into a text input; leaving the
+    field saves a changed, trimmed, non-empty name. Escape cancels the edit and restores the stored
+    name. Saving preserves the target ordinal and its shots. A failed save keeps the name editable
+    and exposes the error; a completed round keeps the name as plain text.
+21. Every rule above that speaks of a `Runde`'s setup — the one-running-`Runde` rule (rule 7), the
     `Rundenabschluss` (rule 8), editing (rule 9), deletion (rule 10), ownership (rule 11),
     `Zielfortschritt` (rule 12), the capture presentations (rules 13–14), the `Rundenübersicht`
     band (rule 15), and the initial position state (rule 16) — holds for both variants. Where a
@@ -318,7 +329,11 @@ Rules:
 - FR-17: Add a `Freies Ziel` just in time with the next ordinal and its default or given name, and
   remove one after a confirmation that names the `Schüsse` it takes with it (rule 18).
 - FR-18: Set a `Freie Runde`'s `Schussposition` as one exclusive value — a picked colour or an
-  exact positive whole-meter `Schussdistanz` — with no slider (rule 19).
+  exact positive whole-meter `Schussdistanz` — with no slider (rule 19). Present the colour palette
+  and meter field together, in both new-shot entry and per-shot editing; selecting one form clears
+  the other and the field displays the active colour or meter.
+- FR-19: Rename a running `Freies Ziel` directly in its header by focusing the name and saving a
+  changed non-empty name on defocus; Escape cancels (rule 20).
 
 **Non-functional**
 
@@ -452,6 +467,16 @@ Rules:
   that `Ziel` a non-empty name, then the name is persisted and shown in capture; renaming is
   refused for a completed `Runde`, a `Parkour` round, or a `Ziel` not in that `Runde`, and the
   existing ownership and authentication rules apply.
+- AC-27: Given a running `Freie Runde`, when the user focuses a `Freies Ziel` name in its card
+  header, then the plain name smoothly becomes an input; when focus leaves after a changed,
+  non-empty name, the trimmed name is saved, while an unchanged value is not submitted, Escape
+  cancels, and a failed save leaves the input open with an error. A completed round shows plain text.
+- AC-28: Given a `Freie Runde` capture position or an expanded shot row, when the user selects a
+  colour, then that colour is the sole stored form and the meter field shows its swatch; when the
+  user enters a valid positive whole-meter value, then that exact distance is the sole stored form
+  and the field shows its number. Choosing either form clears the other; invalid/incomplete meter
+  edits do not replace the last valid stored form, and the shot-row control opens with that shot's
+  current form and offers the same colour palette, not a slider.
 
 ## Deferred requirements
 
@@ -505,13 +530,14 @@ and the refused second start (AC-13). The slider's two behaviours and its redisp
 the two capture presentations (AC-12, AC-17, AC-18), and the `Rundenübersicht` band (AC-19) are
 manual checks: a phone-sized viewport for one-thumb reach and touch targets, a wide viewport for the
 card layout, and both for layout parity (NFR-4). The `Rundenabschluss` completion rule (AC-20) is a
-use-case conformance test. The `Freie Runde` setup (setup typestate rules 17–20, AC-21 to AC-26) is
+use-case conformance test. The `Freie Runde` setup (setup typestate rules 17–21, AC-21 to AC-28) is
 proven at three layers: domain unit tests for setup variants and `Freies Ziel` ordinals, colours,
 and name changes; use-case conformance tests for start, JIT `Ziel` add/remove/rename (including
 ownership and round-state restrictions) with persistence and cascade; and API e2e tests for
 `POST /runden/frei`, JIT `Ziel` routes, ownership, invalid names, rename persistence, and a refused
 colour. The free capture screen, including its running-only rename action, is a manual check like the
-`Parkour` capture screen.
+`Parkour` capture screen. AC-27 and AC-28 are verified with frontend type/lint checks and a manual
+check of focus/blur and shot-row editing on a phone-sized viewport.
 
 ## Decision log
 
@@ -539,6 +565,7 @@ colour. The free capture screen, including its running-only rename action, is a 
 | 2026-11-10 | A `Runde` is either a `Parkour` round or a `Freie Runde`, never both and never neither. A `Parkour` round always names both its `Anlage` and its `Parkour` as one origin; a `Freie Runde` names neither, carries its own name, and has no `Pflöcke`. Adding or removing a `Ziel` is a property of a `Freie Runde` alone, so a `Parkour` round cannot have its `Ziel` list edited at all. | TimerErTim (PO) |
 | 2026-11-10 | A `Freie Runde`'s `Ziele` are added and removed just in time, auto-named "Ziel 1", "Ziel 2", …; removing one deletes its `Schüsse` after a confirmation that names them. Its `Schussposition` stays the one exclusive value: a picked colour (the `Pflock` form) or an exact positive whole-meter `Schussdistanz`; there is no slider. | TimerErTim (PO) |
 | 2026-11-11 | Freie Runde remains in the ongoing implementation scope. An owned running Freie Runde may rename one of its Freie Ziele; whitespace-only names are invalid. The rename preserves ordinal and Schüsse. | TimerErTim (PO) |
+| 2026-11-11 | Freies Ziel names edit inline on focus and save on defocus; colour and exact meter are presented as mutually exclusive choices in the capture control and expanded shot editor. | TimerErTim (PO) |
 
 ## Revision history
 

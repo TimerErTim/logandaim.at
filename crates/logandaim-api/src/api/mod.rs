@@ -20,7 +20,7 @@ use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
     domain::{
-        AnlageId, EmailAdresse, ParkourId, Runde as DomainRunde, RundeId, SchussId, ZielId,
+        AnlageId, AnlageZielId, EmailAdresse, ParkourId, Runde as DomainRunde, RundeId, SchussId,
         konto::BenutzerId,
     },
     ports::{ClientKey, RepositoryError, ThrottleAction},
@@ -279,7 +279,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
         anfrage: requests::ZielRequest,
     ) -> ResultReport<Anlage, StammdatenFehler> {
         let use_case: ZielÄndern = anfrage.als_ändern(anlage_id, ziel_id)?;
@@ -292,7 +292,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
         anfrage: requests::ZielRequest,
     ) -> ResultReport<Anlage, StammdatenFehler> {
         let use_case: ZielErsetzen = anfrage.als_ersetzen(anlage_id, ziel_id)?;
@@ -305,7 +305,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
     ) -> ResultReport<Anlage, StammdatenFehler> {
         let use_case = ZielEntfernen { anlage_id, ziel_id };
         let anlage = self.app.execute(auth, use_case).await?;
@@ -457,17 +457,17 @@ impl LogandaimAppApi {
     // ---------------------------------------------------------------- Runde
 
     /// Start a Runde; the snapshot is captured in the same transaction (AC-7).
-    pub async fn runde_starten(
+    pub async fn runde_mit_parkour_starten(
         &self,
         auth: AuthContext,
-        anfrage: requests::RundeStartenRequest,
+        anfrage: requests::RundeMitParkourStartenRequest,
     ) -> ResultReport<Runde, RundeStartenFehler> {
         let runde = self.app.execute(auth, RundeStarten::from(anfrage)).await?;
         Ok(runde.into())
     }
 
     /// Start a `Freie Runde`; the use case was already built and validated at the boundary.
-    pub async fn runde_starten_frei(
+    pub async fn freie_runde_starten(
         &self,
         auth: AuthContext,
         use_case: RundeStarten,
@@ -645,13 +645,13 @@ impl LogandaimAppApi {
                         .change_context(RundenAnzeigenFehler::Laden)?;
                     let mut erfasste_ziele: std::collections::HashMap<
                         RundeId,
-                        std::collections::HashSet<ZielId>,
+                        std::collections::HashSet<uuid::Uuid>,
                     > = std::collections::HashMap::new();
                     for schuss in schüsse {
                         erfasste_ziele
                             .entry(schuss.runde_id())
                             .or_default()
-                            .insert(schuss.ziel_id());
+                            .insert(schuss.ziel_id().0);
                     }
                     // Newest first: the list a caller opens to find the latest Runde.
                     runden.sort_by_key(|runde| std::cmp::Reverse(runde.begonnen_am()));

@@ -513,7 +513,11 @@ async fn ac11_und_ac12_ein_ziel_ohne_historie_wird_geloescht_mit_historie_archiv
     let parkour_id = parkour_hinzufügen(&harness, &admin, &anlage_id, &benutzt).await;
     let (status, _) = harness
         .client
-        .post_json_auth("/api/runden", json!({ "parkourId": parkour_id }), &admin)
+        .post_json_auth(
+            "/api/runden/mit-parkour",
+            json!({ "parkourId": parkour_id }),
+            &admin,
+        )
         .await;
     assert_eq!(status, StatusCode::OK, "eine Runde referenziert das Ziel");
 

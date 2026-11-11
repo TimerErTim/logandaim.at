@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 use logandaim_core::{
     domain::{
-        self, AnlageId, NonEmptyString, ParkourId, PflockId, ZielId, anlage::WebsiteUrl,
+        self, AnlageId, AnlageZielId, NonEmptyString, ParkourId, PflockId, anlage::WebsiteUrl,
         konto::BenutzerId,
     },
     service::{
@@ -126,7 +126,7 @@ impl TryFrom<Zielplatzierung> for domain::Zielplatzierung {
             .collect::<Result<Vec<_>, Report<StammdatenFehler>>>()?;
         let pflöcke = wert.pflöcke.try_into()?;
         domain::Zielplatzierung::neu_mit_abständen_und_pflöcken(
-            ZielId(wert.ziel_id),
+            AnlageZielId(wert.ziel_id),
             pflöcke,
             abstände,
             &[],
@@ -305,7 +305,7 @@ impl ZielRequest {
     pub fn als_ändern(
         self,
         anlage_id: AnlageId,
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
     ) -> Result<ZielÄndern, Report<StammdatenFehler>> {
         Ok(ZielÄndern {
             anlage_id,
@@ -318,7 +318,7 @@ impl ZielRequest {
     pub fn als_ersetzen(
         self,
         anlage_id: AnlageId,
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
     ) -> Result<ZielErsetzen, Report<StammdatenFehler>> {
         Ok(ZielErsetzen {
             anlage_id,

@@ -9,8 +9,8 @@ use logandaim_core::{
     ResultReport,
     application::uow::Versioned,
     domain::{
-        Anlage, AnlageAktiv, AnlageId, EmailAdresse, Erfasser, NeueAnlage, NeueRunde, NeuerSchuss,
-        ParkourId, Runde, RundeId, RundeInBearbeitung, Schuss, SchussId, ZielId,
+        Anlage, AnlageAktiv, AnlageId, AnlageZielId, EmailAdresse, Erfasser, NeueAnlage, NeueRunde,
+        NeuerSchuss, ParkourId, Runde, RundeId, RundeInBearbeitung, Schuss, SchussId, SchussZielId,
         konto::{
             Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
             NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
@@ -320,7 +320,7 @@ impl RundeRepository for FakeRundeRepository {
             .datastore
             .runden()
             .values()
-            .any(|runde| runde.anlage_id() == Some(id)))
+            .any(|runde| matches!(runde.aufbau(), logandaim_core::domain::Rundenaufbau::Parkour { anlage_id, .. } if *anlage_id == id)))
     }
 
     async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool> {
@@ -328,15 +328,15 @@ impl RundeRepository for FakeRundeRepository {
             .datastore
             .runden()
             .values()
-            .any(|runde| runde.parkour_id() == Some(id)))
+            .any(|runde| matches!(runde.aufbau(), logandaim_core::domain::Rundenaufbau::Parkour { parkour_id, .. } if *parkour_id == id)))
     }
 
-    async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool> {
+    async fn exists_referencing_ziel(&self, id: AnlageZielId) -> RepositoryResult<bool> {
         Ok(self
             .datastore
             .runden()
             .values()
-            .any(|runde| runde.enthält_ziel(id)))
+            .any(|runde| runde.enthält_ziel(logandaim_core::domain::RundenZielId::Anlage(id))))
     }
 }
 
@@ -377,7 +377,10 @@ impl SchussRepository for FakeSchussRepository {
             .collect())
     }
 
-    async fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>> {
+    async fn find_by_ziel(
+        &self,
+        ziel_id: SchussZielId,
+    ) -> RepositoryResult<Vec<Versioned<Schuss>>> {
         Ok(self
             .datastore
             .schüsse()

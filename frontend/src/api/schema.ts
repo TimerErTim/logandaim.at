@@ -1154,6 +1154,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runden/mit-parkour": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a Runde on one active Parkour.
+         * @description The setup is captured as a snapshot in the same transaction, so a later change to the
+         *     Parkour cannot alter this Runde.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["RundeMitParkourStartenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runden": {
         parameters: {
             query?: never;
@@ -1203,52 +1264,7 @@ export interface paths {
             };
         };
         put?: never;
-        /**
-         * Start a Runde on one active Parkour.
-         * @description The setup is captured as a snapshot in the same transaction, so a later change to the
-         *     Parkour cannot alter this Runde.
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: {
-                    Authorization?: string;
-                };
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json; charset=utf-8": components["schemas"]["RundeStartenRequest"];
-                };
-            };
-            responses: {
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json; charset=utf-8": components["schemas"]["Runde"];
-                    };
-                };
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain; charset=utf-8": string;
-                    };
-                };
-                "4XX": {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
-                    };
-                };
-            };
-        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3117,6 +3133,17 @@ export interface components {
             parkourId: string;
         };
         /**
+         * RundeMitParkourStartenRequest
+         * @description Start a Runde on one active Parkour.
+         */
+        RundeMitParkourStartenRequest: {
+            /**
+             * Format: uuid
+             * @description The Parkour to shoot. It must be active.
+             */
+            parkourId: string;
+        };
+        /**
          * RundePflock
          * @description One Pflock of this Runde' captured route, in near-to-far order.
          *
@@ -3134,17 +3161,6 @@ export interface components {
              * @description 0-based position, near to far.
              */
             position: number;
-        };
-        /**
-         * RundeStartenRequest
-         * @description Start a Runde on one active Parkour.
-         */
-        RundeStartenRequest: {
-            /**
-             * Format: uuid
-             * @description The Parkour to shoot. It must be active.
-             */
-            parkourId: string;
         };
         /**
          * RundeZiel

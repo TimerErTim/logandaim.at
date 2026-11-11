@@ -170,24 +170,23 @@ type RundeWire<T> = Omit<
   T,
   "anlageId" | "parkourId" | Extract<keyof T, `parkour${string}`>
 >;
-export type RundeBasic = Omit<
-  RundeWire<Schemas["RundeBasic"]>,
-  "name" | "herkunft"
-> & {
-  name: string;
+type RundeWireMitHerkunft<T> = Omit<RundeWire<T>, "herkunft"> & {
   herkunft: RundeHerkunft | null;
 };
+export type RundeBasic = Omit<
+  RundeWireMitHerkunft<Schemas["RundeBasic"]>,
+  "name"
+> & { name: string };
 export type RundePflock = Schemas["RundePflock"];
 export type Abstand = Schemas["Abstand"];
 export type RundeZiel = Omit<Schemas["RundeZiel"], "pflöcke"> & {
   pflöcke: RundePflock[];
 };
 export type Runde = Omit<
-  RundeWire<Schemas["Runde"]>,
-  "ziele" | "name" | "herkunft"
+  RundeWireMitHerkunft<Schemas["Runde"]>,
+  "ziele" | "name"
 > & {
   name: string;
-  herkunft: RundeHerkunft | null;
   ziele: RundeZiel[];
 };
 export type Schuss = Schemas["Schuss"];

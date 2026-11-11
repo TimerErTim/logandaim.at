@@ -13,7 +13,9 @@ use tracing::{info, instrument};
 
 use crate::{
     application::ExecutionContext,
-    domain::{Erfasser, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId, ZielId},
+    domain::{
+        Erfasser, FreiesZielId, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId, Rundenaufbau,
+    },
     ports::RepositoryError,
     service::UseCase,
     uow::{UnitOfWork, Versioned},
@@ -57,13 +59,13 @@ pub struct RundeStarten {
 }
 
 impl RundeStarten {
-    pub fn parkour(parkour_id: ParkourId) -> Self {
+    pub fn mit_parkour(parkour_id: ParkourId) -> Self {
         Self {
             quelle: Rundenquelle::Parkour(parkour_id),
         }
     }
 
-    pub fn frei(name: NonEmptyString) -> Self {
+    pub fn ohne_parkour(name: NonEmptyString) -> Self {
         Self {
             quelle: Rundenquelle::Frei { name },
         }
@@ -118,9 +120,11 @@ impl UseCase<Runde> for RundeStarten {
                     let Ok(snapshot) = anlage.snapshot_für(parkour.id()) else {
                         return Err(Report::new(RundeStartenFehler::NichtGefunden));
                     };
-                    NeueRunde::neu(anlage.id(), erfasser, snapshot, jetzt)
+                    NeueRunde::mit_parkour(anlage.id(), erfasser, snapshot, jetzt)
                 }
-                Rundenquelle::Frei { name } => NeueRunde::frei(name.clone(), erfasser, jetzt),
+                Rundenquelle::Frei { name } => {
+                    NeueRunde::ohne_parkour(name.clone(), erfasser, jetzt)
+                }
             };
 
             // The one-open-Runde rule covers both setups: a free round and a Parkour round
@@ -153,7 +157,10 @@ impl UseCase<Runde> for RundeStarten {
         let runde = uow.finish(ergebnis, RundeStartenFehler::Starten).await?;
         info!(
             id = ?runde.id(),
-            parkour_id = ?runde.parkour_id(),
+            parkour_id = ?match runde.aufbau() {
+                Rundenaufbau::Parkour { parkour_id, .. } => Some(parkour_id),
+                Rundenaufbau::Freie(_) => None,
+            },
             "runde gestartet"
         );
         Ok(runde)
@@ -216,12 +223,12 @@ impl UseCase<Runde> for RundeZielHinzufügen {
             }
             // The `Option` *is* the type check: a Parkour round has no free setup, so it
             // answers 409 without comparing a flag (SPEC-runde rule 18).
-            let Some(freie) = runde.freie_mut() else {
+            let Rundenaufbau::Freie(freie) = runde.aufbau_mut() else {
                 return Err(Report::new(
                     RundeZielHinzufügenFehler::RundeIstKeineFreieRunde,
                 ));
             };
-            freie.ziel_hinzufügen(ZielId(uuid::Uuid::new_v4()), self.name);
+            freie.ziel_hinzufügen(FreiesZielId(uuid::Uuid::new_v4()), self.name);
 
             uow.runden()
                 .update(&mut runde)
@@ -264,7 +271,7 @@ pub enum RundeZielEntfernenFehler {
 #[derive(Debug, Clone)]
 pub struct RundeZielEntfernen {
     pub runde_id: RundeId,
-    pub ziel_id: ZielId,
+    pub ziel_id: FreiesZielId,
 }
 
 #[async_trait]
@@ -287,7 +294,7 @@ impl UseCase<Runde> for RundeZielEntfernen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielEntfernenFehler::NichtErlaubt));
             }
-            let Some(freie) = runde.freie_mut() else {
+            let Rundenaufbau::Freie(freie) = runde.aufbau_mut() else {
                 return Err(Report::new(
                     RundeZielEntfernenFehler::RundeIstKeineFreieRunde,
                 ));
@@ -305,7 +312,7 @@ impl UseCase<Runde> for RundeZielEntfernen {
                 .map_err(IntoReport::into_report)
                 .change_context(RundeZielEntfernenFehler::Entfernen)?
             {
-                if schuss.ziel_id() == self.ziel_id {
+                if schuss.ziel_id() == self.ziel_id.into() {
                     uow.schüsse()
                         .delete(schuss)
                         .await
@@ -383,7 +390,7 @@ pub enum RundeZielUmbenennenFehler {
 #[derive(Debug, Clone)]
 pub struct RundeZielUmbenennen {
     pub runde_id: RundeId,
-    pub ziel_id: ZielId,
+    pub ziel_id: FreiesZielId,
     pub name: NonEmptyString,
 }
 
@@ -412,7 +419,7 @@ impl UseCase<Runde> for RundeZielUmbenennen {
                     RundeZielUmbenennenFehler::RundeNichtInBearbeitung,
                 ));
             }
-            let Some(freie) = runde.freie_mut() else {
+            let Rundenaufbau::Freie(freie) = runde.aufbau_mut() else {
                 return Err(Report::new(
                     RundeZielUmbenennenFehler::RundeIstKeineFreieRunde,
                 ));

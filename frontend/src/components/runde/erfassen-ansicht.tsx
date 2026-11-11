@@ -213,7 +213,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
               setZielIndex((index) => Math.min(runde.ziele.length, index + 1))
             }
           >
-            Weiter
+            {zielIndex === runde.ziele.length - 1 ? "Abschließen" : "Weiter"}
           </Button>
         </div>
       </div>

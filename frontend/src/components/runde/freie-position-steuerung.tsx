@@ -2,69 +2,120 @@
 
 import { useEffect, useState } from "react";
 import type { RundeZiel, SchusspositionInput } from "@/api/logandaim-api";
-import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/cn";
 import { FreieFarbeFeld } from "./freie-farbe-feld";
+import { PflockPlatzhalter } from "./pflock-platzhalter";
+
+function FreieMeterEingabe({
+  value,
+  farbe,
+  invalid,
+  name,
+  onChange,
+}: {
+  value: string;
+  farbe: string | null;
+  invalid: boolean;
+  name: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="relative">
+      <Input
+        aria-label={name}
+        inputMode="numeric"
+        value={farbe ? "" : value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={farbe ? "" : "Meter"}
+        aria-invalid={invalid}
+        className={cn(
+          farbe && "pl-12",
+          farbe && "text-transparent caret-transparent",
+        )}
+      />
+      {farbe ? <PflockPlatzhalter farbe={farbe} /> : null}
+    </div>
+  );
+}
 
 export function FreiePositionSteuerung({
   ziel,
   farben,
   value,
+  invalid,
+  onValidityChange,
   onChange,
 }: {
   ziel: RundeZiel;
   farben: string[];
   value: SchusspositionInput | null;
+  invalid: boolean;
+  onValidityChange: (invalid: boolean) => void;
   onChange: (position: SchusspositionInput | null) => void;
 }) {
+  const storedMeter =
+    value && "Distanz" in value ? value.Distanz.meter : undefined;
+  const storedFarbe =
+    value && "Pflock" in value ? value.Pflock.farbe : undefined;
   const [meter, setMeter] = useState(
-    value && "Distanz" in value ? String(value.Distanz.meter) : "",
+    storedMeter === undefined ? "" : String(storedMeter),
   );
-  const [farbe, setFarbe] = useState<string | null>(
-    value && "Pflock" in value ? value.Pflock.farbe : null,
-  );
-  useEffect(() => {
-    setMeter(value && "Distanz" in value ? String(value.Distanz.meter) : "");
-    setFarbe(value && "Pflock" in value ? value.Pflock.farbe : null);
-  }, [value]);
+  const [farbe, setFarbe] = useState<string | null>(storedFarbe ?? null);
+  const [meterInvalid, setMeterInvalid] = useState(false);
+  const validMeter = /^[1-9]\d*$/.test(meter) && Number(meter) <= 4_294_967_295;
 
-  const validMeter = /^[1-9]\d*$/.test(meter);
+  useEffect(() => {
+    setMeter(storedMeter === undefined ? "" : String(storedMeter));
+    setFarbe(storedFarbe ?? null);
+    setMeterInvalid(false);
+  }, [storedMeter, storedFarbe]);
+
   return (
-    <div className="space-y-4">
-      <FreieFarbeFeld
-        farben={farben}
-        value={farbe}
-        onChange={(next) => {
-          setFarbe(next);
-          setMeter("");
-          onChange({ Pflock: { farbe: next } });
-        }}
-      />
-      <Field
-        label="Exakte Entfernung"
-        optional
-        hint="Ganze Meter; eine Entfernung ersetzt die gewählte Farbe."
-      >
-        <Input
-          aria-label={`Exakte Entfernung für ${ziel.tiername} in Metern`}
-          inputMode="numeric"
-          value={meter}
-          onChange={(event) => {
-            const next = event.target.value;
-            setMeter(next);
-            if (next === "") {
-              if (farbe) onChange({ Pflock: { farbe } });
-              else onChange(null);
-            } else if (/^[1-9]\d*$/.test(next)) {
+    <div>
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <FreieFarbeFeld
+            farben={farben}
+            value={farbe}
+            onChange={(next) => {
+              setFarbe(next);
+              setMeter("");
+              setMeterInvalid(false);
+              onValidityChange(false);
+              onChange({ Pflock: { farbe: next } });
+            }}
+          />
+        </div>
+        <div className="relative ml-auto w-20 shrink-0 sm:w-24">
+          <FreieMeterEingabe
+            value={meter}
+            farbe={farbe}
+            invalid={invalid || meterInvalid || (meter !== "" && !validMeter)}
+            name={`Exakte Entfernung für ${ziel.tiername} in Metern`}
+            onChange={(next) => {
+              setMeter(next);
               setFarbe(null);
-              onChange({ Distanz: { meter: Number(next) } });
-            }
-          }}
-          placeholder="Meter"
-          aria-invalid={meter !== "" && !validMeter}
-        />
-      </Field>
-      {meter !== "" && !validMeter ? (
+              if (next === "") {
+                setMeterInvalid(false);
+                onValidityChange(false);
+                onChange(null);
+              } else if (
+                /^[1-9]\d*$/.test(next) &&
+                Number(next) <= 4_294_967_295
+              ) {
+                setMeterInvalid(false);
+                onValidityChange(false);
+                onChange({ Distanz: { meter: Number(next) } });
+              } else {
+                setMeterInvalid(true);
+                onValidityChange(true);
+              }
+            }}
+          />
+        </div>
+      </div>
+      {invalid || meterInvalid || (meter !== "" && !validMeter) ? (
         <p role="alert" className="text-xs text-impact">
           Bitte geben Sie eine positive ganze Meterzahl ein.
         </p>

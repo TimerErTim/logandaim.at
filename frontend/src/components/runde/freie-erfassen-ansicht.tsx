@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { apiErrorMessage } from "@/api/errors";
 import { useStammdatenMutations } from "@/api/hooks";
 import { useErfolgsmeldung } from "@/api/hooks/erfolgsmeldung";
@@ -20,7 +20,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -30,6 +29,7 @@ import { Rundenabschluss } from "./rundenabschluss";
 import { SchussLedger } from "./schuss-ledger";
 import { WertungAnzeige } from "./wertung-anzeige";
 import { WertungszoneGruppe } from "./wertungszone-gruppe";
+import { Zieluebersicht } from "./zieluebersicht";
 
 export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
   const {
@@ -44,32 +44,41 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
   const [positionen, setPositionen] = useState<
     Record<string, SchusspositionInput | null>
   >({});
+  const [ungueltigePositionen, setUngueltigePositionen] = useState<
+    Record<string, boolean>
+  >({});
+  const startRenaming = useCallback((ziel: Runde["ziele"][number]) => {
+    cancelRename.current = false;
+    setEditingName(ziel.tiername);
+    setEditingTargetId(ziel.zielId);
+  }, []);
+  const positionValidityChange = useCallback(
+    (zielId: string, invalid: boolean) => {
+      setUngueltigePositionen((current) => ({
+        ...current,
+        [zielId]: invalid,
+      }));
+    },
+    [],
+  );
   const [fehler, setFehler] = useState<string | null>(null);
   const [entfernen, setEntfernen] = useState<Runde["ziele"][number] | null>(
     null,
   );
-  const [umbenennen, setUmbenennen] = useState<Runde["ziele"][number] | null>(
-    null,
-  );
-  const [neuerName, setNeuerName] = useState("");
+  const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const cancelRename = useRef(false);
   const [index, setIndex] = useState(0);
   const shots = runde.ziele.reduce(
     (count, ziel) => count + ziel.schüsse.length,
     0,
   );
-  const usedColours = useMemo(
-    () => [
-      ...new Set(
-        runde.ziele.flatMap((ziel) =>
-          ziel.schüsse.flatMap((shot) =>
-            shot.position && "Pflock" in shot.position
-              ? [shot.position.Pflock.farbe]
-              : [],
-          ),
-        ),
-      ),
-    ],
-    [runde.ziele],
+  const usedColours = runde.ziele.flatMap((ziel) =>
+    ziel.schüsse.flatMap((shot) =>
+      shot.position && "Pflock" in shot.position
+        ? [shot.position.Pflock.farbe]
+        : [],
+    ),
   );
 
   const addTarget = () => {
@@ -108,18 +117,27 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
     );
   };
 
-  const confirmRename = () => {
-    if (!umbenennen) return;
-    const name = neuerName.trim();
-    if (!name) return;
+  const saveTargetName = (ziel: Runde["ziele"][number]) => {
+    const name = editingName.trim();
+    setFehler(null);
+    if (name === "") {
+      setEditingTargetId(null);
+      setEditingName("");
+      return;
+    }
+    if (name === ziel.tiername) {
+      setEditingTargetId(null);
+      setEditingName("");
+      return;
+    }
     meldung.verwerfen();
     freiesZielUmbenennen.mutate(
-      { rundeId: runde.id, zielId: umbenennen.zielId, name },
+      { rundeId: runde.id, zielId: ziel.zielId, name },
       {
         onSuccess: () => {
           meldung.melden("Ziel umbenannt.");
-          setUmbenennen(null);
-          setNeuerName("");
+          setEditingTargetId(null);
+          setEditingName("");
         },
         onError: (error) =>
           setFehler(
@@ -132,13 +150,64 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
   };
 
   const targetCard = (ziel: Runde["ziele"][number], order: number) => {
-    const position =
-      positionen[ziel.zielId] ?? anfangsPosition(ziel, ziel.schüsse);
+    const position = Object.hasOwn(positionen, ziel.zielId)
+      ? positionen[ziel.zielId]
+      : anfangsPosition(ziel, ziel.schüsse);
     return (
       <Card key={ziel.zielId}>
         <CardHeader className="pt-4 pb-2 [&>div:last-child]:mt-2">
           <div className="flex items-center justify-between gap-3">
-            <CardTitle>{ziel.tiername}</CardTitle>
+            {runde.zustand === "InBearbeitung" &&
+            editingTargetId === ziel.zielId ? (
+              <div className="min-w-0 flex-1">
+                <Input
+                  autoFocus
+                  aria-label={`Name für Ziel ${order}`}
+                  value={editingName}
+                  maxLength={120}
+                  aria-invalid={editingName.trim() === ""}
+                  onChange={(event) => setEditingName(event.target.value)}
+                  onBlur={() => {
+                    if (cancelRename.current) {
+                      cancelRename.current = false;
+                      setEditingTargetId(null);
+                      setEditingName("");
+                      return;
+                    }
+                    saveTargetName(ziel);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      cancelRename.current = true;
+                      event.currentTarget.blur();
+                    }
+                    if (event.key === "Enter") event.currentTarget.blur();
+                  }}
+                  className="h-8 min-h-11 border-transparent bg-transparent px-1 font-serif text-[17px] font-semibold tracking-tight focus-visible:border-control"
+                />
+                {fehler ? (
+                  <p role="alert" className="text-xs text-impact">
+                    {fehler}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <CardTitle className="min-w-0 flex-1 truncate">
+                {runde.zustand === "InBearbeitung" ? (
+                  <button
+                    type="button"
+                    aria-label={`${ziel.tiername}, Name bearbeiten`}
+                    onFocus={() => startRenaming(ziel)}
+                    onClick={() => startRenaming(ziel)}
+                    className="min-h-11 w-full truncate rounded-sm text-left outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+                  >
+                    {ziel.tiername}
+                  </button>
+                ) : (
+                  ziel.tiername
+                )}
+              </CardTitle>
+            )}
             <WertungAnzeige
               ersterTreffer={ziel.wertung?.ersterTreffer}
               mehrschuss={ziel.wertung?.mehrschuss}
@@ -153,6 +222,10 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
                 ziel={ziel}
                 farben={usedColours}
                 value={position}
+                invalid={ungueltigePositionen[ziel.zielId] ?? false}
+                onValidityChange={(invalid) =>
+                  positionValidityChange(ziel.zielId, invalid)
+                }
                 onChange={(next) =>
                   setPositionen((current) => ({
                     ...current,
@@ -162,7 +235,10 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
               />
               <Separator />
               <WertungszoneGruppe
-                disabled={runde.zustand !== "InBearbeitung"}
+                disabled={
+                  runde.zustand !== "InBearbeitung" ||
+                  (ungueltigePositionen[ziel.zielId] ?? false)
+                }
                 busy={schussRegistrieren.isPending}
                 onSelect={(zone: Wertungszone) => {
                   meldung.verwerfen();
@@ -197,6 +273,8 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
               runde.zustand === "InBearbeitung" ||
               runde.zustand === "Abgeschlossen"
             }
+            positionArt="frei"
+            farben={usedColours}
             onEdit={(schussId, wertungszone, shotPosition) =>
               schussAendern.mutate({
                 rundeId: runde.id,
@@ -210,16 +288,6 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
           />
           {runde.zustand === "InBearbeitung" ? (
             <div className="flex flex-wrap gap-2">
-              <Button
-                size="field"
-                variant="secondary"
-                onClick={() => {
-                  setNeuerName(ziel.tiername);
-                  setUmbenennen(ziel);
-                }}
-              >
-                Ziel umbenennen
-              </Button>
               <Button
                 size="field"
                 variant="destructive"
@@ -251,9 +319,16 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
           <p className="font-mono text-sm tabular-nums text-secondary">
             {shots} Schüsse
           </p>
-          <span className="justify-self-end text-sm tabular-nums text-secondary">
-            {done} / {runde.ziele.length} Ziele
-          </span>
+          <div className="flex items-center justify-self-end gap-1 text-sm tabular-nums text-secondary">
+            <span>
+              {done} / {runde.ziele.length} Ziele
+            </span>
+            <Zieluebersicht
+              ziele={runde.ziele}
+              currentIndex={index}
+              onSelect={setIndex}
+            />
+          </div>
         </div>
         <Progress
           value={runde.ziele.length ? (done / runde.ziele.length) * 100 : 0}
@@ -261,7 +336,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
         />
       </div>
       {fehler ? <Alert variant="error">{fehler}</Alert> : null}
-      <div className="space-y-4 py-6 lg:hidden">
+      <div className="space-y-4 py-6 lg:hidden pb-24">
         {visible ? targetCard(visible, index + 1) : null}
         {index >= runde.ziele.length ? <Rundenabschluss runde={runde} /> : null}
         {runde.zustand === "InBearbeitung" ? (
@@ -274,22 +349,26 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
           </Button>
         ) : null}
         {runde.ziele.length > 0 ? (
-          <div className="flex gap-3">
-            <Button
-              variant="secondary"
-              disabled={index === 0}
-              onClick={() => setIndex((current) => Math.max(0, current - 1))}
-            >
-              Zurück
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                setIndex((current) => Math.min(runde.ziele.length, current + 1))
-              }
-            >
-              Weiter
-            </Button>
+          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-subtle bg-surface p-3">
+            <div className="mx-auto flex max-w-3xl justify-between gap-3">
+              <Button
+                variant="secondary"
+                disabled={index === 0}
+                onClick={() => setIndex((current) => Math.max(0, current - 1))}
+              >
+                Zurück
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  setIndex((current) =>
+                    Math.min(runde.ziele.length, current + 1),
+                  )
+                }
+              >
+                {index === runde.ziele.length - 1 ? "Abschließen" : "Weiter"}
+              </Button>
+            </div>
           </div>
         ) : null}
       </div>
@@ -306,57 +385,6 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
         ) : null}
         <Rundenabschluss runde={runde} />
       </div>
-      <Dialog
-        open={umbenennen !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setUmbenennen(null);
-            setNeuerName("");
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ziel umbenennen</DialogTitle>
-            <DialogDescription>
-              Ändere den Namen dieses Ziels.
-            </DialogDescription>
-          </DialogHeader>
-          <Field label="Name">
-            <Input
-              autoFocus
-              value={neuerName}
-              maxLength={120}
-              onChange={(event) => setNeuerName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") confirmRename();
-              }}
-            />
-          </Field>
-          {freiesZielUmbenennen.isError ? (
-            <Alert variant="error">
-              {apiErrorMessage(freiesZielUmbenennen.error, {
-                fallback: "Das Ziel konnte nicht umbenannt werden.",
-              })}
-            </Alert>
-          ) : null}
-          <DialogFooter>
-            <Button
-              variant="secondary"
-              disabled={freiesZielUmbenennen.isPending}
-              onClick={() => setUmbenennen(null)}
-            >
-              Abbrechen
-            </Button>
-            <Button
-              disabled={!neuerName.trim() || freiesZielUmbenennen.isPending}
-              onClick={confirmRename}
-            >
-              Speichern
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <Dialog
         open={entfernen !== null}
         onOpenChange={(open) => {

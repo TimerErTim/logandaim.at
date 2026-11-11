@@ -12,11 +12,24 @@ use uuid::Uuid;
 use super::konto::BenutzerId;
 use crate::domain::{Abstand, common::Farbe};
 
-/// Identity of one physical Ziel.
+/// A neutral UUID identity persisted at the shared Schuss boundary.
 ///
-/// Re-exported from the `anlage` aggregate: a `Schuss` references a Ziel by identity
-/// only, never by loading the entity (SPEC-stammdaten rule 9).
-pub use super::anlage::ZielId;
+/// The owning Runde's setup preserves whether this UUID identifies `AnlageZielId` or
+/// `FreiesZielId`; no discriminator is persisted with the Schuss.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct SchussZielId(pub Uuid);
+
+impl From<super::anlage::AnlageZielId> for SchussZielId {
+    fn from(id: super::anlage::AnlageZielId) -> Self {
+        Self(id.0)
+    }
+}
+
+impl From<super::runde::FreiesZielId> for SchussZielId {
+    fn from(id: super::runde::FreiesZielId) -> Self {
+        Self(id.0)
+    }
+}
 
 /// Identity of one logged Schuss.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -125,7 +138,7 @@ pub enum SchussFehler {
 pub struct NeuerSchuss {
     runde_id: RundeId,
     erfasser: Erfasser,
-    ziel_id: ZielId,
+    ziel_id: SchussZielId,
     pfeil: NonZeroUsize,
     wertungszone: Wertungszone,
     position: Option<Schussposition>,
@@ -136,7 +149,7 @@ impl NeuerSchuss {
     pub fn neu(
         runde_id: RundeId,
         erfasser: Erfasser,
-        ziel_id: ZielId,
+        ziel_id: SchussZielId,
         pfeil: usize,
         wertungszone: Wertungszone,
         position: Option<Schussposition>,
@@ -160,7 +173,7 @@ impl NeuerSchuss {
         self.erfasser
     }
 
-    pub fn ziel_id(&self) -> ZielId {
+    pub fn ziel_id(&self) -> SchussZielId {
         self.ziel_id
     }
 
@@ -187,7 +200,7 @@ pub struct Schuss {
     id: SchussId,
     runde_id: RundeId,
     erfasser: Erfasser,
-    ziel_id: ZielId,
+    ziel_id: SchussZielId,
     pfeil: NonZeroUsize,
     wertungszone: Wertungszone,
     position: Option<Schussposition>,
@@ -213,7 +226,7 @@ impl Schuss {
         id: SchussId,
         runde_id: RundeId,
         erfasser: Erfasser,
-        ziel_id: ZielId,
+        ziel_id: SchussZielId,
         pfeil: usize,
         wertungszone: Wertungszone,
         position: Option<Schussposition>,
@@ -234,7 +247,7 @@ impl Schuss {
         self.erfasser
     }
 
-    pub fn ziel_id(&self) -> ZielId {
+    pub fn ziel_id(&self) -> SchussZielId {
         self.ziel_id
     }
 
@@ -329,7 +342,7 @@ impl Zielwertung {
 /// [`ZielSchüsse::wertung`] answers `None`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZielSchüsse {
-    ziel_id: ZielId,
+    ziel_id: SchussZielId,
     schüsse: Vec<Schuss>,
 }
 
@@ -343,18 +356,24 @@ impl ZielSchüsse {
     /// Sort the given Schüsse by Pfeil, so the fold is order-independent. Every Schuss
     /// must name this Ziel: a wrong row is refused rather than silently counted.
     pub fn für_ziel(
-        ziel_id: ZielId,
+        ziel_id: super::runde::RundenZielId,
         schüsse: impl IntoIterator<Item = Schuss>,
     ) -> Result<Self, ZielSchüsseFehler> {
         let mut schüsse: Vec<_> = schüsse.into_iter().collect();
-        if schüsse.iter().any(|schuss| schuss.ziel_id() != ziel_id) {
+        if schüsse
+            .iter()
+            .any(|schuss| schuss.ziel_id().0 != ziel_id.as_uuid())
+        {
             return Err(ZielSchüsseFehler::FremdesZiel);
         }
         schüsse.sort_by_key(|schuss| schuss.pfeil());
-        Ok(Self { ziel_id, schüsse })
+        Ok(Self {
+            ziel_id: SchussZielId(ziel_id.as_uuid()),
+            schüsse,
+        })
     }
 
-    pub fn ziel_id(&self) -> ZielId {
+    pub fn ziel_id(&self) -> SchussZielId {
         self.ziel_id
     }
 
@@ -418,8 +437,12 @@ mod tests {
         NonZeroUsize::new(n).expect("test fixture uses 1-based Pfeile")
     }
 
-    fn ziel() -> ZielId {
-        ZielId(Uuid::from_u128(1))
+    fn ziel() -> SchussZielId {
+        SchussZielId(Uuid::from_u128(1))
+    }
+
+    fn runden_ziel() -> crate::domain::RundenZielId {
+        crate::domain::RundenZielId::Anlage(crate::domain::AnlageZielId(Uuid::from_u128(1)))
     }
 
     fn schuss(pfeil: usize, zone: Wertungszone) -> Schuss {
@@ -437,7 +460,7 @@ mod tests {
 
     fn mengen(schüsse: &[(usize, Wertungszone)]) -> ZielSchüsse {
         ZielSchüsse::für_ziel(
-            ziel(),
+            runden_ziel(),
             schüsse.iter().map(|&(pfeil, zone)| schuss(pfeil, zone)),
         )
         .unwrap()
@@ -504,7 +527,7 @@ mod tests {
     #[test_log::test]
     fn ac6_leer_ohne_wertung_sonst_beliebig_lang() {
         assert!(
-            ZielSchüsse::für_ziel(ziel(), [])
+            ZielSchüsse::für_ziel(runden_ziel(), [])
                 .unwrap()
                 .wertung()
                 .is_none()
@@ -548,7 +571,7 @@ mod tests {
             NeuerSchuss::neu(
                 RundeId(Uuid::nil()),
                 Erfasser::Anonymisiert { am: Utc::now() },
-                ZielId(Uuid::from_u128(99)),
+                SchussZielId(Uuid::from_u128(99)),
                 1,
                 Kill,
                 None,
@@ -556,7 +579,7 @@ mod tests {
             .unwrap(),
         );
         assert!(matches!(
-            ZielSchüsse::für_ziel(ziel(), [fremd]),
+            ZielSchüsse::für_ziel(runden_ziel(), [fremd]),
             Err(ZielSchüsseFehler::FremdesZiel)
         ));
     }

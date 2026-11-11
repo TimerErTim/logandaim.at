@@ -8,8 +8,8 @@ use crate::domain::konto::{
     PasswortWiederherstellung, PasswortWiederherstellungId, SecretTokenHash, Session, SessionId,
 };
 use crate::domain::{
-    Anlage, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId, Runde, RundeId,
-    Schuss, SchussId, ZielId,
+    Anlage, AnlageId, AnlageZielId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId,
+    Runde, RundeId, Schuss, SchussId, SchussZielId,
 };
 
 pub type RepositoryResult<T> = ResultReport<T, RepositoryError>;
@@ -94,7 +94,7 @@ pub trait RundeRepository: Send + Sync {
     async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool>;
 
     /// Whether any Runde's captured route contains this Ziel identity.
-    async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool>;
+    async fn exists_referencing_ziel(&self, id: AnlageZielId) -> RepositoryResult<bool>;
 }
 
 #[async_trait]
@@ -106,7 +106,8 @@ pub trait SchussRepository: Send + Sync {
     async fn find_by_runde(&self, runde_id: RundeId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
 
     /// Per-physical-Ziel history, independent of the Runde that produced it.
-    async fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+    async fn find_by_ziel(&self, ziel_id: SchussZielId)
+    -> RepositoryResult<Vec<Versioned<Schuss>>>;
 
     async fn find_by_benutzer(
         &self,

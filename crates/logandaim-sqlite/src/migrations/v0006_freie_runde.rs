@@ -9,7 +9,8 @@ use molting::UpMigration;
 ///   constraint in place; the pre-release policy allows the copy-drop-rename.
 /// - `runden_referenzen` names `runden`, so it is recreated against the new table.
 /// - Existing Parkour snapshots are rewritten into the current DTO shape by Rust serde before
-///   installing the table. New reads therefore need no compatibility branches.
+///   installing the table. This migration covers every Parkour snapshot format produced in this
+///   WIP feature; new reads therefore need no compatibility branches.
 pub struct Migration;
 
 #[async_trait]
@@ -143,11 +144,22 @@ pub(super) async fn rewrite_legacy_snapshots(
             continue;
         }
 
-        let (Some(anlage_id), Some(parkour_id)) = (anlage_id, parkour_id) else {
-            // Before v0006 every round was Parkour-backed and both columns were NOT NULL.
+        // A free-round document was already introduced by v0006 and has no Parkour ids or
+        // denormalised references. Leave it alone; a Parkour row must carry both ids.
+        if value.get("name").is_some() {
+            if anlage_id.is_none() && parkour_id.is_none() {
+                continue;
+            }
             return Err(libsql::Error::SqliteFailure(
                 libsql::ffi::SQLITE_CORRUPT,
-                "corrupt legacy Runde".into(),
+                "free Runde has Parkour references".into(),
+            ));
+        }
+
+        let (Some(anlage_id), Some(parkour_id)) = (anlage_id, parkour_id) else {
+            return Err(libsql::Error::SqliteFailure(
+                libsql::ffi::SQLITE_CORRUPT,
+                "corrupt legacy Parkour Runde".into(),
             ));
         };
         let legacy: LegacyParkourSnapshot = serde_json::from_value(value).map_err(|_| {
@@ -184,4 +196,111 @@ pub(super) async fn rewrite_legacy_snapshots(
             .await?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::SQLiteInstance;
+
+    #[test_log::test(pollster::test)]
+    async fn v0006_rewrites_legacy_round_snapshots_before_repository_reads() {
+        let instance = SQLiteInstance::in_memory().await.unwrap();
+        let connection = instance.create_connection().await.unwrap();
+        let anlage_id = "00000000-0000-0000-0000-000000000001";
+        let parkour_id = "00000000-0000-0000-0000-000000000002";
+        let legacy_snapshot = r##"{
+            "parkour_id":"00000000-0000-0000-0000-000000000002",
+            "parkour_name":"Wald",
+            "pflöcke":[],
+            "ziele":[
+                {
+                    "ziel_id":"00000000-0000-0000-0000-000000000004",
+                    "tiername":"Ohne eigenen Pflocksatz",
+                    "zielnummer":1,
+                    "abstände":[]
+                },
+                {
+                    "ziel_id":"00000000-0000-0000-0000-000000000005",
+                    "tiername":"Mit eigenem Pflocksatz",
+                    "zielnummer":2,
+                    "pflöcke":{"Explicit":[{"farbe":"#123456","position":0}]},
+                    "abstände":[]
+                }
+            ]
+        }"##;
+
+        connection
+            .execute_batch(
+                r#"
+            CREATE TABLE "runden" (
+                id TEXT PRIMARY KEY,
+                anlage_id TEXT NOT NULL,
+                parkour_id TEXT NOT NULL,
+                snapshot TEXT NOT NULL,
+                benutzer_id TEXT,
+                anonymisiert_am TEXT,
+                zustand TEXT NOT NULL,
+                begonnen_am TEXT NOT NULL,
+                abgeschlossen_am TEXT,
+                _version INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE "runden_referenzen" (
+                runde_id TEXT NOT NULL REFERENCES "runden" (id) ON DELETE CASCADE,
+                art TEXT NOT NULL,
+                ref_id TEXT NOT NULL,
+                PRIMARY KEY (runde_id, art, ref_id)
+            );
+        "#,
+            )
+            .await
+            .unwrap();
+        let runde_id = "00000000-0000-0000-0000-000000000003";
+        connection
+            .execute(
+                r#"INSERT INTO "runden" (id, anlage_id, parkour_id, snapshot, benutzer_id,
+                    anonymisiert_am, zustand, begonnen_am, abgeschlossen_am, _version)
+                    VALUES (?1, ?2, ?3, ?4, NULL, '2026-11-10T20:00:00Z', 'Abgeschlossen',
+                    '2026-11-10T19:00:00Z', '2026-11-10T20:00:00Z', 2)"#,
+                (runde_id, anlage_id, parkour_id, legacy_snapshot),
+            )
+            .await
+            .unwrap();
+        connection
+            .execute(
+                r#"INSERT INTO "runden_referenzen" (runde_id, art, ref_id)
+                   VALUES (?1, 'anlage', ?2), (?1, 'parkour', ?3)"#,
+                (runde_id, anlage_id, parkour_id),
+            )
+            .await
+            .unwrap();
+        let mut migration_tx = connection.transaction().await.unwrap();
+        Migration.up(&mut migration_tx).await.unwrap();
+        migration_tx.commit().await.unwrap();
+
+        let mut rows = connection
+            .query(
+                r#"SELECT snapshot, _version FROM "runden" WHERE id = ?1"#,
+                [runde_id],
+            )
+            .await
+            .unwrap();
+        let row = rows.next().await.unwrap().unwrap();
+        let snapshot: String = row.get(0).unwrap();
+        let version: i64 = row.get(1).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&snapshot).unwrap();
+        assert_eq!(json["anlage_id"], anlage_id);
+        assert_eq!(json["parkour_id"], parkour_id);
+        assert_eq!(json["ziele"][0]["pflöcke"], "InheritFromParkour");
+        assert_eq!(
+            json["ziele"][1]["pflöcke"]["Explicit"][0]["farbe"],
+            "#123456"
+        );
+        assert_eq!(version, 2);
+        let mut foreign_keys = connection
+            .query("PRAGMA foreign_key_check", ())
+            .await
+            .unwrap();
+        assert!(foreign_keys.next().await.unwrap().is_none());
+    }
 }

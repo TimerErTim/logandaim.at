@@ -12,7 +12,7 @@ use uuid::Uuid;
 use error_stack::{Report, ResultExt};
 
 use logandaim_core::{
-    domain::{NonEmptyString, ParkourId, RundeId, ZielId},
+    domain::{FreiesZielId, NonEmptyString, ParkourId, RundeId},
     service::{
         RundeStarten, RundeStartenFehler, RundeZielEntfernen, RundeZielHinzufügen,
         RundeZielUmbenennen, RundeZielUmbenennenFehler,
@@ -25,14 +25,14 @@ use logandaim_core::{
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RundeStartenRequest {
+pub struct RundeMitParkourStartenRequest {
     /// The Parkour to shoot. It must be active.
     pub parkour_id: Uuid,
 }
 
-impl From<RundeStartenRequest> for RundeStarten {
-    fn from(anfrage: RundeStartenRequest) -> Self {
-        Self::parkour(ParkourId(anfrage.parkour_id))
+impl From<RundeMitParkourStartenRequest> for RundeStarten {
+    fn from(anfrage: RundeMitParkourStartenRequest) -> Self {
+        Self::mit_parkour(ParkourId(anfrage.parkour_id))
     }
 }
 
@@ -55,7 +55,7 @@ impl TryFrom<FreieRundeStartenRequest> for RundeStarten {
         NonEmptyString::neu(anfrage.name.trim())
             .change_context(RundeStartenFehler::UngültigeAnfrage)
             .attach("Freie Runde: Name")
-            .map(RundeStarten::frei)
+            .map(RundeStarten::ohne_parkour)
     }
 }
 
@@ -95,11 +95,11 @@ impl ZielUmbenennenRequest {
     pub fn in_use_case(
         self,
         runde_id: RundeId,
-        ziel_id: ZielId,
+        ziel_id: Uuid,
     ) -> Result<RundeZielUmbenennen, Report<RundeZielUmbenennenFehler>> {
         Ok(RundeZielUmbenennen {
             runde_id,
-            ziel_id,
+            ziel_id: FreiesZielId(ziel_id),
             name: NonEmptyString::neu(self.name.trim())
                 .change_context(RundeZielUmbenennenFehler::UngültigeAnfrage)
                 .attach("Freies Ziel: Name")?,
@@ -111,6 +111,6 @@ impl ZielUmbenennenRequest {
 pub fn ziel_entfernen_in_use_case(runde_id: Uuid, ziel_id: Uuid) -> RundeZielEntfernen {
     RundeZielEntfernen {
         runde_id: RundeId(runde_id),
-        ziel_id: ZielId(ziel_id),
+        ziel_id: FreiesZielId(ziel_id),
     }
 }

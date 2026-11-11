@@ -392,37 +392,44 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   // ---------------------------------------------------------------- Runden
 
   async rundenAnzeigen(): Promise<RundeBasic[]> {
-    return (await this.authenticated(() =>
+    const runden = await this.authenticated(() =>
       this.client.GET("/runden", { headers: this.authorizationHeaders() }),
-    )) as unknown as RundeBasic[];
+    );
+    return runden.map((runde) => ({
+      ...runde,
+      herkunft: runde.herkunft ?? null,
+    }));
   }
 
   async rundeStarten(parkourId: string): Promise<Runde> {
-    return (await this.authenticated(() =>
-      this.client.POST("/runden", {
+    const runde = await this.authenticated(() =>
+      this.client.POST("/runden/mit-parkour", {
         body: { parkourId },
         headers: this.authorizationHeaders(),
       }),
-    )) as unknown as Runde;
+    );
+    return { ...runde, herkunft: runde.herkunft ?? null };
   }
 
   async freieRundeStarten(name: string): Promise<Runde> {
-    return (await this.authenticated(() =>
+    const runde = await this.authenticated(() =>
       this.client.POST("/runden/frei", {
         body: { name },
         headers: this.authorizationHeaders(),
       }),
-    )) as unknown as Runde;
+    );
+    return { ...runde, herkunft: runde.herkunft ?? null };
   }
 
   async freiesZielHinzufuegen(rundeId: string, name?: string): Promise<Runde> {
-    return (await this.authenticated(() =>
+    const runde = await this.authenticated(() =>
       this.client.POST("/runden/{runde_id}/ziele", {
         params: { path: { runde_id: rundeId } },
         body: name === undefined ? {} : { name },
         headers: this.authorizationHeaders(),
       }),
-    )) as unknown as Runde;
+    );
+    return { ...runde, herkunft: runde.herkunft ?? null };
   }
 
   async freiesZielUmbenennen(
@@ -430,22 +437,24 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     zielId: string,
     name: string,
   ): Promise<Runde> {
-    return (await this.authenticated(() =>
+    const runde = await this.authenticated(() =>
       this.client.PUT("/runden/{runde_id}/ziele/{ziel_id}", {
         params: { path: { runde_id: rundeId, ziel_id: zielId } },
         body: { name },
         headers: this.authorizationHeaders(),
       }),
-    )) as unknown as Runde;
+    );
+    return { ...runde, herkunft: runde.herkunft ?? null };
   }
 
   async freiesZielEntfernen(rundeId: string, zielId: string): Promise<Runde> {
-    return (await this.authenticated(() =>
+    const runde = await this.authenticated(() =>
       this.client.DELETE("/runden/{runde_id}/ziele/{ziel_id}", {
         params: { path: { runde_id: rundeId, ziel_id: zielId } },
         headers: this.authorizationHeaders(),
       }),
-    )) as unknown as Runde;
+    );
+    return { ...runde, herkunft: runde.herkunft ?? null };
   }
 
   async rundeLoeschen(id: string): Promise<void> {
@@ -458,21 +467,23 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   }
 
   async rundeAnzeigen(id: string): Promise<Runde> {
-    return (await this.authenticated(() =>
+    const runde = await this.authenticated(() =>
       this.client.GET("/runden/{runde_id}", {
         params: { path: { runde_id: id } },
         headers: this.authorizationHeaders(),
       }),
-    )) as unknown as Runde;
+    );
+    return { ...runde, herkunft: runde.herkunft ?? null };
   }
 
   async rundeAbschliessen(id: string): Promise<Runde> {
-    return (await this.authenticated(() =>
+    const runde = await this.authenticated(() =>
       this.client.POST("/runden/{runde_id}/abschluss", {
         params: { path: { runde_id: id } },
         headers: this.authorizationHeaders(),
       }),
-    )) as unknown as Runde;
+    );
+    return { ...runde, herkunft: runde.herkunft ?? null };
   }
 
   async schussRegistrieren(

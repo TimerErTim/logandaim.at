@@ -6,7 +6,7 @@
 
 use uuid::Uuid;
 
-use super::ziel::{ZielId, Zustand};
+use super::ziel::{AnlageZielId, Zustand};
 use crate::domain::common::{Abstand, Farbe, NonEmptyString};
 
 /// Identity of one Parkour.
@@ -111,7 +111,7 @@ impl ZielPflöcke {
 /// One Ziel's use in one Parkour, with an optional distance per Pflock.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Zielplatzierung {
-    ziel_id: ZielId,
+    ziel_id: AnlageZielId,
     /// Which Pflock order applies to this Ziel: the Parkour-wide one or its own.
     pflöcke: ZielPflöcke,
     /// Near to far in the effective Pflock order. A missing entry is a missing distance,
@@ -122,7 +122,8 @@ pub struct Zielplatzierung {
 impl Zielplatzierung {
     /// A placement that inherits the Parkour-wide Pflock order.
     pub fn neu(
-        ziel_id: ZielId, abstände: Vec<(PflockId, Abstand)>
+        ziel_id: AnlageZielId,
+        abstände: Vec<(PflockId, Abstand)>,
     ) -> Result<Self, ParkourFehler> {
         Self::neu_mit_abständen_und_pflöcken(
             ziel_id,
@@ -134,7 +135,7 @@ impl Zielplatzierung {
 
     /// A placement with its own near-to-far Pflock order, which replaces the Parkour's.
     pub fn neu_mit_eigenen_pflöcken(
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
         pflöcke: Vec<Pflock>,
         abstände: Vec<(PflockId, Abstand)>,
     ) -> Result<Self, ParkourFehler> {
@@ -148,7 +149,7 @@ impl Zielplatzierung {
 
     /// Validate distances against the effective Pflock set and store them in its order.
     pub fn neu_mit_abständen_und_pflöcken(
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
         pflöcke: ZielPflöcke,
         mut abstände: Vec<(PflockId, Abstand)>,
         parkour_pflöcke: &[Pflock],
@@ -192,7 +193,7 @@ impl Zielplatzierung {
         })
     }
 
-    pub fn ziel_id(&self) -> ZielId {
+    pub fn ziel_id(&self) -> AnlageZielId {
         self.ziel_id
     }
 
@@ -438,7 +439,7 @@ impl Parkour {
     }
 
     /// Remove one Ziel from the current arrangement; its history is untouched (AC-11).
-    pub fn platzierung_entfernen(&mut self, ziel_id: ZielId) -> Result<(), ParkourFehler> {
+    pub fn platzierung_entfernen(&mut self, ziel_id: AnlageZielId) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         self.platzierungen
             .retain(|platzierung| platzierung.ziel_id != ziel_id);
@@ -447,7 +448,10 @@ impl Parkour {
 
     /// Reorder the route. Every listed id must already be placed, and the result must
     /// still cover the same set.
-    pub fn reihenfolge_ändern(&mut self, reihenfolge: &[ZielId]) -> Result<(), ParkourFehler> {
+    pub fn reihenfolge_ändern(
+        &mut self,
+        reihenfolge: &[AnlageZielId],
+    ) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         if reihenfolge.len() != self.platzierungen.len() {
             return Err(ParkourFehler::ReihenfolgeUngültig);
@@ -472,7 +476,11 @@ impl Parkour {
 
     /// Swap the physical Ziel of one placement in place, keeping its route position and its
     /// distances (AC-5: a replaced target is a new identity at the same slot).
-    pub fn platzierung_ersetzen(&mut self, alt: ZielId, neu: ZielId) -> Result<(), ParkourFehler> {
+    pub fn platzierung_ersetzen(
+        &mut self,
+        alt: AnlageZielId,
+        neu: AnlageZielId,
+    ) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
         if self
             .platzierungen
@@ -495,7 +503,7 @@ impl Parkour {
     /// Set one placement's distance map, re-validated against this Parkour's Pflöcke.
     pub fn abstände_setzen(
         &mut self,
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
         abstände: Vec<(PflockId, Abstand)>,
     ) -> Result<(), ParkourFehler> {
         self.nur_aktiv()?;
@@ -540,11 +548,11 @@ mod tests {
         ]
     }
 
-    fn ziel(id: u128) -> ZielId {
-        ZielId(Uuid::from_u128(id))
+    fn ziel(id: u128) -> AnlageZielId {
+        AnlageZielId(Uuid::from_u128(id))
     }
 
-    fn platzierung(ziel_id: ZielId, abstände: &[(u128, u32)]) -> Zielplatzierung {
+    fn platzierung(ziel_id: AnlageZielId, abstände: &[(u128, u32)]) -> Zielplatzierung {
         Zielplatzierung::neu(
             ziel_id,
             abstände
