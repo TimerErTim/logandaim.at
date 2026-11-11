@@ -407,34 +407,22 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   }
 
   async freieRundeStarten(name: string): Promise<Runde> {
-    const client = this.client as unknown as {
-      POST: (
-        path: string,
-        options: object,
-      ) => Promise<{ data?: unknown; error?: unknown; response: Response }>;
-    };
-    return this.authenticated(async () =>
-      client.POST("/runden/frei", {
+    return (await this.authenticated(() =>
+      this.client.POST("/runden/frei", {
         body: { name },
         headers: this.authorizationHeaders(),
       }),
-    ) as unknown as Promise<Runde>;
+    )) as unknown as Runde;
   }
 
   async freiesZielHinzufuegen(rundeId: string, name?: string): Promise<Runde> {
-    const client = this.client as unknown as {
-      POST: (
-        path: string,
-        options: object,
-      ) => Promise<{ data?: unknown; error?: unknown; response: Response }>;
-    };
-    return this.authenticated(async () =>
-      client.POST("/runden/{runde_id}/ziele", {
+    return (await this.authenticated(() =>
+      this.client.POST("/runden/{runde_id}/ziele", {
         params: { path: { runde_id: rundeId } },
         body: name === undefined ? {} : { name },
         headers: this.authorizationHeaders(),
       }),
-    ) as unknown as Promise<Runde>;
+    )) as unknown as Runde;
   }
 
   async freiesZielUmbenennen(
@@ -442,34 +430,22 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     zielId: string,
     name: string,
   ): Promise<Runde> {
-    const client = this.client as unknown as {
-      PUT: (
-        path: string,
-        options: object,
-      ) => Promise<{ data?: unknown; error?: unknown; response: Response }>;
-    };
-    return this.authenticated(async () =>
-      client.PUT("/runden/{runde_id}/ziele/{ziel_id}", {
+    return (await this.authenticated(() =>
+      this.client.PUT("/runden/{runde_id}/ziele/{ziel_id}", {
         params: { path: { runde_id: rundeId, ziel_id: zielId } },
         body: { name },
         headers: this.authorizationHeaders(),
       }),
-    ) as unknown as Promise<Runde>;
+    )) as unknown as Runde;
   }
 
   async freiesZielEntfernen(rundeId: string, zielId: string): Promise<Runde> {
-    const client = this.client as unknown as {
-      DELETE: (
-        path: string,
-        options: object,
-      ) => Promise<{ data?: unknown; error?: unknown; response: Response }>;
-    };
-    return this.authenticated(async () =>
-      client.DELETE("/runden/{runde_id}/ziele/{ziel_id}", {
+    return (await this.authenticated(() =>
+      this.client.DELETE("/runden/{runde_id}/ziele/{ziel_id}", {
         params: { path: { runde_id: rundeId, ziel_id: zielId } },
         headers: this.authorizationHeaders(),
       }),
-    ) as unknown as Promise<Runde>;
+    )) as unknown as Runde;
   }
 
   async rundeLoeschen(id: string): Promise<void> {

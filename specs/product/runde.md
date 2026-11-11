@@ -3,7 +3,7 @@ id: SPEC-runde
 title: Capture a Runde target by target, on phone and desktop
 status: In delivery
 owner: TimerErTim
-issues: [11, 23, 72]
+issues: [11, 23, 72, 93]
 superseded_by: null
 ---
 
