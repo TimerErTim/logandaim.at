@@ -4,6 +4,14 @@ import { useLogandaimApi } from "../provider";
 import { logandaimKeys } from "../query-keys";
 
 /**
+ * The general failure note in `MutationCache` fires only for a mutation that nothing on
+ * the page reports. Every hook below whose consumers render their own failure `Alert`
+ * therefore carries this marker; `rundeLoeschen` and `logout` deliberately do not, so a
+ * silent failure there still reaches the user. A failure is reported exactly once.
+ */
+const SITE_HANDLED = { meta: { handlesError: true } } as const;
+
+/**
  * Master-data writes all answer the whole `Anlage`, so every one of them invalidates the
  * same two keys: the list (an archive changes it) and that Anlage's detail read.
  */
@@ -13,6 +21,7 @@ function useAnlageMutation<TVariables>(
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
+    ...SITE_HANDLED,
     onSuccess: (anlage) => {
       void queryClient.invalidateQueries({
         queryKey: logandaimKeys.anlagen.all(),
@@ -105,6 +114,7 @@ export function useStammdatenMutations() {
     rundeStarten: useMutation({
       mutationFn: (variables: { parkourId: string }) =>
         api.rundeStarten(variables.parkourId),
+      ...SITE_HANDLED,
       onSuccess: () => {
         void queryClient.invalidateQueries({
           queryKey: logandaimKeys.runden.all(),
@@ -113,6 +123,7 @@ export function useStammdatenMutations() {
     }),
     freieRundeStarten: useMutation({
       mutationFn: (name: string) => api.freieRundeStarten(name),
+      ...SITE_HANDLED,
       onSuccess: (runde) => {
         void queryClient.invalidateQueries({
           queryKey: logandaimKeys.runden.all(),
@@ -125,16 +136,19 @@ export function useStammdatenMutations() {
     freiesZielHinzufuegen: useMutation({
       mutationFn: (vars: { rundeId: string; name?: string }) =>
         api.freiesZielHinzufuegen(vars.rundeId, vars.name),
+      ...SITE_HANDLED,
       onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
     }),
     freiesZielUmbenennen: useMutation({
       mutationFn: (vars: { rundeId: string; zielId: string; name: string }) =>
         api.freiesZielUmbenennen(vars.rundeId, vars.zielId, vars.name),
+      ...SITE_HANDLED,
       onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
     }),
     freiesZielEntfernen: useMutation({
       mutationFn: (vars: { rundeId: string; zielId: string }) =>
         api.freiesZielEntfernen(vars.rundeId, vars.zielId),
+      ...SITE_HANDLED,
       onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
     }),
     rundeLoeschen: useMutation({
@@ -147,6 +161,7 @@ export function useStammdatenMutations() {
     }),
     rundeAbschliessen: useMutation({
       mutationFn: (rundeId: string) => api.rundeAbschliessen(rundeId),
+      ...SITE_HANDLED,
       onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
     }),
     /** One arrow can change the per-Ziel and the whole-Runde Wertung. */
@@ -155,6 +170,7 @@ export function useStammdatenMutations() {
         rundeId: string;
         schuss: Parameters<typeof api.schussRegistrieren>[1];
       }) => api.schussRegistrieren(vars.rundeId, vars.schuss),
+      ...SITE_HANDLED,
       onSuccess: (_schuss, vars) => invalidateRunde(queryClient, vars.rundeId),
     }),
     schussAendern: useMutation({
@@ -163,11 +179,13 @@ export function useStammdatenMutations() {
         schussId: string;
         schuss: Parameters<typeof api.schussAendern>[2];
       }) => api.schussAendern(vars.rundeId, vars.schussId, vars.schuss),
+      ...SITE_HANDLED,
       onSuccess: (_schuss, vars) => invalidateRunde(queryClient, vars.rundeId),
     }),
     schussLoeschen: useMutation({
       mutationFn: (vars: { rundeId: string; schussId: string }) =>
         api.schussLoeschen(vars.rundeId, vars.schussId),
+      ...SITE_HANDLED,
       onSuccess: (_result, vars) => invalidateRunde(queryClient, vars.rundeId),
     }),
   };
@@ -193,18 +211,22 @@ export function useAuthMutations() {
         eMailAdresse: string;
         passwort: string;
       }) => api.anmelden(eMailAdresse, passwort),
+      ...SITE_HANDLED,
       onSuccess: loggedIn,
     }),
     registerStart: useMutation({
       mutationFn: api.registrierungStarten.bind(api),
+      ...SITE_HANDLED,
     }),
     registerFinish: useMutation({
       mutationFn: ({ token, passwort }: { token: string; passwort: string }) =>
         api.registrierungAbschliessen(token, passwort),
+      ...SITE_HANDLED,
       onSuccess: loggedIn,
     }),
     forgotPassword: useMutation({
       mutationFn: api.passwortVergessen.bind(api),
+      ...SITE_HANDLED,
     }),
     resetPassword: useMutation({
       mutationFn: ({
@@ -214,6 +236,7 @@ export function useAuthMutations() {
         token: string;
         neuesPasswort: string;
       }) => api.passwortWiederherstellen(token, neuesPasswort),
+      ...SITE_HANDLED,
       onSuccess: clear,
     }),
     logout: useMutation({
@@ -228,6 +251,7 @@ export function useAuthMutations() {
         passwort: string;
         bestätigt: boolean;
       }) => api.benutzerLoeschen(passwort, bestätigt),
+      ...SITE_HANDLED,
       onSettled: clear,
     }),
   };

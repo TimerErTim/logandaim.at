@@ -867,6 +867,17 @@ async fn ac21_freie_runde_startet_ohne_parkour_und_hat_exklusiven_offenen_slot()
         "AC-21: anmelden erforderlich"
     );
 
+    // A blank name is not a name: the boundary refuses it, so the domain never sees one.
+    let (status, _) = harness
+        .client
+        .post_json_auth("/api/runden/frei", json!({"name":"   "}), &anna)
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "AC-21: ein leerer Rundenname wird abgewiesen"
+    );
+
     let (status, body) = harness
         .client
         .post_json_auth("/api/runden/frei", json!({"name":"Wiese"}), &anna)
@@ -893,6 +904,22 @@ async fn ac21_freie_runde_startet_ohne_parkour_und_hat_exklusiven_offenen_slot()
         .post_json_auth(&format!("/api/runden/{runde_id}/ziele"), json!({}), &anna)
         .await;
     assert_eq!(status, StatusCode::OK);
+
+    // A present-but-blank Ziel name is refused, exactly as the rename route refuses it.
+    // Only an absent name asks the round to number the Ziel itself.
+    let (status, _) = harness
+        .client
+        .post_json_auth(
+            &format!("/api/runden/{runde_id}/ziele"),
+            json!({ "name": "   " }),
+            &anna,
+        )
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "AC-21: ein leerer Zielname wird abgewiesen, nicht automatisch benannt"
+    );
 }
 
 #[test_log::test(pollster::test)]
@@ -1114,7 +1141,18 @@ async fn ac22_freies_ziel_und_runde_sind_nur_fuer_eigentuemer_aenderbar() {
             StatusCode::BAD_REQUEST,
             "leerer Zielname wird abgelehnt"
         );
+        // Log one arrow, so closing has a shot to answer with: a shotless round would make
+        // the read-model assertion below pass no matter which response the route builds.
         let (status, _) = harness
+            .client
+            .post_json_auth(
+                &format!("/api/runden/{runde_id}/schuesse"),
+                json!({ "zielId": ziel_id, "wertungszone": "Spot" }),
+                &anna,
+            )
+            .await;
+        assert_eq!(status, StatusCode::OK, "ein Schuss vor dem Abschluss");
+        let (status, abgeschlossen) = harness
             .client
             .post_json_auth(
                 &format!("/api/runden/{runde_id}/abschluss"),
@@ -1123,6 +1161,16 @@ async fn ac22_freies_ziel_und_runde_sind_nur_fuer_eigentuemer_aenderbar() {
             )
             .await;
         assert_eq!(status, StatusCode::OK, "Eigentümer schließt die Runde ab");
+        // Closing answers the whole read model, so the shots it just froze are still in it.
+        // A shotless answer here would claim the archer's arrows vanished.
+        assert_eq!(abgeschlossen["zustand"], "Abgeschlossen");
+        let schüsse_im_ziel = abgeschlossen["ziele"][0]["schüsse"]
+            .as_array()
+            .expect("die Ziele tragen ihre Schüsse");
+        assert!(
+            !schüsse_im_ziel.is_empty(),
+            "der Abschluss antwortet mit den erfassten Schüssen: {abgeschlossen}"
+        );
         let (status, _) = harness
             .client
             .put_json_auth(

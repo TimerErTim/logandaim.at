@@ -185,6 +185,7 @@ http_status!(RundeStartenFehler {
 });
 
 http_status!(RundeZielHinzufügenFehler {
+    UngültigeAnfrage => StatusCode::BAD_REQUEST,
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     NichtErlaubt => StatusCode::FORBIDDEN,
     NichtGefunden => StatusCode::NOT_FOUND,

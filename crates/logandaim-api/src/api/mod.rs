@@ -484,7 +484,7 @@ impl LogandaimAppApi {
         runde_id: RundeId,
         anfrage: requests::ZielHinzufuegenRequest,
     ) -> ResultReport<Runde, RundeZielHinzufügenFehler> {
-        let use_case = anfrage.in_use_case(runde_id);
+        let use_case = anfrage.in_use_case(runde_id)?;
         let runde = self.app.execute(auth, use_case).await?;
         self.runde_mit_schuessen(runde, runde_id, || RundeZielHinzufügenFehler::RundeLaden)
             .await
@@ -513,7 +513,7 @@ impl LogandaimAppApi {
         runde_id: RundeId,
         ziel_id: RundenZielId,
     ) -> ResultReport<Runde, RundeZielEntfernenFehler> {
-        let use_case = requests::ziel_entfernen_in_use_case(runde_id, ziel_id.0);
+        let use_case = requests::ziel_entfernen_in_use_case(runde_id, ziel_id);
         let runde = self.app.execute(auth, use_case).await?;
         self.runde_mit_schuessen(runde, runde_id, || RundeZielEntfernenFehler::RundeLaden)
             .await
@@ -701,7 +701,10 @@ impl LogandaimAppApi {
             .app
             .execute(auth, RundeAbschliessen { runde_id })
             .await?;
-        Ok(runde.into())
+        // Closing changes only the round's state, but the answer is the whole read model:
+        // reporting it shotless would claim the archer's twenty arrows vanished.
+        self.runde_mit_schuessen(runde, runde_id, || RundeAbschliessenFehler::RundeLaden)
+            .await
     }
 
     // ---------------------------------------------------------------- Schuss

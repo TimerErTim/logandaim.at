@@ -206,42 +206,50 @@ function RundeInhalt({ runde }: { runde: Runde }) {
             </div>
           </CardContent>
         </Card>
-        <HatchBand />
-        <section aria-label="Pflöcke" className="space-y-2">
-          <div className="flex items-baseline gap-3">
-            <h2 className="text-sm font-semibold text-ink">Pflöcke</h2>
-            <SheetNumber>{runde.pflöcke.length}</SheetNumber>
-          </div>
+        {/* A free round has no Parkour provenance and therefore no Pflöcke at all;
+            printing an empty section for it would describe an absence that is by
+            design, not a missing capture. The rule above it goes with it, so no
+            section divider divides nothing. */}
+        {runde.herkunft == null ? null : (
+          <>
+            <HatchBand />
+            <section aria-label="Pflöcke" className="space-y-2">
+              <div className="flex items-baseline gap-3">
+                <h2 className="text-sm font-semibold text-ink">Pflöcke</h2>
+                <SheetNumber>{runde.pflöcke.length}</SheetNumber>
+              </div>
 
-          {runde.pflöcke.length === 0 ? (
-            <p className="text-sm text-secondary">
-              Diese Runde hat keine Pflöcke.
-            </p>
-          ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeader className="w-16">Reihe</TableHeader>
-                  <TableHeader>Farbe</TableHeader>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {runde.pflöcke.map((pflock) => (
-                  <TableRow key={`${pflock.position}-${pflock.farbe}`}>
-                    <TableCell>
-                      <SheetNumber className="text-xs">
-                        {pflock.position + 1}
-                      </SheetNumber>
-                    </TableCell>
-                    <TableCell>
-                      <PflockMarker farbe={pflock.farbe} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </section>
+              {runde.pflöcke.length === 0 ? (
+                <p className="text-sm text-secondary">
+                  Diese Runde hat keine Pflöcke.
+                </p>
+              ) : (
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableHeader className="w-16">Reihe</TableHeader>
+                      <TableHeader>Farbe</TableHeader>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {runde.pflöcke.map((pflock) => (
+                      <TableRow key={`${pflock.position}-${pflock.farbe}`}>
+                        <TableCell>
+                          <SheetNumber className="text-xs">
+                            {pflock.position + 1}
+                          </SheetNumber>
+                        </TableCell>
+                        <TableCell>
+                          <PflockMarker farbe={pflock.farbe} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </section>
+          </>
+        )}
         <Perforation />
         <section aria-label="Ziele" className="space-y-4">
           <div className="flex items-baseline gap-3">
@@ -268,6 +276,7 @@ function RundeInhalt({ runde }: { runde: Runde }) {
                   ziel={ziel}
                   reihenfolge={index + 1}
                   offen={offen}
+                  mitPfloecken={runde.herkunft != null}
                   ausstehend={schussRegistrieren.isPending}
                   onErfassen={(wertungszone) => {
                     schussMeldung.verwerfen();
@@ -407,12 +416,15 @@ function Zielabschnitt({
   ziel,
   reihenfolge,
   offen,
+  mitPfloecken,
   ausstehend,
   onErfassen,
 }: {
   ziel: Runde["ziele"][number];
   reihenfolge: number;
   offen: boolean;
+  /** Whether the round came from a Parkour; a free round's Ziele never carry Pflöcke. */
+  mitPfloecken: boolean;
   ausstehend: boolean;
   onErfassen: (zone: Wertungszone, pfeil: number) => void;
 }) {
@@ -426,38 +438,40 @@ function Zielabschnitt({
         <SheetNumber>{ziel.zielId.slice(0, 8)}</SheetNumber>
       </div>
 
-      <div className="space-y-2">
-        <h4 className="text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
-          Pflöcke für dieses Ziel
-        </h4>
-        {ziel.pflöcke.length === 0 ? (
-          <p className="text-sm text-secondary">Keine Pflöcke erfasst.</p>
-        ) : (
-          <ol className="flex flex-wrap gap-3 text-sm">
-            {ziel.pflöcke.map((pflock, index) => {
-              const abstand = ziel.abstände.find(
-                (eintrag) => eintrag.pflock === pflock.farbe,
-              );
-              return (
-                <li
-                  key={`${pflock.position}-${pflock.farbe}`}
-                  className="inline-flex items-baseline gap-1.5"
-                >
-                  <SheetNumber>{index + 1}</SheetNumber>
-                  <PflockMarker farbe={pflock.farbe} />
-                  {abstand ? (
-                    <span className="font-medium tabular-nums text-ink">
-                      {abstand.meter} m
-                    </span>
-                  ) : (
-                    <span className="text-secondary">Kein Abstand</span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </div>
+      {mitPfloecken ? (
+        <div className="space-y-2">
+          <h4 className="text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
+            Pflöcke für dieses Ziel
+          </h4>
+          {ziel.pflöcke.length === 0 ? (
+            <p className="text-sm text-secondary">Keine Pflöcke erfasst.</p>
+          ) : (
+            <ol className="flex flex-wrap gap-3 text-sm">
+              {ziel.pflöcke.map((pflock, index) => {
+                const abstand = ziel.abstände.find(
+                  (eintrag) => eintrag.pflock === pflock.farbe,
+                );
+                return (
+                  <li
+                    key={`${pflock.position}-${pflock.farbe}`}
+                    className="inline-flex items-baseline gap-1.5"
+                  >
+                    <SheetNumber>{index + 1}</SheetNumber>
+                    <PflockMarker farbe={pflock.farbe} />
+                    {abstand ? (
+                      <span className="font-medium tabular-nums text-ink">
+                        {abstand.meter} m
+                      </span>
+                    ) : (
+                      <span className="text-secondary">Kein Abstand</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+      ) : null}
 
       {ziel.wertung ? (
         <dl className="grid gap-3 text-sm sm:grid-cols-4">

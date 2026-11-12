@@ -14,7 +14,8 @@ use tracing::{info, instrument};
 use crate::{
     application::ExecutionContext,
     domain::{
-        Erfasser, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId, RundenZielId, Rundenaufbau,
+        Erfasser, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId, RundenZielId,
+        Rundenherkunft,
     },
     ports::RepositoryError,
     service::UseCase,
@@ -157,9 +158,9 @@ impl UseCase<Runde> for RundeStarten {
         let runde = uow.finish(ergebnis, RundeStartenFehler::Starten).await?;
         info!(
             id = ?runde.id(),
-            parkour_id = ?match runde.aufbau() {
-                Rundenaufbau::Parkour { parkour_id, .. } => Some(parkour_id),
-                Rundenaufbau::Freie { .. } => None,
+            parkour_id = ?match runde.herkunft() {
+                Rundenherkunft::Parkour { parkour_id, .. } => Some(parkour_id),
+                Rundenherkunft::Freie { .. } => None,
             },
             "runde gestartet"
         );
@@ -171,8 +172,54 @@ impl UseCase<Runde> for RundeStarten {
 // ZielHinzufügen / ZielEntfernen (the free round's JIT Ziel list)
 // ---------------------------------------------------------------------------------------
 
+/// Why a free-round Ziel write is refused, decided by one predicate for all three writes.
+///
+/// A round that is free but closed and a round that is a Parkour round are different
+/// refusals: the first is frozen, the second was never editable. Deciding this once keeps the
+/// three writes from answering two different errors for the same round.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ZielSchreibfehler {
+    /// A closed free round: its Ziel list is frozen (AC-22).
+    NichtInBearbeitung,
+    /// A Parkour round: its route is captured, never edited.
+    KeineFreieRunde,
+}
+
+fn ziel_schreibfehler(runde: &Runde) -> ZielSchreibfehler {
+    if runde.ist_freie_runde() {
+        ZielSchreibfehler::NichtInBearbeitung
+    } else {
+        ZielSchreibfehler::KeineFreieRunde
+    }
+}
+
+impl ZielSchreibfehler {
+    fn als_hinzufuegen(self) -> RundeZielHinzufügenFehler {
+        match self {
+            Self::NichtInBearbeitung => RundeZielHinzufügenFehler::RundeNichtInBearbeitung,
+            Self::KeineFreieRunde => RundeZielHinzufügenFehler::RundeIstKeineFreieRunde,
+        }
+    }
+
+    fn als_entfernen(self) -> RundeZielEntfernenFehler {
+        match self {
+            Self::NichtInBearbeitung => RundeZielEntfernenFehler::RundeNichtInBearbeitung,
+            Self::KeineFreieRunde => RundeZielEntfernenFehler::RundeIstKeineFreieRunde,
+        }
+    }
+
+    fn als_umbenennen(self) -> RundeZielUmbenennenFehler {
+        match self {
+            Self::NichtInBearbeitung => RundeZielUmbenennenFehler::RundeNichtInBearbeitung,
+            Self::KeineFreieRunde => RundeZielUmbenennenFehler::RundeIstKeineFreieRunde,
+        }
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum RundeZielHinzufügenFehler {
+    #[error("die Anfrage ist ungültig")]
+    UngültigeAnfrage,
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
     NichtAngemeldet,
     #[error("diese Runde gehört nicht zu diesem Benutzer")]
@@ -217,20 +264,10 @@ impl UseCase<Runde> for RundeZielHinzufügen {
                 return Err(Report::new(RundeZielHinzufügenFehler::NichtErlaubt));
             }
             let Runde::FreieRundeInArbeit(mut freie_runde) = runde.cloned_data() else {
-                if runde.ist_in_bearbeitung() {
-                    return Err(Report::new(
-                        RundeZielHinzufügenFehler::RundeIstKeineFreieRunde,
-                    ));
-                }
-                return Err(Report::new(
-                    RundeZielHinzufügenFehler::RundeNichtInBearbeitung,
-                ));
+                return Err(Report::new(ziel_schreibfehler(&runde).als_hinzufuegen()));
             };
-            if !freie_runde.ziel_hinzufügen(RundenZielId(uuid::Uuid::new_v4()), self.name) {
-                return Err(Report::new(
-                    RundeZielHinzufügenFehler::RundeIstKeineFreieRunde,
-                ));
-            }
+            // The round mints the identity, so an append can never collide (#18).
+            freie_runde.ziel_hinzufügen(self.name);
 
             runde.set_data(freie_runde.into());
             uow.runden()
@@ -300,14 +337,7 @@ impl UseCase<Runde> for RundeZielEntfernen {
                 return Err(Report::new(RundeZielEntfernenFehler::NichtErlaubt));
             }
             let Runde::FreieRundeInArbeit(mut freie_runde) = runde.cloned_data() else {
-                if runde.ist_freie_runde() {
-                    return Err(Report::new(
-                        RundeZielEntfernenFehler::RundeNichtInBearbeitung,
-                    ));
-                }
-                return Err(Report::new(
-                    RundeZielEntfernenFehler::RundeIstKeineFreieRunde,
-                ));
+                return Err(Report::new(ziel_schreibfehler(&runde).als_entfernen()));
             };
             if freie_runde.ziel_entfernen(self.ziel_id).is_none() {
                 return Err(Report::new(RundeZielEntfernenFehler::ZielNichtGefunden));
@@ -426,14 +456,7 @@ impl UseCase<Runde> for RundeZielUmbenennen {
                 return Err(Report::new(RundeZielUmbenennenFehler::NichtErlaubt));
             }
             let Runde::FreieRundeInArbeit(mut freie_runde) = runde.cloned_data() else {
-                if runde.ist_freie_runde() {
-                    return Err(Report::new(
-                        RundeZielUmbenennenFehler::RundeNichtInBearbeitung,
-                    ));
-                }
-                return Err(Report::new(
-                    RundeZielUmbenennenFehler::RundeIstKeineFreieRunde,
-                ));
+                return Err(Report::new(ziel_schreibfehler(&runde).als_umbenennen()));
             };
             if !freie_runde.ziel_umbenennen(self.ziel_id, self.name) {
                 return Err(Report::new(RundeZielUmbenennenFehler::ZielNichtGefunden));

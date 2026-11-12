@@ -10,7 +10,7 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Anlage, AnlageAktiv, AnlageId, AnlageZielId, EmailAdresse, Erfasser, NeueAnlage, NeueRunde,
-        NeuerSchuss, ParkourId, Runde, RundeId, Schuss, SchussId, SchussZielId,
+        NeuerSchuss, ParkourId, Runde, RundeId, Rundenherkunft, Schuss, SchussId, SchussZielId,
         konto::{
             Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
             NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
@@ -320,7 +320,7 @@ impl RundeRepository for FakeRundeRepository {
             .datastore
             .runden()
             .values()
-            .any(|runde| matches!(runde.aufbau(), logandaim_core::domain::Rundenaufbau::Parkour { anlage_id, .. } if *anlage_id == id)))
+            .any(|runde| matches!(runde.herkunft(), Rundenherkunft::Parkour { anlage_id, .. } if *anlage_id == id)))
     }
 
     async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool> {
@@ -328,7 +328,7 @@ impl RundeRepository for FakeRundeRepository {
             .datastore
             .runden()
             .values()
-            .any(|runde| matches!(runde.aufbau(), logandaim_core::domain::Rundenaufbau::Parkour { parkour_id, .. } if *parkour_id == id)))
+            .any(|runde| matches!(runde.herkunft(), Rundenherkunft::Parkour { parkour_id, .. } if *parkour_id == id)))
     }
 
     async fn exists_referencing_ziel(&self, id: AnlageZielId) -> RepositoryResult<bool> {
@@ -336,6 +336,7 @@ impl RundeRepository for FakeRundeRepository {
             runde
                 .aufbau()
                 .ziele()
+                .iter()
                 .any(|ziel| ziel.anlage_ziel_id() == Some(id))
         }))
     }

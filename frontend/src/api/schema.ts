@@ -407,7 +407,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Grant a role in the Anlage to an existing Benutzer. Administrator only. */
+        /**
+         * Grant a role in the Anlage to an existing Benutzer. Administrator only.
+         * @description The Benutzer is named by identity; find it with `benutzer-suche` first.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -525,7 +528,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Change an existing role. Administrator only. */
+        /**
+         * Change an existing role. Administrator only.
+         * @description The target is in the path, so the body only names the role.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -690,7 +696,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Edit a Ziel's details. */
+        /**
+         * Edit a Ziel's details.
+         * @description The identity stays, and so does everything already recorded against it.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -736,7 +745,11 @@ export interface paths {
             };
         };
         post?: never;
-        /** Remove a Ziel from the Anlage. */
+        /**
+         * Remove a Ziel: archive it when recorded Runden reference it, delete it otherwise.
+         * @description Answers the Anlage as it stands afterwards, so the Ziel is absent from `ziele` either
+         *     way and an archived one no longer appears among the active ones.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -915,7 +928,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Replace the shooting setup with a new Pflock set and route. */
+        /**
+         * Replace the whole shooting setup: Pflöcke and the route that places Ziele among them.
+         * @description Existing Runden keep the snapshot they captured; only future Runden see the change.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -975,7 +991,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Rename a Parkour. */
+        /**
+         * Rename a Parkour.
+         * @description The identity stays, and every captured snapshot keeps the name it recorded.
+         */
         put: {
             parameters: {
                 query?: never;
@@ -1021,7 +1040,10 @@ export interface paths {
             };
         };
         post?: never;
-        /** Remove a Parkour from the Anlage. */
+        /**
+         * Remove a Parkour: archive it when a Runde captured it, delete it otherwise.
+         * @description Answers the Anlage as it stands afterwards.
+         */
         delete: {
             parameters: {
                 query?: never;
@@ -1475,7 +1497,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read one Runde with its whole snapshot and both Wertungen.
+         * Read one Runde with its captured route and both Wertungen.
          * @description The Runde is visible to its owner and to a Systemadministrator.
          */
         get: {
@@ -3233,7 +3255,6 @@ export interface components {
         /**
          * SchussÄnderungRequest
          * @description Replace a Schuss's scoring zone and optional position.
-         *     Replace a Schuss's scoring zone and optional position.
          */
         "Schuss\u00C4nderungRequest": {
             /** @description Where on the Ziel the arrow landed. */

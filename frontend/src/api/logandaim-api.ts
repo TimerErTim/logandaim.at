@@ -166,11 +166,12 @@ export type ParkourÖffentlich = Schemas["ParkourÖffentlich"];
 export type AnlageÖffentlich = Schemas["AnlageÖffentlich"];
 export type ParkourKurz = Schemas["ParkourKurz"];
 export type RundeHerkunft = { anlageId: string; parkourId: string };
-type RundeWire<T> = Omit<
-  T,
-  "anlageId" | "parkourId" | Extract<keyof T, `parkour${string}`>
->;
-type RundeWireMitHerkunft<T> = Omit<RundeWire<T>, "herkunft"> & {
+/**
+ * The only widening the generated schema needs: `herkunft` is emitted as absent rather
+ * than as `null`, and a `Freie Runde` reads it as `null`. Nothing else is narrowed —
+ * an `Omit` here would silently erase a field the schema adds later.
+ */
+type RundeWireMitHerkunft<T> = Omit<T, "herkunft"> & {
   herkunft: RundeHerkunft | null;
 };
 export type RundeBasic = Omit<

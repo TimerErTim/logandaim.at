@@ -97,13 +97,10 @@ impl UseCase<Schuss> for SchussRegistrieren {
             };
 
             // AC-9: a Schuss may only name a Pflock the Runde captured at this Ziel, or —
-            // on a Freie Runde — any colour at all. The setup owns the question, so this use
-            // case never asks which setup it is holding (SPEC-runde rule 19).
-            if runde
-                .aufbau()
-                .pruefe_position(ziel_id, self.position)
-                .is_err()
-            {
+            // on a Freie Runde — any colour at all. The round owns the question, because the
+            // provenance that decides it lives in its typestate, not in the route
+            // (SPEC-runde rule 19).
+            if runde.pruefe_position(ziel_id, self.position).is_err() {
                 return Err(Report::new(SchussRegistrierenFehler::PflockNichtImSnapshot));
             }
             let vorhandene: Vec<Schuss> = uow
@@ -229,9 +226,8 @@ impl UseCase<Schuss> for SchussÄndern {
                 }
             };
             // The Ziel's effective set decides a Parkour round's Pflock; a Freie Runde
-            // accepts any colour. Both go through the setup's one validation seam.
+            // accepts any colour. Both go through the round's one validation seam.
             if runde
-                .aufbau()
                 .pruefe_position(
                     runde
                         .aufbau()

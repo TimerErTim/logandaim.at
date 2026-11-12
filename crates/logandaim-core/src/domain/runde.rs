@@ -1,16 +1,23 @@
-//! One logged Runde, holding the setup it was started from.
+//! One logged Runde: its route, where it came from, and how far it has come.
 //!
 //! A `Runde` is a standalone aggregate root. It never holds a collection of `Schuss`:
 //! each `Schuss` carries `runde_id`, so two aggregates stay two aggregates and no use case
 //! writes both. The Runde-wide Wertung folds the per-Ziel results once, in the order of the
 //! captured route (SPEC-wertung rule 6, AC-8).
 //!
-//! The root is a **typestate**: only `RundeIn<InBearbeitung>` can be closed, and the closing
-//! timestamp lives in the `Abgeschlossen` marker, so "when was it closed?" is not an
-//! `Option` a reader must interpret.
+//! The root is a **typestate**. Two things live in the state, never in an `Option` or a
+//! parallel enum:
 //!
-//! The setup records Parkour provenance when present, over a single round-owned route of
-//! neutral target identities. Route mutations are exposed only by the running Runde state.
+//! - the **setup kind**, as the provenance of the round ([`Rundenherkunft`]), and
+//! - the **lifecycle**, as whether a closing timestamp exists ([`Abgeschlossen`]).
+//!
+//! The setup kind is the marker, so "a free round over a Parkour setup" has no spelling: the
+//! marker fields are private and every constructor picks the marker from the same value it
+//! takes the route from. Route mutations exist only on [`FreieRundeInArbeit`], which is the
+//! AC-22 promise as a compile-time guarantee, and a closed round has no mutator at all.
+//!
+//! The route itself ([`Rundenaufbau`]) is the same shape in every state: it records the
+//! topology and the captured data, and it is immutable once the round is closed.
 
 use std::num::NonZeroU32;
 
@@ -27,55 +34,136 @@ use super::schuss::{Erfasser, Schuss, SchussZielId, Schussposition, ZielSchüsse
 /// Identity of one Runde. Re-exported where a `Schuss` needs it.
 pub use super::schuss::RundeId;
 
-/// Lifecycle markers of the `Runde` typestate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct InBearbeitung;
+/// The one stored spelling of a running Runde, shared by both open markers.
+///
+/// The SQLite partial unique index `idx_runden_offen_pro_benutzer` and
+/// `find_offen_by_benutzer` filter on this literal, so it is spelled once, here.
+pub const ZUSTAND_IN_BEARBEITUNG: &str = "InBearbeitung";
 
-/// The free-round state permits just-in-time route edits.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct FreieRundeInBearbeitung;
+/// The one stored spelling of a closed Runde.
+pub const ZUSTAND_ABGESCHLOSSEN: &str = "Abgeschlossen";
 
-impl FreieRundeInBearbeitung {
-    pub fn as_str(self) -> &'static str {
-        "InBearbeitung"
-    }
+// ---------------------------------------------------------------------------------------
+// Where a Runde came from
+// ---------------------------------------------------------------------------------------
 
-    pub fn ist_in_bearbeitung(self) -> bool {
-        true
+/// The provenance of a Runde: the Parkour it was started at, or the name it gave itself.
+///
+/// Provenance, not topology: the route it was seeded with lives in [`Rundenaufbau`], which is
+/// the same shape for both. A reader therefore asks two separate questions and never has to
+/// interpret "which setup is this?" out of one field.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Rundenherkunft {
+    Parkour {
+        anlage_id: AnlageId,
+        parkour_id: ParkourId,
+        parkour_name: NonEmptyString,
+    },
+    Freie {
+        name: NonEmptyString,
+    },
+}
+
+impl Rundenherkunft {
+    /// The round's name: the captured Parkour's, or the free round's own.
+    pub fn name(&self) -> &NonEmptyString {
+        match self {
+            Self::Parkour { parkour_name, .. } => parkour_name,
+            Self::Freie { name } => name,
+        }
     }
 }
 
-/// The closed state carries when it happened.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The provenance every state can answer, so a closed round still says where it came from.
+///
+/// The markers hold the provenance, so this is what [`RundeIn`] borrows it through; nothing is
+/// cloned to read a round's name.
+pub trait RundenherkunftView {
+    fn herkunft(&self) -> &Rundenherkunft;
+}
+
+// ---------------------------------------------------------------------------------------
+// Lifecycle markers of the `Runde` typestate
+// ---------------------------------------------------------------------------------------
+
+/// A running round seeded from a Parkour.
+///
+/// The field is private and the only constructor is in this module, so this state cannot be
+/// built over [`Rundenherkunft::Freie`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MitParkour {
+    herkunft: Rundenherkunft,
+}
+
+/// A running round that owns its Ziel list and permits just-in-time route edits.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FreieRundeInBearbeitung {
+    herkunft: Rundenherkunft,
+}
+
+/// The closed state: it carries when it happened and the provenance it happened under.
+///
+/// Both live in the marker, so "when was it closed?" and "what was it?" are not `Option`s a
+/// reader must interpret, and closing never erases either.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Abgeschlossen {
+    herkunft: Rundenherkunft,
     abgeschlossen_am: DateTime<Utc>,
 }
 
+impl MitParkour {
+    fn neu(anlage_id: AnlageId, parkour_id: ParkourId, parkour_name: NonEmptyString) -> Self {
+        Self {
+            herkunft: Rundenherkunft::Parkour {
+                anlage_id,
+                parkour_id,
+                parkour_name,
+            },
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        ZUSTAND_IN_BEARBEITUNG
+    }
+}
+
+impl FreieRundeInBearbeitung {
+    fn neu(name: NonEmptyString) -> Self {
+        Self {
+            herkunft: Rundenherkunft::Freie { name },
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        ZUSTAND_IN_BEARBEITUNG
+    }
+}
+
 impl Abgeschlossen {
-    pub fn abgeschlossen_am(self) -> DateTime<Utc> {
+    pub fn abgeschlossen_am(&self) -> DateTime<Utc> {
         self.abgeschlossen_am
     }
-}
 
-// The typestate markers carry their own stored spelling: the two markers are the whole
-// lifecycle, so an adapter never needs a second, parallel enum that restates them.
-impl InBearbeitung {
-    pub fn as_str(self) -> &'static str {
-        "InBearbeitung"
-    }
-
-    pub fn ist_in_bearbeitung(self) -> bool {
-        true
+    pub fn as_str(&self) -> &'static str {
+        ZUSTAND_ABGESCHLOSSEN
     }
 }
 
-impl Abgeschlossen {
-    pub fn as_str(self) -> &'static str {
-        "Abgeschlossen"
+impl RundenherkunftView for MitParkour {
+    fn herkunft(&self) -> &Rundenherkunft {
+        &self.herkunft
     }
+}
 
-    pub fn ist_in_bearbeitung(self) -> bool {
-        false
+impl RundenherkunftView for FreieRundeInBearbeitung {
+    fn herkunft(&self) -> &Rundenherkunft {
+        &self.herkunft
+    }
+}
+
+impl RundenherkunftView for Abgeschlossen {
+    fn herkunft(&self) -> &Rundenherkunft {
+        &self.herkunft
     }
 }
 
@@ -131,9 +219,6 @@ impl RundenZiel {
     pub fn id(&self) -> RundenZielId {
         self.id
     }
-    pub fn ziel_id(&self) -> RundenZielId {
-        self.id
-    }
     pub fn anlage_ziel_id(&self) -> Option<AnlageZielId> {
         self.anlage_ziel_id
     }
@@ -155,15 +240,19 @@ impl RundenZiel {
     }
 }
 
-/// The common route snapshot. Both setup kinds use the same round-local targets and
-/// capture/read model; only the Parkour setup carries a configured stake set.
+/// The route one Runde captured: its Pflöcke and its ordered Ziele.
+///
+/// Topology and data only, with no provenance inside it, so the same value serves a Parkour
+/// round, a free round, and a closed round. A Parkour round seeds it from the `ParkourSnapshot`
+/// (AC-7/AC-9: a value copy, never a live read) and leaves it alone; a free round appends and
+/// removes targets while it runs; a closed round keeps it as the round's historical snapshot.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RundenSnapshot {
+pub struct Rundenaufbau {
     pflöcke: Vec<PflockSnapshot>,
     ziele: Vec<RundenZiel>,
 }
 
-impl RundenSnapshot {
+impl Rundenaufbau {
     pub fn from_parts(pflöcke: Vec<PflockSnapshot>, ziele: Vec<RundenZiel>) -> Self {
         Self { pflöcke, ziele }
     }
@@ -231,113 +320,18 @@ impl RundenSnapshot {
                 .any(|pflock| pflock.farbe() == farbe)
         })
     }
-}
 
-/// The setup of a Runde: Anlage/Parkour provenance or a free-round name, over one common route.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Rundenaufbau {
-    Parkour {
-        anlage_id: AnlageId,
-        parkour_id: ParkourId,
-        parkour_name: NonEmptyString,
-        snapshot: RundenSnapshot,
-    },
-    Freie {
-        name: NonEmptyString,
-        snapshot: RundenSnapshot,
-    },
+    pub fn ziel_id_für_schuss(&self, ziel_id: SchussZielId) -> Option<RundenZielId> {
+        self.ziele
+            .iter()
+            .find(|ziel| ziel.id.0 == ziel_id.0)
+            .map(RundenZiel::id)
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
 #[error("der Pflock gehört nicht zum Aufbau dieser Runde")]
 pub struct PositionNichtImAufbau;
-
-impl Rundenaufbau {
-    pub fn parkour(anlage_id: AnlageId, snapshot: ParkourSnapshot) -> Self {
-        Self::Parkour {
-            anlage_id,
-            parkour_id: snapshot.parkour_id(),
-            parkour_name: snapshot.parkour_name().clone(),
-            snapshot: RundenSnapshot::from_parkour(&snapshot),
-        }
-    }
-
-    pub fn snapshot(&self) -> &RundenSnapshot {
-        match self {
-            Self::Parkour { snapshot, .. } | Self::Freie { snapshot, .. } => snapshot,
-        }
-    }
-
-    pub fn parkour_name(&self) -> Option<&NonEmptyString> {
-        match self {
-            Self::Parkour { parkour_name, .. } => Some(parkour_name),
-            _ => None,
-        }
-    }
-
-    pub fn name(&self) -> &NonEmptyString {
-        match self {
-            Self::Parkour { parkour_name, .. } => parkour_name,
-            Self::Freie { name, .. } => name,
-        }
-    }
-
-    pub fn ziele(&self) -> impl Iterator<Item = &RundenZiel> {
-        self.snapshot().ziele().iter()
-    }
-
-    pub fn ziel_id_für_schuss(&self, ziel_id: SchussZielId) -> Option<RundenZielId> {
-        self.snapshot()
-            .ziele()
-            .iter()
-            .find(|ziel| ziel.id.0 == ziel_id.0)
-            .map(RundenZiel::id)
-    }
-
-    pub fn enthält_ziel(&self, ziel_id: RundenZielId) -> bool {
-        self.snapshot().enthält_ziel(ziel_id)
-    }
-
-    pub fn pruefe_position(
-        &self,
-        ziel_id: RundenZielId,
-        position: Option<Schussposition>,
-    ) -> Result<(), PositionNichtImAufbau> {
-        if !self.enthält_ziel(ziel_id) {
-            return Err(PositionNichtImAufbau);
-        }
-        if !self.enthält_ziel(ziel_id) {
-            return Err(PositionNichtImAufbau);
-        }
-        if let Some(Schussposition::Pflock(farbe)) = position {
-            match self {
-                Self::Parkour { snapshot, .. } if snapshot.hat_pflock_am_ziel(ziel_id, farbe) => {
-                    Ok(())
-                }
-                Self::Freie { .. } => Ok(()),
-                _ => Err(PositionNichtImAufbau),
-            }
-        } else {
-            Ok(())
-        }
-    }
-
-    fn farben(&self, schüsse: impl IntoIterator<Item = Schuss>) -> Vec<Farbe> {
-        let freie = matches!(self, Self::Freie { .. });
-        let mut farben = Vec::new();
-        if freie {
-            for schuss in schüsse {
-                if self.ziel_id_für_schuss(schuss.ziel_id()).is_some()
-                    && let Some(Schussposition::Pflock(farbe)) = schuss.position()
-                    && !farben.contains(&farbe)
-                {
-                    farben.push(farbe);
-                }
-            }
-        }
-        farben
-    }
-}
 
 // ---------------------------------------------------------------------------------------
 // Creation input
@@ -346,7 +340,7 @@ impl Rundenaufbau {
 /// Creation input of a Runde: everything except its identity and lifecycle state.
 ///
 /// A variant, not a bag of optional fields, so neither setup can be built half-way: the
-/// `Rundenaufbau` follows from the variant (SPEC-runde rule 17).
+/// provenance and the route both follow from the variant (SPEC-runde rule 17).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NeueRunde {
     Parkour {
@@ -405,23 +399,19 @@ impl NeueRunde {
         }
     }
 
-    /// The setup this input describes, built once so the pair cannot be split.
-    pub fn aufbau(&self) -> Rundenaufbau {
+    /// Where this round comes from, built once so the pair cannot be split.
+    pub fn herkunft(&self) -> Rundenherkunft {
         match self {
             Self::Parkour {
                 anlage_id,
                 snapshot,
                 ..
-            } => Rundenaufbau::Parkour {
+            } => Rundenherkunft::Parkour {
                 anlage_id: *anlage_id,
                 parkour_id: snapshot.parkour_id(),
                 parkour_name: snapshot.parkour_name().clone(),
-                snapshot: RundenSnapshot::from_parkour(snapshot),
             },
-            Self::Freie { name, .. } => Rundenaufbau::Freie {
-                name: name.clone(),
-                snapshot: RundenSnapshot::from_parts(Vec::new(), Vec::new()),
-            },
+            Self::Freie { name, .. } => Rundenherkunft::Freie { name: name.clone() },
         }
     }
 }
@@ -430,7 +420,7 @@ impl NeueRunde {
 // The aggregate
 // ---------------------------------------------------------------------------------------
 
-/// One logged Runde: who, the frozen setup, and whether it is still running.
+/// One logged Runde: who, the captured route, and the state that names its kind and lifecycle.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RundeIn<S> {
     id: RundeId,
@@ -440,7 +430,7 @@ pub struct RundeIn<S> {
     state: S,
 }
 
-pub type RundeInBearbeitung = RundeIn<InBearbeitung>;
+pub type RundeInBearbeitung = RundeIn<MitParkour>;
 pub type FreieRundeInArbeit = RundeIn<FreieRundeInBearbeitung>;
 pub type RundeAbgeschlossen = RundeIn<Abgeschlossen>;
 
@@ -473,20 +463,20 @@ impl<S> RundeIn<S> {
         self.erfasst_von.benutzer() == Some(benutzer_id)
     }
 
-    /// Whether the setup contains this Ziel (the AC-9 contract a Schuss obeys).
+    /// Whether the captured route contains this Ziel (the AC-9 contract a Schuss obeys).
     pub fn enthält_ziel(&self, ziel_id: RundenZielId) -> bool {
         self.aufbau.enthält_ziel(ziel_id)
     }
 
     /// Replace the owner with [`Erfasser::Anonymisiert`] (SPEC-datenschutz retention).
-    /// The setup and every Schuss stay untouched (NFR-3).
+    /// The route, the provenance, and every Schuss stay untouched (NFR-3).
     pub fn anonymisiere(&mut self, am: DateTime<Utc>) {
         self.erfasst_von = Erfasser::Anonymisiert { am };
     }
 
     /// Fold the given Schüsse into one Wertung per Ziel, in visiting order.
     ///
-    /// `None` marks a Ziel no Schuss was logged at (AC-6). The slice pairs with the setup's
+    /// `None` marks a Ziel no Schuss was logged at (AC-6). The slice pairs with the route's
     /// own Ziel order, so a reader zips the two instead of re-deriving a fold.
     pub fn ziel_wertungen(
         &self,
@@ -498,9 +488,10 @@ impl<S> RundeIn<S> {
             .collect();
         self.aufbau
             .ziele()
+            .iter()
             .map(|ziel| {
                 // The filter names exactly this Ziel, so the collection cannot refuse a row.
-                let ziel_id = ziel.ziel_id();
+                let ziel_id = ziel.id();
                 ZielSchüsse::für_ziel(
                     ziel_id.into(),
                     eigene
@@ -522,9 +513,9 @@ impl<S> RundeIn<S> {
             .into_iter()
             .filter(|schuss| schuss.runde_id() == self.id)
             .collect();
-        let je_ziel = self.aufbau.ziele().filter_map(|ziel| {
+        let je_ziel = self.aufbau.ziele().iter().filter_map(|ziel| {
             // The filter names exactly this Ziel, so the collection cannot refuse a row here.
-            let ziel_id = ziel.ziel_id();
+            let ziel_id = ziel.id();
             let schuss_ziel_id = ziel_id.into();
             ZielSchüsse::für_ziel(
                 schuss_ziel_id,
@@ -541,20 +532,79 @@ impl<S> RundeIn<S> {
     }
 }
 
+impl<S: RundenherkunftView> RundeIn<S> {
+    /// Where this round came from, borrowed from the state that stores it.
+    pub fn herkunft(&self) -> &Rundenherkunft {
+        self.state.herkunft()
+    }
+
+    /// The round's name: the captured Parkour's, or the free round's own.
+    pub fn name(&self) -> &NonEmptyString {
+        self.herkunft().name()
+    }
+
+    /// Whether this position may be captured at this Ziel (AC-9, AC-23).
+    ///
+    /// A Parkour round only accepts a Pflock its route carries at that Ziel; a free round
+    /// configures no Pflock set, so the colour the archer picked is a position as such. The
+    /// provenance decides, which is why the question is asked here and not of the route.
+    pub fn pruefe_position(
+        &self,
+        ziel_id: RundenZielId,
+        position: Option<Schussposition>,
+    ) -> Result<(), PositionNichtImAufbau> {
+        if !self.aufbau.enthält_ziel(ziel_id) {
+            return Err(PositionNichtImAufbau);
+        }
+        match (self.herkunft(), position) {
+            (_, None) => Ok(()),
+            (Rundenherkunft::Freie { .. }, Some(_)) => Ok(()),
+            (Rundenherkunft::Parkour { .. }, Some(Schussposition::Distanz(_))) => Ok(()),
+            (Rundenherkunft::Parkour { .. }, Some(Schussposition::Pflock(farbe)))
+                if self.aufbau.hat_pflock_am_ziel(ziel_id, farbe) =>
+            {
+                Ok(())
+            }
+            (Rundenherkunft::Parkour { .. }, Some(Schussposition::Pflock(_))) => {
+                Err(PositionNichtImAufbau)
+            }
+        }
+    }
+}
+
 impl RundeInBearbeitung {
-    fn aus_neu(id: RundeId, neu: NeueRunde) -> Self {
+    /// Start a Parkour round from its captured setup.
+    ///
+    /// The parameters are the Parkour's own identities, which a free round does not have, so
+    /// a free round cannot reach this constructor at all — not even by mistake.
+    fn aus_neu(
+        id: RundeId,
+        erfasser: Erfasser,
+        anlage_id: AnlageId,
+        snapshot: ParkourSnapshot,
+        begonnen_am: DateTime<Utc>,
+    ) -> Self {
+        let state = MitParkour::neu(
+            anlage_id,
+            snapshot.parkour_id(),
+            snapshot.parkour_name().clone(),
+        );
         Self {
             id,
-            erfasst_von: neu.erfasst_von(),
-            aufbau: neu.aufbau(),
-            begonnen_am: neu.begonnen_am(),
-            state: InBearbeitung,
+            erfasst_von: erfasser,
+            aufbau: Rundenaufbau::from_parkour(&snapshot),
+            begonnen_am,
+            state,
         }
     }
 
+    /// Rebuild a persisted Parkour round; the same Parkour identities gate the state.
     fn from_parts(
         id: RundeId,
         erfasser: Erfasser,
+        anlage_id: AnlageId,
+        parkour_id: ParkourId,
+        parkour_name: NonEmptyString,
         aufbau: Rundenaufbau,
         begonnen_am: DateTime<Utc>,
     ) -> Self {
@@ -563,7 +613,7 @@ impl RundeInBearbeitung {
             erfasst_von: erfasser,
             aufbau,
             begonnen_am,
-            state: InBearbeitung,
+            state: MitParkour::neu(anlage_id, parkour_id, parkour_name),
         }
     }
 
@@ -575,6 +625,7 @@ impl RundeInBearbeitung {
             aufbau: self.aufbau,
             begonnen_am: self.begonnen_am,
             state: Abgeschlossen {
+                herkunft: self.state.herkunft,
                 abgeschlossen_am: am,
             },
         }
@@ -582,19 +633,26 @@ impl RundeInBearbeitung {
 }
 
 impl FreieRundeInArbeit {
-    pub fn aus_neu(id: RundeId, neu: NeueRunde) -> Self {
+    /// Start a free round: it names itself and owns an empty route.
+    fn aus_neu(
+        id: RundeId,
+        erfasser: Erfasser,
+        name: NonEmptyString,
+        begonnen_am: DateTime<Utc>,
+    ) -> Self {
         Self {
             id,
-            erfasst_von: neu.erfasst_von(),
-            aufbau: neu.aufbau(),
-            begonnen_am: neu.begonnen_am(),
-            state: FreieRundeInBearbeitung,
+            erfasst_von: erfasser,
+            aufbau: Rundenaufbau::from_parts(Vec::new(), Vec::new()),
+            begonnen_am,
+            state: FreieRundeInBearbeitung::neu(name),
         }
     }
 
-    pub fn from_parts(
+    fn from_parts(
         id: RundeId,
         erfasser: Erfasser,
+        name: NonEmptyString,
         aufbau: Rundenaufbau,
         begonnen_am: DateTime<Utc>,
     ) -> Self {
@@ -603,39 +661,33 @@ impl FreieRundeInArbeit {
             erfasst_von: erfasser,
             aufbau,
             begonnen_am,
-            state: FreieRundeInBearbeitung,
+            state: FreieRundeInBearbeitung::neu(name),
         }
     }
 
-    pub fn ziel_hinzufügen(&mut self, id: RundenZielId, name: Option<NonEmptyString>) -> bool {
-        let Rundenaufbau::Freie { snapshot, .. } = &mut self.aufbau else {
-            unreachable!("free-round typestate always carries free setup")
-        };
-        if snapshot.enthält_ziel(id) {
-            return false;
-        }
-        snapshot.ziel_hinzufügen(id, name);
-        true
+    /// Append a Ziel with a fresh round-local identity and answer that identity.
+    ///
+    /// The round mints the id, so a caller cannot hand in one that already exists and the
+    /// append cannot be refused: a duplicate is unrepresentable, not an error to report.
+    pub fn ziel_hinzufügen(&mut self, name: Option<NonEmptyString>) -> RundenZielId {
+        let id = RundenZielId(uuid::Uuid::new_v4());
+        self.aufbau.ziel_hinzufügen(id, name);
+        id
     }
 
     pub fn ziel_entfernen(&mut self, id: RundenZielId) -> Option<RundenZiel> {
-        let Rundenaufbau::Freie { snapshot, .. } = &mut self.aufbau else {
-            unreachable!("free-round typestate always carries free setup")
-        };
-        snapshot.ziel_entfernen(id)
+        self.aufbau.ziel_entfernen(id)
     }
 
     pub fn ziel_umbenennen(&mut self, id: RundenZielId, name: NonEmptyString) -> bool {
-        let Rundenaufbau::Freie { snapshot, .. } = &mut self.aufbau else {
-            unreachable!("free-round typestate always carries free setup")
-        };
-        let Some(ziel) = snapshot.ziel_mut(id) else {
+        let Some(ziel) = self.aufbau.ziel_mut(id) else {
             return false;
         };
         ziel.umbenennen(name);
         true
     }
 
+    /// Close the free round: its route and its names are the round's historical snapshot.
     pub fn abschliessen(self, am: DateTime<Utc>) -> RundeAbgeschlossen {
         RundeIn {
             id: self.id,
@@ -643,6 +695,7 @@ impl FreieRundeInArbeit {
             aufbau: self.aufbau,
             begonnen_am: self.begonnen_am,
             state: Abgeschlossen {
+                herkunft: self.state.herkunft,
                 abgeschlossen_am: am,
             },
         }
@@ -651,9 +704,10 @@ impl FreieRundeInArbeit {
 
 impl RundeAbgeschlossen {
     /// Rebuild a persisted, closed Runde.
-    pub fn from_parts(
+    fn from_parts(
         id: RundeId,
         erfasser: Erfasser,
+        herkunft: Rundenherkunft,
         aufbau: Rundenaufbau,
         begonnen_am: DateTime<Utc>,
         abgeschlossen_am: DateTime<Utc>,
@@ -663,7 +717,10 @@ impl RundeAbgeschlossen {
             erfasst_von: erfasser,
             aufbau,
             begonnen_am,
-            state: Abgeschlossen { abgeschlossen_am },
+            state: Abgeschlossen {
+                herkunft,
+                abgeschlossen_am,
+            },
         }
     }
 
@@ -691,38 +748,74 @@ impl From<RundeAbgeschlossen> for Runde {
 }
 
 impl Runde {
-    /// Rebuild a persisted Runde in either state.
+    /// Start a Runde in the state its setup names.
     ///
-    /// The closing timestamp *is* the state, so the adapter passes what it read and the
-    /// typestate follows: `None` is a running Runde, `Some` a closed one.
+    /// The state and the route are read from the same variant, so neither can be picked
+    /// independently of the other.
     pub fn aus_neu(id: RundeId, neu: NeueRunde) -> Self {
         match neu {
-            parkour @ NeueRunde::Parkour { .. } => {
-                Self::InBearbeitung(RundeInBearbeitung::aus_neu(id, parkour))
-            }
-            freie @ NeueRunde::Freie { .. } => {
-                Self::FreieRundeInArbeit(FreieRundeInArbeit::aus_neu(id, freie))
-            }
+            NeueRunde::Parkour {
+                anlage_id,
+                erfasser,
+                snapshot,
+                begonnen_am,
+            } => Self::InBearbeitung(RundeInBearbeitung::aus_neu(
+                id,
+                erfasser,
+                anlage_id,
+                snapshot,
+                begonnen_am,
+            )),
+            NeueRunde::Freie {
+                name,
+                erfasser,
+                begonnen_am,
+            } => Self::FreieRundeInArbeit(FreieRundeInArbeit::aus_neu(
+                id,
+                erfasser,
+                name,
+                begonnen_am,
+            )),
         }
     }
 
+    /// Rebuild a persisted Runde in either state.
+    ///
+    /// The closing timestamp *is* the state, so the adapter passes what it read and the
+    /// typestate follows: `None` is a running Runde, `Some` a closed one. The provenance is
+    /// the same value the state is chosen from, so a loaded round cannot disagree with itself.
     pub fn from_parts(
         id: RundeId,
         erfasser: Erfasser,
+        herkunft: Rundenherkunft,
         aufbau: Rundenaufbau,
         begonnen_am: DateTime<Utc>,
         abgeschlossen_am: Option<DateTime<Utc>>,
     ) -> Self {
-        match (aufbau, abgeschlossen_am) {
-            (aufbau @ Rundenaufbau::Parkour { .. }, None) => Self::InBearbeitung(
-                RundeInBearbeitung::from_parts(id, erfasser, aufbau, begonnen_am),
-            ),
-            (aufbau @ Rundenaufbau::Freie { .. }, None) => Self::FreieRundeInArbeit(
-                FreieRundeInArbeit::from_parts(id, erfasser, aufbau, begonnen_am),
-            ),
-            (aufbau, Some(am)) => Self::Abgeschlossen(RundeAbgeschlossen::from_parts(
+        match (herkunft, abgeschlossen_am) {
+            (
+                Rundenherkunft::Parkour {
+                    anlage_id,
+                    parkour_id,
+                    parkour_name,
+                },
+                None,
+            ) => Self::InBearbeitung(RundeInBearbeitung::from_parts(
                 id,
                 erfasser,
+                anlage_id,
+                parkour_id,
+                parkour_name,
+                aufbau,
+                begonnen_am,
+            )),
+            (Rundenherkunft::Freie { name }, None) => Self::FreieRundeInArbeit(
+                FreieRundeInArbeit::from_parts(id, erfasser, name, aufbau, begonnen_am),
+            ),
+            (herkunft, Some(am)) => Self::Abgeschlossen(RundeAbgeschlossen::from_parts(
+                id,
+                erfasser,
+                herkunft,
                 aufbau,
                 begonnen_am,
                 am,
@@ -746,12 +839,18 @@ impl Runde {
         }
     }
 
-    pub fn farben(&self, schüsse: impl IntoIterator<Item = Schuss>) -> Vec<Farbe> {
+    /// Where this round came from; a closed round answers it too.
+    pub fn herkunft(&self) -> &Rundenherkunft {
         match self {
-            Self::InBearbeitung(runde) => runde.aufbau.farben(schüsse),
-            Self::FreieRundeInArbeit(runde) => runde.aufbau.farben(schüsse),
-            Self::Abgeschlossen(runde) => runde.aufbau.farben(schüsse),
+            Self::InBearbeitung(runde) => runde.herkunft(),
+            Self::FreieRundeInArbeit(runde) => runde.herkunft(),
+            Self::Abgeschlossen(runde) => runde.herkunft(),
         }
+    }
+
+    /// The round's name: the captured Parkour's, or the free round's own.
+    pub fn name(&self) -> &NonEmptyString {
+        self.herkunft().name()
     }
 
     pub fn erfasst_von(&self) -> Erfasser {
@@ -798,15 +897,9 @@ impl Runde {
         matches!(self, Self::InBearbeitung(_) | Self::FreieRundeInArbeit(_))
     }
 
+    /// Whether this round is a free one, whether it still runs or is closed.
     pub fn ist_freie_runde(&self) -> bool {
-        matches!(
-            self,
-            Self::FreieRundeInArbeit(_)
-                | Self::Abgeschlossen(RundeIn {
-                    aufbau: Rundenaufbau::Freie { .. },
-                    ..
-                })
-        )
+        matches!(self.herkunft(), Rundenherkunft::Freie { .. })
     }
 
     pub fn enthält_ziel(&self, ziel_id: RundenZielId) -> bool {
@@ -814,6 +907,19 @@ impl Runde {
             Self::InBearbeitung(runde) => runde.enthält_ziel(ziel_id),
             Self::FreieRundeInArbeit(runde) => runde.enthält_ziel(ziel_id),
             Self::Abgeschlossen(runde) => runde.enthält_ziel(ziel_id),
+        }
+    }
+
+    /// Whether this position may be captured at this Ziel (AC-9, AC-23).
+    pub fn pruefe_position(
+        &self,
+        ziel_id: RundenZielId,
+        position: Option<Schussposition>,
+    ) -> Result<(), PositionNichtImAufbau> {
+        match self {
+            Self::InBearbeitung(runde) => runde.pruefe_position(ziel_id, position),
+            Self::FreieRundeInArbeit(runde) => runde.pruefe_position(ziel_id, position),
+            Self::Abgeschlossen(runde) => runde.pruefe_position(ziel_id, position),
         }
     }
 
@@ -893,6 +999,10 @@ mod tests {
         NonEmptyString::neu(wert).unwrap()
     }
 
+    /// The master-data id space the fixture captures from. It is deliberately unrelated to
+    /// the round-local ids the round mints, so a leak of one into the other is visible.
+    const ANLAGE_ZIEL_BASIS: u128 = 10_000;
+
     fn snapshot(ziele: &[(u128, &str)]) -> ParkourSnapshot {
         ParkourSnapshot::from_parts(
             ParkourId(Uuid::from_u128(7)),
@@ -902,7 +1012,7 @@ mod tests {
                 .iter()
                 .map(|&(id, tiername)| {
                     ZielSnapshot::neu(
-                        AnlageZielId(Uuid::from_u128(id)),
+                        AnlageZielId(Uuid::from_u128(ANLAGE_ZIEL_BASIS + id)),
                         NonZeroU32::new(1).unwrap(),
                         name(tiername),
                         ZielPflöckeSnapshot::InheritFromParkour,
@@ -917,46 +1027,64 @@ mod tests {
         DateTime::from_timestamp(1_700_000_000, 0).unwrap()
     }
 
+    /// A running Parkour round over the given targets, keyed by the caller's label.
+    ///
+    /// The fixture never rewrites a round-local id: the round mints them, exactly as it does
+    /// in production, and a caller reaches a target through the master-data id it was
+    /// captured from.
     fn runde(ziele: &[(u128, &str)]) -> Runde {
-        let aufbau = Rundenaufbau::parkour(AnlageId(Uuid::nil()), snapshot(ziele));
-        let Rundenaufbau::Parkour { snapshot, .. } = aufbau else {
-            unreachable!();
-        };
-        let mut snapshot = snapshot;
-        for ziel in &mut snapshot.ziele {
-            ziel.id = RundenZielId(ziel.anlage_ziel_id.expect("test target provenance").0);
-        }
-        Runde::InBearbeitung(RundeInBearbeitung::from_parts(
+        Runde::aus_neu(
             RundeId(Uuid::nil()),
-            Erfasser::Benutzer(BenutzerId(Uuid::nil())),
-            Rundenaufbau::Parkour {
-                anlage_id: AnlageId(Uuid::nil()),
-                parkour_id: ParkourId(Uuid::from_u128(7)),
-                parkour_name: name("Waldrunde"),
-                snapshot,
-            },
-            jetzt(),
-        ))
+            NeueRunde::mit_parkour(
+                AnlageId(Uuid::nil()),
+                Erfasser::Benutzer(BenutzerId(Uuid::nil())),
+                snapshot(ziele),
+                jetzt(),
+            ),
+        )
     }
 
     fn freie_runde() -> Runde {
         Runde::FreieRundeInArbeit(FreieRundeInArbeit::aus_neu(
             RundeId(Uuid::nil()),
-            NeueRunde::ohne_parkour(
-                name("Wiese daheim"),
-                Erfasser::Benutzer(BenutzerId(Uuid::nil())),
-                jetzt(),
-            ),
+            Erfasser::Benutzer(BenutzerId(Uuid::nil())),
+            name("Wiese daheim"),
+            jetzt(),
         ))
     }
 
-    fn schuss(ziel: u128, pfeil: usize, zone: Wertungszone) -> Schuss {
+    /// The round-local id of the target captured from the master-data target `anlage_ziel`.
+    fn ziel_id_zu(runde: &Runde, anlage_ziel: u128) -> RundenZielId {
+        runde
+            .aufbau()
+            .ziele()
+            .iter()
+            .find(|ziel| {
+                ziel.anlage_ziel_id()
+                    == Some(AnlageZielId(Uuid::from_u128(
+                        ANLAGE_ZIEL_BASIS + anlage_ziel,
+                    )))
+            })
+            .expect("the round captured this target")
+            .id()
+    }
+
+    fn schuss(runde: &Runde, anlage_ziel: u128, pfeil: usize, zone: Wertungszone) -> Schuss {
+        schuss_auf(runde.id(), ziel_id_zu(runde, anlage_ziel), pfeil, zone)
+    }
+
+    fn schuss_auf(
+        runde_id: RundeId,
+        ziel_id: RundenZielId,
+        pfeil: usize,
+        zone: Wertungszone,
+    ) -> Schuss {
         Schuss::neu(
             SchussId(Uuid::from_u128(pfeil as u128)),
             NeuerSchuss::neu(
-                RundeId(Uuid::nil()),
+                runde_id,
                 Erfasser::Benutzer(BenutzerId(Uuid::nil())),
-                RundenZielId(Uuid::from_u128(ziel)).into(),
+                ziel_id.into(),
                 pfeil,
                 zone,
                 None,
@@ -971,21 +1099,10 @@ mod tests {
         // Ziel 11: Miss, Spot = erster 14, mehr 14.
         let runde = runde(&[(10, "Keiler"), (11, "Reh")]);
         let schüsse = vec![
-            schuss(10, 1, Wertungszone::Kill),
-            schuss(10, 2, Wertungszone::Kill),
-            schuss(10, 3, Wertungszone::Spot),
-            Schuss::neu(
-                SchussId(Uuid::from_u128(11)),
-                NeuerSchuss::neu(
-                    RundeId(Uuid::nil()),
-                    Erfasser::Benutzer(BenutzerId(Uuid::nil())),
-                    RundenZielId(Uuid::from_u128(11)).into(),
-                    2,
-                    Wertungszone::Spot,
-                    None,
-                )
-                .unwrap(),
-            ),
+            schuss(&runde, 10, 1, Wertungszone::Kill),
+            schuss(&runde, 10, 2, Wertungszone::Kill),
+            schuss(&runde, 10, 3, Wertungszone::Spot),
+            schuss(&runde, 11, 2, Wertungszone::Spot),
         ];
         let wertung = runde.wertung(schüsse);
         assert_eq!(wertung.erster_treffer(), 18 + 14);
@@ -996,7 +1113,7 @@ mod tests {
     #[test_log::test]
     fn ac15_zielwertungen_zeigen_leerzustand_und_fortschritt_aus_schuessen() {
         let runde = runde(&[(10, "Keiler"), (11, "Reh")]);
-        let schüsse = vec![schuss(10, 1, Wertungszone::Kill)];
+        let schüsse = vec![schuss(&runde, 10, 1, Wertungszone::Kill)];
         let ziel_wertungen = runde.ziel_wertungen(schüsse.clone());
         let Some(erster) = ziel_wertungen[0] else {
             panic!("logged Ziel has a result");
@@ -1011,7 +1128,7 @@ mod tests {
     #[test_log::test]
     fn ac8_ziele_ohne_schuss_werden_uebersprungen() {
         let runde = runde(&[(10, "Keiler"), (11, "Reh")]);
-        let wertung = runde.wertung(vec![schuss(11, 1, Wertungszone::Kill)]);
+        let wertung = runde.wertung(vec![schuss(&runde, 11, 1, Wertungszone::Kill)]);
         assert_eq!(wertung.erster_treffer(), 18);
         assert_eq!(wertung.mehrschuss(), 18);
         assert_eq!(wertung.ziele_mit_wertung(), 1);
@@ -1020,23 +1137,23 @@ mod tests {
     #[test_log::test]
     fn ac8_fremde_schüsse_zaehlen_nicht() {
         let runde = runde(&[(10, "Keiler")]);
-        let mut fremd = Schuss::neu(
-            SchussId(Uuid::from_u128(2)),
-            NeuerSchuss::neu(
-                RundeId(Uuid::from_u128(99)),
-                Erfasser::Benutzer(BenutzerId(Uuid::nil())),
-                RundenZielId(Uuid::from_u128(10)).into(),
-                1,
-                Wertungszone::Spot,
-                None,
-            )
-            .unwrap(),
+        let mut fremd = schuss_auf(
+            RundeId(Uuid::from_u128(99)),
+            RundenZielId(Uuid::from_u128(99)),
+            1,
+            Wertungszone::Spot,
         );
         fremd.anonymisiere(jetzt());
         let wertung = runde.wertung(vec![
-            schuss(10, 1, Wertungszone::Kill),
+            schuss(&runde, 10, 1, Wertungszone::Kill),
             fremd,
-            schuss(99, 1, Wertungszone::Spot),
+            // A target this round never captured: same round, foreign Ziel.
+            schuss_auf(
+                RundeId(Uuid::nil()),
+                RundenZielId(Uuid::from_u128(99)),
+                1,
+                Wertungszone::Spot,
+            ),
         ]);
         assert_eq!(wertung.erster_treffer(), 18);
         assert_eq!(wertung.mehrschuss(), 18);
@@ -1064,20 +1181,22 @@ mod tests {
     }
 
     #[test_log::test]
-    fn ac9_der_snapshot_kennt_nur_die_platzierte_route() {
+    fn ac9_der_aufbau_kennt_nur_die_platzierte_route() {
         let runde = runde(&[(10, "Keiler")]);
-        let ziel_id = runde.aufbau().ziele().next().unwrap().id();
+        let ziel_id = runde.aufbau().ziele().first().unwrap().id();
         assert!(runde.enthält_ziel(ziel_id));
         assert!(!runde.enthält_ziel(RundenZielId(Uuid::from_u128(11))));
     }
 
     #[test_log::test]
-    fn anonymisieren_laesst_den_aufbau_unberuehrt() {
+    fn anonymisieren_laesst_aufbau_und_herkunft_unberuehrt() {
         let mut runde = runde(&[(10, "Keiler")]);
         let vorher = runde.aufbau().clone();
+        let herkunft = runde.herkunft().clone();
         runde.anonymisiere(jetzt());
         assert_eq!(runde.erfasst_von(), Erfasser::Anonymisiert { am: jetzt() });
         assert_eq!(runde.aufbau(), &vorher);
+        assert_eq!(runde.herkunft(), &herkunft);
     }
 
     #[test_log::test]
@@ -1086,6 +1205,7 @@ mod tests {
         let geladen = Runde::from_parts(
             offen.id(),
             offen.erfasst_von(),
+            offen.herkunft().clone(),
             offen.aufbau().clone(),
             offen.begonnen_am(),
             offen.abgeschlossen_am(),
@@ -1096,6 +1216,7 @@ mod tests {
         let geladen = Runde::from_parts(
             freie.id(),
             freie.erfasst_von(),
+            freie.herkunft().clone(),
             freie.aufbau().clone(),
             freie.begonnen_am(),
             freie.abgeschlossen_am(),
@@ -1109,11 +1230,34 @@ mod tests {
         let geladen = Runde::from_parts(
             geschlossen.id(),
             geschlossen.erfasst_von(),
+            geschlossen.herkunft().clone(),
             geschlossen.aufbau().clone(),
             geschlossen.begonnen_am(),
             geschlossen.abgeschlossen_am(),
         );
         assert_eq!(geschlossen, geladen);
+
+        // The closed *free* round is its own case: its route is the free one's, and its
+        // provenance must survive the round trip just as a Parkour round's does (#13).
+        let Runde::FreieRundeInArbeit(aktiv) = freie_runde() else {
+            panic!("eine freie Runde ist offen");
+        };
+        let mut aktiv = aktiv;
+        aktiv.ziel_hinzufügen(Some(name("Baumstumpf")));
+        let geschlossen: Runde = aktiv.abschliessen(jetzt()).into();
+        assert_eq!(geschlossen.zustand(), "Abgeschlossen");
+        assert!(geschlossen.ist_freie_runde());
+        let geladen = Runde::from_parts(
+            geschlossen.id(),
+            geschlossen.erfasst_von(),
+            geschlossen.herkunft().clone(),
+            geschlossen.aufbau().clone(),
+            geschlossen.begonnen_am(),
+            geschlossen.abgeschlossen_am(),
+        );
+        assert_eq!(geschlossen, geladen);
+        assert_eq!(geladen.aufbau().ziele().len(), 1);
+        assert_eq!(geladen.name().as_str(), "Wiese daheim");
     }
 
     #[test_log::test]
@@ -1123,6 +1267,7 @@ mod tests {
         let geladen = Runde::from_parts(
             offen.id(),
             offen.erfasst_von(),
+            offen.herkunft().clone(),
             offen.aufbau().clone(),
             offen.begonnen_am(),
             Some(jetzt()),
@@ -1132,37 +1277,43 @@ mod tests {
     }
 
     #[test_log::test]
-    fn ac21_ein_parkour_aufbau_traegt_seine_provenienz_und_den_gemeinsamen_snapshot() {
+    fn ac21_ein_parkour_aufbau_traegt_seine_provenienz_und_den_gemeinsamen_aufbau() {
         let runde = runde(&[(10, "Keiler")]);
-        let Rundenaufbau::Parkour {
+        let Rundenherkunft::Parkour {
             anlage_id,
             parkour_id,
             parkour_name,
-            snapshot,
-        } = runde.aufbau()
+        } = runde.herkunft()
         else {
             panic!("ein Parkour-Aufbau trägt Referenzen");
         };
         assert_eq!(*anlage_id, AnlageId(Uuid::nil()));
         assert_eq!(*parkour_id, ParkourId(Uuid::from_u128(7)));
         assert_eq!(parkour_name.as_str(), "Waldrunde");
-        assert_eq!(snapshot.pflöcke().len(), 1);
+        assert_eq!(runde.aufbau().pflöcke().len(), 1);
         assert_eq!(
-            snapshot.ziele()[0].anlage_ziel_id(),
-            Some(AnlageZielId(Uuid::from_u128(10)))
+            runde.aufbau().ziele()[0].anlage_ziel_id(),
+            Some(AnlageZielId(Uuid::from_u128(ANLAGE_ZIEL_BASIS + 10)))
         );
-        assert_eq!(snapshot.ziele()[0].id().0, Uuid::from_u128(10));
+        // The route's own identity is minted by the round, never the master-data one (#12):
+        // a leak of `AnlageZielId` into `RundenZielId` fails right here.
+        assert_ne!(
+            runde.aufbau().ziele()[0].id().0,
+            Uuid::from_u128(ANLAGE_ZIEL_BASIS + 10)
+        );
     }
 
     #[test_log::test]
     fn ac21_eine_freie_runde_hat_weder_anlage_noch_parkour_noch_pfloecke() {
         let runde = freie_runde();
-        let Rundenaufbau::Freie { name, snapshot } = runde.aufbau() else {
+        let Rundenherkunft::Freie { name } = runde.herkunft() else {
             panic!("eine freie Runde trägt ihren Aufbau");
         };
         assert_eq!(name.as_str(), "Wiese daheim");
-        assert!(snapshot.pflöcke().is_empty());
-        assert!(snapshot.ziele().is_empty());
+        assert!(runde.aufbau().pflöcke().is_empty());
+        assert!(runde.aufbau().ziele().is_empty());
+        // Both open states store the same spelling, and the store filters on it (#8).
+        assert_eq!(runde.zustand(), ZUSTAND_IN_BEARBEITUNG);
     }
 
     #[test_log::test]
@@ -1170,19 +1321,18 @@ mod tests {
         let Runde::FreieRundeInArbeit(mut runde) = freie_runde() else {
             panic!("eine freie Runde hat ihren eigenen offenen Typ");
         };
-        let erstes = RundenZielId(Uuid::from_u128(1));
-        let zweites = RundenZielId(Uuid::from_u128(2));
-        assert!(runde.ziel_hinzufügen(erstes, None));
-        assert!(runde.ziel_hinzufügen(zweites, None));
-        assert!(runde.ziel_hinzufügen(RundenZielId(Uuid::from_u128(3)), Some(name("Baumstumpf"))));
+        let erstes = runde.ziel_hinzufügen(None);
+        let zweites = runde.ziel_hinzufügen(None);
+        let drittes = runde.ziel_hinzufügen(Some(name("Baumstumpf")));
 
         let namen: Vec<&str> = runde
             .aufbau()
             .ziele()
+            .iter()
             .map(|ziel| ziel.name().as_str())
             .collect();
         assert_eq!(namen, ["Ziel 1", "Ziel 2", "Baumstumpf"]);
-        assert_eq!(runde.aufbau().snapshot().ziele()[2].ordinal().get(), 3);
+        assert_eq!(runde.aufbau().ziele()[2].ordinal().get(), 3);
 
         assert_eq!(
             runde
@@ -1190,10 +1340,17 @@ mod tests {
                 .map(|ziel| ziel.ordinal().get()),
             Some(2)
         );
-        assert!(runde.ziel_hinzufügen(RundenZielId(Uuid::from_u128(4)), None));
-        let letztes = runde.aufbau().snapshot().ziele().last().unwrap();
+        // A removed identity is never handed out again: the next Ziel gets a fresh one and
+        // the removed one stays unknown to the round.
+        let viertes = runde.ziel_hinzufügen(None);
+        assert_ne!(viertes, erstes);
+        assert_ne!(viertes, drittes);
+        assert_ne!(viertes, zweites);
+        assert!(!runde.enthält_ziel(zweites));
+        let letztes = runde.aufbau().ziele().last().unwrap();
         assert_eq!(letztes.ordinal().get(), 4);
         assert_eq!(letztes.name().as_str(), "Ziel 4");
+        assert_eq!(letztes.id(), viertes);
         assert!(
             runde
                 .ziel_entfernen(RundenZielId(Uuid::from_u128(99)))
@@ -1206,58 +1363,62 @@ mod tests {
     }
 
     #[test_log::test]
-    fn ac22_ein_parkour_aufbau_hat_keinen_ziel_mutator() {
-        // The compile-time half of the promise: this block deliberately does not compile,
-        // because `ziel_hinzufügen` exists only on `FreieRunde`.
-        //
-        // ```compile_fail
-        // let mut aufbau = Rundenaufbau::parkour(AnlageId(uuid::Uuid::nil()), snapshot);
-        // aufbau.ziel_hinzufügen(AnlageZielId(uuid::Uuid::nil()), None);
-        // ```
-        let aufbau = rundenaufbau();
-        assert!(matches!(aufbau, Rundenaufbau::Parkour { .. }));
-    }
-
-    fn rundenaufbau() -> Rundenaufbau {
-        Rundenaufbau::parkour(AnlageId(Uuid::nil()), snapshot(&[(10, "Keiler")]))
+    fn ac22_abschliessen_behaelt_route_und_herkunft() {
+        // The compile-time half of the AC-22 promise — a Parkour round has no route mutator
+        // — is `tests/compile_fail/parkour_hat_keinen_ziel_mutator.rs`, because "this method
+        // does not exist" can only be proven by failing to compile.
+        let Runde::InBearbeitung(runde) = runde(&[(10, "Keiler")]) else {
+            panic!("eine neue Parkour-Runde ist in Bearbeitung");
+        };
+        let ziel_id = runde.aufbau().ziele()[0].id();
+        let aufbau = runde.aufbau().clone();
+        let geschlossen: Runde = runde.abschliessen(jetzt()).into();
+        assert_eq!(geschlossen.zustand(), "Abgeschlossen");
+        // Closing erases nothing: the route and the provenance are the round's snapshot.
+        assert_eq!(geschlossen.aufbau(), &aufbau);
+        assert!(geschlossen.enthält_ziel(ziel_id));
+        assert!(matches!(
+            geschlossen.herkunft(),
+            Rundenherkunft::Parkour { .. }
+        ));
+        assert!(!geschlossen.ist_freie_runde());
     }
 
     #[test_log::test]
     fn ac3_ziele_werden_in_einer_round_localen_route_abgebildet() {
-        let Runde::FreieRundeInArbeit(mut runde) = freie_runde() else {
+        let Runde::FreieRundeInArbeit(mut freie) = freie_runde() else {
             panic!("eine freie Runde hat ihren eigenen offenen Typ");
         };
-        let id = RundenZielId(Uuid::from_u128(5));
-        assert!(runde.ziel_hinzufügen(id, None));
-        let ziele: Vec<_> = runde.aufbau().ziele().collect();
+        let id = freie.ziel_hinzufügen(None);
+        let ziele = freie.aufbau().ziele();
         assert_eq!(ziele.len(), 1);
         assert_eq!(ziele[0].id(), id);
         assert_eq!(ziele[0].name().as_str(), "Ziel 1");
         assert_eq!(ziele[0].ordinal().get(), 1);
         assert!(ziele[0].abstände().is_empty());
 
-        let parkour = rundenaufbau();
-        let ziel = parkour.ziele().next().unwrap();
+        let parkour = runde(&[(10, "Keiler")]);
+        let ziel = &parkour.aufbau().ziele()[0];
         assert_eq!(ziel.name().as_str(), "Keiler");
         assert_eq!(ziel.ordinal().get(), 1);
         assert_eq!(
             ziel.anlage_ziel_id(),
-            Some(AnlageZielId(Uuid::from_u128(10)))
+            Some(AnlageZielId(Uuid::from_u128(ANLAGE_ZIEL_BASIS + 10)))
         );
     }
 
     #[test_log::test]
     fn ac23_parkour_pflock_wird_gegen_das_ziel_geprueft() {
-        let aufbau = rundenaufbau();
-        let ziel = aufbau.ziele().next().unwrap().id();
+        let runde = runde(&[(10, "Keiler")]);
+        let ziel = runde.aufbau().ziele()[0].id();
         let farbe = Farbe::neu("#c0392b").unwrap();
         assert!(
-            aufbau
+            runde
                 .pruefe_position(ziel, Some(Schussposition::Pflock(farbe)))
                 .is_ok()
         );
         assert!(
-            aufbau
+            runde
                 .pruefe_position(
                     ziel,
                     Some(Schussposition::Distanz(Abstand::neu(35).unwrap()))
@@ -1265,7 +1426,7 @@ mod tests {
                 .is_ok()
         );
         assert!(
-            aufbau
+            runde
                 .pruefe_position(
                     ziel,
                     Some(Schussposition::Pflock(Farbe::neu("#e8b81c").unwrap()))
@@ -1273,10 +1434,14 @@ mod tests {
                 .is_err(),
             "ein fremder Pflock ist keine Position dieser Runde"
         );
+        // A Ziel the route never captured is refused before the Pflock is looked at.
         assert!(
-            aufbau
-                .pruefe_position(ziel, Some(Schussposition::Pflock(farbe)))
-                .is_ok()
+            runde
+                .pruefe_position(
+                    RundenZielId(Uuid::from_u128(99)),
+                    Some(Schussposition::Pflock(farbe))
+                )
+                .is_err()
         );
     }
 
@@ -1285,85 +1450,25 @@ mod tests {
         let Runde::FreieRundeInArbeit(mut runde) = freie_runde() else {
             panic!("eine freie Runde hat ihren eigenen offenen Typ");
         };
-        let ziel = RundenZielId(Uuid::from_u128(1));
-        assert!(runde.ziel_hinzufügen(ziel, None));
-        let aufbau = runde.aufbau().clone();
+        let ziel = runde.ziel_hinzufügen(None);
         // A free round configures no Pflock set, so the colour the archer picked is a
         // position; `Farbe` has already proven it is a colour.
         for hex in ["#c0392b", "#1b4f9c", "#abc123"] {
             assert!(
-                aufbau
+                runde
                     .pruefe_position(ziel, Some(Schussposition::Pflock(Farbe::neu(hex).unwrap())))
                     .is_ok()
             );
         }
         assert!(
-            aufbau
+            runde
                 .pruefe_position(
                     ziel,
                     Some(Schussposition::Distanz(Abstand::neu(35).unwrap()))
                 )
                 .is_ok()
         );
-        assert!(aufbau.pruefe_position(ziel, None).is_ok());
-    }
-
-    #[test_log::test]
-    fn ac23_farben_sind_die_bereits_verwendeten_farben() {
-        let Runde::FreieRundeInArbeit(mut runde) = freie_runde() else {
-            panic!("eine freie Runde hat ihren eigenen offenen Typ");
-        };
-        let ziel_id = RundenZielId(Uuid::from_u128(1));
-        assert!(runde.ziel_hinzufügen(ziel_id, None));
-        let rot = Farbe::neu("#c0392b").unwrap();
-        let blau = Farbe::neu("#1b4f9c").unwrap();
-        let schüsse = vec![
-            Schuss::neu(
-                SchussId(Uuid::from_u128(1)),
-                NeuerSchuss::neu(
-                    RundeId(Uuid::nil()),
-                    Erfasser::Benutzer(BenutzerId(Uuid::nil())),
-                    ziel_id.into(),
-                    1,
-                    Wertungszone::Kill,
-                    Some(Schussposition::Pflock(rot)),
-                )
-                .unwrap(),
-            ),
-            Schuss::neu(
-                SchussId(Uuid::from_u128(2)),
-                NeuerSchuss::neu(
-                    RundeId(Uuid::nil()),
-                    Erfasser::Benutzer(BenutzerId(Uuid::nil())),
-                    ziel_id.into(),
-                    2,
-                    Wertungszone::Spot,
-                    Some(Schussposition::Pflock(rot)),
-                )
-                .unwrap(),
-            ),
-            Schuss::neu(
-                SchussId(Uuid::from_u128(3)),
-                NeuerSchuss::neu(
-                    RundeId(Uuid::nil()),
-                    Erfasser::Benutzer(BenutzerId(Uuid::nil())),
-                    ziel_id.into(),
-                    3,
-                    Wertungszone::Spot,
-                    Some(Schussposition::Distanz(Abstand::neu(35).unwrap())),
-                )
-                .unwrap(),
-            ),
-        ];
-        assert_eq!(
-            Runde::FreieRundeInArbeit(runde.clone()).farben(schüsse),
-            vec![rot]
-        );
-        assert!(
-            !Runde::FreieRundeInArbeit(runde)
-                .farben(Vec::new())
-                .contains(&blau)
-        );
+        assert!(runde.pruefe_position(ziel, None).is_ok());
     }
 
     #[test_log::test]
@@ -1371,12 +1476,12 @@ mod tests {
         let Runde::FreieRundeInArbeit(mut runde) = freie_runde() else {
             panic!("eine freie Runde hat ihren eigenen offenen Typ");
         };
-        assert!(runde.ziel_hinzufügen(RundenZielId(Uuid::from_u128(1)), None));
-        assert!(runde.ziel_hinzufügen(RundenZielId(Uuid::from_u128(2)), None));
+        let erstes = runde.ziel_hinzufügen(None);
+        let zweites = runde.ziel_hinzufügen(None);
         let schüsse = vec![
-            schuss(1, 1, Wertungszone::Kill),
-            schuss(1, 2, Wertungszone::Spot),
-            schuss(2, 1, Wertungszone::Miss),
+            schuss_auf(runde.id(), erstes, 1, Wertungszone::Kill),
+            schuss_auf(runde.id(), erstes, 2, Wertungszone::Spot),
+            schuss_auf(runde.id(), zweites, 1, Wertungszone::Miss),
         ];
         let wertung = runde.wertung(schüsse.clone());
         assert_eq!(wertung.erster_treffer(), 18);
@@ -1384,7 +1489,7 @@ mod tests {
         assert_eq!(wertung.ziele_mit_wertung(), 2);
 
         // Removing a Ziel drops its result from the fold (AC-22/AC-24).
-        runde.ziel_entfernen(RundenZielId(Uuid::from_u128(2)));
+        runde.ziel_entfernen(zweites);
         let wertung = runde.wertung(schüsse);
         assert_eq!(wertung.ziele_mit_wertung(), 1);
     }

@@ -94,7 +94,6 @@ impl SchussErstellungRequest {
 }
 
 /// Replace a Schuss's scoring zone and optional position.
-/// Replace a Schuss's scoring zone and optional position.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]

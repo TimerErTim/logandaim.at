@@ -752,10 +752,7 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("AC-7: eine Runde startet");
-    let vorher = match runde.aufbau() {
-        logandaim_core::domain::Rundenaufbau::Parkour { snapshot, .. } => snapshot.clone(),
-        logandaim_core::domain::Rundenaufbau::Freie { .. } => panic!("Parkour-Aufbau"),
-    };
+    let vorher = runde.aufbau().clone();
     let anlage_id = anlage.id();
 
     harness
@@ -789,11 +786,8 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
 
     // AC-9: the existing Runde still displays L1 exactly.
     let (gelesen, _) = runde_laden(&harness, runde.id()).await;
-    let logandaim_core::domain::Rundenaufbau::Parkour { snapshot, .. } = gelesen.aufbau() else {
-        panic!("Parkour-Aufbau");
-    };
-    assert_eq!(snapshot, &vorher);
-    let ziel = &snapshot.ziele()[0];
+    assert_eq!(gelesen.aufbau(), &vorher);
+    let ziel = &gelesen.aufbau().ziele()[0];
     assert_eq!(ziel.name().as_str(), "Keiler");
     assert_eq!(ziel.ordinal().get(), 1);
     assert_eq!(
@@ -804,7 +798,7 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
         ]
     );
     assert_eq!(
-        gelesen.aufbau().name().as_str(),
+        gelesen.name().as_str(),
         "Waldrunde",
         "AC-9: der Name ist Teil des Schnappschusses"
     );
@@ -827,9 +821,7 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("AC-7: eine neue Runde startet");
-    let logandaim_core::domain::Rundenaufbau::Parkour { snapshot: neu, .. } = neue.aufbau() else {
-        panic!("Parkour-Aufbau");
-    };
+    let neu = neue.aufbau();
     assert_eq!(neu.ziele()[0].name().as_str(), "Reh");
     assert_ne!(neu, &vorher);
 }
@@ -847,7 +839,7 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die erste Runde startet");
-    let erstes_ziel_id = erste.aufbau().ziele().next().expect("ein Ziel").id();
+    let erstes_ziel_id = erste.aufbau().ziele().first().expect("ein Ziel").id();
     harness
         .app()
         .execute(
@@ -899,7 +891,7 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
         .execute(admin, RundeStarten::mit_parkour(zweiter_parkour))
         .await
         .expect("die zweite Runde startet");
-    let zweites_ziel_id = zweite.aufbau().ziele().next().expect("ein Ziel").id();
+    let zweites_ziel_id = zweite.aufbau().ziele().first().expect("ein Ziel").id();
     harness
         .app()
         .execute(
@@ -917,20 +909,8 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
     let (eine, eine_schüsse) = runde_laden(&harness, erste.id()).await;
     let (andere, andere_schüsse) = runde_laden(&harness, zweite.id()).await;
 
-    let logandaim_core::domain::Rundenaufbau::Parkour {
-        snapshot: eine_snapshot,
-        ..
-    } = eine.aufbau()
-    else {
-        panic!("Parkour-Aufbau");
-    };
-    let logandaim_core::domain::Rundenaufbau::Parkour {
-        snapshot: andere_snapshot,
-        ..
-    } = andere.aufbau()
-    else {
-        panic!("Parkour-Aufbau");
-    };
+    let eine_snapshot = eine.aufbau();
+    let andere_snapshot = andere.aufbau();
     assert_eq!(eine_snapshot.ziele()[0].anlage_ziel_id(), Some(ziel_id));
     assert_eq!(andere_snapshot.ziele()[0].anlage_ziel_id(), Some(ziel_id));
     assert_eq!(eine.wertung(eine_schüsse).erster_treffer(), 18);
@@ -1331,7 +1311,7 @@ async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
         .execute(anna, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("Anna startet eine Runde");
-    let runden_ziel_id = runde.aufbau().ziele().next().expect("ein Ziel").id();
+    let runden_ziel_id = runde.aufbau().ziele().first().expect("ein Ziel").id();
     harness
         .app()
         .execute(
