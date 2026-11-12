@@ -24,8 +24,8 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Abstand, AnlageId, AnlageZielId, Erfasser, Farbe, NeueRunde, NonEmptyString, ParkourId,
-        PflockSnapshot, Runde, RundeId, RundeInBearbeitung, RundenSnapshot, RundenZiel,
-        RundenZielId, Rundenaufbau, ZielPflöckeSnapshot, konto::BenutzerId,
+        PflockSnapshot, Runde, RundeId, RundenSnapshot, RundenZiel, RundenZielId, Rundenaufbau,
+        ZielPflöckeSnapshot, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
 };
@@ -505,7 +505,7 @@ impl SQLiteRundeRepository {
 impl RundeRepository for SQLiteRundeRepository {
     async fn create(&self, runde: NeueRunde) -> RepositoryResult<Versioned<Runde>> {
         let id = RundeId(Uuid::new_v4());
-        let domain = Runde::InBearbeitung(RundeInBearbeitung::neu(id, runde));
+        let domain = Runde::aus_neu(id, runde);
 
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;

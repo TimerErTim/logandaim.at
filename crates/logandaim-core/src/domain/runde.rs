@@ -31,6 +31,20 @@ pub use super::schuss::RundeId;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct InBearbeitung;
 
+/// The free-round state permits just-in-time route edits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct FreieRundeInBearbeitung;
+
+impl FreieRundeInBearbeitung {
+    pub fn as_str(self) -> &'static str {
+        "InBearbeitung"
+    }
+
+    pub fn ist_in_bearbeitung(self) -> bool {
+        true
+    }
+}
+
 /// The closed state carries when it happened.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Abgeschlossen {
@@ -72,16 +86,6 @@ impl Abgeschlossen {
 /// Neutral identity for a target within a single Runde.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct RundenZielId(pub uuid::Uuid);
-
-impl RundenZielId {
-    pub fn as_uuid(self) -> uuid::Uuid {
-        self.0
-    }
-
-    pub fn as_schuss_ziel_id(self) -> SchussZielId {
-        SchussZielId(self.0)
-    }
-}
 
 /// One target in the route captured by a Runde.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -318,13 +322,6 @@ impl Rundenaufbau {
         }
     }
 
-    fn freie_mut(&mut self) -> Option<&mut RundenSnapshot> {
-        match self {
-            Self::Freie { snapshot, .. } => Some(snapshot),
-            _ => None,
-        }
-    }
-
     fn farben(&self, schüsse: impl IntoIterator<Item = Schuss>) -> Vec<Farbe> {
         let freie = matches!(self, Self::Freie { .. });
         let mut farben = Vec::new();
@@ -444,12 +441,14 @@ pub struct RundeIn<S> {
 }
 
 pub type RundeInBearbeitung = RundeIn<InBearbeitung>;
+pub type FreieRundeInArbeit = RundeIn<FreieRundeInBearbeitung>;
 pub type RundeAbgeschlossen = RundeIn<Abgeschlossen>;
 
-/// The sum of both states, for code that does not know the state at compile time.
+/// The setup-specific states of an open Runde and its common closed state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Runde {
     InBearbeitung(RundeInBearbeitung),
+    FreieRundeInArbeit(FreieRundeInArbeit),
     Abgeschlossen(RundeAbgeschlossen),
 }
 
@@ -503,7 +502,7 @@ impl<S> RundeIn<S> {
                 // The filter names exactly this Ziel, so the collection cannot refuse a row.
                 let ziel_id = ziel.ziel_id();
                 ZielSchüsse::für_ziel(
-                    ziel_id,
+                    ziel_id.into(),
                     eigene
                         .iter()
                         .filter(|schuss| {
@@ -526,8 +525,9 @@ impl<S> RundeIn<S> {
         let je_ziel = self.aufbau.ziele().filter_map(|ziel| {
             // The filter names exactly this Ziel, so the collection cannot refuse a row here.
             let ziel_id = ziel.ziel_id();
+            let schuss_ziel_id = ziel_id.into();
             ZielSchüsse::für_ziel(
-                ziel_id,
+                schuss_ziel_id,
                 eigener
                     .iter()
                     .filter(|schuss| {
@@ -542,7 +542,7 @@ impl<S> RundeIn<S> {
 }
 
 impl RundeInBearbeitung {
-    pub fn neu(id: RundeId, neu: NeueRunde) -> Self {
+    fn aus_neu(id: RundeId, neu: NeueRunde) -> Self {
         Self {
             id,
             erfasst_von: neu.erfasst_von(),
@@ -552,8 +552,7 @@ impl RundeInBearbeitung {
         }
     }
 
-    /// Rebuild a persisted, still running Runde.
-    pub fn from_parts(
+    fn from_parts(
         id: RundeId,
         erfasser: Erfasser,
         aufbau: Rundenaufbau,
@@ -568,9 +567,49 @@ impl RundeInBearbeitung {
         }
     }
 
+    /// Close a Parkour-backed Runde: no further Schuss may be registered.
+    pub fn abschliessen(self, am: DateTime<Utc>) -> RundeAbgeschlossen {
+        RundeIn {
+            id: self.id,
+            erfasst_von: self.erfasst_von,
+            aufbau: self.aufbau,
+            begonnen_am: self.begonnen_am,
+            state: Abgeschlossen {
+                abgeschlossen_am: am,
+            },
+        }
+    }
+}
+
+impl FreieRundeInArbeit {
+    pub fn aus_neu(id: RundeId, neu: NeueRunde) -> Self {
+        Self {
+            id,
+            erfasst_von: neu.erfasst_von(),
+            aufbau: neu.aufbau(),
+            begonnen_am: neu.begonnen_am(),
+            state: FreieRundeInBearbeitung,
+        }
+    }
+
+    pub fn from_parts(
+        id: RundeId,
+        erfasser: Erfasser,
+        aufbau: Rundenaufbau,
+        begonnen_am: DateTime<Utc>,
+    ) -> Self {
+        Self {
+            id,
+            erfasst_von: erfasser,
+            aufbau,
+            begonnen_am,
+            state: FreieRundeInBearbeitung,
+        }
+    }
+
     pub fn ziel_hinzufügen(&mut self, id: RundenZielId, name: Option<NonEmptyString>) -> bool {
-        let Some(snapshot) = self.aufbau.freie_mut() else {
-            return false;
+        let Rundenaufbau::Freie { snapshot, .. } = &mut self.aufbau else {
+            unreachable!("free-round typestate always carries free setup")
         };
         if snapshot.enthält_ziel(id) {
             return false;
@@ -580,12 +619,15 @@ impl RundeInBearbeitung {
     }
 
     pub fn ziel_entfernen(&mut self, id: RundenZielId) -> Option<RundenZiel> {
-        self.aufbau.freie_mut()?.ziel_entfernen(id)
+        let Rundenaufbau::Freie { snapshot, .. } = &mut self.aufbau else {
+            unreachable!("free-round typestate always carries free setup")
+        };
+        snapshot.ziel_entfernen(id)
     }
 
     pub fn ziel_umbenennen(&mut self, id: RundenZielId, name: NonEmptyString) -> bool {
-        let Some(snapshot) = self.aufbau.freie_mut() else {
-            return false;
+        let Rundenaufbau::Freie { snapshot, .. } = &mut self.aufbau else {
+            unreachable!("free-round typestate always carries free setup")
         };
         let Some(ziel) = snapshot.ziel_mut(id) else {
             return false;
@@ -594,7 +636,6 @@ impl RundeInBearbeitung {
         true
     }
 
-    /// Close the Runde: no further Schuss may be registered.
     pub fn abschliessen(self, am: DateTime<Utc>) -> RundeAbgeschlossen {
         RundeIn {
             id: self.id,
@@ -637,6 +678,12 @@ impl From<RundeInBearbeitung> for Runde {
     }
 }
 
+impl From<FreieRundeInArbeit> for Runde {
+    fn from(runde: FreieRundeInArbeit) -> Self {
+        Self::FreieRundeInArbeit(runde)
+    }
+}
+
 impl From<RundeAbgeschlossen> for Runde {
     fn from(runde: RundeAbgeschlossen) -> Self {
         Self::Abgeschlossen(runde)
@@ -648,6 +695,17 @@ impl Runde {
     ///
     /// The closing timestamp *is* the state, so the adapter passes what it read and the
     /// typestate follows: `None` is a running Runde, `Some` a closed one.
+    pub fn aus_neu(id: RundeId, neu: NeueRunde) -> Self {
+        match neu {
+            parkour @ NeueRunde::Parkour { .. } => {
+                Self::InBearbeitung(RundeInBearbeitung::aus_neu(id, parkour))
+            }
+            freie @ NeueRunde::Freie { .. } => {
+                Self::FreieRundeInArbeit(FreieRundeInArbeit::aus_neu(id, freie))
+            }
+        }
+    }
+
     pub fn from_parts(
         id: RundeId,
         erfasser: Erfasser,
@@ -655,14 +713,14 @@ impl Runde {
         begonnen_am: DateTime<Utc>,
         abgeschlossen_am: Option<DateTime<Utc>>,
     ) -> Self {
-        match abgeschlossen_am {
-            None => Self::InBearbeitung(RundeInBearbeitung::from_parts(
-                id,
-                erfasser,
-                aufbau,
-                begonnen_am,
-            )),
-            Some(am) => Self::Abgeschlossen(RundeAbgeschlossen::from_parts(
+        match (aufbau, abgeschlossen_am) {
+            (aufbau @ Rundenaufbau::Parkour { .. }, None) => Self::InBearbeitung(
+                RundeInBearbeitung::from_parts(id, erfasser, aufbau, begonnen_am),
+            ),
+            (aufbau @ Rundenaufbau::Freie { .. }, None) => Self::FreieRundeInArbeit(
+                FreieRundeInArbeit::from_parts(id, erfasser, aufbau, begonnen_am),
+            ),
+            (aufbau, Some(am)) => Self::Abgeschlossen(RundeAbgeschlossen::from_parts(
                 id,
                 erfasser,
                 aufbau,
@@ -675,6 +733,7 @@ impl Runde {
     pub fn id(&self) -> RundeId {
         match self {
             Self::InBearbeitung(runde) => runde.id(),
+            Self::FreieRundeInArbeit(runde) => runde.id(),
             Self::Abgeschlossen(runde) => runde.id(),
         }
     }
@@ -682,6 +741,7 @@ impl Runde {
     pub fn aufbau(&self) -> &Rundenaufbau {
         match self {
             Self::InBearbeitung(runde) => runde.aufbau(),
+            Self::FreieRundeInArbeit(runde) => runde.aufbau(),
             Self::Abgeschlossen(runde) => runde.aufbau(),
         }
     }
@@ -689,34 +749,15 @@ impl Runde {
     pub fn farben(&self, schüsse: impl IntoIterator<Item = Schuss>) -> Vec<Farbe> {
         match self {
             Self::InBearbeitung(runde) => runde.aufbau.farben(schüsse),
+            Self::FreieRundeInArbeit(runde) => runde.aufbau.farben(schüsse),
             Self::Abgeschlossen(runde) => runde.aufbau.farben(schüsse),
-        }
-    }
-
-    pub fn ziel_hinzufügen(&mut self, id: RundenZielId, name: Option<NonEmptyString>) -> bool {
-        match self {
-            Self::InBearbeitung(runde) => runde.ziel_hinzufügen(id, name),
-            Self::Abgeschlossen(_) => false,
-        }
-    }
-
-    pub fn ziel_entfernen(&mut self, id: RundenZielId) -> Option<RundenZiel> {
-        match self {
-            Self::InBearbeitung(runde) => runde.ziel_entfernen(id),
-            Self::Abgeschlossen(_) => None,
-        }
-    }
-
-    pub fn ziel_umbenennen(&mut self, id: RundenZielId, name: NonEmptyString) -> bool {
-        match self {
-            Self::InBearbeitung(runde) => runde.ziel_umbenennen(id, name),
-            Self::Abgeschlossen(_) => false,
         }
     }
 
     pub fn erfasst_von(&self) -> Erfasser {
         match self {
             Self::InBearbeitung(runde) => runde.erfasst_von(),
+            Self::FreieRundeInArbeit(runde) => runde.erfasst_von(),
             Self::Abgeschlossen(runde) => runde.erfasst_von(),
         }
     }
@@ -725,6 +766,7 @@ impl Runde {
     pub fn zustand(&self) -> &'static str {
         match self {
             Self::InBearbeitung(runde) => runde.state.as_str(),
+            Self::FreieRundeInArbeit(runde) => runde.state.as_str(),
             Self::Abgeschlossen(runde) => runde.state.as_str(),
         }
     }
@@ -732,13 +774,14 @@ impl Runde {
     pub fn begonnen_am(&self) -> DateTime<Utc> {
         match self {
             Self::InBearbeitung(runde) => runde.begonnen_am(),
+            Self::FreieRundeInArbeit(runde) => runde.begonnen_am(),
             Self::Abgeschlossen(runde) => runde.begonnen_am(),
         }
     }
 
     pub fn abgeschlossen_am(&self) -> Option<DateTime<Utc>> {
         match self {
-            Self::InBearbeitung(_) => None,
+            Self::InBearbeitung(_) | Self::FreieRundeInArbeit(_) => None,
             Self::Abgeschlossen(runde) => Some(runde.abgeschlossen_am()),
         }
     }
@@ -746,50 +789,57 @@ impl Runde {
     pub fn gehört_zu(&self, benutzer_id: BenutzerId) -> bool {
         match self {
             Self::InBearbeitung(runde) => runde.gehört_zu(benutzer_id),
+            Self::FreieRundeInArbeit(runde) => runde.gehört_zu(benutzer_id),
             Self::Abgeschlossen(runde) => runde.gehört_zu(benutzer_id),
         }
     }
 
     pub fn ist_in_bearbeitung(&self) -> bool {
-        matches!(self, Self::InBearbeitung(_))
+        matches!(self, Self::InBearbeitung(_) | Self::FreieRundeInArbeit(_))
     }
 
     pub fn ist_freie_runde(&self) -> bool {
-        matches!(self.aufbau(), Rundenaufbau::Freie { .. })
+        matches!(
+            self,
+            Self::FreieRundeInArbeit(_)
+                | Self::Abgeschlossen(RundeIn {
+                    aufbau: Rundenaufbau::Freie { .. },
+                    ..
+                })
+        )
     }
 
     pub fn enthält_ziel(&self, ziel_id: RundenZielId) -> bool {
         match self {
             Self::InBearbeitung(runde) => runde.enthält_ziel(ziel_id),
+            Self::FreieRundeInArbeit(runde) => runde.enthält_ziel(ziel_id),
             Self::Abgeschlossen(runde) => runde.enthält_ziel(ziel_id),
         }
     }
 
-    /// Replace the owner in either state (SPEC-datenschutz retention).
     pub fn anonymisiere(&mut self, am: DateTime<Utc>) {
         match self {
             Self::InBearbeitung(runde) => runde.anonymisiere(am),
+            Self::FreieRundeInArbeit(runde) => runde.anonymisiere(am),
             Self::Abgeschlossen(runde) => runde.anonymisiere(am),
         }
     }
 
-    /// The per-Ziel and Runde-wide Wertung over the given Schüsse.
-    ///
-    /// Schüsse of another Runde are filtered out, so passing every loaded row is safe.
     pub fn wertung(&self, schüsse: impl IntoIterator<Item = Schuss>) -> Rundenwertung {
         match self {
             Self::InBearbeitung(runde) => runde.wertung(schüsse),
+            Self::FreieRundeInArbeit(runde) => runde.wertung(schüsse),
             Self::Abgeschlossen(runde) => runde.wertung(schüsse),
         }
     }
 
-    /// One Wertung per captured Ziel, in visiting order. Delegated like [`Runde::wertung`].
     pub fn ziel_wertungen(
         &self,
         schüsse: impl IntoIterator<Item = Schuss>,
     ) -> Vec<Option<Zielwertung>> {
         match self {
             Self::InBearbeitung(runde) => runde.ziel_wertungen(schüsse),
+            Self::FreieRundeInArbeit(runde) => runde.ziel_wertungen(schüsse),
             Self::Abgeschlossen(runde) => runde.ziel_wertungen(schüsse),
         }
     }
@@ -868,27 +918,29 @@ mod tests {
     }
 
     fn runde(ziele: &[(u128, &str)]) -> Runde {
-        let mut runde = Runde::InBearbeitung(RundeInBearbeitung::neu(
-            RundeId(Uuid::nil()),
-            NeueRunde::mit_parkour(
-                AnlageId(Uuid::nil()),
-                Erfasser::Benutzer(BenutzerId(Uuid::nil())),
-                snapshot(ziele),
-                jetzt(),
-            ),
-        ));
-        if let Runde::InBearbeitung(in_bearbeitung) = &mut runde {
-            if let Rundenaufbau::Parkour { snapshot, .. } = &mut in_bearbeitung.aufbau {
-                for ziel in snapshot.ziele.iter_mut() {
-                    ziel.id = RundenZielId(ziel.anlage_ziel_id.expect("test target provenance").0);
-                }
-            }
+        let aufbau = Rundenaufbau::parkour(AnlageId(Uuid::nil()), snapshot(ziele));
+        let Rundenaufbau::Parkour { snapshot, .. } = aufbau else {
+            unreachable!();
+        };
+        let mut snapshot = snapshot;
+        for ziel in &mut snapshot.ziele {
+            ziel.id = RundenZielId(ziel.anlage_ziel_id.expect("test target provenance").0);
         }
-        runde
+        Runde::InBearbeitung(RundeInBearbeitung::from_parts(
+            RundeId(Uuid::nil()),
+            Erfasser::Benutzer(BenutzerId(Uuid::nil())),
+            Rundenaufbau::Parkour {
+                anlage_id: AnlageId(Uuid::nil()),
+                parkour_id: ParkourId(Uuid::from_u128(7)),
+                parkour_name: name("Waldrunde"),
+                snapshot,
+            },
+            jetzt(),
+        ))
     }
 
     fn freie_runde() -> Runde {
-        Runde::InBearbeitung(RundeInBearbeitung::neu(
+        Runde::FreieRundeInArbeit(FreieRundeInArbeit::aus_neu(
             RundeId(Uuid::nil()),
             NeueRunde::ohne_parkour(
                 name("Wiese daheim"),
@@ -1002,7 +1054,7 @@ mod tests {
     #[test_log::test]
     fn abschliessen_ist_eine_einbahnstrasse() {
         let Runde::InBearbeitung(runde) = runde(&[(10, "Keiler")]) else {
-            panic!("eine neue Runde ist in Bearbeitung");
+            panic!("eine neue Parkour-Runde ist in Bearbeitung");
         };
         let geschlossen: Runde = runde.abschliessen(jetzt()).into();
         assert_eq!(geschlossen.zustand(), "Abgeschlossen");
@@ -1051,7 +1103,7 @@ mod tests {
         assert_eq!(freie, geladen);
 
         let Runde::InBearbeitung(aktiv) = offen else {
-            panic!("offen");
+            panic!("eine Parkour-Runde ist offen");
         };
         let geschlossen: Runde = aktiv.abschliessen(jetzt()).into();
         let geladen = Runde::from_parts(
@@ -1115,7 +1167,9 @@ mod tests {
 
     #[test_log::test]
     fn ac22_freie_ziele_werden_fortlaufend_nummeriert_und_nie_wiederverwendet() {
-        let mut runde = freie_runde();
+        let Runde::FreieRundeInArbeit(mut runde) = freie_runde() else {
+            panic!("eine freie Runde hat ihren eigenen offenen Typ");
+        };
         let erstes = RundenZielId(Uuid::from_u128(1));
         let zweites = RundenZielId(Uuid::from_u128(2));
         assert!(runde.ziel_hinzufügen(erstes, None));
@@ -1146,12 +1200,9 @@ mod tests {
                 .is_none()
         );
 
-        let mut abgeschlossen: Runde = match runde {
-            Runde::InBearbeitung(runde) => runde.abschliessen(jetzt()).into(),
-            Runde::Abgeschlossen(_) => unreachable!(),
-        };
-        assert!(!abgeschlossen.ziel_hinzufügen(RundenZielId(Uuid::from_u128(5)), None));
-        assert!(abgeschlossen.ziel_entfernen(erstes).is_none());
+        let abgeschlossen = runde.abschliessen(jetzt());
+        let abgeschlossen: Runde = abgeschlossen.into();
+        assert!(!matches!(abgeschlossen, Runde::FreieRundeInArbeit(_)));
     }
 
     #[test_log::test]
@@ -1173,7 +1224,9 @@ mod tests {
 
     #[test_log::test]
     fn ac3_ziele_werden_in_einer_round_localen_route_abgebildet() {
-        let mut runde = freie_runde();
+        let Runde::FreieRundeInArbeit(mut runde) = freie_runde() else {
+            panic!("eine freie Runde hat ihren eigenen offenen Typ");
+        };
         let id = RundenZielId(Uuid::from_u128(5));
         assert!(runde.ziel_hinzufügen(id, None));
         let ziele: Vec<_> = runde.aufbau().ziele().collect();
@@ -1229,7 +1282,9 @@ mod tests {
 
     #[test_log::test]
     fn ac23_eine_freie_runde_nimmt_jede_farbe_und_jede_distanz() {
-        let mut runde = freie_runde();
+        let Runde::FreieRundeInArbeit(mut runde) = freie_runde() else {
+            panic!("eine freie Runde hat ihren eigenen offenen Typ");
+        };
         let ziel = RundenZielId(Uuid::from_u128(1));
         assert!(runde.ziel_hinzufügen(ziel, None));
         let aufbau = runde.aufbau().clone();
@@ -1255,7 +1310,9 @@ mod tests {
 
     #[test_log::test]
     fn ac23_farben_sind_die_bereits_verwendeten_farben() {
-        let mut runde = freie_runde();
+        let Runde::FreieRundeInArbeit(mut runde) = freie_runde() else {
+            panic!("eine freie Runde hat ihren eigenen offenen Typ");
+        };
         let ziel_id = RundenZielId(Uuid::from_u128(1));
         assert!(runde.ziel_hinzufügen(ziel_id, None));
         let rot = Farbe::neu("#c0392b").unwrap();
@@ -1298,13 +1355,22 @@ mod tests {
                 .unwrap(),
             ),
         ];
-        assert_eq!(runde.farben(schüsse), vec![rot]);
-        assert!(!runde.farben(Vec::new()).contains(&blau));
+        assert_eq!(
+            Runde::FreieRundeInArbeit(runde.clone()).farben(schüsse),
+            vec![rot]
+        );
+        assert!(
+            !Runde::FreieRundeInArbeit(runde)
+                .farben(Vec::new())
+                .contains(&blau)
+        );
     }
 
     #[test_log::test]
     fn ac24_die_wertung_faltet_ueber_die_freien_ziele() {
-        let mut runde = freie_runde();
+        let Runde::FreieRundeInArbeit(mut runde) = freie_runde() else {
+            panic!("eine freie Runde hat ihren eigenen offenen Typ");
+        };
         assert!(runde.ziel_hinzufügen(RundenZielId(Uuid::from_u128(1)), None));
         assert!(runde.ziel_hinzufügen(RundenZielId(Uuid::from_u128(2)), None));
         let schüsse = vec![

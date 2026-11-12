@@ -184,7 +184,7 @@ impl Runde {
             .into_iter()
             .zip(wertungen)
             .map(|(ziel, wertung)| RundeZiel {
-                ziel_id: ziel.id().as_uuid(),
+                ziel_id: ziel.id().0,
                 tiername: ziel.name().to_string(),
                 zielnummer: ziel.ordinal().get(),
                 pflöcke: effective_pflöcke(ziel, pflöcke),
@@ -199,7 +199,7 @@ impl Runde {
                 wertung: wertung.map(Into::into),
                 schüsse: schüsse
                     .iter()
-                    .filter(|schuss| schuss.ziel_id() == ziel.id().as_schuss_ziel_id())
+                    .filter(|schuss| schuss.ziel_id() == ziel.id().into())
                     .cloned()
                     .map(Into::into)
                     .collect(),
@@ -284,7 +284,7 @@ impl From<domain::Runde> for Runde {
             ziele: ziele
                 .into_iter()
                 .map(|ziel| RundeZiel {
-                    ziel_id: ziel.id().as_uuid(),
+                    ziel_id: ziel.id().0,
                     tiername: ziel.name().to_string(),
                     zielnummer: ziel.ordinal().get(),
                     pflöcke: effective_pflöcke(ziel, pflöcke),

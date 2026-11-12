@@ -10,8 +10,8 @@ use logandaim_core::{
     application::AuthContext,
     domain::{
         Abstand, AnlageAdresse, AnlageId, AnlageKontakt, AnlageZielId, EmailAdresse, Erfasser,
-        Farbe, Ländercode, NonEmptyString, ParkourId, Pflock, PflockId, RundeId, Schussposition,
-        Wertungszone, Zielplatzierung,
+        Farbe, Ländercode, NonEmptyString, ParkourId, Pflock, PflockId, RundeId, SchussZielId,
+        Schussposition, Wertungszone, Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
@@ -296,7 +296,7 @@ async fn schuesse_zaehlen_nur_in_der_eigenen_offenen_runde() {
             anna,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel.0,
+                ziel_id: runden_ziel.into(),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -326,7 +326,7 @@ async fn ein_schuss_auf_ein_ziel_ausserhalb_des_snapshots_wird_abgelehnt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: uuid::Uuid::new_v4(),
+                ziel_id: SchussZielId(uuid::Uuid::new_v4()),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -367,7 +367,7 @@ async fn eine_abgeschlossene_runde_nimmt_keine_schuesse_mehr_an() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -401,7 +401,7 @@ async fn schuesse_erhalten_ihre_pfeilnummer_in_registrierungsreihenfolge() {
                 admin,
                 SchussRegistrieren {
                     runde_id: runde.id(),
-                    ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                    ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                     wertungszone: zone,
                     position: None,
                 },
@@ -431,7 +431,7 @@ async fn ein_schuss_traegt_den_angemeldeten_benutzer_als_eigentuemer() {
             anna,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                 wertungszone: Wertungszone::Spot,
                 position: None,
             },
@@ -545,7 +545,7 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Distanz(Abstand::neu(35).unwrap())),
             },
@@ -558,7 +558,7 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                 wertungszone: Wertungszone::Spot,
                 position: None,
             },
@@ -639,7 +639,7 @@ async fn ac10_runde_loeschen_entfernt_alle_schuesse() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -860,7 +860,7 @@ async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, erstes.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, erstes.0)),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Pflock(eigene[0])),
             },
@@ -875,7 +875,7 @@ async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, zweites.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, zweites.0)),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Pflock(eigene[0])),
             },
@@ -894,7 +894,7 @@ async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, zweites.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, zweites.0)),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Pflock(Farbe::neu("#c0392b").unwrap())),
             },
@@ -909,7 +909,7 @@ async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, erstes.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, erstes.0)),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Pflock(Farbe::neu("#c0392b").unwrap())),
             },
@@ -941,7 +941,7 @@ async fn ac9_eine_korrektur_prueft_den_pflock_gegen_das_ziel_des_schusses() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, zweites.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, zweites.0)),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -989,7 +989,7 @@ async fn ac9_eine_korrektur_prueft_den_pflock_gegen_das_ziel_des_schusses() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, erstes.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, erstes.0)),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -1471,7 +1471,7 @@ async fn ac22_das_entfernen_eines_ziels_nimmt_seine_schuesse_mit() {
                 anna,
                 SchussRegistrieren {
                     runde_id: runde.id(),
-                    ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                    ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                     wertungszone: Wertungszone::Kill,
                     position: None,
                 },
@@ -1580,7 +1580,7 @@ async fn ac23_eine_freie_runde_nimmt_jede_farbe_und_jede_distanz() {
                 anna,
                 SchussRegistrieren {
                     runde_id: runde.id(),
-                    ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                    ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                     wertungszone: Wertungszone::Kill,
                     position: Some(Schussposition::Pflock(Farbe::neu(hex).unwrap())),
                 },
@@ -1599,7 +1599,7 @@ async fn ac23_eine_freie_runde_nimmt_jede_farbe_und_jede_distanz() {
             anna,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                 wertungszone: Wertungszone::Kill,
                 position: Some(Schussposition::Distanz(Abstand::neu(35).unwrap())),
             },
@@ -1660,7 +1660,7 @@ async fn ac23_eine_unbekannte_farbe_ist_nur_auf_einem_parkour_abgelehnt() {
             admin,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                 wertungszone: Wertungszone::Kill,
                 // Not one of the Parkour's two captured colours.
                 position: Some(Schussposition::Pflock(Farbe::neu("#abc123").unwrap())),
@@ -1716,7 +1716,7 @@ async fn ac24_die_wertung_faltet_ueber_die_freien_ziele() {
                 anna,
                 SchussRegistrieren {
                     runde_id: runde.id(),
-                    ziel_id: runden_ziel_id(&runde, ziel_id.0),
+                    ziel_id: SchussZielId(runden_ziel_id(&runde, ziel_id.0)),
                     wertungszone: zone,
                     position: None,
                 },

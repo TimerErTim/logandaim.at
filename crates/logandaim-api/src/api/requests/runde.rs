@@ -108,9 +108,9 @@ impl ZielUmbenennenRequest {
 }
 
 /// The path of one free Ziel inside its Runde.
-pub fn ziel_entfernen_in_use_case(runde_id: Uuid, ziel_id: Uuid) -> RundeZielEntfernen {
+pub fn ziel_entfernen_in_use_case(runde_id: RundeId, ziel_id: Uuid) -> RundeZielEntfernen {
     RundeZielEntfernen {
-        runde_id: RundeId(runde_id),
+        runde_id,
         ziel_id: RundenZielId(ziel_id),
     }
 }

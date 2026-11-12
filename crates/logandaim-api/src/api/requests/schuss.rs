@@ -8,7 +8,7 @@ use error_stack::Report;
 use uuid::Uuid;
 
 use logandaim_core::{
-    domain::{RundeId, Schussposition},
+    domain::{RundeId, SchussZielId, Schussposition},
     service::{SchussRegistrieren, SchussRegistrierenFehler, SchussÄndern, SchussÄndernFehler},
 };
 
@@ -65,7 +65,7 @@ fn position_aus_anfrage(position: SchusspositionRequest) -> Result<Schusspositio
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SchussErstellungRequest {
-    /// The Ziel that was aimed at; it must be part of the Runde's snapshot.
+    /// The neutral round-local Ziel identity.
     pub ziel_id: Uuid,
     /// Where on the Ziel the arrow landed.
     pub wertungszone: Wertungszone,
@@ -80,7 +80,7 @@ impl SchussErstellungRequest {
     ) -> Result<SchussRegistrieren, Report<SchussRegistrierenFehler>> {
         Ok(SchussRegistrieren {
             runde_id,
-            ziel_id: self.ziel_id,
+            ziel_id: SchussZielId(self.ziel_id),
             wertungszone: self.wertungszone.into(),
             position: self
                 .position
