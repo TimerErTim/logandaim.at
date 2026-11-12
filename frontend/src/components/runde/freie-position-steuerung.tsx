@@ -20,21 +20,30 @@ function FreieMeterEingabe({
   name: string;
   onChange: (value: string) => void;
 }) {
+  // The colour is the stored form while the field is untouched, so it stands in for the
+  // number. Once the reader types, their own digits are what they must read; the swatch
+  // stays visible beside them as the last valid stored form (AC-28).
+  const farbeStattEingabe = farbe !== null && value === "";
   return (
     <div className="relative">
       <Input
         aria-label={name}
         inputMode="numeric"
-        value={farbe ? "" : value}
+        value={farbeStattEingabe ? "" : value}
         onChange={(event) => onChange(event.target.value)}
-        placeholder={farbe ? "" : "Meter"}
+        placeholder={farbeStattEingabe ? "" : "Meter"}
         aria-invalid={invalid}
         className={cn(
           farbe && "pl-12",
-          farbe && "text-transparent caret-transparent",
+          farbeStattEingabe && "text-transparent caret-transparent",
         )}
       />
-      {farbe ? <PflockPlatzhalter farbe={farbe} /> : null}
+      {farbe ? (
+        <PflockPlatzhalter
+          farbe={farbe}
+          text={farbeStattEingabe ? "Pflock" : null}
+        />
+      ) : null}
     </div>
   );
 }
@@ -95,8 +104,10 @@ export function FreiePositionSteuerung({
             name={`Exakte Entfernung für ${ziel.tiername} in Metern`}
             onChange={(next) => {
               setMeter(next);
-              setFarbe(null);
               if (next === "") {
+                // A cleared field is no form at all, so it and the swatch go together:
+                // the display never claims a stored colour that is gone.
+                setFarbe(null);
                 setMeterInvalid(false);
                 onValidityChange(false);
                 onChange(null);
@@ -106,6 +117,9 @@ export function FreiePositionSteuerung({
               ) {
                 setMeterInvalid(false);
                 onValidityChange(false);
+                // A valid meter is the sole stored form, so the colour is dropped here
+                // and only here: an invalid edit must leave the last valid form (AC-28).
+                setFarbe(null);
                 onChange({ Distanz: { meter: Number(next) } });
               } else {
                 setMeterInvalid(true);

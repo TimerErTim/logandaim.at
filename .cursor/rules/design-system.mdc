@@ -205,6 +205,12 @@ Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour 
   replaces the older one, a new mutation clears the slot first, and a timer clears it after `5s`. It
   sits where that mutation's failure `Alert` sits — one result slot per section, never one inside a
   card and one outside. Writes that navigate express their success by the destination instead.
+- **The general failure note.** A write whose screen shows no failure of its own falls back to the
+  same floating slot the success notes use (`ToastProvider`), drawn in the `error` tone: the same
+  wash and left rule as `Alert variant="error"`, a `CircleAlert` icon, `role="alert"`. It is a
+  fallback, not a second vocabulary: a screen that *can* say something specific about its own
+  failure marks the mutation `meta.handlesError` and renders its own `Alert`, and the general note
+  then stays silent. One failure, one sentence, one place — the note never repeats a site error.
 - **`Separator`** — the ruled line; the standard section divider.
 - **`Input`, `Textarea`, `Select`, `SearchInput`** — `--bg-elevated` with a `--border-control`
   contour, turning `--color-primary` on focus and darkening on hover. All are drawn at 44px: they are

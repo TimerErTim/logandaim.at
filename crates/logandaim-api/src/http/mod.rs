@@ -249,6 +249,8 @@ impl LogandaimApiSpec {
     }
 
     /// Grant a role in the Anlage to an existing Benutzer. Administrator only.
+    ///
+    /// The Benutzer is named by identity; find it with `benutzer-suche` first.
     #[oai(
         path = "/anlagen/:anlage_id/verwaltungen",
         method = "post",
@@ -301,6 +303,8 @@ impl LogandaimApiSpec {
     }
 
     /// Change an existing role. Administrator only.
+    ///
+    /// The target is in the path, so the body only names the role.
     #[oai(
         path = "/anlagen/:anlage_id/verwaltungen/:benutzer_id",
         method = "put",
@@ -386,6 +390,8 @@ impl LogandaimApiSpec {
     }
 
     /// Edit a Ziel's details.
+    ///
+    /// The identity stays, and so does everything already recorded against it.
     #[oai(
         path = "/anlagen/:anlage_id/ziele/:ziel_id",
         method = "put",
@@ -439,7 +445,10 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Remove a Ziel from the Anlage.
+    /// Remove a Ziel: archive it when recorded Runden reference it, delete it otherwise.
+    ///
+    /// Answers the Anlage as it stands afterwards, so the Ziel is absent from `ziele` either
+    /// way and an archived one no longer appears among the active ones.
     #[oai(
         path = "/anlagen/:anlage_id/ziele/:ziel_id",
         method = "delete",
@@ -491,7 +500,9 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Replace the shooting setup with a new Pflock set and route.
+    /// Replace the whole shooting setup: Pflöcke and the route that places Ziele among them.
+    ///
+    /// Existing Runden keep the snapshot they captured; only future Runden see the change.
     #[oai(
         path = "/anlagen/:anlage_id/parkour/:parkour_id/setup",
         method = "put",
@@ -518,6 +529,8 @@ impl LogandaimApiSpec {
     }
 
     /// Rename a Parkour.
+    ///
+    /// The identity stays, and every captured snapshot keeps the name it recorded.
     #[oai(
         path = "/anlagen/:anlage_id/parkour/:parkour_id",
         method = "put",
@@ -543,7 +556,9 @@ impl LogandaimApiSpec {
         ergebnis.into()
     }
 
-    /// Remove a Parkour from the Anlage.
+    /// Remove a Parkour: archive it when a Runde captured it, delete it otherwise.
+    ///
+    /// Answers the Anlage as it stands afterwards.
     #[oai(
         path = "/anlagen/:anlage_id/parkour/:parkour_id",
         method = "delete",
@@ -712,7 +727,7 @@ impl LogandaimApiSpec {
             .into()
     }
 
-    /// Read one Runde with its whole snapshot and both Wertungen.
+    /// Read one Runde with its captured route and both Wertungen.
     ///
     /// The Runde is visible to its owner and to a Systemadministrator.
     #[oai(path = "/runden/:runde_id", method = "get", tag = "ApiTag::Runden")]

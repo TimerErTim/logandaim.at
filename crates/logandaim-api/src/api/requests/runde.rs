@@ -15,7 +15,7 @@ use logandaim_core::{
     domain::{NonEmptyString, ParkourId, RundeId, RundenZielId},
     service::{
         RundeStarten, RundeStartenFehler, RundeZielEntfernen, RundeZielHinzufügen,
-        RundeZielUmbenennen, RundeZielUmbenennenFehler,
+        RundeZielHinzufügenFehler, RundeZielUmbenennen, RundeZielUmbenennenFehler,
     },
 };
 
@@ -71,13 +71,24 @@ pub struct ZielHinzufuegenRequest {
 }
 
 impl ZielHinzufuegenRequest {
-    pub fn in_use_case(self, runde_id: RundeId) -> RundeZielHinzufügen {
-        RundeZielHinzufügen {
-            runde_id,
-            name: self
-                .name
-                .and_then(|name| NonEmptyString::neu(name.trim()).ok()),
-        }
+    /// Present-but-blank is a refusal, absent is the auto-name case.
+    ///
+    /// `{"name": "   "}` used to reach `None` and be answered 200 with a generated name,
+    /// while the same body on the rename route is a 400. The two routes now agree: only an
+    /// absent name asks the round to number the Ziel itself.
+    pub fn in_use_case(
+        self,
+        runde_id: RundeId,
+    ) -> Result<RundeZielHinzufügen, Report<RundeZielHinzufügenFehler>> {
+        let name = match self.name {
+            None => None,
+            Some(name) => Some(
+                NonEmptyString::neu(name.trim())
+                    .change_context(RundeZielHinzufügenFehler::UngültigeAnfrage)
+                    .attach("Freies Ziel: Name")?,
+            ),
+        };
+        Ok(RundeZielHinzufügen { runde_id, name })
     }
 }
 
@@ -108,9 +119,6 @@ impl ZielUmbenennenRequest {
 }
 
 /// The path of one free Ziel inside its Runde.
-pub fn ziel_entfernen_in_use_case(runde_id: RundeId, ziel_id: Uuid) -> RundeZielEntfernen {
-    RundeZielEntfernen {
-        runde_id,
-        ziel_id: RundenZielId(ziel_id),
-    }
+pub fn ziel_entfernen_in_use_case(runde_id: RundeId, ziel_id: RundenZielId) -> RundeZielEntfernen {
+    RundeZielEntfernen { runde_id, ziel_id }
 }

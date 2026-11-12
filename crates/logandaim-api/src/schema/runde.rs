@@ -91,6 +91,7 @@ pub struct RundeZiel {
     /// The distances as captured. Always empty on a free round.
     pub abstände: Vec<Abstand>,
     /// The Wertung of this Ziel; absent while no Schuss has been logged at it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wertung: Option<Zielwertung>,
     /// The logged arrows at this Ziel, in Pfeil order.
     pub schüsse: Vec<Schuss>,
@@ -117,6 +118,7 @@ pub struct Runde {
     /// Identity of the Runde.
     pub id: Uuid,
     /// The Anlage/Parkour pair; absent on a `Freie Runde`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub herkunft: Option<RundeHerkunft>,
     /// The round's name: the captured Parkour's, or the free round's own.
     pub name: String,
@@ -127,6 +129,7 @@ pub struct Runde {
     /// Start of the Runde.
     pub begonnen_am: DateTime<Utc>,
     /// End of the Runde; absent while it is open.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub abgeschlossen_am: Option<DateTime<Utc>>,
     /// The captured Pflöcke' colours, near to far; empty on a free round.
     pub pflöcke: Vec<RundePflock>,
@@ -153,6 +156,7 @@ pub struct RundeBasic {
     /// Identity of the Runde.
     pub id: Uuid,
     /// The Anlage/Parkour pair; absent on a `Freie Runde`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub herkunft: Option<RundeHerkunft>,
     /// The round's name: the captured Parkour's, or the free round's own.
     pub name: String,
@@ -165,6 +169,7 @@ pub struct RundeBasic {
     /// Start of the Runde.
     pub begonnen_am: DateTime<Utc>,
     /// End of the Runde; absent while it is open.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub abgeschlossen_am: Option<DateTime<Utc>>,
 }
 
@@ -177,11 +182,11 @@ pub struct RundeBasic {
 impl Runde {
     pub fn gelesen(runde: domain::Runde, schüsse: Vec<domain::Schuss>) -> Self {
         let wertungen = runde.ziel_wertungen(schüsse.iter().cloned());
-        let snapshot = runde.aufbau().snapshot();
-        let pflöcke = snapshot.pflöcke();
-        let ziele = snapshot.ziele();
+        let aufbau = runde.aufbau();
+        let pflöcke = aufbau.pflöcke();
+        let ziele = aufbau.ziele();
         let ziele = ziele
-            .into_iter()
+            .iter()
             .zip(wertungen)
             .map(|(ziel, wertung)| RundeZiel {
                 ziel_id: ziel.id().0,
@@ -251,21 +256,10 @@ fn effective_pflöcke(
 /// impl renders the captured route exactly and leaves every Wertung empty.
 impl From<domain::Runde> for Runde {
     fn from(runde: domain::Runde) -> Self {
-        let (herkunft, name) = match runde.aufbau() {
-            domain::Rundenaufbau::Parkour {
-                anlage_id,
-                parkour_id,
-                parkour_name,
-                ..
-            } => (
-                Some(RundeHerkunft::from((*anlage_id, *parkour_id))),
-                parkour_name.to_string(),
-            ),
-            domain::Rundenaufbau::Freie { name, .. } => (None, name.to_string()),
-        };
-        let snapshot = runde.aufbau().snapshot();
-        let pflöcke = snapshot.pflöcke();
-        let ziele = snapshot.ziele();
+        let (herkunft, name) = herkunft_und_name(&runde);
+        let aufbau = runde.aufbau();
+        let pflöcke = aufbau.pflöcke();
+        let ziele = aufbau.ziele();
         Self {
             id: runde.id().0,
             herkunft,
@@ -282,7 +276,7 @@ impl From<domain::Runde> for Runde {
                 })
                 .collect(),
             ziele: ziele
-                .into_iter()
+                .iter()
                 .map(|ziel| RundeZiel {
                     ziel_id: ziel.id().0,
                     tiername: ziel.name().to_string(),
@@ -309,19 +303,8 @@ impl From<domain::Runde> for Runde {
 
 impl From<domain::Runde> for RundeBasic {
     fn from(runde: domain::Runde) -> Self {
-        let (herkunft, name) = match runde.aufbau() {
-            domain::Rundenaufbau::Parkour {
-                anlage_id,
-                parkour_id,
-                parkour_name,
-                ..
-            } => (
-                Some(RundeHerkunft::from((*anlage_id, *parkour_id))),
-                parkour_name.to_string(),
-            ),
-            domain::Rundenaufbau::Freie { name, .. } => (None, name.to_string()),
-        };
-        let anzahl_ziele = runde.aufbau().snapshot().ziele().len();
+        let (herkunft, name) = herkunft_und_name(&runde);
+        let anzahl_ziele = runde.aufbau().ziele().len();
         Self {
             id: runde.id().0,
             herkunft,
@@ -332,5 +315,23 @@ impl From<domain::Runde> for RundeBasic {
             begonnen_am: runde.begonnen_am(),
             abgeschlossen_am: runde.abgeschlossen_am(),
         }
+    }
+}
+
+/// The wire form of a round's provenance: the Anlage/Parkour pair, or nothing at all.
+///
+/// One field pair, so a client cannot receive two ids naming different Parkours, and the
+/// free round's own name is the round's `name`.
+fn herkunft_und_name(runde: &domain::Runde) -> (Option<RundeHerkunft>, String) {
+    match runde.herkunft() {
+        domain::Rundenherkunft::Parkour {
+            anlage_id,
+            parkour_id,
+            parkour_name,
+        } => (
+            Some(RundeHerkunft::from((*anlage_id, *parkour_id))),
+            parkour_name.to_string(),
+        ),
+        domain::Rundenherkunft::Freie { name } => (None, name.to_string()),
     }
 }

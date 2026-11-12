@@ -43,6 +43,7 @@ fn runden_ziel_id(runde: &logandaim_core::domain::Runde, id: uuid::Uuid) -> uuid
     runde
         .aufbau()
         .ziele()
+        .iter()
         .find(|ziel| {
             ziel.id().0 == id
                 || ziel
@@ -288,7 +289,7 @@ async fn schuesse_zaehlen_nur_in_der_eigenen_offenen_runde() {
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die Runde des Systemadministrators");
-    let runden_ziel = runde.aufbau().ziele().next().expect("ein Ziel").id();
+    let runden_ziel = runde.aufbau().ziele().first().expect("ein Ziel").id();
 
     let fehler = harness
         .app()
@@ -349,7 +350,7 @@ async fn eine_abgeschlossene_runde_nimmt_keine_schuesse_mehr_an() {
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die Runde startet");
-    let ziel_id = runde.aufbau().ziele().next().expect("ein Ziel").id();
+    let ziel_id = runde.aufbau().ziele().first().expect("ein Ziel").id();
     harness
         .app()
         .execute(
@@ -442,7 +443,7 @@ async fn ein_schuss_traegt_den_angemeldeten_benutzer_als_eigentuemer() {
     assert_eq!(schuss.runde_id(), runde.id());
     assert_eq!(
         schuss.ziel_id().0,
-        runde.aufbau().ziele().next().unwrap().id().0
+        runde.aufbau().ziele().first().unwrap().id().0
     );
 }
 
@@ -535,10 +536,9 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die Runde startet");
-    let snapshot = match runde.aufbau() {
-        logandaim_core::domain::Rundenaufbau::Parkour { snapshot, .. } => Some(snapshot.clone()),
-        logandaim_core::domain::Rundenaufbau::Freie { .. } => None,
-    };
+    // AC-9: the route and the provenance are the ones the round started with.
+    let aufbau = runde.aufbau().clone();
+    let herkunft = runde.herkunft().clone();
     let erster = harness
         .app()
         .execute(
@@ -584,13 +584,8 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
         Some(Schussposition::Pflock(Farbe::neu("#1b4f9c").unwrap()))
     );
     let (geladen_nach_aenderung, schüsse) = super::helpers::runde_laden(&harness, runde.id()).await;
-    assert_eq!(
-        match geladen_nach_aenderung.aufbau() {
-            logandaim_core::domain::Rundenaufbau::Parkour { snapshot, .. } => Some(snapshot),
-            logandaim_core::domain::Rundenaufbau::Freie { .. } => None,
-        },
-        snapshot.as_ref()
-    );
+    assert_eq!(geladen_nach_aenderung.aufbau(), &aufbau);
+    assert_eq!(geladen_nach_aenderung.herkunft(), &herkunft);
     assert_eq!(
         geladen_nach_aenderung
             .wertung(schüsse.clone())
@@ -611,13 +606,7 @@ async fn ac9_editieren_von_schuss_und_datum_erhaelt_snapshot_und_berechnet_wertu
         .await
         .expect("Schuss wird gelöscht");
     let (geladen, schüsse) = super::helpers::runde_laden(&harness, runde.id()).await;
-    assert_eq!(
-        match geladen.aufbau() {
-            logandaim_core::domain::Rundenaufbau::Parkour { snapshot, .. } => Some(snapshot),
-            logandaim_core::domain::Rundenaufbau::Freie { .. } => None,
-        },
-        snapshot.as_ref()
-    );
+    assert_eq!(geladen.aufbau(), &aufbau);
     assert_eq!(schüsse.len(), 1);
     assert_eq!(schüsse[0].pfeil().get(), 1);
     assert_eq!(geladen.wertung(schüsse).mehrschuss(), 0);
@@ -849,7 +838,12 @@ async fn ac9_ein_schuss_am_eigenen_pflock_ist_nur_am_eigenen_ziel_erlaubt() {
         .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die Runde startet");
-    let ziel_ids: Vec<_> = runde.aufbau().ziele().map(|ziel| ziel.id()).collect();
+    let ziel_ids: Vec<_> = runde
+        .aufbau()
+        .ziele()
+        .iter()
+        .map(|ziel| ziel.id())
+        .collect();
     assert_ne!(ziel_ids[0].0, erstes.0, "RundenZielId is round-local");
     assert_ne!(ziel_ids[1].0, zweites.0, "RundenZielId is round-local");
 
@@ -1036,16 +1030,16 @@ async fn ac21_eine_freie_runde_startet_ohne_parkour() {
     let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
 
     let runde = freie_runde(&harness, anna, "Wiese daheim").await;
-    let logandaim_core::domain::Rundenaufbau::Freie { name, snapshot } = runde.aufbau() else {
+    let logandaim_core::domain::Rundenherkunft::Freie { name } = runde.herkunft() else {
         panic!("die Runde ist frei");
     };
     assert_eq!(name.as_str(), "Wiese daheim");
-    assert!(snapshot.ziele().is_empty());
+    assert!(runde.aufbau().ziele().is_empty());
 
-    // The stored setup survives a round trip through either repository.
+    // The stored provenance and route survive a round trip through either repository.
     let (geladen, schüsse) = super::helpers::runde_laden(&harness, runde.id()).await;
     assert_eq!(geladen.id(), runde.id());
-    let logandaim_core::domain::Rundenaufbau::Freie { name, .. } = geladen.aufbau() else {
+    let logandaim_core::domain::Rundenherkunft::Freie { name } = geladen.herkunft() else {
         panic!("die Runde bleibt frei");
     };
     assert_eq!(name.as_str(), "Wiese daheim");
@@ -1170,11 +1164,11 @@ async fn ac22_freie_ziele_werden_jit_hinzugefuegt_und_entfernt() {
         )
         .await
         .expect("das erste Ziel entsteht");
-    let ziele: Vec<_> = mit_einem.aufbau().ziele().collect();
+    let ziele = mit_einem.aufbau().ziele();
     assert_eq!(ziele.len(), 1);
     assert_eq!(ziele[0].name().as_str(), "Ziel 1");
     assert_eq!(ziele[0].ordinal().get(), 1);
-    let erstes = ziele[0].ziel_id();
+    let erstes = ziele[0].id();
 
     let mit_zwei = harness
         .app()
@@ -1187,7 +1181,7 @@ async fn ac22_freie_ziele_werden_jit_hinzugefuegt_und_entfernt() {
         )
         .await
         .expect("das zweite Ziel entsteht");
-    let ziele: Vec<_> = mit_zwei.aufbau().ziele().collect();
+    let ziele = mit_zwei.aufbau().ziele();
     assert_eq!(ziele[1].name().as_str(), "Baumstumpf");
     assert_eq!(ziele[1].ordinal().get(), 2);
 
@@ -1196,6 +1190,7 @@ async fn ac22_freie_ziele_werden_jit_hinzugefuegt_und_entfernt() {
     let namen: Vec<String> = geladen
         .aufbau()
         .ziele()
+        .iter()
         .map(|ziel| ziel.name().to_string())
         .collect();
     assert_eq!(namen, ["Ziel 1", "Baumstumpf"]);
@@ -1211,7 +1206,7 @@ async fn ac22_freie_ziele_werden_jit_hinzugefuegt_und_entfernt() {
         )
         .await
         .expect("das Ziel wird entfernt");
-    assert_eq!(nach_entfernen.aufbau().ziele().count(), 1);
+    assert_eq!(nach_entfernen.aufbau().ziele().len(), 1);
 
     // Removing an unknown Ziel is a 404, not a silent success.
     let fehler = harness
@@ -1247,7 +1242,7 @@ async fn ac26_freie_ziele_lassen_sich_waehrend_der_runde_umbenennen() {
         )
         .await
         .expect("das Ziel wird angelegt");
-    let ziel_id = angelegt.aufbau().ziele().next().unwrap().ziel_id();
+    let ziel_id = angelegt.aufbau().ziele().first().unwrap().id();
 
     let umbenannt = harness
         .app()
@@ -1262,13 +1257,13 @@ async fn ac26_freie_ziele_lassen_sich_waehrend_der_runde_umbenennen() {
         .await
         .expect("das Ziel wird umbenannt");
     assert_eq!(
-        umbenannt.aufbau().ziele().next().unwrap().name().as_str(),
+        umbenannt.aufbau().ziele().first().unwrap().name().as_str(),
         "Alter Apfelbaum"
     );
 
     let (geladen, _) = super::helpers::runde_laden(&harness, runde.id()).await;
     assert_eq!(
-        geladen.aufbau().ziele().next().unwrap().name().as_str(),
+        geladen.aufbau().ziele().first().unwrap().name().as_str(),
         "Alter Apfelbaum"
     );
 }
@@ -1290,7 +1285,7 @@ async fn ac26_freie_ziele_koennen_nur_in_eigenen_laufenden_freien_runden_umbenan
         )
         .await
         .unwrap();
-    let ziel_id = angelegt.aufbau().ziele().next().unwrap().ziel_id();
+    let ziel_id = angelegt.aufbau().ziele().first().unwrap().id();
 
     let fehler = harness
         .app()
@@ -1369,6 +1364,94 @@ async fn ac26_freie_ziele_koennen_nur_in_eigenen_laufenden_freien_runden_umbenan
         abgeschlossen.current_context(),
         RundeZielUmbenennenFehler::RundeNichtInBearbeitung
     ));
+}
+
+/// AC-22: closing a `Freie Runde` freezes its target list and names — on every write path.
+///
+/// All three writes ask one predicate (`ist_freie_runde`), so a closed free round answers
+/// the same "not in progress" refusal whether the caller adds, removes, or renames.
+#[test_log::test(pollster::test)]
+async fn ac22_eine_abgeschlossene_freie_runde_friert_ihre_ziel_liste_ein() {
+    let harness = harness().await;
+    let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
+    let runde = freie_runde(&harness, anna, "Wiese").await;
+    let angelegt = harness
+        .app()
+        .execute(
+            anna,
+            RundeZielHinzufügen {
+                runde_id: runde.id(),
+                name: None,
+            },
+        )
+        .await
+        .expect("das Ziel wird angelegt");
+    let ziel_id = angelegt.aufbau().ziele().first().expect("ein Ziel").id();
+    harness
+        .app()
+        .execute(
+            anna,
+            RundeAbschliessen {
+                runde_id: runde.id(),
+            },
+        )
+        .await
+        .expect("die freie Runde wird abgeschlossen");
+
+    let hinzufuegen = harness
+        .app()
+        .execute(
+            anna,
+            RundeZielHinzufügen {
+                runde_id: runde.id(),
+                name: None,
+            },
+        )
+        .await
+        .expect_err("eine abgeschlossene freie Runde nimmt kein Ziel mehr an");
+    assert!(matches!(
+        hinzufuegen.current_context(),
+        RundeZielHinzufügenFehler::RundeNichtInBearbeitung
+    ));
+
+    let entfernen = harness
+        .app()
+        .execute(
+            anna,
+            RundeZielEntfernen {
+                runde_id: runde.id(),
+                ziel_id,
+            },
+        )
+        .await
+        .expect_err("eine abgeschlossene freie Runde gibt kein Ziel mehr her");
+    assert!(matches!(
+        entfernen.current_context(),
+        RundeZielEntfernenFehler::RundeNichtInBearbeitung
+    ));
+
+    let umbenennen = harness
+        .app()
+        .execute(
+            anna,
+            RundeZielUmbenennen {
+                runde_id: runde.id(),
+                ziel_id,
+                name: name("Danach"),
+            },
+        )
+        .await
+        .expect_err("eine abgeschlossene freie Runde ist nicht umbenennbar");
+    assert!(matches!(
+        umbenennen.current_context(),
+        RundeZielUmbenennenFehler::RundeNichtInBearbeitung
+    ));
+
+    // The freeze is real, not only a refusal: the stored round is unchanged.
+    let (geladen, _) = super::helpers::runde_laden(&harness, runde.id()).await;
+    assert_eq!(geladen.aufbau().ziele().len(), 1);
+    assert_eq!(geladen.aufbau().ziele()[0].name().as_str(), "Ziel 1");
+    assert_eq!(geladen.zustand(), "Abgeschlossen");
 }
 
 #[test_log::test(pollster::test)]
@@ -1460,9 +1543,9 @@ async fn ac22_das_entfernen_eines_ziels_nimmt_seine_schuesse_mit() {
         )
         .await
         .expect("das zweite Ziel entsteht");
-    let ziele: Vec<_> = mit_zielen.aufbau().ziele().collect();
-    let erstes = ziele[0].ziel_id();
-    let zweites = ziele[1].ziel_id();
+    let ziele = mit_zielen.aufbau().ziele();
+    let erstes = ziele[0].id();
+    let zweites = ziele[1].id();
 
     for ziel_id in [erstes, erstes, zweites] {
         harness
@@ -1565,12 +1648,7 @@ async fn ac23_eine_freie_runde_nimmt_jede_farbe_und_jede_distanz() {
         )
         .await
         .expect("das Ziel entsteht");
-    let ziel_id = mit_ziel
-        .aufbau()
-        .ziele()
-        .next()
-        .expect("ein Ziel")
-        .ziel_id();
+    let ziel_id = mit_ziel.aufbau().ziele().first().expect("ein Ziel").id();
 
     // A colour the archer chose, and one the round has never seen: both are positions.
     for hex in ["#c0392b", "#1b4f9c", "#abc123"] {
@@ -1701,9 +1779,9 @@ async fn ac24_die_wertung_faltet_ueber_die_freien_ziele() {
         )
         .await
         .expect("das zweite Ziel entsteht");
-    let ziele: Vec<_> = mit_zielen.aufbau().ziele().collect();
-    let erstes = ziele[0].ziel_id();
-    let zweites = ziele[1].ziel_id();
+    let ziele = mit_zielen.aufbau().ziele();
+    let erstes = ziele[0].id();
+    let zweites = ziele[1].id();
 
     for (ziel_id, zone) in [
         (erstes, Wertungszone::Kill),

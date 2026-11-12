@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/cn";
 import { anfangsPosition } from "@/lib/runden-position";
 import { FreiePositionSteuerung } from "./freie-position-steuerung";
 import { Rundenabschluss } from "./rundenabschluss";
@@ -49,6 +50,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
   >({});
   const startRenaming = useCallback((ziel: Runde["ziele"][number]) => {
     cancelRename.current = false;
+    setUmbenennenFehler(null);
     setEditingName(ziel.tiername);
     setEditingTargetId(ziel.zielId);
   }, []);
@@ -62,6 +64,11 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
     [],
   );
   const [fehler, setFehler] = useState<string | null>(null);
+  /**
+   * A rename is its own result slot: its failure belongs next to the input that caused
+   * it, not on the page-level `Alert` that reports shot writes (design rule 8).
+   */
+  const [umbenennenFehler, setUmbenennenFehler] = useState<string | null>(null);
   const [entfernen, setEntfernen] = useState<Runde["ziele"][number] | null>(
     null,
   );
@@ -69,6 +76,8 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
   const [editingName, setEditingName] = useState("");
   const cancelRename = useRef(false);
   const [index, setIndex] = useState(0);
+  /** The Ziel that received the latest entry; its card carries the active ring. */
+  const [aktivesZiel, setAktivesZiel] = useState<string | null>(null);
   const shots = runde.ziele.reduce(
     (count, ziel) => count + ziel.schüsse.length,
     0,
@@ -83,6 +92,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
 
   const addTarget = () => {
     meldung.verwerfen();
+    setFehler(null);
     freiesZielHinzufuegen.mutate(
       { rundeId: runde.id },
       {
@@ -100,6 +110,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
   const confirmRemove = () => {
     if (!entfernen) return;
     const deletedShots = entfernen.schüsse.length;
+    setFehler(null);
     freiesZielEntfernen.mutate(
       { rundeId: runde.id, zielId: entfernen.zielId },
       {
@@ -107,40 +118,39 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
           meldung.melden(`Ziel entfernt; ${deletedShots} Schüsse gelöscht.`);
           setEntfernen(null);
         },
-        onError: (error) =>
-          setFehler(
-            apiErrorMessage(error, {
-              fallback: "Das Ziel konnte nicht entfernt werden.",
-            }),
-          ),
+        // No `onError` here: the dialog renders this mutation's failure itself, and one
+        // failure gets one sentence in the place that caused it.
       },
     );
   };
 
   const saveTargetName = (ziel: Runde["ziele"][number]) => {
     const name = editingName.trim();
-    setFehler(null);
     if (name === "") {
-      setEditingTargetId(null);
-      setEditingName("");
+      // An emptied name is a refused rename, not a cancel: the input stays open so the
+      // typed text is not lost, and the reason sits beside it (AC-27).
+      setUmbenennenFehler("Bitte geben Sie einen Namen für das Ziel ein.");
       return;
     }
     if (name === ziel.tiername) {
+      setUmbenennenFehler(null);
       setEditingTargetId(null);
       setEditingName("");
       return;
     }
     meldung.verwerfen();
+    setUmbenennenFehler(null);
     freiesZielUmbenennen.mutate(
       { rundeId: runde.id, zielId: ziel.zielId, name },
       {
         onSuccess: () => {
           meldung.melden("Ziel umbenannt.");
+          setUmbenennenFehler(null);
           setEditingTargetId(null);
           setEditingName("");
         },
         onError: (error) =>
-          setFehler(
+          setUmbenennenFehler(
             apiErrorMessage(error, {
               fallback: "Das Ziel konnte nicht umbenannt werden.",
             }),
@@ -154,7 +164,13 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
       ? positionen[ziel.zielId]
       : anfangsPosition(ziel, ziel.schüsse);
     return (
-      <Card key={ziel.zielId}>
+      <Card
+        key={ziel.zielId}
+        className={cn(
+          "-mx-6 sm:mx-0",
+          aktivesZiel === ziel.zielId && "ring-1 ring-primary",
+        )}
+      >
         <CardHeader className="pt-4 pb-2 [&>div:last-child]:mt-2">
           <div className="flex items-center justify-between gap-3">
             {runde.zustand === "InBearbeitung" &&
@@ -170,6 +186,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
                   onBlur={() => {
                     if (cancelRename.current) {
                       cancelRename.current = false;
+                      setUmbenennenFehler(null);
                       setEditingTargetId(null);
                       setEditingName("");
                       return;
@@ -185,9 +202,9 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
                   }}
                   className="h-8 min-h-11 border-transparent bg-transparent px-1 font-serif text-[17px] font-semibold tracking-tight focus-visible:border-control"
                 />
-                {fehler ? (
+                {umbenennenFehler ? (
                   <p role="alert" className="text-xs text-impact">
-                    {fehler}
+                    {umbenennenFehler}
                   </p>
                 ) : null}
               </div>
@@ -242,6 +259,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
                 busy={schussRegistrieren.isPending}
                 onSelect={(zone: Wertungszone) => {
                   meldung.verwerfen();
+                  setFehler(null);
                   schussRegistrieren.mutate(
                     {
                       rundeId: runde.id,
@@ -252,7 +270,10 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
                       },
                     },
                     {
-                      onSuccess: () => meldung.melden("Schuss gespeichert."),
+                      onSuccess: () => {
+                        setAktivesZiel(ziel.zielId);
+                        meldung.melden("Schuss gespeichert.");
+                      },
                       onError: (error) =>
                         setFehler(
                           apiErrorMessage(error, {
@@ -275,23 +296,49 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
             }
             positionArt="frei"
             farben={usedColours}
-            onEdit={(schussId, wertungszone, shotPosition) =>
-              schussAendern.mutate({
-                rundeId: runde.id,
-                schussId,
-                schuss: { wertungszone, position: shotPosition },
-              })
-            }
-            onDelete={(schussId) =>
-              schussLoeschen.mutate({ rundeId: runde.id, schussId })
-            }
+            onEdit={(schussId, wertungszone, shotPosition) => {
+              setFehler(null);
+              schussAendern.mutate(
+                {
+                  rundeId: runde.id,
+                  schussId,
+                  schuss: { wertungszone, position: shotPosition },
+                },
+                {
+                  onError: (error) =>
+                    setFehler(
+                      apiErrorMessage(error, {
+                        fallback: "Der Schuss konnte nicht geändert werden.",
+                      }),
+                    ),
+                },
+              );
+            }}
+            onDelete={(schussId) => {
+              setFehler(null);
+              schussLoeschen.mutate(
+                { rundeId: runde.id, schussId },
+                {
+                  onError: (error) =>
+                    setFehler(
+                      apiErrorMessage(error, {
+                        fallback: "Der Schuss konnte nicht gelöscht werden.",
+                      }),
+                    ),
+                },
+              );
+            }}
           />
           {runde.zustand === "InBearbeitung" ? (
             <div className="flex flex-wrap gap-2">
               <Button
                 size="field"
                 variant="destructive"
-                onClick={() => setEntfernen(ziel)}
+                onClick={() => {
+                  // A previous removal's failure must not greet the next one.
+                  freiesZielEntfernen.reset();
+                  setEntfernen(ziel);
+                }}
               >
                 Ziel entfernen
               </Button>
@@ -303,6 +350,13 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
   };
 
   const done = runde.ziele.filter((ziel) => ziel.schüsse.length > 0).length;
+  const leer = runde.ziele.length === 0;
+  /**
+   * A round with no target must not reach its summary while it is open: pressing the
+   * finish action there would freeze an empty route, irreversibly. A round that is
+   * already closed still shows its summary — that card only links to the annex.
+   */
+  const zeigeAbschluss = !leer || runde.zustand === "Abgeschlossen";
   const visible = runde.ziele[index];
   return (
     <div className="px-6 pb-24">
@@ -338,7 +392,14 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
       {fehler ? <Alert variant="error">{fehler}</Alert> : null}
       <div className="space-y-4 py-6 lg:hidden pb-24">
         {visible ? targetCard(visible, index + 1) : null}
-        {index >= runde.ziele.length ? <Rundenabschluss runde={runde} /> : null}
+        {leer ? (
+          <p className="text-sm text-secondary">
+            Noch kein Ziel erfasst — legen Sie das erste an
+          </p>
+        ) : null}
+        {index >= runde.ziele.length && zeigeAbschluss ? (
+          <Rundenabschluss runde={runde} />
+        ) : null}
         {runde.zustand === "InBearbeitung" ? (
           <Button
             variant="secondary"
@@ -366,7 +427,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
                   )
                 }
               >
-                {index === runde.ziele.length - 1 ? "Abschließen" : "Weiter"}
+                {index === runde.ziele.length - 1 ? "Zum Abschluss" : "Weiter"}
               </Button>
             </div>
           </div>
@@ -374,6 +435,11 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
       </div>
       <div className="hidden space-y-4 py-6 lg:block">
         {runde.ziele.map((ziel, order) => targetCard(ziel, order + 1))}
+        {leer ? (
+          <p className="text-sm text-secondary">
+            Noch kein Ziel erfasst — legen Sie das erste an
+          </p>
+        ) : null}
         {runde.zustand === "InBearbeitung" ? (
           <Button
             variant="secondary"
@@ -383,7 +449,9 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
             Ziel hinzufügen
           </Button>
         ) : null}
-        <Rundenabschluss runde={runde} />
+        {/* The summary is withheld only while the round is still open: finishing it
+            would freeze an empty route, and that cannot be undone. */}
+        {zeigeAbschluss ? <Rundenabschluss runde={runde} /> : null}
       </div>
       <Dialog
         open={entfernen !== null}
@@ -410,7 +478,10 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
             <Button
               variant="secondary"
               disabled={freiesZielEntfernen.isPending}
-              onClick={() => setEntfernen(null)}
+              onClick={() => {
+                freiesZielEntfernen.reset();
+                setEntfernen(null);
+              }}
             >
               Abbrechen
             </Button>

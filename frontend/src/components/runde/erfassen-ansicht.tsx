@@ -127,16 +127,38 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
               runde.zustand === "InBearbeitung" ||
               runde.zustand === "Abgeschlossen"
             }
-            onEdit={(schussId, wertungszone, shotPosition) =>
-              schussAendern.mutate({
-                rundeId: runde.id,
-                schussId,
-                schuss: { wertungszone, position: shotPosition },
-              })
-            }
-            onDelete={(schussId) =>
-              schussLoeschen.mutate({ rundeId: runde.id, schussId })
-            }
+            onEdit={(schussId, wertungszone, shotPosition) => {
+              setFehler(null);
+              schussAendern.mutate(
+                {
+                  rundeId: runde.id,
+                  schussId,
+                  schuss: { wertungszone, position: shotPosition },
+                },
+                {
+                  onError: (error) =>
+                    setFehler(
+                      apiErrorMessage(error, {
+                        fallback: "Der Schuss konnte nicht geändert werden.",
+                      }),
+                    ),
+                },
+              );
+            }}
+            onDelete={(schussId) => {
+              setFehler(null);
+              schussLoeschen.mutate(
+                { rundeId: runde.id, schussId },
+                {
+                  onError: (error) =>
+                    setFehler(
+                      apiErrorMessage(error, {
+                        fallback: "Der Schuss konnte nicht gelöscht werden.",
+                      }),
+                    ),
+                },
+              );
+            }}
           />
         </div>
       </CardContent>
@@ -213,7 +235,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
               setZielIndex((index) => Math.min(runde.ziele.length, index + 1))
             }
           >
-            {zielIndex === runde.ziele.length - 1 ? "Abschließen" : "Weiter"}
+            {zielIndex === runde.ziele.length - 1 ? "Zum Abschluss" : "Weiter"}
           </Button>
         </div>
       </div>

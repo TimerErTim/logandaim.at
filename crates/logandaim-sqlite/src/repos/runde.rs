@@ -24,8 +24,8 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Abstand, AnlageId, AnlageZielId, Erfasser, Farbe, NeueRunde, NonEmptyString, ParkourId,
-        PflockSnapshot, Runde, RundeId, RundenSnapshot, RundenZiel, RundenZielId, Rundenaufbau,
-        ZielPflöckeSnapshot, konto::BenutzerId,
+        PflockSnapshot, Runde, RundeId, RundenZiel, RundenZielId, Rundenaufbau, Rundenherkunft,
+        ZUSTAND_IN_BEARBEITUNG, ZielPflöckeSnapshot, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
 };
@@ -115,13 +115,13 @@ fn parkour_to_dto(
     anlage_id: AnlageId,
     parkour_id: ParkourId,
     parkour_name: &NonEmptyString,
-    snapshot: &RundenSnapshot,
+    aufbau: &Rundenaufbau,
 ) -> RundenaufbauDto {
     RundenaufbauDto::Parkour {
         anlage_id: anlage_id.0,
         parkour_id: parkour_id.0,
         parkour_name: parkour_name.to_string(),
-        pflöcke: snapshot
+        pflöcke: aufbau
             .pflöcke()
             .iter()
             .map(|pflock| PflockDto {
@@ -129,7 +129,7 @@ fn parkour_to_dto(
                 position: pflock.position(),
             })
             .collect(),
-        ziele: snapshot
+        ziele: aufbau
             .ziele()
             .iter()
             .map(|ziel| ZielDto {
@@ -148,22 +148,25 @@ fn parkour_to_dto(
     }
 }
 
-fn aufbau_to_json(aufbau: &Rundenaufbau) -> RepositoryResult<String> {
-    let dto = match aufbau {
-        Rundenaufbau::Parkour {
+/// Serialise one Runde's document: its provenance and its route, in one object.
+fn aufbau_to_json(herkunft: &Rundenherkunft, aufbau: &Rundenaufbau) -> RepositoryResult<String> {
+    let dto = match herkunft {
+        Rundenherkunft::Parkour {
             anlage_id,
             parkour_id,
             parkour_name,
-            snapshot,
-        } => parkour_to_dto(*anlage_id, *parkour_id, parkour_name, snapshot),
-        Rundenaufbau::Freie { name, snapshot } => RundenaufbauDto::Freie {
+        } => parkour_to_dto(*anlage_id, *parkour_id, parkour_name, aufbau),
+        Rundenherkunft::Freie { name } => RundenaufbauDto::Freie {
             name: name.to_string(),
-            ziele: snapshot
+            ziele: aufbau
                 .ziele()
                 .iter()
                 .map(|ziel| ZielDto {
                     ziel_id: ziel.id().0,
-                    anlage_ziel_id: ziel.anlage_ziel_id().map(|id| id.0),
+                    // A free target has no master-data identity to carry: the round minted
+                    // its own. Writing one here would let a free target be read back wearing
+                    // Anlage provenance that `ersetze_referenzen` never indexes.
+                    anlage_ziel_id: None,
                     tiername: ziel.name().to_string(),
                     zielnummer: ziel.ordinal().get(),
                     pflöcke: ZielPflöckeDto::aus_snapshot(ziel.pflöcke()),
@@ -179,12 +182,12 @@ fn aufbau_to_json(aufbau: &Rundenaufbau) -> RepositoryResult<String> {
     serde_json::to_string(&dto).contextualize(RepositoryError::Data)
 }
 
-/// The two denormalised projection columns, derived from the setup document.
+/// The two denormalised projection columns, derived from the round's provenance.
 ///
 /// `None` for both on a free round: SQL that filters by Anlage must not see one.
-fn projizierte_ids(aufbau: &Rundenaufbau) -> (Option<String>, Option<String>) {
-    match aufbau {
-        Rundenaufbau::Parkour {
+fn projizierte_ids(herkunft: &Rundenherkunft) -> (Option<String>, Option<String>) {
+    match herkunft {
+        Rundenherkunft::Parkour {
             anlage_id,
             parkour_id,
             ..
@@ -192,11 +195,12 @@ fn projizierte_ids(aufbau: &Rundenaufbau) -> (Option<String>, Option<String>) {
             Some(anlage_id.0.to_string()),
             Some(parkour_id.0.to_string()),
         ),
-        Rundenaufbau::Freie { .. } => (None, None),
+        Rundenherkunft::Freie { .. } => (None, None),
     }
 }
 
-fn aufbau_from_json(json: &str) -> RepositoryResult<Rundenaufbau> {
+/// Read one stored document back into the provenance and the route it captured.
+fn aufbau_from_json(json: &str) -> RepositoryResult<(Rundenherkunft, Rundenaufbau)> {
     let dto: RundenaufbauDto = serde_json::from_str(json).contextualize(RepositoryError::Data)?;
     match dto {
         RundenaufbauDto::Parkour {
@@ -261,13 +265,15 @@ fn aufbau_from_json(json: &str) -> RepositoryResult<Rundenaufbau> {
                 })
                 .collect::<RepositoryResult<Vec<_>>>()?;
 
-            Ok(Rundenaufbau::Parkour {
-                anlage_id: AnlageId(anlage_id),
-                parkour_id: ParkourId(parkour_id),
-                parkour_name: (NonEmptyString::neu(&parkour_name))
-                    .contextualize(RepositoryError::Data)?,
-                snapshot: RundenSnapshot::from_parts(pflöcke, ziele),
-            })
+            Ok((
+                Rundenherkunft::Parkour {
+                    anlage_id: AnlageId(anlage_id),
+                    parkour_id: ParkourId(parkour_id),
+                    parkour_name: (NonEmptyString::neu(&parkour_name))
+                        .contextualize(RepositoryError::Data)?,
+                },
+                Rundenaufbau::from_parts(pflöcke, ziele),
+            ))
         }
         RundenaufbauDto::Freie { name, ziele } => {
             let ziele = ziele
@@ -300,9 +306,14 @@ fn aufbau_from_json(json: &str) -> RepositoryResult<Rundenaufbau> {
                             ))
                         })
                         .collect::<RepositoryResult<Vec<_>>>()?;
+                    // The Freie DTO carries no Anlage identity, so a stored one is corrupt
+                    // rather than provenance: refuse it instead of restoring it.
+                    if ziel.anlage_ziel_id.is_some() {
+                        return Err(RepositoryError::Data.into());
+                    }
                     Ok(RundenZiel::from_parts(
                         RundenZielId(ziel.ziel_id),
-                        ziel.anlage_ziel_id.map(AnlageZielId),
+                        None,
                         (NonEmptyString::neu(&ziel.tiername))
                             .contextualize(RepositoryError::Data)?,
                         std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?,
@@ -311,10 +322,12 @@ fn aufbau_from_json(json: &str) -> RepositoryResult<Rundenaufbau> {
                     ))
                 })
                 .collect::<RepositoryResult<Vec<_>>>()?;
-            Ok(Rundenaufbau::Freie {
-                name: (NonEmptyString::neu(&name)).contextualize(RepositoryError::Data)?,
-                snapshot: RundenSnapshot::from_parts(Vec::new(), ziele),
-            })
+            Ok((
+                Rundenherkunft::Freie {
+                    name: (NonEmptyString::neu(&name)).contextualize(RepositoryError::Data)?,
+                },
+                Rundenaufbau::from_parts(Vec::new(), ziele),
+            ))
         }
     }
 }
@@ -333,12 +346,12 @@ mod tests {
             "ziele":[]
         }"#;
 
-        let aufbau = aufbau_from_json(snapshot).unwrap();
-        let Rundenaufbau::Parkour {
+        let (herkunft, aufbau) = aufbau_from_json(snapshot).unwrap();
+        let Rundenherkunft::Parkour {
             anlage_id,
             parkour_id,
             ..
-        } = &aufbau
+        } = &herkunft
         else {
             panic!("parkour setup");
         };
@@ -350,6 +363,7 @@ mod tests {
             parkour_id.0.to_string(),
             "00000000-0000-0000-0000-000000000002"
         );
+        assert!(aufbau.ziele().is_empty());
     }
 
     #[test]
@@ -393,16 +407,26 @@ fn runde_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Runde>> {
     let snapshot_raw: String = row.get(1).contextualize(RepositoryError::Data)?;
     let benutzer_id: Option<String> = row.get(2).contextualize(RepositoryError::Data)?;
     let anonymisiert_am: Option<String> = row.get(3).contextualize(RepositoryError::Data)?;
+    let zustand_raw: String = row.get(4).contextualize(RepositoryError::Data)?;
     let begonnen_am_raw: String = row.get(5).contextualize(RepositoryError::Data)?;
     let abgeschlossen_am: Option<String> = row.get(6).contextualize(RepositoryError::Data)?;
 
+    let (herkunft, aufbau) = aufbau_from_json(&snapshot_raw)?;
     let runde = Runde::from_parts(
         RundeId(parse_uuid(&id_raw)?),
         zuordnung_aus_zeile(benutzer_id, anonymisiert_am)?,
-        aufbau_from_json(&snapshot_raw)?,
+        herkunft,
+        aufbau,
         parse_datetime(&begonnen_am_raw)?,
         abgeschlossen_am.map(|am| parse_datetime(&am)).transpose()?,
     );
+
+    // `zustand` is a stored projection of the snapshot's own typestate, used by the
+    // "open round" query. A row where the two disagree cannot be read back into a
+    // coherent aggregate, so it is corrupt data rather than a round that looks open.
+    if zustand_raw != runde.zustand() {
+        return Err(RepositoryError::Data.into());
+    }
 
     Ok(Versioned::new(parse_version(row, 7)?, runde))
 }
@@ -414,8 +438,9 @@ fn runde_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Runde>> {
 /// Record the master-data identities one Runde leans on, so AC-11/AC-12 is an index read.
 ///
 /// `art` names the kind of reference; the ids are the snapshot's own copies, which is exactly
-/// what "may this master data be deleted?" has to ask. A free round references nothing but its
-/// own Ziele, so its Ziel identities stay indexed while its Anlage and Parkour rows do not exist.
+/// what "may this master data be deleted?" has to ask. A free round references no master data
+/// at all — its Ziele are round-local identities the round minted itself, not `AnlageZielId`s
+/// — so it records no rows here. That is why deleting an Anlage never reaches a free round.
 async fn ersetze_referenzen(tx: &Transaction, runde: &Runde) -> RepositoryResult<()> {
     let runde_id = runde.id().0.to_string();
     tx.execute(
@@ -426,22 +451,19 @@ async fn ersetze_referenzen(tx: &Transaction, runde: &Runde) -> RepositoryResult
     .contextualize_with(libsql_error_to_persistence_error)?;
 
     let mut referenzen: Vec<(&'static str, String)> = Vec::new();
-    match runde.aufbau() {
-        Rundenaufbau::Parkour {
-            anlage_id,
-            parkour_id,
-            snapshot,
-            ..
-        } => {
-            referenzen.push(("anlage", anlage_id.0.to_string()));
-            referenzen.push(("parkour", parkour_id.0.to_string()));
-            for ziel in snapshot.ziele() {
-                if let Some(anlage_ziel_id) = ziel.anlage_ziel_id() {
-                    referenzen.push(("ziel", anlage_ziel_id.0.to_string()));
-                }
+    if let Rundenherkunft::Parkour {
+        anlage_id,
+        parkour_id,
+        ..
+    } = runde.herkunft()
+    {
+        referenzen.push(("anlage", anlage_id.0.to_string()));
+        referenzen.push(("parkour", parkour_id.0.to_string()));
+        for ziel in runde.aufbau().ziele() {
+            if let Some(anlage_ziel_id) = ziel.anlage_ziel_id() {
+                referenzen.push(("ziel", anlage_ziel_id.0.to_string()));
             }
         }
-        Rundenaufbau::Freie { .. } => {}
     }
 
     for (art, ref_id) in referenzen {
@@ -476,8 +498,8 @@ impl SQLiteRundeRepository {
             Erfasser::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
             Erfasser::Anonymisiert { am } => (None, Some(format_datetime(am))),
         };
-        let snapshot = aufbau_to_json(runde.aufbau())?;
-        let (anlage_id, parkour_id) = projizierte_ids(runde.aufbau());
+        let snapshot = aufbau_to_json(runde.herkunft(), runde.aufbau())?;
+        let (anlage_id, parkour_id) = projizierte_ids(runde.herkunft());
         update_versioned(
             tx,
             r#"UPDATE "runden" SET anlage_id = ?2, parkour_id = ?3, snapshot = ?4,
@@ -514,7 +536,7 @@ impl RundeRepository for SQLiteRundeRepository {
             Erfasser::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
             Erfasser::Anonymisiert { am } => (None, Some(format_datetime(am))),
         };
-        let (anlage_id, parkour_id) = projizierte_ids(domain.aufbau());
+        let (anlage_id, parkour_id) = projizierte_ids(domain.herkunft());
 
         tx.execute(
             r#"INSERT INTO "runden" (id, anlage_id, parkour_id, snapshot, benutzer_id,
@@ -525,7 +547,7 @@ impl RundeRepository for SQLiteRundeRepository {
                 id.0.to_string(),
                 anlage_id,
                 parkour_id,
-                aufbau_to_json(domain.aufbau())?,
+                aufbau_to_json(domain.herkunft(), domain.aufbau())?,
                 benutzer_id,
                 anonymisiert_am,
                 domain.zustand(),
@@ -592,12 +614,12 @@ impl RundeRepository for SQLiteRundeRepository {
     ) -> RepositoryResult<Versioned<Runde>> {
         let mut guard = self.tx.lock().await;
         let tx = guard.as_mut().ok_or(RepositoryError::Conflict)?;
+        // One spelling, shared with the domain markers: the partial unique index
+        // `idx_runden_offen_pro_benutzer` filters on the same literal.
         let mut rows = tx
             .query(
-                &format!(
-                    r#"{SELECT} WHERE benutzer_id = ?1 AND zustand = 'InBearbeitung' LIMIT 1"#
-                ),
-                [benutzer_id.0.to_string()],
+                &format!(r#"{SELECT} WHERE benutzer_id = ?1 AND zustand = ?2 LIMIT 1"#),
+                (benutzer_id.0.to_string(), ZUSTAND_IN_BEARBEITUNG),
             )
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;

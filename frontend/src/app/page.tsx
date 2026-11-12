@@ -206,7 +206,7 @@ function AktiveRunde({ runde }: { runde: RundeBasic }) {
         </span>
       </div>
       <Button asChild>
-        <Link href={`${paths.runden}/detail?id=${runde.id}`}>Fortsetzen</Link>
+        <Link href={`${paths.rundenErfassen}?id=${runde.id}`}>Fortsetzen</Link>
       </Button>
     </section>
   );
