@@ -59,6 +59,8 @@ pub use menge::Menge;
 pub use preis::Preis;
 pub use ratio::Ratio;
 pub use runde::Abgeschlossen;
+pub use runde::FreieRundeInArbeit;
+pub use runde::FreieRundeInBearbeitung;
 pub use runde::InBearbeitung;
 pub use runde::NeueRunde;
 pub use runde::PositionNichtImAufbau;

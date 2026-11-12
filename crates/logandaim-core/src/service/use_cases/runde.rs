@@ -216,22 +216,23 @@ impl UseCase<Runde> for RundeZielHinzufügen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielHinzufügenFehler::NichtErlaubt));
             }
-            if !runde.ist_in_bearbeitung() {
+            let Runde::FreieRundeInArbeit(mut freie_runde) = runde.cloned_data() else {
+                if runde.ist_in_bearbeitung() {
+                    return Err(Report::new(
+                        RundeZielHinzufügenFehler::RundeIstKeineFreieRunde,
+                    ));
+                }
                 return Err(Report::new(
                     RundeZielHinzufügenFehler::RundeNichtInBearbeitung,
                 ));
-            }
-            if !runde.ist_freie_runde() {
-                return Err(Report::new(
-                    RundeZielHinzufügenFehler::RundeIstKeineFreieRunde,
-                ));
-            }
-            if !runde.ziel_hinzufügen(RundenZielId(uuid::Uuid::new_v4()), self.name) {
+            };
+            if !freie_runde.ziel_hinzufügen(RundenZielId(uuid::Uuid::new_v4()), self.name) {
                 return Err(Report::new(
                     RundeZielHinzufügenFehler::RundeIstKeineFreieRunde,
                 ));
             }
 
+            runde.set_data(freie_runde.into());
             uow.runden()
                 .update(&mut runde)
                 .await
@@ -298,17 +299,17 @@ impl UseCase<Runde> for RundeZielEntfernen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielEntfernenFehler::NichtErlaubt));
             }
-            if !runde.ist_freie_runde() {
+            let Runde::FreieRundeInArbeit(mut freie_runde) = runde.cloned_data() else {
+                if runde.ist_freie_runde() {
+                    return Err(Report::new(
+                        RundeZielEntfernenFehler::RundeNichtInBearbeitung,
+                    ));
+                }
                 return Err(Report::new(
                     RundeZielEntfernenFehler::RundeIstKeineFreieRunde,
                 ));
-            }
-            if !runde.ist_in_bearbeitung() {
-                return Err(Report::new(
-                    RundeZielEntfernenFehler::RundeNichtInBearbeitung,
-                ));
-            }
-            if runde.ziel_entfernen(self.ziel_id).is_none() {
+            };
+            if freie_runde.ziel_entfernen(self.ziel_id).is_none() {
                 return Err(Report::new(RundeZielEntfernenFehler::ZielNichtGefunden));
             }
 
@@ -330,6 +331,7 @@ impl UseCase<Runde> for RundeZielEntfernen {
                 }
             }
 
+            runde.set_data(freie_runde.into());
             uow.runden()
                 .update(&mut runde)
                 .await
@@ -423,19 +425,20 @@ impl UseCase<Runde> for RundeZielUmbenennen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielUmbenennenFehler::NichtErlaubt));
             }
-            if !runde.ist_freie_runde() {
+            let Runde::FreieRundeInArbeit(mut freie_runde) = runde.cloned_data() else {
+                if runde.ist_freie_runde() {
+                    return Err(Report::new(
+                        RundeZielUmbenennenFehler::RundeNichtInBearbeitung,
+                    ));
+                }
                 return Err(Report::new(
                     RundeZielUmbenennenFehler::RundeIstKeineFreieRunde,
                 ));
-            }
-            if !runde.ist_in_bearbeitung() {
-                return Err(Report::new(
-                    RundeZielUmbenennenFehler::RundeNichtInBearbeitung,
-                ));
-            }
-            if !runde.ziel_umbenennen(self.ziel_id, self.name) {
+            };
+            if !freie_runde.ziel_umbenennen(self.ziel_id, self.name) {
                 return Err(Report::new(RundeZielUmbenennenFehler::ZielNichtGefunden));
             }
+            runde.set_data(freie_runde.into());
 
             uow.runden()
                 .update(&mut runde)
@@ -601,10 +604,14 @@ impl UseCase<Runde> for RundeAbschliessen {
                 return Err(Report::new(RundeAbschliessenFehler::NichtErlaubt));
             }
             // The typestate makes closing once-only: a closed Runde has no `abschliessen`.
-            let Runde::InBearbeitung(offen) = runde.cloned_data() else {
-                return Err(Report::new(RundeAbschliessenFehler::BereitsAbgeschlossen));
+            let offen = match runde.cloned_data() {
+                Runde::InBearbeitung(offen) => offen.abschliessen(jetzt),
+                Runde::FreieRundeInArbeit(offen) => offen.abschliessen(jetzt),
+                Runde::Abgeschlossen(_) => {
+                    return Err(Report::new(RundeAbschliessenFehler::BereitsAbgeschlossen));
+                }
             };
-            runde.set_data(offen.abschliessen(jetzt).into());
+            runde.set_data(offen.into());
 
             uow.runden()
                 .update(&mut runde)

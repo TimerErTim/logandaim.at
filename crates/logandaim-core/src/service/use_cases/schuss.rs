@@ -22,7 +22,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct SchussRegistrieren {
     pub runde_id: RundeId,
-    pub ziel_id: uuid::Uuid,
+    pub ziel_id: SchussZielId,
     pub wertungszone: Wertungszone,
     pub position: Option<Schussposition>,
 }
@@ -92,10 +92,7 @@ impl UseCase<Schuss> for SchussRegistrieren {
                 ));
             }
             // AC-9: a Schuss may only name a Ziel the Runde captured.
-            let Some(ziel_id) = runde
-                .aufbau()
-                .ziel_id_für_schuss(SchussZielId(self.ziel_id))
-            else {
+            let Some(ziel_id) = runde.aufbau().ziel_id_für_schuss(self.ziel_id) else {
                 return Err(Report::new(SchussRegistrierenFehler::ZielNichtImSnapshot));
             };
 
@@ -121,13 +118,13 @@ impl UseCase<Schuss> for SchussRegistrieren {
                     runde.aufbau().ziel_id_für_schuss(schuss.ziel_id()) == Some(ziel_id)
                 })
                 .collect();
-            let ziel_schüsse = ZielSchüsse::für_ziel(ziel_id, vorhandene)
+            let ziel_schüsse = ZielSchüsse::für_ziel(self.ziel_id, vorhandene)
                 .expect("all filtered Schüsse belong to this Ziel");
             let pfeil = ziel_schüsse.nächster_pfeil().get();
             let neu = NeuerSchuss::neu(
                 self.runde_id,
                 Erfasser::Benutzer(benutzer_id),
-                ziel_id.as_schuss_ziel_id(),
+                ziel_id.into(),
                 pfeil,
                 self.wertungszone,
                 self.position,
@@ -341,7 +338,7 @@ impl UseCase<()> for SchussLöschen {
                 .map(|row| row.into_data())
                 .filter(|row| runde.aufbau().ziel_id_für_schuss(row.ziel_id()) == Some(ziel_id))
                 .collect::<Vec<_>>();
-            let verbleibend = ZielSchüsse::für_ziel(ziel_id, ziel_schüsse)
+            let verbleibend = ZielSchüsse::für_ziel(ziel_id.into(), ziel_schüsse)
                 .expect("the target's shot list contains only that target")
                 .ohne_schuss(self.schuss_id);
 

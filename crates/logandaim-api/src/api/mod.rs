@@ -20,8 +20,8 @@ use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
     domain::{
-        AnlageId, AnlageZielId, EmailAdresse, ParkourId, Runde as DomainRunde, RundeId, SchussId,
-        konto::BenutzerId,
+        AnlageId, AnlageZielId, EmailAdresse, ParkourId, Runde as DomainRunde, RundeId,
+        RundenZielId, SchussId, konto::BenutzerId,
     },
     ports::{ClientKey, RepositoryError, ThrottleAction},
     service::{
@@ -32,9 +32,8 @@ use logandaim_core::{
         PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen,
         PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
         RegistrierungStarten, RegistrierungStartenFehler, RundeAbschliessen,
-        RundeAbschliessenFehler, RundeStarten, RundeStartenFehler, RundeZielEntfernen,
-        RundeZielEntfernenFehler, RundeZielHinzufügen, RundeZielHinzufügenFehler,
-        RundeZielUmbenennen, RundeZielUmbenennenFehler, SchussLöschen, SchussLöschenFehler,
+        RundeAbschliessenFehler, RundeStarten, RundeStartenFehler, RundeZielEntfernenFehler,
+        RundeZielHinzufügenFehler, RundeZielUmbenennenFehler, SchussLöschen, SchussLöschenFehler,
         SchussRegistrieren, SchussRegistrierenFehler, SchussÄndernFehler, SessionAusgestellt,
         StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern,
         darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
@@ -466,12 +465,14 @@ impl LogandaimAppApi {
         Ok(runde.into())
     }
 
-    /// Start a `Freie Runde`; the use case was already built and validated at the boundary.
+    /// Start a `Freie Runde` from its validated request.
     pub async fn freie_runde_starten(
         &self,
         auth: AuthContext,
-        use_case: RundeStarten,
+        anfrage: requests::FreieRundeStartenRequest,
     ) -> ResultReport<Runde, RundeStartenFehler> {
+        let use_case = RundeStarten::try_from(anfrage)
+            .map_err(|error| error.change_context(RundeStartenFehler::UngültigeAnfrage))?;
         let runde = self.app.execute(auth, use_case).await?;
         Ok(runde.into())
     }
@@ -480,9 +481,10 @@ impl LogandaimAppApi {
     pub async fn runde_ziel_hinzufuegen(
         &self,
         auth: AuthContext,
-        use_case: RundeZielHinzufügen,
+        runde_id: RundeId,
+        anfrage: requests::ZielHinzufuegenRequest,
     ) -> ResultReport<Runde, RundeZielHinzufügenFehler> {
-        let runde_id = use_case.runde_id;
+        let use_case = anfrage.in_use_case(runde_id);
         let runde = self.app.execute(auth, use_case).await?;
         self.runde_mit_schuessen(runde, runde_id, || RundeZielHinzufügenFehler::RundeLaden)
             .await
@@ -492,9 +494,13 @@ impl LogandaimAppApi {
     pub async fn runde_ziel_umbenennen(
         &self,
         auth: AuthContext,
-        use_case: RundeZielUmbenennen,
+        runde_id: RundeId,
+        ziel_id: RundenZielId,
+        anfrage: requests::ZielUmbenennenRequest,
     ) -> ResultReport<Runde, RundeZielUmbenennenFehler> {
-        let runde_id = use_case.runde_id;
+        let use_case = anfrage
+            .in_use_case(runde_id, ziel_id.0)
+            .map_err(|error| error.change_context(RundeZielUmbenennenFehler::UngültigeAnfrage))?;
         let runde = self.app.execute(auth, use_case).await?;
         self.runde_mit_schuessen(runde, runde_id, || RundeZielUmbenennenFehler::RundeLaden)
             .await
@@ -504,9 +510,10 @@ impl LogandaimAppApi {
     pub async fn runde_ziel_entfernen(
         &self,
         auth: AuthContext,
-        use_case: RundeZielEntfernen,
+        runde_id: RundeId,
+        ziel_id: RundenZielId,
     ) -> ResultReport<Runde, RundeZielEntfernenFehler> {
-        let runde_id = use_case.runde_id;
+        let use_case = requests::ziel_entfernen_in_use_case(runde_id, ziel_id.0);
         let runde = self.app.execute(auth, use_case).await?;
         self.runde_mit_schuessen(runde, runde_id, || RundeZielEntfernenFehler::RundeLaden)
             .await
@@ -706,7 +713,9 @@ impl LogandaimAppApi {
         runde_id: RundeId,
         anfrage: requests::SchussErstellungRequest,
     ) -> ResultReport<Schuss, SchussRegistrierenFehler> {
-        let use_case: SchussRegistrieren = anfrage.in_use_case(runde_id)?;
+        let use_case: SchussRegistrieren = anfrage
+            .in_use_case(runde_id)
+            .map_err(|error| error.change_context(SchussRegistrierenFehler::UngültigeAnfrage))?;
         let schuss = self.app.execute(auth, use_case).await?;
         Ok(schuss.into())
     }

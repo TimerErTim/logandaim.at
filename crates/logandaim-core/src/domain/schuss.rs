@@ -349,21 +349,15 @@ impl ZielSchüsse {
     /// Sort the given Schüsse by Pfeil, so the fold is order-independent. Every Schuss
     /// must name this Ziel: a wrong row is refused rather than silently counted.
     pub fn für_ziel(
-        ziel_id: super::runde::RundenZielId,
+        ziel_id: SchussZielId,
         schüsse: impl IntoIterator<Item = Schuss>,
     ) -> Result<Self, ZielSchüsseFehler> {
         let mut schüsse: Vec<_> = schüsse.into_iter().collect();
-        if schüsse
-            .iter()
-            .any(|schuss| schuss.ziel_id().0 != ziel_id.as_uuid())
-        {
+        if schüsse.iter().any(|schuss| schuss.ziel_id() != ziel_id) {
             return Err(ZielSchüsseFehler::FremdesZiel);
         }
         schüsse.sort_by_key(|schuss| schuss.pfeil());
-        Ok(Self {
-            ziel_id: SchussZielId(ziel_id.as_uuid()),
-            schüsse,
-        })
+        Ok(Self { ziel_id, schüsse })
     }
 
     pub fn ziel_id(&self) -> SchussZielId {
@@ -453,7 +447,7 @@ mod tests {
 
     fn mengen(schüsse: &[(usize, Wertungszone)]) -> ZielSchüsse {
         ZielSchüsse::für_ziel(
-            runden_ziel(),
+            runden_ziel().into(),
             schüsse.iter().map(|&(pfeil, zone)| schuss(pfeil, zone)),
         )
         .unwrap()
@@ -520,7 +514,7 @@ mod tests {
     #[test_log::test]
     fn ac6_leer_ohne_wertung_sonst_beliebig_lang() {
         assert!(
-            ZielSchüsse::für_ziel(runden_ziel(), [])
+            ZielSchüsse::für_ziel(runden_ziel().into(), [])
                 .unwrap()
                 .wertung()
                 .is_none()
@@ -572,7 +566,7 @@ mod tests {
             .unwrap(),
         );
         assert!(matches!(
-            ZielSchüsse::für_ziel(runden_ziel(), [fremd]),
+            ZielSchüsse::für_ziel(runden_ziel().into(), [fremd]),
             Err(ZielSchüsseFehler::FremdesZiel)
         ));
     }

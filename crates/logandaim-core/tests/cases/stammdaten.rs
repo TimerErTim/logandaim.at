@@ -854,7 +854,7 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
             admin,
             SchussRegistrieren {
                 runde_id: erste.id(),
-                ziel_id: erstes_ziel_id.0,
+                ziel_id: erstes_ziel_id.into(),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -906,7 +906,7 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
             admin,
             SchussRegistrieren {
                 runde_id: zweite.id(),
-                ziel_id: zweites_ziel_id.0,
+                ziel_id: zweites_ziel_id.into(),
                 wertungszone: Wertungszone::Spot,
                 position: None,
             },
@@ -1338,7 +1338,7 @@ async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
             anna,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id: runden_ziel_id.0,
+                ziel_id: runden_ziel_id.into(),
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },

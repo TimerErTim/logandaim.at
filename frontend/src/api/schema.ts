@@ -13,8 +13,7 @@ export interface paths {
         };
         /**
          * Report that the service is up.
-         * @description Answers the literal `OK`. It touches no dependency, so a green answer means the
-         *     process is listening, not that its database is reachable.
+         * @description Returns `OK` when the service is running.
          */
         get: {
             parameters: {
@@ -51,10 +50,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Report whether the mail relay's last probe succeeded.
-         * @description Answers from the last verdict and never waits on the relay; a stale or failed
-         *     verdict starts a fresh probe in the background. `Unknown` until the first probe
-         *     reports.
+         * Report the latest result from the mail relay check.
+         * @description The response describes the latest probe result, or `Unknown` before the first probe.
          */
         get: {
             parameters: {
@@ -92,8 +89,7 @@ export interface paths {
         };
         /**
          * List the Anlagen the caller may administer.
-         * @description Archived Anlagen are not listed. Each row carries the caller's role in that Anlage
-         *     so a client can gate its controls.
+         * @description Each row includes the caller's role in that Anlage.
          */
         get: {
             parameters: {
@@ -135,8 +131,7 @@ export interface paths {
         put?: never;
         /**
          * Create an Anlage. Systemadministrator only.
-         * @description The caller becomes its first Administrator. The address is required, the contact
-         *     details are optional.
+         * @description The caller becomes its first Administrator.
          */
         post: {
             parameters: {
@@ -194,8 +189,7 @@ export interface paths {
         };
         /**
          * List the active Anlagen with the Parkour each offers. No sign-in needed.
-         * @description This is the public directory. It carries no contact data, and a broken token is
-         *     answered as anonymous rather than as an error.
+         * @description This public directory contains no contact data.
          */
         get: {
             parameters: {
@@ -251,8 +245,7 @@ export interface paths {
         };
         /**
          * Read one Anlage with its whole master data.
-         * @description An archived Anlage answers only to a Systemadministrator; every write to one is
-         *     refused with `409`.
+         * @description Only a Systemadministrator can access an archived Anlage.
          */
         get: {
             parameters: {
@@ -295,8 +288,7 @@ export interface paths {
         };
         /**
          * Rewrite the Anlage's own fields: name, address, and contact. Administrator only.
-         * @description The whole set is replaced; omitted contact fields become empty. Ziele, Parkour, and
-         *     role assignments are untouched.
+         * @description The whole set is replaced; omitted contact fields become empty.
          */
         put: {
             parameters: {
@@ -359,7 +351,7 @@ export interface paths {
         put?: never;
         /**
          * Deactivate an Anlage once and for all.
-         * @description Irreversible: no route reactivates one. Reads keep working, writes answer `409`.
+         * @description An archived Anlage remains available for reading but cannot be changed.
          */
         post: {
             parameters: {
@@ -415,10 +407,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Grant a role in the Anlage to an existing Benutzer. Administrator only.
-         * @description The Benutzer is named by identity; find it with `benutzer-suche` first.
-         */
+        /** Grant a role in the Anlage to an existing Benutzer. Administrator only. */
         post: {
             parameters: {
                 query?: never;
@@ -477,8 +466,7 @@ export interface paths {
         };
         /**
          * Find a Benutzer by exact e-mail address, for granting a role.
-         * @description Usable only by a caller who may manage this active Anlage. Answers a single match or
-         *     an empty list.
+         * @description The result contains the matching Benutzer, if one exists.
          */
         get: {
             parameters: {
@@ -537,10 +525,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         * Change an existing role. Administrator only.
-         * @description The target is in the path, so the body only names the role.
-         */
+        /** Change an existing role. Administrator only. */
         put: {
             parameters: {
                 query?: never;
@@ -646,7 +631,7 @@ export interface paths {
         put?: never;
         /**
          * Add a physical Ziel to the Anlage.
-         * @description A Mitarbeiter may do this; the Anlage's own fields are not touched.
+         * @description The new Ziel is added to the Anlage's target list.
          */
         post: {
             parameters: {
@@ -705,10 +690,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         * Edit a Ziel's details.
-         * @description The identity stays, and so does everything already recorded against it.
-         */
+        /** Edit a Ziel's details. */
         put: {
             parameters: {
                 query?: never;
@@ -754,11 +736,7 @@ export interface paths {
             };
         };
         post?: never;
-        /**
-         * Remove a Ziel: archive it when recorded Runden reference it, delete it otherwise.
-         * @description Answers the Anlage as it stands afterwards, so the Ziel is absent from `ziele` either
-         *     way and an archived one no longer appears among the active ones.
-         */
+        /** Remove a Ziel from the Anlage. */
         delete: {
             parameters: {
                 query?: never;
@@ -878,7 +856,7 @@ export interface paths {
         put?: never;
         /**
          * Create a Parkour with its Pflock setup and its route.
-         * @description The Pflöcke and their order are given explicitly; a colour never implies an order.
+         * @description Provide the Pflöcke in the order in which they should appear.
          */
         post: {
             parameters: {
@@ -937,10 +915,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         * Replace the whole shooting setup: Pflöcke and the route that places Ziele among them.
-         * @description Existing Runden keep the snapshot they captured; only future Runden see the change.
-         */
+        /** Replace the shooting setup with a new Pflock set and route. */
         put: {
             parameters: {
                 query?: never;
@@ -1000,10 +975,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         * Rename a Parkour.
-         * @description The identity stays, and every captured snapshot keeps the name it recorded.
-         */
+        /** Rename a Parkour. */
         put: {
             parameters: {
                 query?: never;
@@ -1049,10 +1021,7 @@ export interface paths {
             };
         };
         post?: never;
-        /**
-         * Remove a Parkour: archive it when a Runde captured it, delete it otherwise.
-         * @description Answers the Anlage as it stands afterwards.
-         */
+        /** Remove a Parkour from the Anlage. */
         delete: {
             parameters: {
                 query?: never;
@@ -1107,7 +1076,7 @@ export interface paths {
         };
         /**
          * List every active Parkour of every active Anlage. No sign-in needed.
-         * @description This is the list a client starts a Runde from.
+         * @description Use this list to choose a Parkour when starting a round.
          */
         get: {
             parameters: {
@@ -1165,8 +1134,7 @@ export interface paths {
         put?: never;
         /**
          * Start a Runde on one active Parkour.
-         * @description The setup is captured as a snapshot in the same transaction, so a later change to the
-         *     Parkour cannot alter this Runde.
+         * @description Later changes to the Parkour do not change the setup captured by this Runde.
          */
         post: {
             parameters: {
@@ -1224,7 +1192,7 @@ export interface paths {
         };
         /**
          * List the caller's own Runden, newest first.
-         * @description No one but the caller and a Systemadministrator ever sees a Runde here.
+         * @description Only the owner can see these Runden.
          */
         get: {
             parameters: {
@@ -1282,8 +1250,7 @@ export interface paths {
         put?: never;
         /**
          * Start a `Freie Runde`: no Anlage, no Parkour, and its own name.
-         * @description The reply carries `herkunft: null`, which is how a client tells this round from a
-         *     Parkour round without guessing from an empty list.
+         * @description The response identifies this round as having no Anlage or Parkour.
          */
         post: {
             parameters: {
@@ -1343,7 +1310,7 @@ export interface paths {
         put?: never;
         /**
          * Append one `Freies Ziel` to the caller's own open `Freie Runde`.
-         * @description A Parkour round answers 409: its Ziel list is its captured snapshot.
+         * @description Targets in a Parkour round cannot be changed.
          */
         post: {
             parameters: {
@@ -1404,7 +1371,7 @@ export interface paths {
         get?: never;
         /**
          * Rename one `Freies Ziel` in a running free Runde.
-         * @description Whitespace-only names are refused with 400. A completed or Parkour round answers 409.
+         * @description A name containing only whitespace is invalid. Only an open free round can be changed.
          */
         put: {
             parameters: {
@@ -1453,8 +1420,7 @@ export interface paths {
         post?: never;
         /**
          * Remove one `Freies Ziel` from a free Runde.
-         * @description Its Schüsse go with it, in the same transaction, and the reply is the updated Runde.
-         *     A Parkour round answers 409, and a Ziel this round does not hold answers 404.
+         * @description Removing a target also removes its recorded shots. The response contains the updated round.
          */
         delete: {
             parameters: {
@@ -1510,8 +1476,7 @@ export interface paths {
         };
         /**
          * Read one Runde with its whole snapshot and both Wertungen.
-         * @description The owner and a Systemadministrator may read it; staff may not read another
-         *     Benutzer's Runde.
+         * @description The Runde is visible to its owner and to a Systemadministrator.
          */
         get: {
             parameters: {
@@ -1613,7 +1578,7 @@ export interface paths {
         put?: never;
         /**
          * Close the caller's own Runde.
-         * @description Afterwards it refuses further Schüsse and its Wertungen are final.
+         * @description Once closed, the Runde no longer accepts Schüsse.
          */
         post: {
             parameters: {
@@ -1671,7 +1636,7 @@ export interface paths {
         put?: never;
         /**
          * Log one arrow at a Ziel of the caller's own open Runde.
-         * @description The owner comes from the token, and the Ziel must be part of the Runde's snapshot.
+         * @description The target must belong to the round.
          */
         post: {
             parameters: {
@@ -1839,8 +1804,7 @@ export interface paths {
         put?: never;
         /**
          * Registration step 1: request a confirmation mail for an e-mail address.
-         * @description Answers `200` whether the address is free or already taken, so the route cannot be
-         *     used to probe for accounts.
+         * @description Returns the same response whether the address is free or already registered.
          */
         post: {
             parameters: {
@@ -1903,8 +1867,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Registration step 2: create the Benutzer and its Konto from the mailed token.
-         * @description Answers the first token pair; the refresh token leaves as the `__Host-` cookie.
+         * Complete registration with the token from the confirmation email.
+         * @description Returns the new session credentials.
          */
         post: {
             parameters: {
@@ -1970,7 +1934,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in with e-mail address and password.
-         * @description Answers an access token in the body and a refresh token in the `__Host-` cookie.
+         * @description Returns the new session credentials.
          */
         post: {
             parameters: {
@@ -2035,8 +1999,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Rotate the refresh token from the `__Host-` cookie.
-         * @description Answers a fresh token pair. A `401` clears the unusable cookie.
+         * Renew the current session.
+         * @description Returns a new session when the refresh token is valid.
          */
         post: {
             parameters: {
@@ -2100,7 +2064,7 @@ export interface paths {
         put?: never;
         /**
          * End the current session.
-         * @description The refresh token is revoked and the cookie is cleared with it.
+         * @description The current session is ended.
          */
         post: {
             parameters: {
@@ -2161,8 +2125,7 @@ export interface paths {
         put?: never;
         /**
          * Request a password reset mail for an e-mail address.
-         * @description Answers `200` whether the address exists or not, so the route cannot be used to probe
-         *     for accounts.
+         * @description Returns the same response whether the address belongs to an account or not.
          */
         post: {
             parameters: {
@@ -2226,7 +2189,7 @@ export interface paths {
         put?: never;
         /**
          * Set a new password from a mailed reset token.
-         * @description The token is single use and ends every session; the cookie is cleared with them.
+         * @description The reset token can be used once. All existing sessions end when the password changes.
          */
         post: {
             parameters: {
@@ -2287,7 +2250,7 @@ export interface paths {
         };
         /**
          * Read the authenticated caller, including its account-level role.
-         * @description Answers `401` when the token is missing or unusable; there is no anonymous answer.
+         * @description Requires a valid sign-in.
          */
         get: {
             parameters: {
@@ -2348,8 +2311,7 @@ export interface paths {
         put?: never;
         /**
          * Delete the caller's own Benutzer.
-         * @description The password is re-entered and the intent must be confirmed explicitly. The cookie
-         *     is cleared with the identity.
+         * @description The caller confirms the deletion by re-entering their password.
          */
         post: {
             parameters: {
@@ -3241,7 +3203,7 @@ export interface components {
         SchussErstellungRequest: {
             /**
              * Format: uuid
-             * @description The Ziel that was aimed at; it must be part of the Runde's snapshot.
+             * @description The neutral round-local Ziel identity.
              */
             zielId: string;
             /** @description Where on the Ziel the arrow landed. */

@@ -10,7 +10,7 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Anlage, AnlageAktiv, AnlageId, AnlageZielId, EmailAdresse, Erfasser, NeueAnlage, NeueRunde,
-        NeuerSchuss, ParkourId, Runde, RundeId, RundeInBearbeitung, Schuss, SchussId, SchussZielId,
+        NeuerSchuss, ParkourId, Runde, RundeId, Schuss, SchussId, SchussZielId,
         konto::{
             Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
             NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
@@ -267,7 +267,7 @@ impl RundeRepository for FakeRundeRepository {
             return Err(Report::new(RepositoryError::Conflict));
         }
         let id = RundeId(Uuid::new_v4());
-        let erstellt = Versioned::init(Runde::InBearbeitung(RundeInBearbeitung::neu(id, runde)));
+        let erstellt = Versioned::init(Runde::aus_neu(id, runde));
         runden.insert(id, erstellt.clone());
         Ok(erstellt)
     }
