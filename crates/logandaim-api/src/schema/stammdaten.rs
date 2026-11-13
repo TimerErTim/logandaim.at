@@ -15,9 +15,8 @@ use crate::schema::EmailAdresse;
 /// Country codes currently accepted for Anlage addresses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
-#[cfg_attr(feature = "openapi", oai(rename = "Laendercode"))]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub enum Ländercode {
+pub enum Laendercode {
     AT,
     DE,
     CH,
@@ -60,17 +59,13 @@ impl TryFrom<Farbe> for domain::Farbe {
 #[serde(rename_all = "camelCase")]
 pub struct AnlageAdresse {
     /// Street and house number.
-    #[cfg_attr(feature = "openapi", oai(rename = "strasse"))]
-    #[serde(rename = "strasse")]
-    pub straße: String,
+    pub strasse: String,
     /// Postal code of the place.
     pub postleitzahl: String,
     /// The place itself.
     pub ort: String,
     /// Two-letter country code; only `AT`, `DE`, and `CH` are accepted.
-    #[cfg_attr(feature = "openapi", oai(rename = "laendercode"))]
-    #[serde(rename = "laendercode")]
-    pub ländercode: Ländercode,
+    pub laendercode: Laendercode,
 }
 
 /// Optional contact details of an Anlage; each may be absent on its own.
@@ -158,13 +153,9 @@ pub struct Zielverwendung {
     pub parkour_id: Uuid,
     /// 0-based position in that Parkour' route.
     pub position: usize,
-    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
-    #[serde(rename = "pfloecke")]
-    pub pflöcke: ZielPflöcke,
+    pub pfloecke: ZielPfloecke,
     /// Pflock identity to metres, near to far.
-    #[cfg_attr(feature = "openapi", oai(rename = "abstaende"))]
-    #[serde(rename = "abstaende")]
-    pub abstände: Vec<PflockAbstand>,
+    pub abstaende: Vec<PflockAbstand>,
 }
 
 /// One distance from a Pflock to a Ziel.
@@ -203,53 +194,38 @@ pub struct ParkourPflock {
 /// near-to-far order that replaces it.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Union))]
-#[cfg_attr(
-    feature = "openapi",
-    oai(rename = "ZielPfloecke", discriminator_name = "art")
-)]
+#[cfg_attr(feature = "openapi", oai(discriminator_name = "art"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(tag = "art")]
-pub enum ZielPflöcke {
-    #[cfg_attr(feature = "openapi", oai(mapping = "InheritFromParkour"))]
-    #[serde(rename = "InheritFromParkour")]
-    InheritFromParkour(InheritFromParkourPflöcke),
-    #[cfg_attr(feature = "openapi", oai(mapping = "Explicit"))]
-    #[serde(rename = "Explicit")]
-    Explicit(ExplicitPflöcke),
+pub enum ZielPfloecke {
+    InheritFromParkour(InheritFromParkourPfloecke),
+    Explicit(ExplicitPfloecke),
 }
 
 /// The Parkour-wide order applies to this Ziel. Carries nothing; the discriminator is the
 /// whole message.
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(
-    feature = "openapi",
-    oai(rename = "InheritFromParkourPfloecke", rename_all = "camelCase")
-)]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct InheritFromParkourPflöcke {}
+pub struct InheritFromParkourPfloecke {}
 
 /// This Ziel's own near-to-far Pflock order, which replaces the Parkour-wide one. Never
 /// empty.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(
-    feature = "openapi",
-    oai(rename = "ExplicitPfloecke", rename_all = "camelCase")
-)]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ExplicitPflöcke {
+pub struct ExplicitPfloecke {
     /// The own Pflöcke, near to far.
-    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
-    #[serde(rename = "pfloecke")]
-    pub pflöcke: Vec<ParkourPflock>,
+    pub pfloecke: Vec<ParkourPflock>,
 }
 
-impl Default for ZielPflöcke {
+impl Default for ZielPfloecke {
     fn default() -> Self {
-        Self::InheritFromParkour(InheritFromParkourPflöcke {})
+        Self::InheritFromParkour(InheritFromParkourPfloecke {})
     }
 }
 
@@ -262,13 +238,9 @@ impl Default for ZielPflöcke {
 pub struct Zielplatzierung {
     /// The Ziel that stands here.
     pub ziel_id: Uuid,
-    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
-    #[serde(rename = "pfloecke")]
-    pub pflöcke: ZielPflöcke,
+    pub pfloecke: ZielPfloecke,
     /// Distances by Pflock identity; a missing entry means no distance is configured.
-    #[cfg_attr(feature = "openapi", oai(rename = "abstaende"))]
-    #[serde(rename = "abstaende")]
-    pub abstände: Vec<PflockAbstand>,
+    pub abstaende: Vec<PflockAbstand>,
 }
 
 /// One Parkour of the Anlage: its name, its Pflöcke, and the route they form.
@@ -285,9 +257,7 @@ pub struct Parkour {
     /// Whether the Parkour is in use or retired.
     pub zustand: AnlageZustand,
     /// Far to near, in the order the shooter walks them. Never inferred from a colour.
-    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
-    #[serde(rename = "pfloecke")]
-    pub pflöcke: Vec<ParkourPflock>,
+    pub pfloecke: Vec<ParkourPflock>,
     /// In route order.
     pub platzierungen: Vec<Zielplatzierung>,
 }
@@ -295,13 +265,10 @@ pub struct Parkour {
 /// One active Parkour with the Anlage that holds it, for starting a Runde.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(
-    feature = "openapi",
-    oai(rename = "ParkourOeffentlich", rename_all = "camelCase")
-)]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ParkourÖffentlich {
+pub struct ParkourOeffentlich {
     /// The Anlage that offers this Parkour.
     pub anlage_id: Uuid,
     /// That Anlage's name.
@@ -322,9 +289,7 @@ pub struct ParkourKurz {
     /// Shown name of the Parkour.
     pub name: String,
     /// How many Pflöcke the route uses.
-    #[cfg_attr(feature = "openapi", oai(rename = "anzahlPfloecke"))]
-    #[serde(rename = "anzahlPfloecke")]
-    pub anzahl_pflöcke: usize,
+    pub anzahl_pfloecke: usize,
     /// How many Ziele the route places.
     pub anzahl_ziele: usize,
 }
@@ -335,13 +300,10 @@ pub struct ParkourKurz {
 /// and is not published.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(
-    feature = "openapi",
-    oai(rename = "AnlageOeffentlich", rename_all = "camelCase")
-)]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AnlageÖffentlich {
+pub struct AnlageOeffentlich {
     /// Identity of the Anlage.
     pub anlage_id: Uuid,
     /// Shown name of the Anlage.
@@ -349,9 +311,7 @@ pub struct AnlageÖffentlich {
     /// The place the Anlage is in.
     pub ort: String,
     /// Two-letter country code of that place.
-    #[cfg_attr(feature = "openapi", oai(rename = "laendercode"))]
-    #[serde(rename = "laendercode")]
-    pub ländercode: Ländercode,
+    pub laendercode: Laendercode,
     /// The Parkour it currently offers, without their setup.
     pub parkour: Vec<ParkourKurz>,
 }
@@ -427,7 +387,7 @@ impl TryFrom<AnlageVerwaltungRolle> for domain::AnlageVerwaltungRolle {
     }
 }
 
-impl From<domain::Ländercode> for Ländercode {
+impl From<domain::Ländercode> for Laendercode {
     fn from(code: domain::Ländercode) -> Self {
         match code {
             domain::Ländercode::AT => Self::AT,
@@ -440,10 +400,10 @@ impl From<domain::Ländercode> for Ländercode {
 impl From<domain::AnlageAdresse> for AnlageAdresse {
     fn from(adresse: domain::AnlageAdresse) -> Self {
         Self {
-            straße: adresse.straße().to_owned(),
+            strasse: adresse.straße().to_owned(),
             postleitzahl: adresse.postleitzahl().to_owned(),
             ort: adresse.ort().to_owned(),
-            ländercode: adresse.ländercode().into(),
+            laendercode: adresse.ländercode().into(),
         }
     }
 }
@@ -477,14 +437,14 @@ impl From<domain::ParkourPflock> for ParkourPflock {
     }
 }
 
-impl From<&domain::ZielPflöcke> for ZielPflöcke {
+impl From<&domain::ZielPflöcke> for ZielPfloecke {
     fn from(pflöcke: &domain::ZielPflöcke) -> Self {
         match pflöcke {
             domain::ZielPflöcke::InheritFromParkour => {
-                Self::InheritFromParkour(InheritFromParkourPflöcke {})
+                Self::InheritFromParkour(InheritFromParkourPfloecke {})
             }
-            domain::ZielPflöcke::Explicit(eigene) => Self::Explicit(ExplicitPflöcke {
-                pflöcke: eigene.iter().cloned().map(Into::into).collect(),
+            domain::ZielPflöcke::Explicit(eigene) => Self::Explicit(ExplicitPfloecke {
+                pfloecke: eigene.iter().cloned().map(Into::into).collect(),
             }),
         }
     }
@@ -494,8 +454,8 @@ impl From<domain::Zielplatzierung> for Zielplatzierung {
     fn from(platzierung: domain::Zielplatzierung) -> Self {
         Self {
             ziel_id: platzierung.ziel_id().0,
-            pflöcke: platzierung.pflöcke().into(),
-            abstände: platzierung
+            pfloecke: platzierung.pflöcke().into(),
+            abstaende: platzierung
                 .abstände()
                 .iter()
                 .map(|(pflock_id, abstand)| PflockAbstand {
@@ -513,7 +473,7 @@ impl From<domain::Parkour> for Parkour {
             id: parkour.id().0,
             name: parkour.name().as_str().to_owned(),
             zustand: zustand(parkour.zustand()),
-            pflöcke: parkour.pflöcke().iter().cloned().map(Into::into).collect(),
+            pfloecke: parkour.pflöcke().iter().cloned().map(Into::into).collect(),
             platzierungen: parkour
                 .platzierungen()
                 .iter()
@@ -529,8 +489,8 @@ impl From<domain::Zielverwendung> for Zielverwendung {
         Self {
             parkour_id: verwendung.parkour_id.0,
             position: verwendung.position,
-            pflöcke: (&verwendung.pflöcke).into(),
-            abstände: verwendung
+            pfloecke: (&verwendung.pflöcke).into(),
+            abstaende: verwendung
                 .abstände
                 .into_iter()
                 .map(|(pflock_id, abstand)| PflockAbstand {
@@ -597,7 +557,7 @@ impl From<domain::Parkour> for ParkourKurz {
         Self {
             id: parkour.id().0,
             name: parkour.name().as_str().to_owned(),
-            anzahl_pflöcke: parkour.pflöcke().len(),
+            anzahl_pfloecke: parkour.pflöcke().len(),
             anzahl_ziele: parkour.platzierungen().len(),
         }
     }

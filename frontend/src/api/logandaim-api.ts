@@ -156,21 +156,8 @@ export type WireToDomain = {
   anzahlPfloecke: "anzahlPflöcke";
   anzahlSchuesse: "anzahlSchüsse";
 };
-type DomainSchemaName = {
-  AnlageAenderungRequest: "AnlageÄnderungRequest";
-  AnlageOeffentlich: "AnlageÖffentlich";
-  BenutzerLoeschungRequest: "BenutzerLöschungRequest";
-  ExplicitPfloecke: "ExplicitPflöcke";
-  InheritFromParkourPfloecke: "InheritFromParkourPflöcke";
-  Laendercode: "Ländercode";
-  ParkourOeffentlich: "ParkourÖffentlich";
-  SchussAenderungRequest: "SchussÄnderungRequest";
-  ZielPfloecke: "ZielPflöcke";
-};
 export type Schemas = {
-  [K in keyof components["schemas"] as K extends keyof DomainSchemaName
-    ? DomainSchemaName[K]
-    : K]: Domainize<components["schemas"][K]>;
+  [K in keyof components["schemas"]]: Domainize<components["schemas"][K]>;
 };
 
 export type Benutzer = Schemas["Benutzer"];
@@ -193,13 +180,13 @@ export type Ziel = Schemas["Ziel"];
 /** The response's round-owned target; same wire schema as the domain name. */
 export type RundeZiel = Ziel;
 /** The Ziel-specific ordered set, or the Parkour-wide set when inherited. */
-export type ZielPflöcke = Schemas["ZielPflöcke"];
+export type ZielPflöcke = Schemas["ZielPfloecke"];
 export type Zielplatzierung = Schemas["Zielplatzierung"];
 export type Parkour = Omit<Schemas["Parkour"], "platzierungen"> & {
   platzierungen: Zielplatzierung[];
 };
-export type ParkourÖffentlich = Schemas["ParkourÖffentlich"];
-export type AnlageÖffentlich = Schemas["AnlageÖffentlich"];
+export type ParkourÖffentlich = Schemas["ParkourOeffentlich"];
+export type AnlageÖffentlich = Schemas["AnlageOeffentlich"];
 export type ParkourKurz = Schemas["ParkourKurz"];
 export type RundeHerkunft = { anlageId: string; parkourId: string };
 /**

@@ -10,17 +10,13 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::konto::BenutzerId;
+pub use super::runde::RundeId;
 use super::runde::ZielId;
 use crate::domain::{Abstand, common::Farbe};
 
 /// Identity of one logged Schuss.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SchussId(pub Uuid);
-
-/// Identity of the Runde a Schuss belongs to. The Schuss carries the link, so a Runde
-/// never holds a mutable child collection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct RundeId(pub Uuid);
 
 /// Scoring zone hit by one Schuss on a 3D target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

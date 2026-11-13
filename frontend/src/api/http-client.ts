@@ -62,15 +62,6 @@ const wireToDomain: Record<string, string> = {
   schuesse: "schüsse",
   anzahlPfloecke: "anzahlPflöcke",
   anzahlSchuesse: "anzahlSchüsse",
-  AnlageAenderungRequest: "AnlageÄnderungRequest",
-  AnlageOeffentlich: "AnlageÖffentlich",
-  BenutzerLoeschungRequest: "BenutzerLöschungRequest",
-  ExplicitPfloecke: "ExplicitPflöcke",
-  InheritFromParkourPfloecke: "InheritFromParkourPflöcke",
-  Laendercode: "Ländercode",
-  ParkourOeffentlich: "ParkourÖffentlich",
-  SchussAenderungRequest: "SchussÄnderungRequest",
-  ZielPfloecke: "ZielPflöcke",
 };
 const domainToWire = Object.fromEntries(
   Object.entries(wireToDomain).map(([wire, domain]) => [domain, wire]),

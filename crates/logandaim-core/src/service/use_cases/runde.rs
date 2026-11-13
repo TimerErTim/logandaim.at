@@ -18,7 +18,6 @@ use crate::{
     },
     ports::RepositoryError,
     service::UseCase,
-    uow::{UnitOfWork, Versioned},
 };
 
 // ---------------------------------------------------------------------------------------
@@ -261,7 +260,15 @@ impl UseCase<Runde> for RundeZielHinzufügen {
             .change_context(RundeZielHinzufügenFehler::RundeLaden)?;
 
         let ergebnis = async {
-            let mut runde = laden(&uow, self.runde_id).await?;
+            let mut runde = match uow.runden().find_by_id(self.runde_id).await {
+                Ok(runde) => runde,
+                Err(fehler) => Err(match fehler.current_context() {
+                    RepositoryError::NotFound => {
+                        Report::new(RundeZielHinzufügenFehler::NichtGefunden)
+                    }
+                    _ => fehler.change_context(RundeZielHinzufügenFehler::RundeLaden),
+                })?,
+            };
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielHinzufügenFehler::NichtErlaubt));
             }
@@ -334,7 +341,15 @@ impl UseCase<Runde> for RundeZielEntfernen {
             .change_context(RundeZielEntfernenFehler::RundeLaden)?;
 
         let ergebnis = async {
-            let mut runde = laden_entfernen(&uow, self.runde_id).await?;
+            let mut runde = match uow.runden().find_by_id(self.runde_id).await {
+                Ok(runde) => runde,
+                Err(fehler) => Err(match fehler.current_context() {
+                    RepositoryError::NotFound => {
+                        Report::new(RundeZielEntfernenFehler::NichtGefunden)
+                    }
+                    _ => fehler.change_context(RundeZielEntfernenFehler::RundeLaden),
+                })?,
+            };
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielEntfernenFehler::NichtErlaubt));
             }
@@ -378,32 +393,6 @@ impl UseCase<Runde> for RundeZielEntfernen {
             .await?;
         info!(id = ?runde.id(), ziel_id = ?self.ziel_id, "freies ziel entfernt");
         Ok(runde)
-    }
-}
-
-async fn laden(
-    uow: &UnitOfWork<'_>,
-    runde_id: RundeId,
-) -> Result<Versioned<Runde>, Report<RundeZielHinzufügenFehler>> {
-    match uow.runden().find_by_id(runde_id).await {
-        Ok(runde) => Ok(runde),
-        Err(fehler) => Err(match fehler.current_context() {
-            RepositoryError::NotFound => Report::new(RundeZielHinzufügenFehler::NichtGefunden),
-            _ => fehler.change_context(RundeZielHinzufügenFehler::RundeLaden),
-        }),
-    }
-}
-
-async fn laden_entfernen(
-    uow: &UnitOfWork<'_>,
-    runde_id: RundeId,
-) -> Result<Versioned<Runde>, Report<RundeZielEntfernenFehler>> {
-    match uow.runden().find_by_id(runde_id).await {
-        Ok(runde) => Ok(runde),
-        Err(fehler) => Err(match fehler.current_context() {
-            RepositoryError::NotFound => Report::new(RundeZielEntfernenFehler::NichtGefunden),
-            _ => fehler.change_context(RundeZielEntfernenFehler::RundeLaden),
-        }),
     }
 }
 
@@ -453,7 +442,15 @@ impl UseCase<Runde> for RundeZielUmbenennen {
             .change_context(RundeZielUmbenennenFehler::RundeLaden)?;
 
         let ergebnis = async {
-            let mut runde = laden_umbenennen(&uow, self.runde_id).await?;
+            let mut runde = match uow.runden().find_by_id(self.runde_id).await {
+                Ok(runde) => runde,
+                Err(fehler) => Err(match fehler.current_context() {
+                    RepositoryError::NotFound => {
+                        Report::new(RundeZielUmbenennenFehler::NichtGefunden)
+                    }
+                    _ => fehler.change_context(RundeZielUmbenennenFehler::RundeLaden),
+                })?,
+            };
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielUmbenennenFehler::NichtErlaubt));
             }
@@ -479,19 +476,6 @@ impl UseCase<Runde> for RundeZielUmbenennen {
             .await?;
         info!(id = ?runde.id(), ziel_id = ?self.ziel_id, "freies ziel umbenannt");
         Ok(runde)
-    }
-}
-
-async fn laden_umbenennen(
-    uow: &UnitOfWork<'_>,
-    runde_id: RundeId,
-) -> Result<Versioned<Runde>, Report<RundeZielUmbenennenFehler>> {
-    match uow.runden().find_by_id(runde_id).await {
-        Ok(runde) => Ok(runde),
-        Err(fehler) => Err(match fehler.current_context() {
-            RepositoryError::NotFound => Report::new(RundeZielUmbenennenFehler::NichtGefunden),
-            _ => fehler.change_context(RundeZielUmbenennenFehler::RundeLaden),
-        }),
     }
 }
 

@@ -26,8 +26,8 @@ use logandaim_core::{
 };
 
 use crate::schema::{
-    AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, Farbe, Ländercode, ParkourPflock,
-    ZielPflöcke, Zielplatzierung,
+    AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, Farbe, Laendercode, ParkourPflock,
+    ZielPfloecke, Zielplatzierung,
 };
 
 fn name(wert: String) -> Result<NonEmptyString, Report<StammdatenFehler>> {
@@ -37,12 +37,12 @@ fn name(wert: String) -> Result<NonEmptyString, Report<StammdatenFehler>> {
 }
 
 fn adresse(wert: AnlageAdresse) -> Result<domain::AnlageAdresse, Report<StammdatenFehler>> {
-    let ländercode = match wert.ländercode {
-        Ländercode::AT => domain::Ländercode::AT,
-        Ländercode::DE => domain::Ländercode::DE,
-        Ländercode::CH => domain::Ländercode::CH,
+    let laendercode = match wert.laendercode {
+        Laendercode::AT => domain::Ländercode::AT,
+        Laendercode::DE => domain::Ländercode::DE,
+        Laendercode::CH => domain::Ländercode::CH,
     };
-    domain::AnlageAdresse::neu(wert.straße, wert.postleitzahl, wert.ort, ländercode)
+    domain::AnlageAdresse::neu(wert.strasse, wert.postleitzahl, wert.ort, laendercode)
         .change_context(StammdatenFehler::UngültigeAnfrage)
         .attach("Anlage: Adresse")
 }
@@ -98,13 +98,13 @@ fn pflock(
     ))
 }
 
-impl TryFrom<ZielPflöcke> for domain::ZielPflöcke {
+impl TryFrom<ZielPfloecke> for domain::ZielPflöcke {
     type Error = Report<StammdatenFehler>;
 
-    fn try_from(wert: ZielPflöcke) -> Result<Self, Self::Error> {
+    fn try_from(wert: ZielPfloecke) -> Result<Self, Self::Error> {
         match wert {
-            ZielPflöcke::InheritFromParkour(_) => Ok(Self::InheritFromParkour),
-            ZielPflöcke::Explicit(explicit) => Self::überschreibe(pflöcke(explicit.pflöcke)?)
+            ZielPfloecke::InheritFromParkour(_) => Ok(Self::InheritFromParkour),
+            ZielPfloecke::Explicit(explicit) => Self::überschreibe(pflöcke(explicit.pfloecke)?)
                 .change_context(StammdatenFehler::UngültigeAnfrage)
                 .attach("Ziel: eigene Pflöcke"),
         }
@@ -117,7 +117,7 @@ impl TryFrom<Zielplatzierung> for domain::Zielplatzierung {
     fn try_from(wert: Zielplatzierung) -> Result<Self, Self::Error> {
         // An absent distance is simply not configured for that Pflock.
         let abstände = wert
-            .abstände
+            .abstaende
             .into_iter()
             .filter_map(|abstand| abstand.meter.map(|meter| (abstand.pflock_id, meter)))
             .map(|(pflock_id, meter)| {
@@ -129,7 +129,7 @@ impl TryFrom<Zielplatzierung> for domain::Zielplatzierung {
                 ))
             })
             .collect::<Result<Vec<_>, Report<StammdatenFehler>>>()?;
-        let pflöcke = wert.pflöcke.try_into()?;
+        let pflöcke = wert.pfloecke.try_into()?;
         domain::Zielplatzierung::neu_mit_abständen_und_pflöcken(
             AnlageZielId(wert.ziel_id),
             pflöcke,
@@ -198,13 +198,10 @@ impl AnlageErstellungRequest {
 /// Rewrite the Anlage's descriptive fields.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(
-    feature = "openapi",
-    oai(rename = "AnlageAenderungRequest", rename_all = "camelCase")
-)]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AnlageÄnderungRequest {
+pub struct AnlageAenderungRequest {
     /// Shown name of the Anlage.
     pub name: String,
     /// Its structured address; every address field is required.
@@ -214,7 +211,7 @@ pub struct AnlageÄnderungRequest {
     pub kontakt: AnlageKontakt,
 }
 
-impl AnlageÄnderungRequest {
+impl AnlageAenderungRequest {
     pub fn in_use_case(
         self,
         anlage_id: AnlageId,
@@ -350,9 +347,7 @@ pub struct ParkourErstellungRequest {
     /// Shown name of the new Parkour.
     pub name: String,
     /// The Pflöcke, far to near.
-    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
-    #[serde(rename = "pfloecke")]
-    pub pflöcke: Vec<ParkourPflock>,
+    pub pfloecke: Vec<ParkourPflock>,
     /// The Ziele on the route, in walking order. May be empty.
     #[serde(default)]
     pub platzierungen: Vec<Zielplatzierung>,
@@ -366,7 +361,7 @@ impl ParkourErstellungRequest {
         Ok(ParkourHinzufügen {
             anlage_id,
             name: parkour_name(self.name).attach(anlage_kontext(anlage_id))?,
-            pflöcke: pflöcke(self.pflöcke).attach(anlage_kontext(anlage_id))?,
+            pflöcke: pflöcke(self.pfloecke).attach(anlage_kontext(anlage_id))?,
             platzierungen: platzierungen(self.platzierungen).attach(anlage_kontext(anlage_id))?,
         })
     }
@@ -380,9 +375,7 @@ impl ParkourErstellungRequest {
 #[serde(rename_all = "camelCase")]
 pub struct ParkourSetupRequest {
     /// The Pflöcke, far to near.
-    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
-    #[serde(rename = "pfloecke")]
-    pub pflöcke: Vec<ParkourPflock>,
+    pub pfloecke: Vec<ParkourPflock>,
     /// The Ziele on the route, in walking order. May be empty.
     #[serde(default)]
     pub platzierungen: Vec<Zielplatzierung>,
@@ -397,7 +390,7 @@ impl ParkourSetupRequest {
         Ok(ParkourSetupÄndern {
             anlage_id,
             parkour_id,
-            pflöcke: pflöcke(self.pflöcke)
+            pflöcke: pflöcke(self.pfloecke)
                 .attach(anlage_kontext(anlage_id))
                 .attach(format!("Parkour {parkour_id:?}"))?,
             platzierungen: platzierungen(self.platzierungen)

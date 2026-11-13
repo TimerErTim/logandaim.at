@@ -68,16 +68,12 @@ pub struct Ziel {
     /// 1-based route ordinal.
     pub zielnummer: u32,
     /// The Pflöcke that apply to this Ziel as captured, near to far.
-    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
-    #[serde(rename = "pfloecke")]
-    pub pflöcke: Vec<Pflock>,
+    pub pfloecke: Vec<Pflock>,
     /// The Wertung of this Ziel; absent while no Schuss has been logged at it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wertung: Option<Zielwertung>,
     /// The logged arrows at this Ziel, in Pfeil order.
-    #[cfg_attr(feature = "openapi", oai(rename = "schuesse"))]
-    #[serde(rename = "schuesse")]
-    pub schüsse: Vec<Schuss>,
+    pub schuesse: Vec<Schuss>,
 }
 
 /// `InBearbeitung` or `Abgeschlossen`.
@@ -172,7 +168,7 @@ impl Runde {
                 ziel_id: ziel.id().0,
                 tiername: ziel.name().to_string(),
                 zielnummer: ziel.ordinal().get(),
-                pflöcke: ziel
+                pfloecke: ziel
                     .pflöcke()
                     .iter()
                     .map(|pflock| Pflock {
@@ -181,7 +177,7 @@ impl Runde {
                     })
                     .collect(),
                 wertung: wertung.map(Into::into),
-                schüsse: schüsse
+                schuesse: schüsse
                     .iter()
                     .filter(|schuss| schuss.ziel_id() == ziel.id().into())
                     .cloned()
@@ -232,7 +228,7 @@ impl From<domain::Runde> for Runde {
                     ziel_id: ziel.id().0,
                     tiername: ziel.name().to_string(),
                     zielnummer: ziel.ordinal().get(),
-                    pflöcke: ziel
+                    pfloecke: ziel
                         .pflöcke()
                         .iter()
                         .map(|pflock| Pflock {
@@ -241,7 +237,7 @@ impl From<domain::Runde> for Runde {
                         })
                         .collect(),
                     wertung: None,
-                    schüsse: Vec::new(),
+                    schuesse: Vec::new(),
                 })
                 .collect(),
             gesamt_erster_treffer: 0,

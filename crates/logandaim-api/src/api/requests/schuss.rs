@@ -96,20 +96,17 @@ impl SchussErstellungRequest {
 /// Replace a Schuss's scoring zone and optional position.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(
-    feature = "openapi",
-    oai(rename = "SchussAenderungRequest", rename_all = "camelCase")
-)]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SchussÄnderungRequest {
+pub struct SchussAenderungRequest {
     /// Where on the Ziel the arrow landed.
     pub wertungszone: Wertungszone,
     /// Optional shot position; null clears the stored position.
     pub position: Option<SchusspositionRequest>,
 }
 
-impl SchussÄnderungRequest {
+impl SchussAenderungRequest {
     pub fn in_use_case(
         self,
         runde_id: RundeId,

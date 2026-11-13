@@ -47,7 +47,7 @@ pub mod requests;
 use self::errors::{RundeAnzeigenFehler, RundenAnzeigenFehler};
 
 use crate::schema::{
-    Anlage, AnlageZugriff, AnlageÖffentlich, Benutzer, ParkourKurz, ParkourÖffentlich, Runde,
+    Anlage, AnlageOeffentlich, AnlageZugriff, Benutzer, ParkourKurz, ParkourOeffentlich, Runde,
     RundeBasic, Schuss,
 };
 
@@ -201,7 +201,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        anfrage: requests::AnlageÄnderungRequest,
+        anfrage: requests::AnlageAenderungRequest,
     ) -> ResultReport<Anlage, StammdatenFehler> {
         let use_case: AnlageBeschreibendeDatenÄndern = anfrage.in_use_case(anlage_id)?;
         let anlage = self.app.execute(auth, use_case).await?;
@@ -367,7 +367,7 @@ impl LogandaimAppApi {
     pub async fn parkour_anzeigen(
         &self,
         auth: AuthContext,
-    ) -> ResultReport<Vec<ParkourÖffentlich>, StammdatenFehler> {
+    ) -> ResultReport<Vec<ParkourOeffentlich>, StammdatenFehler> {
         self.app
             .execute_fn(auth, async |ctx| {
                 let uow = ctx
@@ -389,7 +389,7 @@ impl LogandaimAppApi {
                             if parkour.ist_archiviert() {
                                 continue;
                             }
-                            offen.push(ParkourÖffentlich {
+                            offen.push(ParkourOeffentlich {
                                 anlage_id: anlage.id().0,
                                 anlage_name: anlage.name().to_string(),
                                 parkour: parkour.clone().into(),
@@ -407,11 +407,11 @@ impl LogandaimAppApi {
 
     /// The public Anlagen directory: active Anlagen with a short Parkour list.
     ///
-    /// Needs no identity, and carries no contact data (see [`AnlageÖffentlich`]).
+    /// Needs no identity, and carries no contact data (see [`AnlageOeffentlich`]).
     pub async fn anlagen_verzeichnis(
         &self,
         auth: AuthContext,
-    ) -> ResultReport<Vec<AnlageÖffentlich>, StammdatenFehler> {
+    ) -> ResultReport<Vec<AnlageOeffentlich>, StammdatenFehler> {
         self.app
             .execute_fn(auth, async |ctx| {
                 let uow = ctx
@@ -430,11 +430,11 @@ impl LogandaimAppApi {
                     Ok::<_, Report<StammdatenFehler>>(
                         anlagen
                             .into_iter()
-                            .map(|anlage| AnlageÖffentlich {
+                            .map(|anlage| AnlageOeffentlich {
                                 anlage_id: anlage.id().0,
                                 name: anlage.name().to_string(),
                                 ort: anlage.adresse().ort().to_owned(),
-                                ländercode: anlage.adresse().ländercode().into(),
+                                laendercode: anlage.adresse().ländercode().into(),
                                 parkour: anlage
                                     .parkour()
                                     .iter()
@@ -728,7 +728,7 @@ impl LogandaimAppApi {
         auth: AuthContext,
         runde_id: RundeId,
         schuss_id: SchussId,
-        anfrage: requests::SchussÄnderungRequest,
+        anfrage: requests::SchussAenderungRequest,
     ) -> ResultReport<Schuss, SchussÄndernFehler> {
         let use_case = anfrage.in_use_case(runde_id, schuss_id)?;
         self.app.execute(auth, use_case).await.map(Into::into)
@@ -935,7 +935,7 @@ impl LogandaimAppApi {
     pub async fn benutzer_löschen(
         &self,
         auth: AuthContext,
-        anfrage: requests::BenutzerLöschungRequest,
+        anfrage: requests::BenutzerLoeschungRequest,
     ) -> ResultReport<(), BenutzerLöschenFehler> {
         let use_case: BenutzerLöschen = anfrage.in_use_case()?;
         self.app.execute(auth, use_case).await
