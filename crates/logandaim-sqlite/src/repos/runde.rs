@@ -23,9 +23,9 @@ use logandaim_core::{
     ErrorReportExt,
     application::uow::Versioned,
     domain::{
-        Abstand, AnlageId, AnlageZielId, Erfasser, Farbe, NeueRunde, NonEmptyString, ParkourId,
-        Pflock, Runde, RundeId, RundenHerkunft, Rundenaufbau, ZUSTAND_IN_BEARBEITUNG, Ziel, ZielId,
-        konto::BenutzerId,
+        Abstand, AnlageId, AnlageZielId, Erfasser, Farbe, FreieRundeInBearbeitung, NeueRunde,
+        NonEmptyString, ParkourId, Pflock, Runde, RundeId, RundeTypestate, RundenHerkunft,
+        Rundenaufbau, Ziel, ZielId, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
 };
@@ -485,7 +485,10 @@ impl RundeRepository for SQLiteRundeRepository {
         let mut rows = tx
             .query(
                 &format!(r#"{SELECT} WHERE benutzer_id = ?1 AND zustand = ?2 LIMIT 1"#),
-                (benutzer_id.0.to_string(), ZUSTAND_IN_BEARBEITUNG),
+                (
+                    benutzer_id.0.to_string(),
+                    <FreieRundeInBearbeitung as RundeTypestate>::zustand(),
+                ),
             )
             .await
             .contextualize_with(libsql_error_to_persistence_error)?;

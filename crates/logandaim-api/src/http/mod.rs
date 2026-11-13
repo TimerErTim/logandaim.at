@@ -43,18 +43,18 @@ use crate::{
     api::{
         LogandaimAppApi,
         requests::{
-            AnlageErstellungRequest, AnlageVerwaltungRequest, AnlageÄnderungRequest,
-            AnmeldungRequest, BenutzerLöschungRequest, FreieRundeStartenRequest,
+            AnlageAenderungRequest, AnlageErstellungRequest, AnlageVerwaltungRequest,
+            AnmeldungRequest, BenutzerLoeschungRequest, FreieRundeStartenRequest,
             ParkourErstellungRequest, ParkourSetupRequest, ParkourUmbenennenRequest,
             PasswortVergessenRequest, PasswortWiederherstellenRequest,
             RegistrierungAbschlussRequest, RegistrierungStartRequest,
-            RundeMitParkourStartenRequest, SchussErstellungRequest, SchussÄnderungRequest,
+            RundeMitParkourStartenRequest, SchussAenderungRequest, SchussErstellungRequest,
             ZielHinzufuegenRequest, ZielRequest, ZielUmbenennenRequest,
         },
     },
     schema::{
-        Anlage, AnlageZugriff, AnlageÖffentlich, AuthenticatedBenutzer, Benutzer, MailHealth, Ok,
-        ParkourÖffentlich, Runde, RundeBasic, Schuss,
+        Anlage, AnlageOeffentlich, AnlageZugriff, AuthenticatedBenutzer, Benutzer, MailHealth, Ok,
+        ParkourOeffentlich, Runde, RundeBasic, Schuss,
     },
 };
 
@@ -167,7 +167,7 @@ impl LogandaimApiSpec {
     async fn anlagen_verzeichnis(
         &self,
         #[oai(name = "Authorization")] authorization: BearerAuthorization,
-    ) -> TypicalJsonResponse<Vec<AnlageÖffentlich>> {
+    ) -> TypicalJsonResponse<Vec<AnlageOeffentlich>> {
         // A broken token is answered as anonymous here, never as an error: this route is
         // public, and a stale token must not hide the directory from its own reader.
         let auth = self
@@ -207,7 +207,7 @@ impl LogandaimApiSpec {
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         anlage_id: Path<Uuid>,
-        body: Json<AnlageÄnderungRequest>,
+        body: Json<AnlageAenderungRequest>,
     ) -> TypicalJsonResponse<Anlage> {
         // A missing or unusable token is anonymous here; the use case answers 401.
         let auth = self
@@ -590,7 +590,7 @@ impl LogandaimApiSpec {
     async fn parkour_anzeigen(
         &self,
         #[oai(name = "Authorization")] authorization: BearerAuthorization,
-    ) -> TypicalJsonResponse<Vec<ParkourÖffentlich>> {
+    ) -> TypicalJsonResponse<Vec<ParkourOeffentlich>> {
         // A broken token is answered as anonymous here, never as an error: this route is
         // public, and a stale token must not hide master data from its own reader.
         let auth = self
@@ -831,7 +831,7 @@ impl LogandaimApiSpec {
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
         runde_id: Path<Uuid>,
         schuss_id: Path<Uuid>,
-        body: Json<SchussÄnderungRequest>,
+        body: Json<SchussAenderungRequest>,
     ) -> TypicalJsonResponse<Schuss> {
         let auth = self
             .auth_context(authorization.0.as_deref())
@@ -1102,7 +1102,7 @@ impl LogandaimApiSpec {
     async fn benutzer_löschen(
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
-        body: Json<BenutzerLöschungRequest>,
+        body: Json<BenutzerLoeschungRequest>,
     ) -> EndSessionResponse<Ok> {
         // A missing or unusable token is anonymous here; the use case answers 401.
         let auth = self

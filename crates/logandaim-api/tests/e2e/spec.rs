@@ -215,6 +215,54 @@ fn wire_identifikatoren_sind_ascii() {
     }
 }
 
+/// API source identifiers mirror the stable ASCII wire schema names and properties.
+#[test_log::test]
+fn schema_namen_und_felder_bleiben_wire_kompatibel() {
+    let spec = spec();
+    let schemas = spec["components"]["schemas"].as_object().expect("schemas");
+
+    for name in [
+        "BenutzerLoeschungRequest",
+        "AnlageAenderungRequest",
+        "SchussAenderungRequest",
+        "Laendercode",
+        "ZielPfloecke",
+        "ParkourOeffentlich",
+        "AnlageOeffentlich",
+    ] {
+        assert!(schemas.contains_key(name), "missing wire schema {name}");
+    }
+    for retired in ["BenutzerLoeschenRequest", "BenutzerLöschungRequest"] {
+        assert!(
+            !schemas.contains_key(retired),
+            "unexpected schema {retired}"
+        );
+    }
+
+    let properties = |name: &str| {
+        schemas[name]["properties"]
+            .as_object()
+            .unwrap_or_else(|| panic!("schema {name} has no properties"))
+    };
+    for (schema, field) in [
+        ("BenutzerLoeschungRequest", "bestaetigt"),
+        ("AnlageAdresse", "strasse"),
+        ("AnlageAdresse", "laendercode"),
+        ("Zielverwendung", "pfloecke"),
+        ("Zielverwendung", "abstaende"),
+        ("Parkour", "pfloecke"),
+        ("ParkourKurz", "anzahlPfloecke"),
+        ("Ziel", "pfloecke"),
+        ("Ziel", "schuesse"),
+        ("Zielwertung", "anzahlSchuesse"),
+    ] {
+        assert!(
+            properties(schema).contains_key(field),
+            "schema {schema} is missing wire property {field}"
+        );
+    }
+}
+
 /// Every operation and every published schema is described, because that is the document.
 #[test_log::test]
 fn jede_operation_und_jedes_schema_ist_beschrieben() {

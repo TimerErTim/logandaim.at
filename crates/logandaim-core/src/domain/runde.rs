@@ -31,17 +31,14 @@ use super::common::{Abstand, Farbe, NonEmptyString};
 use super::konto::BenutzerId;
 use super::schuss::{Erfasser, Schuss, Schussposition, ZielSchüsse, Zielwertung};
 
-/// Identity of one Runde. Re-exported where a `Schuss` needs it.
-pub use super::schuss::RundeId;
+/// Identity of one Runde. The aggregate owns its identity; Schuss only refers to it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct RundeId(pub uuid::Uuid);
 
-/// The one stored spelling of a running Runde, shared by both open markers.
-///
-/// The SQLite partial unique index `idx_runden_offen_pro_benutzer` and
-/// `find_offen_by_benutzer` filter on this literal, so it is spelled once, here.
-pub const ZUSTAND_IN_BEARBEITUNG: &str = "InBearbeitung";
-
-/// The one stored spelling of a closed Runde.
-pub const ZUSTAND_ABGESCHLOSSEN: &str = "Abgeschlossen";
+/// A typestate's persisted lifecycle spelling.
+pub trait RundeTypestate {
+    fn zustand() -> &'static str;
+}
 
 // ---------------------------------------------------------------------------------------
 // Where a Runde came from
@@ -77,14 +74,14 @@ impl MitParkourInBearbeitung {
         Self { herkunft }
     }
 
-    /// Where this round came from. Always `Some`: a round without provenance is the other
-    /// open marker, and its type says so.
-    pub fn herkunft(&self) -> Option<&RundenHerkunft> {
-        Some(&self.herkunft)
+    pub fn herkunft(&self) -> &RundenHerkunft {
+        &self.herkunft
     }
+}
 
-    pub fn as_str(&self) -> &'static str {
-        ZUSTAND_IN_BEARBEITUNG
+impl RundeTypestate for MitParkourInBearbeitung {
+    fn zustand() -> &'static str {
+        "InBearbeitung"
     }
 }
 
@@ -95,14 +92,9 @@ impl MitParkourInBearbeitung {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct FreieRundeInBearbeitung;
 
-impl FreieRundeInBearbeitung {
-    /// A free round has no provenance, in this state and in every other.
-    pub fn herkunft(&self) -> Option<&RundenHerkunft> {
-        None
-    }
-
-    pub fn as_str(&self) -> &'static str {
-        ZUSTAND_IN_BEARBEITUNG
+impl RundeTypestate for FreieRundeInBearbeitung {
+    fn zustand() -> &'static str {
+        "InBearbeitung"
     }
 }
 
@@ -125,9 +117,11 @@ impl Abgeschlossen {
     pub fn herkunft(&self) -> Option<&RundenHerkunft> {
         self.herkunft.as_ref()
     }
+}
 
-    pub fn as_str(&self) -> &'static str {
-        ZUSTAND_ABGESCHLOSSEN
+impl RundeTypestate for Abgeschlossen {
+    fn zustand() -> &'static str {
+        "Abgeschlossen"
     }
 }
 
@@ -406,29 +400,6 @@ impl NeueRunde {
             Self::Parkour { begonnen_am, .. } | Self::Freie { begonnen_am, .. } => *begonnen_am,
         }
     }
-
-    /// Where this round comes from: the Parkour pair, or nothing for a free round.
-    pub fn herkunft(&self) -> Option<RundenHerkunft> {
-        match self {
-            Self::Parkour {
-                anlage_id,
-                parkour_id,
-                ..
-            } => Some(RundenHerkunft {
-                anlage_id: *anlage_id,
-                parkour_id: *parkour_id,
-            }),
-            Self::Freie { .. } => None,
-        }
-    }
-
-    /// The route this round starts with: the captured one, or an empty free route.
-    pub fn aufbau(&self) -> Rundenaufbau {
-        match self {
-            Self::Parkour { aufbau, .. } => aufbau.clone(),
-            Self::Freie { .. } => Rundenaufbau::default(),
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------------------
@@ -600,8 +571,8 @@ impl RundeMitParkour {
         }
     }
 
-    /// Where this round came from. Always `Some`; the free marker is what answers `None`.
-    pub fn herkunft(&self) -> Option<&RundenHerkunft> {
+    /// Where this round came from.
+    pub fn herkunft(&self) -> &RundenHerkunft {
         self.state.herkunft()
     }
 
@@ -675,11 +646,6 @@ impl FreieRunde {
         }
     }
 
-    /// A free round has no provenance, in this state and in every other.
-    pub fn herkunft(&self) -> Option<&RundenHerkunft> {
-        self.state.herkunft()
-    }
-
     /// Append a Ziel with a fresh round-local identity and answer that identity.
     ///
     /// The round mints the id, so a caller cannot hand in one that already exists and the
@@ -702,15 +668,8 @@ impl FreieRunde {
         true
     }
 
-    /// Whether this position may be captured at this Ziel (AC-23).
-    ///
-    /// A free round configures no Pflock set, so every colour the archer picked is a position
-    /// and every distance is one too; only an unknown Ziel is refused.
-    pub fn pruefe_position(
-        &self,
-        ziel_id: ZielId,
-        _position: Option<Schussposition>,
-    ) -> Result<(), PositionNichtImAufbau> {
+    /// Whether this Ziel belongs to this free round's route.
+    pub fn pruefe_position(&self, ziel_id: ZielId) -> Result<(), PositionNichtImAufbau> {
         if !self.aufbau.enthält_ziel(ziel_id) {
             return Err(PositionNichtImAufbau);
         }
@@ -792,21 +751,28 @@ impl Runde {
     /// The state and the route are read from the same variant, so neither can be picked
     /// independently of the other.
     pub fn aus_neu(id: RundeId, neu: NeueRunde) -> Self {
-        let name = neu.name().clone();
-        let erfasser = neu.erfasst_von();
-        let begonnen_am = neu.begonnen_am();
-        let aufbau = neu.aufbau();
-        match neu.herkunft() {
-            Some(herkunft) => Self::MitParkour(RundeMitParkour::aus_neu(
+        match neu {
+            NeueRunde::Parkour {
+                anlage_id,
+                parkour_id,
+                name,
+                aufbau,
+                erfasser,
+                begonnen_am,
+            } => Self::MitParkour(RundeMitParkour::aus_neu(
                 id,
                 erfasser,
-                herkunft.anlage_id,
-                herkunft.parkour_id,
+                anlage_id,
+                parkour_id,
                 name,
                 aufbau,
                 begonnen_am,
             )),
-            None => Self::FreieRunde(FreieRunde::aus_neu(id, erfasser, name, begonnen_am)),
+            NeueRunde::Freie {
+                name,
+                erfasser,
+                begonnen_am,
+            } => Self::FreieRunde(FreieRunde::aus_neu(id, erfasser, name, begonnen_am)),
         }
     }
 
@@ -872,8 +838,8 @@ impl Runde {
     /// not, a free round never gains a provenance.
     pub fn herkunft(&self) -> Option<&RundenHerkunft> {
         match self {
-            Self::MitParkour(runde) => runde.herkunft(),
-            Self::FreieRunde(runde) => runde.herkunft(),
+            Self::MitParkour(runde) => Some(runde.herkunft()),
+            Self::FreieRunde(_) => None,
             Self::AbgeschlosseneRunde(runde) => runde.herkunft(),
         }
     }
@@ -898,9 +864,9 @@ impl Runde {
     /// The stored lifecycle spelling, taken from the active variant itself.
     pub fn zustand(&self) -> &'static str {
         match self {
-            Self::MitParkour(runde) => runde.state.as_str(),
-            Self::FreieRunde(runde) => runde.state.as_str(),
-            Self::AbgeschlosseneRunde(runde) => runde.state.as_str(),
+            Self::MitParkour(_) => <MitParkourInBearbeitung as RundeTypestate>::zustand(),
+            Self::FreieRunde(_) => <FreieRundeInBearbeitung as RundeTypestate>::zustand(),
+            Self::AbgeschlosseneRunde(_) => <Abgeschlossen as RundeTypestate>::zustand(),
         }
     }
 
@@ -1128,6 +1094,20 @@ mod tests {
             name("Wiese daheim"),
             jetzt(),
         ))
+    }
+
+    #[test_log::test]
+    fn zustand_gibt_fuer_jeden_typestate_den_exakten_persistierten_wert_zurueck() {
+        let mit_parkour = runde(&[(10, "Keiler")]);
+        let freie = freie_runde();
+        let Runde::MitParkour(laufend) = runde(&[(10, "Keiler")]) else {
+            panic!("eine Parkour-Runde ist offen");
+        };
+        let abgeschlossen: Runde = laufend.abschliessen(jetzt()).into();
+
+        assert_eq!(mit_parkour.zustand(), "InBearbeitung");
+        assert_eq!(freie.zustand(), "InBearbeitung");
+        assert_eq!(abgeschlossen.zustand(), "Abgeschlossen");
     }
 
     /// The round-local id of the target captured from the master-data target `anlage_ziel`.
@@ -1376,7 +1356,10 @@ mod tests {
         assert_eq!(runde.name().as_str(), "Wiese daheim");
         assert!(runde.aufbau().ziele().is_empty());
         // Both open states store the same spelling, and the store filters on it (#8).
-        assert_eq!(runde.zustand(), ZUSTAND_IN_BEARBEITUNG);
+        assert_eq!(
+            runde.zustand(),
+            <FreieRundeInBearbeitung as RundeTypestate>::zustand()
+        );
     }
 
     #[test_log::test]
@@ -1431,13 +1414,13 @@ mod tests {
         };
         let ziel_id = runde.aufbau().ziele()[0].id();
         let aufbau = runde.aufbau().clone();
-        let herkunft = runde.herkunft().copied();
+        let herkunft = *runde.herkunft();
         let geschlossen: Runde = runde.abschliessen(jetzt()).into();
         assert_eq!(geschlossen.zustand(), "Abgeschlossen");
         // Closing erases nothing: the route and the provenance are the round's record.
         assert_eq!(geschlossen.aufbau(), &aufbau);
         assert!(geschlossen.enthält_ziel(ziel_id));
-        assert_eq!(geschlossen.herkunft(), herkunft.as_ref());
+        assert_eq!(geschlossen.herkunft(), Some(&herkunft));
         assert!(!geschlossen.ist_freie_runde());
     }
 
@@ -1510,31 +1493,10 @@ mod tests {
         let ziel = runde.ziel_hinzufügen(None);
         // A free round configures no Pflock set, so the colour the archer picked is a
         // position; `Farbe` has already proven it is a colour.
-        for hex in ["#c0392b", "#1b4f9c", "#abc123"] {
-            assert!(
-                runde
-                    .pruefe_position(ziel, Some(Schussposition::Pflock(Farbe::neu(hex).unwrap())))
-                    .is_ok()
-            );
-        }
-        assert!(
-            runde
-                .pruefe_position(
-                    ziel,
-                    Some(Schussposition::Distanz(Abstand::neu(35).unwrap()))
-                )
-                .is_ok()
-        );
-        assert!(runde.pruefe_position(ziel, None).is_ok());
-        // Only an unknown Ziel is refused.
-        assert!(
-            runde
-                .pruefe_position(
-                    ZielId(Uuid::from_u128(99)),
-                    Some(Schussposition::Pflock(Farbe::neu("#c0392b").unwrap()))
-                )
-                .is_err()
-        );
+        // Position acceptance is checked by the use case; this typestate only answers
+        // whether the target belongs to the route.
+        assert!(runde.pruefe_position(ziel).is_ok());
+        assert!(runde.pruefe_position(ZielId(Uuid::from_u128(99))).is_err());
     }
 
     #[test_log::test]
