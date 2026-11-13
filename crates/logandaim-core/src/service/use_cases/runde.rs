@@ -14,8 +14,7 @@ use tracing::{info, instrument};
 use crate::{
     application::ExecutionContext,
     domain::{
-        Erfasser, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId, RundenZielId,
-        Rundenherkunft,
+        Erfasser, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId, Rundenaufbau, ZielId,
     },
     ports::RepositoryError,
     service::UseCase,
@@ -118,10 +117,16 @@ impl UseCase<Runde> for RundeStarten {
                     };
 
                     // AC-7/AC-9: one value copy, taken in this transaction.
-                    let Ok(snapshot) = anlage.snapshot_für(parkour.id()) else {
-                        return Err(Report::new(RundeStartenFehler::NichtGefunden));
-                    };
-                    NeueRunde::mit_parkour(anlage.id(), erfasser, snapshot, jetzt)
+                    let aufbau = Rundenaufbau::aus_parkour(parkour, |ziel_id| anlage.ziel(ziel_id))
+                        .map_err(|_| Report::new(RundeStartenFehler::NichtGefunden))?;
+                    NeueRunde::mit_parkour(
+                        anlage.id(),
+                        parkour.id(),
+                        parkour.name().clone(),
+                        aufbau,
+                        erfasser,
+                        jetzt,
+                    )
                 }
                 Rundenquelle::Frei { name } => {
                     NeueRunde::ohne_parkour(name.clone(), erfasser, jetzt)
@@ -158,10 +163,7 @@ impl UseCase<Runde> for RundeStarten {
         let runde = uow.finish(ergebnis, RundeStartenFehler::Starten).await?;
         info!(
             id = ?runde.id(),
-            parkour_id = ?match runde.herkunft() {
-                Rundenherkunft::Parkour { parkour_id, .. } => Some(parkour_id),
-                Rundenherkunft::Freie { .. } => None,
-            },
+            herkunft = ?runde.herkunft(),
             "runde gestartet"
         );
         Ok(runde)
@@ -263,7 +265,7 @@ impl UseCase<Runde> for RundeZielHinzufügen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielHinzufügenFehler::NichtErlaubt));
             }
-            let Runde::FreieRundeInArbeit(mut freie_runde) = runde.cloned_data() else {
+            let Runde::FreieRunde(mut freie_runde) = runde.cloned_data() else {
                 return Err(Report::new(ziel_schreibfehler(&runde).als_hinzufuegen()));
             };
             // The round mints the identity, so an append can never collide (#18).
@@ -313,7 +315,7 @@ pub enum RundeZielEntfernenFehler {
 #[derive(Debug, Clone)]
 pub struct RundeZielEntfernen {
     pub runde_id: RundeId,
-    pub ziel_id: RundenZielId,
+    pub ziel_id: ZielId,
 }
 
 #[async_trait]
@@ -336,7 +338,7 @@ impl UseCase<Runde> for RundeZielEntfernen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielEntfernenFehler::NichtErlaubt));
             }
-            let Runde::FreieRundeInArbeit(mut freie_runde) = runde.cloned_data() else {
+            let Runde::FreieRunde(mut freie_runde) = runde.cloned_data() else {
                 return Err(Report::new(ziel_schreibfehler(&runde).als_entfernen()));
             };
             if freie_runde.ziel_entfernen(self.ziel_id).is_none() {
@@ -352,7 +354,7 @@ impl UseCase<Runde> for RundeZielEntfernen {
                 .map_err(IntoReport::into_report)
                 .change_context(RundeZielEntfernenFehler::Entfernen)?
             {
-                if schuss.ziel_id() == self.ziel_id.into() {
+                if schuss.ziel_id() == self.ziel_id {
                     uow.schüsse()
                         .delete(schuss)
                         .await
@@ -431,7 +433,7 @@ pub enum RundeZielUmbenennenFehler {
 #[derive(Debug, Clone)]
 pub struct RundeZielUmbenennen {
     pub runde_id: RundeId,
-    pub ziel_id: RundenZielId,
+    pub ziel_id: ZielId,
     pub name: NonEmptyString,
 }
 
@@ -455,7 +457,7 @@ impl UseCase<Runde> for RundeZielUmbenennen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(RundeZielUmbenennenFehler::NichtErlaubt));
             }
-            let Runde::FreieRundeInArbeit(mut freie_runde) = runde.cloned_data() else {
+            let Runde::FreieRunde(mut freie_runde) = runde.cloned_data() else {
                 return Err(Report::new(ziel_schreibfehler(&runde).als_umbenennen()));
             };
             if !freie_runde.ziel_umbenennen(self.ziel_id, self.name) {
@@ -628,9 +630,9 @@ impl UseCase<Runde> for RundeAbschliessen {
             }
             // The typestate makes closing once-only: a closed Runde has no `abschliessen`.
             let offen = match runde.cloned_data() {
-                Runde::InBearbeitung(offen) => offen.abschliessen(jetzt),
-                Runde::FreieRundeInArbeit(offen) => offen.abschliessen(jetzt),
-                Runde::Abgeschlossen(_) => {
+                Runde::MitParkour(offen) => offen.abschliessen(jetzt),
+                Runde::FreieRunde(offen) => offen.abschliessen(jetzt),
+                Runde::AbgeschlosseneRunde(_) => {
                     return Err(Report::new(RundeAbschliessenFehler::BereitsAbgeschlossen));
                 }
             };

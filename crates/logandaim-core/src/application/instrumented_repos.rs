@@ -17,7 +17,7 @@ use crate::domain::konto::{
 };
 use crate::domain::{
     Anlage, AnlageId, AnlageZielId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId,
-    Runde, RundeId, Schuss, SchussId, SchussZielId,
+    Runde, RundeId, Schuss, SchussId, ZielId,
 };
 use crate::ports::{
     AnlageRepository, BenutzerRepository, EmailBestätigungRepository, KontoRepository,
@@ -130,7 +130,7 @@ impl_instrumented_repo!(
         #[instrument(skip(self, runde_id), fields(runde_id = ?runde_id), level = "trace", err(Debug))]
         fn find_by_runde(&self, runde_id: RundeId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
         #[instrument(skip(self, ziel_id), fields(ziel_id = ?ziel_id), level = "trace", err(Debug))]
-        fn find_by_ziel(&self, ziel_id: SchussZielId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
+        fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
         #[instrument(skip(self, benutzer_id), fields(benutzer_id = ?benutzer_id), level = "trace", err(Debug))]
         fn find_by_benutzer(&self, benutzer_id: BenutzerId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
         #[instrument(skip(self, schuss), level = "debug", err(Debug))]

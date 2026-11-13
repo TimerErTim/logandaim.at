@@ -290,10 +290,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
           <SchussLedger
             ziel={ziel}
             reihenfolge={order}
-            editable={
-              runde.zustand === "InBearbeitung" ||
-              runde.zustand === "Abgeschlossen"
-            }
+            editable={runde.zustand === "InBearbeitung"}
             positionArt="frei"
             farben={usedColours}
             onEdit={(schussId, wertungszone, shotPosition) => {

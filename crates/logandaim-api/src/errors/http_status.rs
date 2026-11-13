@@ -133,7 +133,8 @@ http_status!(SchussÄndernFehler {
     NichtErlaubt => StatusCode::FORBIDDEN,
     NichtGefunden => StatusCode::NOT_FOUND,
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
-    PflockNichtImSnapshot => StatusCode::CONFLICT,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
+    PflockNichtImAufbau => StatusCode::CONFLICT,
     Laden => StatusCode::INTERNAL_SERVER_ERROR,
     Speichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
@@ -142,6 +143,7 @@ http_status!(SchussLöschenFehler {
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     NichtErlaubt => StatusCode::FORBIDDEN,
     NichtGefunden => StatusCode::NOT_FOUND,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
     Laden => StatusCode::INTERNAL_SERVER_ERROR,
     Löschen => StatusCode::INTERNAL_SERVER_ERROR,
     Speichern => StatusCode::INTERNAL_SERVER_ERROR,
@@ -153,8 +155,8 @@ http_status!(SchussRegistrierenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     NichtGefunden => StatusCode::NOT_FOUND,
     RundeNichtInBearbeitung => StatusCode::CONFLICT,
-    ZielNichtImSnapshot => StatusCode::CONFLICT,
-    PflockNichtImSnapshot => StatusCode::CONFLICT,
+    ZielNichtImAufbau => StatusCode::CONFLICT,
+    PflockNichtImAufbau => StatusCode::CONFLICT,
     PfeilKonflikt => StatusCode::CONFLICT,
     Speichern => StatusCode::INTERNAL_SERVER_ERROR,
     RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
@@ -476,7 +478,7 @@ mod tests {
             StatusCode::CONFLICT
         );
         assert_eq!(
-            status(SchussRegistrierenFehler::ZielNichtImSnapshot),
+            status(SchussRegistrierenFehler::ZielNichtImAufbau),
             StatusCode::CONFLICT
         );
         assert_eq!(

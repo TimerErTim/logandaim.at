@@ -1,7 +1,7 @@
 ---
 id: SPEC-runde
 title: Capture a Runde target by target, on phone and desktop
-status: Draft
+status: PO-approved
 owner: TimerErTim
 issues: [11, 23, 72, 93]
 superseded_by: null
@@ -93,9 +93,10 @@ whole route out as cards on a wide screen, with one-thumb logging throughout.
    from the finish action below the cards. The summary finishes nothing by itself: the `Runde` is
    completed by its finish action (rule 8). `Ziele` without `Schuss` have no result. An unfinished
    `Runde` stays open and can be resumed.
-7. **Edit.** The `Benutzer` corrects a mis-entry in an own `Runde`: add, change, or remove
-   `Schüsse` and `Schusspositionen`, or change the date. The `Wertungen` recompute; the `Parkour`
-   and its snapshot never change.
+7. **Edit.** While an own `Runde` is in progress, the `Benutzer` corrects a mis-entry: add, change,
+   or remove `Schüsse` and `Schusspositionen`, or change the date. The `Wertungen` recompute; the
+   `Parkour` and its captured setup never change. Completing the `Runde` freezes it: afterward,
+   its `Schüsse`, `Schusspositionen`, route, target names, and date are read-only.
 8. **Delete.** The `Benutzer` deletes an own `Runde` after explicit confirmation; the `Runde` and
    its `Schüsse` are gone from history.
 9. **Shoot a free `Runde`.** The `Benutzer` starts a `Freie Runde` under a name, picks no
@@ -123,10 +124,12 @@ Rules:
    one `Parkour` with its `Anlage` and the `Parkour-Snapshot` taken when the `Runde` is created
    ([`stammdaten.md`](stammdaten.md) rules 7–8), or a `Freie Runde`'s own name. The setup never
    changes afterwards; a wrong `Parkour` is fixed by deleting the `Runde` and logging it again.
-2. The `Ziele` of a `Parkour` round are the `Ziele` of its snapshot, in visiting order (a
-   `Freie Runde` holds its own, rule 18). The `Benutzer` may log them in any order: skip `Ziele`,
-   revisit them, and add `Schüsse` at any time until the `Runde` is deleted. Within one `Ziel`,
-   the `Schüsse` keep their shooting order (`Pfeil` 1, 2, 3, … per [`wertung.md`](wertung.md)).
+2. The `Ziele` of a `Parkour` round are the `Ziele` of its captured setup, in visiting order (a
+   `Freie Runde` holds its own, rule 18). While the `Runde` is in progress, the `Benutzer` may log
+   them in any order: skip `Ziele`, revisit them, and add `Schüsse`. Completing the `Runde` freezes
+   its route, `Schüsse`, and `Datum`; a completed `Runde` is read-only and may only be deleted.
+   Within one `Ziel`, the `Schüsse` keep their shooting order (`Pfeil` 1, 2, 3, … per
+   [`wertung.md`](wertung.md)).
 3. Every `Schuss` records exactly one `Wertungszone` (`Spot`, `Kill`, `Body`, `Miss`) and at most
    one `Schussposition`. There is no upper limit on `Schüsse` per `Ziel`
    ([`wertung.md`](wertung.md) rule 1). Recording stays a single optional field so "position not
@@ -184,13 +187,14 @@ Rules:
    totals, the `Zielfortschritt`, and how many `Ziele` are still uncaptured. The summary is a read
    of what was logged, not a write — it is shown *before* the `Runde` is finished, and the finish
    action lives in it. Only pressing that action marks the `Runde` complete, and completing is
-   display-only state that changes no data. A finished `Runde` can still be edited and deleted; an
-   unfinished `Runde` can be resumed.
-9. Editing never changes the `Parkour` or the `Parkour-Snapshot`. Removing a `Schuss` renumbers the
-   later `Schüsse` of that `Ziel`, so `Pfeil` stays contiguous from 1 and the points of the moved
-   `Schüsse` follow their new `Pfeil`. Master-data changes made after the `Runde` was started never
-   rewrite it ([`stammdaten.md`](stammdaten.md) rules 7–8); the `Runde` always displays the layout
-   as it was shot.
+   display-only state that changes no logged data. A finished `Runde` is read-only and may be
+   deleted; an unfinished `Runde` can be resumed.
+9. While a `Runde` is in progress, editing never changes the `Parkour` or the captured setup.
+   Removing a `Schuss` renumbers the later `Schüsse` of that `Ziel`, so `Pfeil` stays contiguous
+   from 1 and the points of the moved `Schüsse` follow their new `Pfeil`. Master-data changes made
+   after the `Runde` was started never rewrite it ([`stammdaten.md`](stammdaten.md) rules 7–8); the
+   `Runde` always displays the layout as it was shot. Completing freezes its route, `Schüsse`, and
+   `Datum`; only deletion remains available afterwards.
 10. Deleting removes the `Runde` with all its `Schüsse` — including from per-`Ziel` shot history —
     irreversibly, after explicit confirmation.
 11. Only the owning `Benutzer` may view, edit, finish, or delete a `Runde`
@@ -251,7 +255,7 @@ Rules:
       editing that `Schuss`.
 
     The initial state is derived from the logged `Schüsse` and never stored separately, so it
-    survives a resume without extra state and cannot drift from what was recorded.
+    survives a resume of an in-progress round without extra state and cannot drift from what was recorded.
 17. Setup. A `Runde` is either a `Parkour` round or a `Freie Runde`, never both and never neither.
     A `Parkour` round always names both its `Anlage` and its `Parkour`, as one origin the `Runde`
     records at the start (rule 1); a `Freie Runde` names neither and carries its own name instead.
@@ -312,9 +316,11 @@ be added, removed, or renamed afterwards:
 - FR-6: Hold at most one `Runde` in progress per `Benutzer`, refuse a second start, and offer to
   resume the running one (rule 7).
 - FR-7: Summarise the `Runde` in the `Rundenabschluss` before finishing, complete it only on that
-  summary's finish action, and resume an unfinished one (rule 8).
-- FR-8: Edit `Datum`, `Schüsse`, and `Schusspositionen` of an own `Runde`, with `Wertungen`
-  recomputed and deleted `Schüsse` renumbered (rule 9).
+  summary's finish action, allow resuming only while unfinished, and keep completed rounds read-only
+  (rule 8).
+- FR-8: Edit `Datum`, `Schüsse`, and `Schusspositionen` of an own in-progress `Runde`, with
+  `Wertungen` recomputed and deleted `Schüsse` renumbered; refuse these edits after completion
+  (rule 9).
 - FR-9: Delete an own `Runde` after explicit confirmation (rule 10).
 - FR-10: Enforce ownership on every read and write of a `Runde` (rule 11).
 - FR-11: Show the `Zielfortschritt` of a `Runde` (rule 12).
@@ -397,11 +403,13 @@ be added, removed, or renamed afterwards:
   an exact `Schussdistanz` can still be typed for a `Schuss` (AC-15). A `Ziel` whose own set holds
   one `Pflock` behaves the same, judged by its own set and not by the `Parkour`-wide one. A
   `Ziel`'s own `Pflöcke` never appear on another `Ziel` of the same `Runde`.
-- AC-8: When a `Runde` is finished with unlogged `Ziele`, then those `Ziele` show no result and the
-  totals cover only the logged `Ziele`; `Schüsse` added when the `Runde` is resumed later are
-  included in the recomputed totals.
-- AC-9: When the owner adds, changes, or removes a `Schuss` or `Schussposition` in an own `Runde`,
-  or changes its `Datum`, then the `Wertungen` recompute and the `Parkour-Snapshot` is unchanged.
+- AC-8: When an in-progress `Runde` is finished with unlogged `Ziele`, then those `Ziele` show no
+  result and the totals cover only the logged `Ziele`. A completed `Runde` cannot be resumed and
+  accepts no further `Schüsse`.
+- AC-9: While an owned `Runde` is in progress, when the owner adds, changes, or removes a `Schuss` or
+  `Schussposition`, or changes its `Datum`, then the `Wertungen` recompute and the captured setup is
+  unchanged. After completion, attempts to add, change, or remove a `Schuss` or `Schussposition`,
+  or change the `Datum`, are refused; the completed `Runde` remains readable and may be deleted.
 - AC-10: When the owner deletes a `Runde` after confirming, then the `Runde` and its `Schüsse` are
   gone, including from per-`Ziel` shot history; without confirmation nothing is deleted.
 - AC-11: When another `Benutzer` requests a `Runde` that is not its own, then the request fails with
@@ -424,9 +432,10 @@ be added, removed, or renamed afterwards:
   distance is typed instead, the `Schuss` stores exactly that positive whole-meter
   `Schussdistanz`, displays it without the estimate label, and holds no `Pflock`; a non-positive or
   fractional value is rejected.
-- AC-16: Given a `Ziel` with `Schüsse` at `Pfeil` 1–4, when the `Schuss` at `Pfeil` 2 is deleted,
-  then the remaining three are renumbered 1–3, their points follow their new `Pfeil`, and the
-  `Ziel` and `Runde` `Wertungen` recompute.
+- AC-16: Given an in-progress `Runde` with a `Ziel` holding `Schüsse` at `Pfeil` 1–4, when the
+  owner deletes the `Schuss` at `Pfeil` 2, then the remaining three are renumbered 1–3, their
+  points follow their new `Pfeil`, and the `Ziel` and `Runde` `Wertungen` recompute. The same
+  deletion on a completed `Runde` is refused.
 - AC-17: On a narrow screen the capture screen shows exactly one `Ziel` at a time, with both
   `Runde` totals and the `Zielfortschritt` in a pinned strip, a `Zielübersicht` that expands into
   a selectable list of every `Ziel`, a shot ledger whose every row offers a `Wertungszone` select,
@@ -569,9 +578,10 @@ check of focus/blur and shot-row editing on a phone-sized viewport.
 | 2026-11-06 | Only a `Schussdistanz` contributes to meter-based metrics; a `Pflock`-form `Schussposition` does not, even when the snapshot configures a `Distanz` for that stake. | TimerErTim (PO) |
 | 2026-11-06 | Rule 16 is named "initial slider state": the derived value seeds the control, while what a `Schuss` stores is decided at registration. | Agent (Cursor) |
 | 2026-11-07 | Interpolated and typed distances use the same bare meter display (for example, "35 m"); no estimate label is shown because the single stored position cannot preserve that distinction. | TimerErTim (PO) |
-| 2026-11-07 | A closed `Runde` remains correctable: its `Schüsse` and `Datum` can be edited, but no new `Schuss` can be registered after completion. | TimerErTim (PO) |
-| 2026-11-10 | A `Ziel` may carry its own `Pflöcke` instead of the `Parkour`-wide set. The capture screen, the slider, and the stored `Schussposition` use the `Ziel`'s effective set (own set when present, otherwise the `Parkour`-wide set); a `Ziel`'s own `Pflöcke` are selectable only for that `Ziel` and never appear on another `Ziel` of the same `Runde`. | Agent (Cursor) |
-| 2026-11-10 | A `Runde` is either a `Parkour` round or a `Freie Runde`, never both and never neither. A `Parkour` round always names both its `Anlage` and its `Parkour` as one origin; a `Freie Runde` names neither, carries its own name, and has no `Pflöcke`. Adding or removing a `Ziel` is a property of a `Freie Runde` alone, so a `Parkour` round cannot have its `Ziel` list edited at all. | TimerErTim (PO) |
+| 2026-11-13 | A completed `Runde` is immutable: its `Schüsse`, positions, and `Datum` cannot be changed, and no `Schuss` can be registered; it remains readable and may be deleted. | TimerErTim (PO) |
+| 2026-11-07 | ~~A closed `Runde` remains correctable: its `Schüsse` and `Datum` can be edited, but no new `Schuss` can be registered after completion.~~ Superseded 2026-11-13 by the PO's decision that completion freezes the entire round. | TimerErTim (PO) |
+| 2026-11-13 | Each captured `Ziel` owns its effective `Pflöcke` as colour plus optional distance; inheritance from a Parkour is resolved when the Runde starts. There is no Runde-wide Pflock set. | TimerErTim (PO) |
+| 2026-11-13 | Provenance is only the `AnlageId`/`ParkourId` pair; the `Runde` stores its name separately. A completed `Runde` has optional provenance and is immutable. | TimerErTim (PO) |
 | 2026-11-10 | A `Freie Runde`'s `Ziele` are added and removed just in time, auto-named "Ziel 1", "Ziel 2", …; removing one deletes its `Schüsse` after a confirmation that names them. Its `Schussposition` stays the one exclusive value: a picked colour (the `Pflock` form) or an exact positive whole-meter `Schussdistanz`; there is no slider. | TimerErTim (PO) |
 | 2026-11-11 | Freie Runde remains in the ongoing implementation scope. An owned running Freie Runde may rename one of its Freie Ziele; whitespace-only names are invalid. The rename preserves ordinal and Schüsse. | TimerErTim (PO) |
 | 2026-11-11 | Freies Ziel names edit inline on focus and save on defocus; colour and exact meter are presented as mutually exclusive choices in the capture control and expanded shot editor. | TimerErTim (PO) |

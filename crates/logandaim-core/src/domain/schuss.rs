@@ -10,19 +10,8 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::konto::BenutzerId;
+use super::runde::ZielId;
 use crate::domain::{Abstand, common::Farbe};
-
-/// A neutral UUID identity persisted at the shared Schuss boundary.
-///
-/// The owning Runde's setup maps this UUID to its neutral round-local target identity.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct SchussZielId(pub Uuid);
-
-impl From<super::runde::RundenZielId> for SchussZielId {
-    fn from(id: super::runde::RundenZielId) -> Self {
-        Self(id.0)
-    }
-}
 
 /// Identity of one logged Schuss.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -131,7 +120,7 @@ pub enum SchussFehler {
 pub struct NeuerSchuss {
     runde_id: RundeId,
     erfasser: Erfasser,
-    ziel_id: SchussZielId,
+    ziel_id: ZielId,
     pfeil: NonZeroUsize,
     wertungszone: Wertungszone,
     position: Option<Schussposition>,
@@ -142,7 +131,7 @@ impl NeuerSchuss {
     pub fn neu(
         runde_id: RundeId,
         erfasser: Erfasser,
-        ziel_id: SchussZielId,
+        ziel_id: ZielId,
         pfeil: usize,
         wertungszone: Wertungszone,
         position: Option<Schussposition>,
@@ -166,7 +155,7 @@ impl NeuerSchuss {
         self.erfasser
     }
 
-    pub fn ziel_id(&self) -> SchussZielId {
+    pub fn ziel_id(&self) -> ZielId {
         self.ziel_id
     }
 
@@ -186,14 +175,14 @@ impl NeuerSchuss {
 /// One arrow shot at one Ziel.
 ///
 /// The only aggregate invariant is `pfeil != 0`; membership in a Runde is a use-case
-/// concern, validated against that Runde's snapshot (AC-9). The Erfasser is fixed at
+/// concern, validated against that Runde's captured route (AC-9). The Erfasser is fixed at
 /// construction: there is no mutator that could reassign it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Schuss {
     id: SchussId,
     runde_id: RundeId,
     erfasser: Erfasser,
-    ziel_id: SchussZielId,
+    ziel_id: ZielId,
     pfeil: NonZeroUsize,
     wertungszone: Wertungszone,
     position: Option<Schussposition>,
@@ -219,7 +208,7 @@ impl Schuss {
         id: SchussId,
         runde_id: RundeId,
         erfasser: Erfasser,
-        ziel_id: SchussZielId,
+        ziel_id: ZielId,
         pfeil: usize,
         wertungszone: Wertungszone,
         position: Option<Schussposition>,
@@ -240,7 +229,7 @@ impl Schuss {
         self.erfasser
     }
 
-    pub fn ziel_id(&self) -> SchussZielId {
+    pub fn ziel_id(&self) -> ZielId {
         self.ziel_id
     }
 
@@ -335,7 +324,7 @@ impl Zielwertung {
 /// [`ZielSchüsse::wertung`] answers `None`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ZielSchüsse {
-    ziel_id: SchussZielId,
+    ziel_id: ZielId,
     schüsse: Vec<Schuss>,
 }
 
@@ -349,7 +338,7 @@ impl ZielSchüsse {
     /// Sort the given Schüsse by Pfeil, so the fold is order-independent. Every Schuss
     /// must name this Ziel: a wrong row is refused rather than silently counted.
     pub fn für_ziel(
-        ziel_id: SchussZielId,
+        ziel_id: ZielId,
         schüsse: impl IntoIterator<Item = Schuss>,
     ) -> Result<Self, ZielSchüsseFehler> {
         let mut schüsse: Vec<_> = schüsse.into_iter().collect();
@@ -360,7 +349,7 @@ impl ZielSchüsse {
         Ok(Self { ziel_id, schüsse })
     }
 
-    pub fn ziel_id(&self) -> SchussZielId {
+    pub fn ziel_id(&self) -> ZielId {
         self.ziel_id
     }
 
@@ -424,12 +413,8 @@ mod tests {
         NonZeroUsize::new(n).expect("test fixture uses 1-based Pfeile")
     }
 
-    fn ziel() -> SchussZielId {
-        SchussZielId(Uuid::from_u128(1))
-    }
-
-    fn runden_ziel() -> crate::domain::RundenZielId {
-        crate::domain::RundenZielId(Uuid::from_u128(1))
+    fn ziel() -> ZielId {
+        ZielId(Uuid::from_u128(1))
     }
 
     fn schuss(pfeil: usize, zone: Wertungszone) -> Schuss {
@@ -447,7 +432,7 @@ mod tests {
 
     fn mengen(schüsse: &[(usize, Wertungszone)]) -> ZielSchüsse {
         ZielSchüsse::für_ziel(
-            runden_ziel().into(),
+            ziel(),
             schüsse.iter().map(|&(pfeil, zone)| schuss(pfeil, zone)),
         )
         .unwrap()
@@ -514,7 +499,7 @@ mod tests {
     #[test_log::test]
     fn ac6_leer_ohne_wertung_sonst_beliebig_lang() {
         assert!(
-            ZielSchüsse::für_ziel(runden_ziel().into(), [])
+            ZielSchüsse::für_ziel(ziel(), [])
                 .unwrap()
                 .wertung()
                 .is_none()
@@ -558,7 +543,7 @@ mod tests {
             NeuerSchuss::neu(
                 RundeId(Uuid::nil()),
                 Erfasser::Anonymisiert { am: Utc::now() },
-                SchussZielId(Uuid::from_u128(99)),
+                ZielId(Uuid::from_u128(99)),
                 1,
                 Kill,
                 None,
@@ -566,7 +551,7 @@ mod tests {
             .unwrap(),
         );
         assert!(matches!(
-            ZielSchüsse::für_ziel(runden_ziel().into(), [fremd]),
+            ZielSchüsse::für_ziel(ziel(), [fremd]),
             Err(ZielSchüsseFehler::FremdesZiel)
         ));
     }

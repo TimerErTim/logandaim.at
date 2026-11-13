@@ -18,8 +18,8 @@ use crate::{
     application::ExecutionContext,
     domain::{
         Anlage, AnlageAdresse, AnlageFehler, AnlageId, AnlageKontakt, AnlageVerwaltungRolle,
-        AnlageZielId, NeueAnlage, NeuerParkour, NonEmptyString, ParkourFehler, ParkourId, Pflock,
-        ZielFehler, Zielplatzierung, konto::BenutzerId,
+        AnlageZielId, NeueAnlage, NeuerParkour, NonEmptyString, ParkourFehler, ParkourId,
+        ParkourPflock, ZielFehler, Zielplatzierung, konto::BenutzerId,
     },
     ports::RepositoryError,
     service::{UseCase, darf_anlage_verwalten, darf_masterdaten_pflegen},
@@ -699,7 +699,7 @@ impl UseCase<Anlage> for ZielEntfernen {
 pub struct ParkourHinzufügen {
     pub anlage_id: AnlageId,
     pub name: NonEmptyString,
-    pub pflöcke: Vec<Pflock>,
+    pub pflöcke: Vec<ParkourPflock>,
     pub platzierungen: Vec<Zielplatzierung>,
 }
 
@@ -758,12 +758,12 @@ impl UseCase<Anlage> for ParkourHinzufügen {
 
 /// Replace a Parkour' whole shooting setup (FR-3, AC-6/AC-7).
 ///
-/// Only master data changes: an existing Runde keeps its captured snapshot (NFR-3).
+/// Only master data changes: an existing Runde keeps its captured route (NFR-3).
 #[derive(Debug, Clone)]
 pub struct ParkourSetupÄndern {
     pub anlage_id: AnlageId,
     pub parkour_id: ParkourId,
-    pub pflöcke: Vec<Pflock>,
+    pub pflöcke: Vec<ParkourPflock>,
     pub platzierungen: Vec<Zielplatzierung>,
 }
 
@@ -818,7 +818,7 @@ impl UseCase<Anlage> for ParkourSetupÄndern {
     }
 }
 
-/// Rename a Parkour. Its identity, and every snapshot naming it, stay unchanged.
+/// Rename a Parkour. Its identity, and every round naming it, stay unchanged.
 #[derive(Debug, Clone)]
 pub struct ParkourUmbenennen {
     pub anlage_id: AnlageId,

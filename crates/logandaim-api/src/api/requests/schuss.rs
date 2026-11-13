@@ -8,7 +8,7 @@ use error_stack::Report;
 use uuid::Uuid;
 
 use logandaim_core::{
-    domain::{RundeId, SchussZielId, Schussposition},
+    domain::{RundeId, Schussposition, ZielId},
     service::{SchussRegistrieren, SchussRegistrierenFehler, SchussÄndern, SchussÄndernFehler},
 };
 
@@ -80,7 +80,7 @@ impl SchussErstellungRequest {
     ) -> Result<SchussRegistrieren, Report<SchussRegistrierenFehler>> {
         Ok(SchussRegistrieren {
             runde_id,
-            ziel_id: SchussZielId(self.ziel_id),
+            ziel_id: ZielId(self.ziel_id),
             wertungszone: self.wertungszone.into(),
             position: self
                 .position

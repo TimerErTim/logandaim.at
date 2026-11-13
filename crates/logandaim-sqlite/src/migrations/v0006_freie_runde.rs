@@ -102,35 +102,150 @@ impl UpMigration<libsql::Transaction, libsql::Error> for Migration {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
-struct LegacyParkourSnapshot {
-    parkour_id: uuid::Uuid,
-    parkour_name: String,
-    pflöcke: Vec<LegacyPflock>,
-    ziele: Vec<LegacyZiel>,
+fn corrupt() -> libsql::Error {
+    libsql::Error::SqliteFailure(
+        libsql::ffi::SQLITE_CORRUPT,
+        "corrupt legacy Runde snapshot".into(),
+    )
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
-struct LegacyPflock {
-    farbe: String,
-    position: usize,
+fn pflock_dtos(
+    source: &[serde_json::Value],
+    distances: &serde_json::Map<String, serde_json::Value>,
+) -> Result<Vec<serde_json::Value>, libsql::Error> {
+    source
+        .iter()
+        .map(|pflock| {
+            let farbe = pflock
+                .get("farbe")
+                .and_then(serde_json::Value::as_str)
+                .ok_or_else(corrupt)?;
+            let distance = pflock
+                .get("abstand")
+                .cloned()
+                .or_else(|| distances.get(farbe).cloned());
+            Ok(serde_json::json!({ "farbe": farbe, "abstand": distance }))
+        })
+        .collect()
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
-struct LegacyZiel {
-    ziel_id: uuid::Uuid,
-    tiername: String,
-    zielnummer: u32,
-    #[serde(default)]
-    pflöcke: LegacyZielPflöcke,
-    abstände: Vec<(String, u32)>,
+fn target_ziele(
+    source: &[serde_json::Value],
+    parkour_pflöcke: &[serde_json::Value],
+    has_anlage: bool,
+) -> Result<Vec<serde_json::Value>, libsql::Error> {
+    source
+        .iter()
+        .map(|ziel| {
+            let id = ziel.get("ziel_id").cloned().ok_or_else(corrupt)?;
+            let name = ziel
+                .get("tiername")
+                .or_else(|| ziel.get("name"))
+                .cloned()
+                .ok_or_else(corrupt)?;
+            let number = ziel
+                .get("zielnummer")
+                .or_else(|| ziel.get("ordinal"))
+                .cloned()
+                .ok_or_else(corrupt)?;
+            let own_distances = ziel
+                .get("abstände")
+                .and_then(serde_json::Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(|pair| Some((pair.get(0)?.as_str()?.to_owned(), pair.get(1)?.clone())))
+                .collect::<serde_json::Map<_, _>>();
+            let stored = ziel
+                .get("pflöcke")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
+            let source_pflöcke = if let Some(array) = stored.as_array() {
+                array.clone()
+            } else if stored == "InheritFromParkour" || stored.is_null() {
+                parkour_pflöcke.to_vec()
+            } else if let Some(explicit) =
+                stored.get("Explicit").and_then(serde_json::Value::as_array)
+            {
+                explicit.clone()
+            } else {
+                return Err(corrupt());
+            };
+            let mut result = serde_json::json!({
+                "ziel_id": id,
+                "tiername": name,
+                "zielnummer": number,
+                "pflöcke": pflock_dtos(&source_pflöcke, &own_distances)?,
+            });
+            if let Some(anlage_ziel_id) = ziel.get("anlage_ziel_id") {
+                result["anlage_ziel_id"] = anlage_ziel_id.clone();
+            } else if !has_anlage {
+                result["anlage_ziel_id"] = serde_json::Value::Null;
+            }
+            Ok(result)
+        })
+        .collect()
 }
 
-#[derive(Default, serde::Deserialize, serde::Serialize)]
-enum LegacyZielPflöcke {
-    #[default]
-    InheritFromParkour,
-    Explicit(Vec<LegacyPflock>),
+fn rewrite_document(
+    value: serde_json::Value,
+    anlage_column: Option<&str>,
+    parkour_column: Option<&str>,
+) -> Result<serde_json::Value, libsql::Error> {
+    let object = value.as_object().ok_or_else(corrupt)?;
+    let anlage = object
+        .get("anlage_id")
+        .and_then(serde_json::Value::as_str)
+        .or(anlage_column);
+    let parkour = object
+        .get("parkour_id")
+        .and_then(serde_json::Value::as_str)
+        .or(parkour_column);
+    let goals = object
+        .get("ziele")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(corrupt)?;
+    let parkour_pflöcke = object
+        .get("pflöcke")
+        .and_then(serde_json::Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+
+    if let Some(parkour_id) = parkour {
+        let anlage_id = anlage.ok_or_else(corrupt)?;
+        if let Some(column) = parkour_column {
+            if column != parkour_id {
+                return Err(corrupt());
+            }
+        }
+        if let Some(column) = anlage_column {
+            if column != anlage_id {
+                return Err(corrupt());
+            }
+        }
+        let name = object
+            .get("name")
+            .or_else(|| object.get("parkour_name"))
+            .cloned()
+            .ok_or_else(corrupt)?;
+        Ok(serde_json::json!({
+            "anlage_id": anlage_id,
+            "parkour_id": parkour_id,
+            "name": name,
+            "ziele": target_ziele(goals, &parkour_pflöcke, true)?,
+        }))
+    } else {
+        if anlage.is_some() || parkour_column.is_some() || anlage_column.is_some() {
+            return Err(libsql::Error::SqliteFailure(
+                libsql::ffi::SQLITE_CORRUPT,
+                "free Runde has Parkour references".into(),
+            ));
+        }
+        let name = object.get("name").cloned().ok_or_else(corrupt)?;
+        Ok(serde_json::json!({
+            "name": name,
+            "ziele": target_ziele(goals, &[], false)?,
+        }))
+    }
 }
 
 pub(super) async fn rewrite_legacy_snapshots(
@@ -155,49 +270,8 @@ pub(super) async fn rewrite_legacy_snapshots(
                 "corrupt legacy Runde snapshot".into(),
             )
         })?;
-        if value.get("anlage_id").is_some() {
-            continue;
-        }
-
-        // A free-round document was already introduced by v0006 and has no Parkour ids or
-        // denormalised references. Leave it alone; a Parkour row must carry both ids.
-        if value.get("name").is_some() {
-            if anlage_id.is_none() && parkour_id.is_none() {
-                continue;
-            }
-            return Err(libsql::Error::SqliteFailure(
-                libsql::ffi::SQLITE_CORRUPT,
-                "free Runde has Parkour references".into(),
-            ));
-        }
-
-        let (Some(anlage_id), Some(parkour_id)) = (anlage_id, parkour_id) else {
-            return Err(libsql::Error::SqliteFailure(
-                libsql::ffi::SQLITE_CORRUPT,
-                "corrupt legacy Parkour Runde".into(),
-            ));
-        };
-        let legacy: LegacyParkourSnapshot = serde_json::from_value(value).map_err(|_| {
-            libsql::Error::SqliteFailure(
-                libsql::ffi::SQLITE_CORRUPT,
-                "corrupt legacy Runde snapshot".into(),
-            )
-        })?;
-        if legacy.parkour_id.to_string() != parkour_id {
-            return Err(libsql::Error::SqliteFailure(
-                libsql::ffi::SQLITE_CORRUPT,
-                "legacy Runde Parkour id mismatch".into(),
-            ));
-        }
-
-        let rewritten = serde_json::json!({
-            "anlage_id": anlage_id,
-            "parkour_id": legacy.parkour_id,
-            "parkour_name": legacy.parkour_name,
-            "pflöcke": legacy.pflöcke,
-            "ziele": legacy.ziele,
-        })
-        .to_string();
+        let rewritten =
+            rewrite_document(value, anlage_id.as_deref(), parkour_id.as_deref())?.to_string();
         updates.push((id, rewritten));
     }
     drop(rows);
@@ -259,13 +333,13 @@ mod tests {
         let legacy_snapshot = r##"{
             "parkour_id":"00000000-0000-0000-0000-000000000002",
             "parkour_name":"Wald",
-            "pflöcke":[],
+            "pflöcke":[{"farbe":"#123456","position":0}],
             "ziele":[
                 {
                     "ziel_id":"00000000-0000-0000-0000-000000000004",
                     "tiername":"Ohne eigenen Pflocksatz",
                     "zielnummer":1,
-                    "abstände":[]
+                    "abstände":[["#123456",35]]
                 },
                 {
                     "ziel_id":"00000000-0000-0000-0000-000000000005",
@@ -315,11 +389,12 @@ mod tests {
         let json: serde_json::Value = serde_json::from_str(&snapshot).unwrap();
         assert_eq!(json["anlage_id"], anlage_id);
         assert_eq!(json["parkour_id"], parkour_id);
-        assert_eq!(json["ziele"][0]["pflöcke"], "InheritFromParkour");
-        assert_eq!(
-            json["ziele"][1]["pflöcke"]["Explicit"][0]["farbe"],
-            "#123456"
-        );
+        assert_eq!(json["ziele"][0]["pflöcke"][0]["farbe"], "#123456");
+        assert_eq!(json["ziele"][0]["pflöcke"][0]["abstand"], 35);
+        assert_eq!(json["ziele"][1]["pflöcke"][0]["farbe"], "#123456");
+        assert!(json["ziele"][1]["pflöcke"][0]["abstand"].is_null());
+        assert!(json.get("parkour_name").is_none());
+        assert!(json.get("pflöcke").is_none());
         assert_eq!(version, 2);
         let mut foreign_keys = connection
             .query("PRAGMA foreign_key_check", ())
