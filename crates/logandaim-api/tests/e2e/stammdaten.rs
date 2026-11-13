@@ -17,10 +17,10 @@ fn anlage_body(name: &str) -> Value {
     json!({
         "name": name,
         "adresse": {
-            "straße": "Waldweg 1",
+            "strasse": "Waldweg 1",
             "postleitzahl": "3100",
             "ort": "St. Pölten",
-            "ländercode": "AT",
+            "laendercode": "AT",
         },
         "kontakt": { "name": "Verein Breitenstein" },
     })
@@ -73,14 +73,14 @@ async fn parkour_hinzufügen(
             &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Waldrunde",
-                "pflöcke": [
+                "pfloecke": [
                     { "id": nah, "farbe": "#1b4f9c" },
                     { "id": weit, "farbe": "#c0392b" },
                 ],
                 "platzierungen": [{
                     "zielId": ziel_id,
-                    "pflöcke": { "art": "InheritFromParkour" },
-                    "abstände": [
+                    "pfloecke": { "art": "InheritFromParkour" },
+                    "abstaende": [
                         { "pflockId": nah, "meter": 20 },
                         { "pflockId": weit, "meter": 40 },
                     ],
@@ -569,9 +569,9 @@ async fn ac13_die_parkourliste_ist_oeffentlich_und_zeigt_nur_aktive_parkour() {
     assert_eq!(parkour[0]["parkour"]["id"], bleibt);
     assert_eq!(parkour[0]["anlageName"], "Breitenstein");
     assert_eq!(
-        parkour[0]["parkour"]["pflöcke"]
+        parkour[0]["parkour"]["pfloecke"]
             .as_array()
-            .expect("pflöcke")
+            .expect("pfloecke")
             .iter()
             .map(|pflock| pflock["farbe"].as_str())
             .collect::<Vec<_>>(),
@@ -597,11 +597,11 @@ async fn ac6_und_ac7_ein_parkour_setup_ersetzt_die_ganze_aufstellung() {
         .put_json_auth(
             &format!("/api/anlagen/{anlage_id}/parkour/{parkour_id}/setup"),
             json!({
-                "pflöcke": [{ "id": nah, "farbe": "#e8b81c" }],
+                "pfloecke": [{ "id": nah, "farbe": "#e8b81c" }],
                 "platzierungen": [{
                     "zielId": ziel_id,
-                    "pflöcke": { "art": "InheritFromParkour" },
-                    "abstände": [{ "pflockId": nah, "meter": 15 }],
+                    "pfloecke": { "art": "InheritFromParkour" },
+                    "abstaende": [{ "pflockId": nah, "meter": 15 }],
                 }],
             }),
             &admin,
@@ -615,13 +615,13 @@ async fn ac6_und_ac7_ein_parkour_setup_ersetzt_die_ganze_aufstellung() {
 
     let parkour = &body["parkour"][0];
     assert_eq!(
-        parkour["pflöcke"].as_array().expect("pflöcke").len(),
+        parkour["pfloecke"].as_array().expect("pfloecke").len(),
         1,
         "AC-6: der alte Pflock ist fort"
     );
-    assert_eq!(parkour["pflöcke"][0]["farbe"], "#e8b81c");
+    assert_eq!(parkour["pfloecke"][0]["farbe"], "#e8b81c");
     assert_eq!(
-        parkour["pflöcke"][0].get("bezeichnung"),
+        parkour["pfloecke"][0].get("bezeichnung"),
         None,
         "ein Pflock trägt keine Bezeichnung mehr"
     );
@@ -727,10 +727,10 @@ async fn das_anlagenverzeichnis_ist_oeffentlich_und_ohne_kontaktdaten() {
             json!({
                 "name": "Breitenstein",
                 "adresse": {
-                    "straße": "Waldweg 1",
+                    "strasse": "Waldweg 1",
                     "postleitzahl": "3100",
                     "ort": "St. Pölten",
-                    "ländercode": "AT",
+                    "laendercode": "AT",
                 },
                 "kontakt": {
                     "name": "Verein Breitenstein",
@@ -767,13 +767,13 @@ async fn das_anlagenverzeichnis_ist_oeffentlich_und_ohne_kontaktdaten() {
     assert_eq!(anlage["anlageId"], anlage_id);
     assert_eq!(anlage["name"], "Breitenstein");
     assert_eq!(anlage["ort"], "St. Pölten");
-    assert_eq!(anlage["ländercode"], "AT");
+    assert_eq!(anlage["laendercode"], "AT");
 
     let parkour = anlage["parkour"].as_array().expect("parkour");
     assert_eq!(parkour.len(), 1, "nur der aktive Parkour");
     assert_eq!(parkour[0]["id"], bleibt);
     assert_eq!(parkour[0]["name"], "Waldrunde");
-    assert_eq!(parkour[0]["anzahlPflöcke"], 2);
+    assert_eq!(parkour[0]["anzahlPfloecke"], 2);
     assert_eq!(parkour[0]["anzahlZiele"], 1);
 
     // No contact data in the public payload.
@@ -891,9 +891,9 @@ async fn die_anlage_zeigt_wo_ihre_ziele_verwendet_werden() {
     assert_eq!(verwendungen.len(), 1);
     assert_eq!(body["parkour"][0]["name"], "Waldrunde");
     assert_eq!(
-        verwendungen[0]["abstände"]
+        verwendungen[0]["abstaende"]
             .as_array()
-            .expect("abstände")
+            .expect("abstaende")
             .iter()
             .map(|abstand| abstand["meter"].as_u64())
             .collect::<Vec<_>>(),
@@ -915,7 +915,7 @@ async fn ein_pflock_verlangt_eine_hex_farbe() {
             &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Waldrunde",
-                "pflöcke": [{ "id": Uuid::new_v4(), "farbe": "Rot" }],
+                "pfloecke": [{ "id": Uuid::new_v4(), "farbe": "Rot" }],
             }),
             &admin,
         )
@@ -954,17 +954,17 @@ async fn ein_ziel_traegt_seine_eigenen_pfloecke_mit_abstaenden() {
             &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Waldrunde",
-                "pflöcke": [pflock_json(geteilt, "#c0392b")],
+                "pfloecke": [pflock_json(geteilt, "#c0392b")],
                 "platzierungen": [{
                     "zielId": ziel_id,
-                    "pflöcke": {
+                    "pfloecke": {
                         "art": "Explicit",
-                        "pflöcke": [
+                        "pfloecke": [
                             pflock_json(eigen_nah, "#c0392b"),
                             pflock_json(eigen_weit, "#e8b81c"),
                         ],
                     },
-                    "abstände": [
+                    "abstaende": [
                         { "pflockId": eigen_nah, "meter": 15 },
                         { "pflockId": eigen_weit, "meter": 45 },
                     ],
@@ -982,20 +982,20 @@ async fn ein_ziel_traegt_seine_eigenen_pfloecke_mit_abstaenden() {
     assert_eq!(status, StatusCode::OK, "{body}");
 
     // The Parkour round-trips the union as sent.
-    let pflöcke = &body["parkour"][0]["platzierungen"][0]["pflöcke"];
+    let pflöcke = &body["parkour"][0]["platzierungen"][0]["pfloecke"];
     assert_eq!(pflöcke["art"], "Explicit");
     assert_eq!(
-        pflöcke["pflöcke"].as_array().expect("pflöcke").len(),
+        pflöcke["pfloecke"].as_array().expect("pfloecke").len(),
         2,
         "#72: der eigene Satz hat zwei Pflöcke"
     );
-    assert_eq!(pflöcke["pflöcke"][0]["id"], eigen_nah.to_string());
-    assert_eq!(pflöcke["pflöcke"][0]["farbe"], "#c0392b");
+    assert_eq!(pflöcke["pfloecke"][0]["id"], eigen_nah.to_string());
+    assert_eq!(pflöcke["pfloecke"][0]["farbe"], "#c0392b");
 
     // ...and the Ziel's usages carry the enum plus the distances keyed by its own ids.
     let verwendung = &body["ziele"][0]["verwendungen"][0];
-    assert_eq!(verwendung["pflöcke"]["art"], "Explicit");
-    let abstände = verwendung["abstände"].as_array().expect("abstände");
+    assert_eq!(verwendung["pfloecke"]["art"], "Explicit");
+    let abstände = verwendung["abstaende"].as_array().expect("abstaende");
     assert_eq!(abstände.len(), 2);
     assert_eq!(abstände[0]["pflockId"], eigen_nah.to_string());
     assert_eq!(abstände[0]["meter"], 15);
@@ -1018,11 +1018,11 @@ async fn eine_platzierung_ohne_pfloecke_erbt_die_parkour_pfloecke() {
             &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Waldrunde",
-                "pflöcke": [pflock_json(Uuid::new_v4(), "#c0392b")],
+                "pfloecke": [pflock_json(Uuid::new_v4(), "#c0392b")],
                 "platzierungen": [{
                     "zielId": ziel_id,
-                    "pflöcke": { "art": "InheritFromParkour" },
-                    "abstände": []
+                    "pfloecke": { "art": "InheritFromParkour" },
+                    "abstaende": []
                 }],
             }),
             &admin,
@@ -1030,7 +1030,7 @@ async fn eine_platzierung_ohne_pfloecke_erbt_die_parkour_pfloecke() {
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(
-        body["parkour"][0]["platzierungen"][0]["pflöcke"]["art"], "InheritFromParkour",
+        body["parkour"][0]["platzierungen"][0]["pfloecke"]["art"], "InheritFromParkour",
         "#72: ein fehlendes Feld bedeutet Erben"
     );
 
@@ -1041,11 +1041,11 @@ async fn eine_platzierung_ohne_pfloecke_erbt_die_parkour_pfloecke() {
             &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Feldrunde",
-                "pflöcke": [pflock_json(Uuid::new_v4(), "#c0392b")],
+                "pfloecke": [pflock_json(Uuid::new_v4(), "#c0392b")],
                 "platzierungen": [{
                     "zielId": ziel_id,
-                    "pflöcke": { "art": "InheritFromParkour" },
-                    "abstände": [],
+                    "pfloecke": { "art": "InheritFromParkour" },
+                    "abstaende": [],
                 }],
             }),
             &admin,
@@ -1053,7 +1053,7 @@ async fn eine_platzierung_ohne_pfloecke_erbt_die_parkour_pfloecke() {
         .await;
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(
-        body["parkour"][1]["platzierungen"][0]["pflöcke"]["art"],
+        body["parkour"][1]["platzierungen"][0]["pfloecke"]["art"],
         "InheritFromParkour"
     );
 }
@@ -1073,11 +1073,11 @@ async fn ein_leerer_eigener_satz_wird_abgelehnt() {
             &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Waldrunde",
-                "pflöcke": [pflock_json(Uuid::new_v4(), "#c0392b")],
+                "pfloecke": [pflock_json(Uuid::new_v4(), "#c0392b")],
                 "platzierungen": [{
                     "zielId": ziel_id,
-                    "pflöcke": { "art": "Explicit", "pflöcke": [] },
-                    "abstände": [],
+                    "pfloecke": { "art": "Explicit", "pfloecke": [] },
+                    "abstaende": [],
                 }],
             }),
             &admin,

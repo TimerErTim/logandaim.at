@@ -198,7 +198,10 @@ impl AnlageErstellungRequest {
 /// Rewrite the Anlage's descriptive fields.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[cfg_attr(
+    feature = "openapi",
+    oai(rename = "AnlageAenderungRequest", rename_all = "camelCase")
+)]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnlageÄnderungRequest {
@@ -347,6 +350,8 @@ pub struct ParkourErstellungRequest {
     /// Shown name of the new Parkour.
     pub name: String,
     /// The Pflöcke, far to near.
+    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
+    #[serde(rename = "pfloecke")]
     pub pflöcke: Vec<ParkourPflock>,
     /// The Ziele on the route, in walking order. May be empty.
     #[serde(default)]
@@ -375,6 +380,8 @@ impl ParkourErstellungRequest {
 #[serde(rename_all = "camelCase")]
 pub struct ParkourSetupRequest {
     /// The Pflöcke, far to near.
+    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
+    #[serde(rename = "pfloecke")]
     pub pflöcke: Vec<ParkourPflock>,
     /// The Ziele on the route, in walking order. May be empty.
     #[serde(default)]

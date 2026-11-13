@@ -177,6 +177,8 @@ pub struct Zielwertung {
     /// Whether the very first arrow hit.
     pub erster_pfeil_getroffen: bool,
     /// How many Schüsse were logged at this Ziel.
+    #[cfg_attr(feature = "openapi", oai(rename = "anzahlSchuesse"))]
+    #[serde(rename = "anzahlSchuesse")]
     pub anzahl_schüsse: usize,
 }
 

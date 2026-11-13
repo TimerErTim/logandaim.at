@@ -2,9 +2,9 @@ import {
   AnlageVerwaltungRolle,
   AnlageZustand,
   type components,
-  // openapi-typescript transliterates the umlaut in `Ländercode` to `LNdercode`; the
-  // seam keeps the domain spelling so call sites never see the codegen artefact.
-  LNdercode as Ländercode,
+  type ZielPfloecke_ExplicitPfloeckeArt as ExplicitArt,
+  type ZielPfloecke_InheritFromParkourPfloeckeArt as InheritArt,
+  Laendercode as Ländercode,
   RundeZustand,
   Wertungszone,
 } from "./schema";
@@ -17,6 +17,22 @@ export {
   RundeZustand,
   Wertungszone,
 };
+
+export type Domainize<T> = T extends ExplicitArt
+  ? "Explicit"
+  : T extends InheritArt
+    ? "InheritFromParkour"
+    : T extends string | number | boolean | null | undefined
+      ? T
+      : T extends readonly (infer Item)[]
+        ? Domainize<Item>[]
+        : T extends object
+          ? {
+              [K in keyof T as K extends keyof WireToDomain
+                ? WireToDomain[K]
+                : K]: Domainize<T[K]>;
+            }
+          : T;
 
 /**
  * Transport-neutral API surface. Replacing this implementation is the seam for a
@@ -130,7 +146,32 @@ export interface AuthSession {
   subscribe(listener: () => void): () => void;
 }
 
-type Schemas = components["schemas"];
+export type WireToDomain = {
+  strasse: "straße";
+  laendercode: "ländercode";
+  bestaetigt: "bestätigt";
+  pfloecke: "pflöcke";
+  abstaende: "abstände";
+  schuesse: "schüsse";
+  anzahlPfloecke: "anzahlPflöcke";
+  anzahlSchuesse: "anzahlSchüsse";
+};
+type DomainSchemaName = {
+  AnlageAenderungRequest: "AnlageÄnderungRequest";
+  AnlageOeffentlich: "AnlageÖffentlich";
+  BenutzerLoeschungRequest: "BenutzerLöschungRequest";
+  ExplicitPfloecke: "ExplicitPflöcke";
+  InheritFromParkourPfloecke: "InheritFromParkourPflöcke";
+  Laendercode: "Ländercode";
+  ParkourOeffentlich: "ParkourÖffentlich";
+  SchussAenderungRequest: "SchussÄnderungRequest";
+  ZielPfloecke: "ZielPflöcke";
+};
+export type Schemas = {
+  [K in keyof components["schemas"] as K extends keyof DomainSchemaName
+    ? DomainSchemaName[K]
+    : K]: Domainize<components["schemas"][K]>;
+};
 
 export type Benutzer = Schemas["Benutzer"];
 /** The authenticated caller: the only shape that carries a `rolle`. */
@@ -152,16 +193,8 @@ export type Ziel = Schemas["Ziel"];
 /** The response's round-owned target; same wire schema as the domain name. */
 export type RundeZiel = Ziel;
 /** The Ziel-specific ordered set, or the Parkour-wide set when inherited. */
-export type ZielPflöcke =
-  | { art: "InheritFromParkour"; [key: string]: unknown }
-  | { art: "Explicit"; pflöcke: ParkourPflock[]; [key: string]: unknown };
-export type Zielplatzierung = Omit<
-  Schemas["Zielplatzierung"],
-  "pflöcke" | "abstände"
-> & {
-  pflöcke: ZielPflöcke;
-  abstände: PflockAbstand[];
-};
+export type ZielPflöcke = Schemas["ZielPflöcke"];
+export type Zielplatzierung = Schemas["Zielplatzierung"];
 export type Parkour = Omit<Schemas["Parkour"], "platzierungen"> & {
   platzierungen: Zielplatzierung[];
 };
@@ -194,11 +227,10 @@ export type Erfasser = Schemas["Erfasser"];
 
 export type AnlageErstellungInput = Schemas["AnlageErstellungRequest"];
 export type ZielInput = Schemas["ZielRequest"];
-type ParkourErstellungRequest = Omit<
+export type ParkourInput = Omit<
   Schemas["ParkourErstellungRequest"],
   "platzierungen"
 > & { platzierungen: Zielplatzierung[] };
-export type ParkourInput = ParkourErstellungRequest;
 export type ParkourSetupInput = Omit<
   Schemas["ParkourSetupRequest"],
   "platzierungen"

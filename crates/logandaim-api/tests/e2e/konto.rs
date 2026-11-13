@@ -615,8 +615,8 @@ async fn ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei() {
     let (status, _) = harness
         .client
         .post_json(
-            "/api/benutzer/löschung",
-            json!({ "passwort": PASSWORT, "bestätigt": true }),
+            "/api/benutzer/loeschung",
+            json!({ "passwort": PASSWORT, "bestaetigt": true }),
         )
         .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "ohne Anmeldung");
@@ -628,8 +628,8 @@ async fn ac12_löschung_entfernt_identität_und_gibt_die_adresse_frei() {
     let (status, _) = harness
         .client
         .post_json_auth(
-            "/api/benutzer/löschung",
-            json!({ "passwort": PASSWORT, "bestätigt": true }),
+            "/api/benutzer/loeschung",
+            json!({ "passwort": PASSWORT, "bestaetigt": true }),
             &access,
         )
         .await;
@@ -663,8 +663,8 @@ async fn ac12_löschung_ohne_bestätigung_oder_mit_falschem_passwort_scheitert()
     let (status, _) = harness
         .client
         .post_json_auth(
-            "/api/benutzer/löschung",
-            json!({ "passwort": PASSWORT, "bestätigt": false }),
+            "/api/benutzer/loeschung",
+            json!({ "passwort": PASSWORT, "bestaetigt": false }),
             &access,
         )
         .await;
@@ -673,8 +673,8 @@ async fn ac12_löschung_ohne_bestätigung_oder_mit_falschem_passwort_scheitert()
     let (status, _) = harness
         .client
         .post_json_auth(
-            "/api/benutzer/löschung",
-            json!({ "passwort": "falsch-falsch", "bestätigt": true }),
+            "/api/benutzer/loeschung",
+            json!({ "passwort": "falsch-falsch", "bestaetigt": true }),
             &access,
         )
         .await;
