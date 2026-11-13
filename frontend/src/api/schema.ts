@@ -207,7 +207,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["Anlage\u00D6ffentlich"][];
+                        "application/json; charset=utf-8": components["schemas"]["AnlageOeffentlich"][];
                     };
                 };
                 500: {
@@ -303,7 +303,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["Anlage\u00C4nderungRequest"];
+                    "application/json; charset=utf-8": components["schemas"]["AnlageAenderungRequest"];
                 };
             };
             responses: {
@@ -1116,7 +1116,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["Parkour\u00D6ffentlich"][];
+                        "application/json; charset=utf-8": components["schemas"]["ParkourOeffentlich"][];
                     };
                 };
                 500: {
@@ -1735,7 +1735,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["Schuss\u00C4nderungRequest"];
+                    "application/json; charset=utf-8": components["schemas"]["SchussAenderungRequest"];
                 };
             };
             responses: {
@@ -2322,7 +2322,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/benutzer/l\u00F6schung": {
+    "/benutzer/loeschung": {
         parameters: {
             query?: never;
             header?: never;
@@ -2346,7 +2346,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["BenutzerL\u00F6schungRequest"];
+                    "application/json; charset=utf-8": components["schemas"]["BenutzerLoeschungRequest"];
                 };
             };
             responses: {
@@ -2422,13 +2422,25 @@ export interface components {
          */
         AnlageAdresse: {
             /** @description Street and house number. */
-            "stra\u00DFe": string;
+            strasse: string;
             /** @description Postal code of the place. */
             postleitzahl: string;
             /** @description The place itself. */
             ort: string;
             /** @description Two-letter country code; only `AT`, `DE`, and `CH` are accepted. */
-            "l\u00E4ndercode": components["schemas"]["L\u00E4ndercode"] & unknown;
+            laendercode: components["schemas"]["Laendercode"] & unknown;
+        };
+        /**
+         * AnlageAenderungRequest
+         * @description Rewrite the Anlage's descriptive fields.
+         */
+        AnlageAenderungRequest: {
+            /** @description Shown name of the Anlage. */
+            name: string;
+            /** @description Its structured address; every address field is required. */
+            adresse: components["schemas"]["AnlageAdresse"] & unknown;
+            /** @description Optional contact details. */
+            kontakt: components["schemas"]["AnlageKontakt"] & unknown;
         };
         /**
          * AnlageErstellungRequest
@@ -2459,6 +2471,28 @@ export interface components {
             telefon?: string;
             /** @description Website of the Anlage. */
             website?: string;
+        };
+        /**
+         * AnlageOeffentlich
+         * @description One active Anlage in the public directory.
+         *
+         *     Public, so it carries no contact data: an email address or phone number is personal data
+         *     and is not published.
+         */
+        AnlageOeffentlich: {
+            /**
+             * Format: uuid
+             * @description Identity of the Anlage.
+             */
+            anlageId: string;
+            /** @description Shown name of the Anlage. */
+            name: string;
+            /** @description The place the Anlage is in. */
+            ort: string;
+            /** @description Two-letter country code of that place. */
+            laendercode: components["schemas"]["Laendercode"] & unknown;
+            /** @description The Parkour it currently offers, without their setup. */
+            parkour: components["schemas"]["ParkourKurz"][];
         };
         /**
          * AnlageVerwaltung
@@ -2536,40 +2570,6 @@ export interface components {
          */
         AnlageZustand: AnlageZustand;
         /**
-         * AnlageÄnderungRequest
-         * @description Rewrite the Anlage's descriptive fields.
-         */
-        "Anlage\u00C4nderungRequest": {
-            /** @description Shown name of the Anlage. */
-            name: string;
-            /** @description Its structured address; every address field is required. */
-            adresse: components["schemas"]["AnlageAdresse"] & unknown;
-            /** @description Optional contact details. */
-            kontakt: components["schemas"]["AnlageKontakt"] & unknown;
-        };
-        /**
-         * AnlageÖffentlich
-         * @description One active Anlage in the public directory.
-         *
-         *     Public, so it carries no contact data: an email address or phone number is personal data
-         *     and is not published.
-         */
-        "Anlage\u00D6ffentlich": {
-            /**
-             * Format: uuid
-             * @description Identity of the Anlage.
-             */
-            anlageId: string;
-            /** @description Shown name of the Anlage. */
-            name: string;
-            /** @description The place the Anlage is in. */
-            ort: string;
-            /** @description Two-letter country code of that place. */
-            "l\u00E4ndercode": components["schemas"]["L\u00E4ndercode"] & unknown;
-            /** @description The Parkour it currently offers, without their setup. */
-            parkour: components["schemas"]["ParkourKurz"][];
-        };
-        /**
          * AnmeldungRequest
          * @description Sign-in with the account's e-mail address and password.
          */
@@ -2642,14 +2642,14 @@ export interface components {
             benutzerId: string;
         };
         /**
-         * BenutzerLöschungRequest
+         * BenutzerLoeschungRequest
          * @description Delete one's own Benutzer: the password is re-entered, and the intent is explicit.
          */
-        "BenutzerL\u00F6schungRequest": {
+        BenutzerLoeschungRequest: {
             /** @description The account's password, re-entered to prove the caller's identity. */
             passwort: string;
             /** @description Must be `true`; a missing flag is a refusal, never a default. */
-            "best\u00E4tigt": boolean;
+            bestaetigt: boolean;
         };
         /**
          * @description `Benutzer` or `Systemadministrator`: the role a Benutzer holds on the whole instance.
@@ -2707,13 +2707,13 @@ export interface components {
             Benutzer: components["schemas"]["BenutzerErfasser"];
         };
         /**
-         * ExplicitPflöcke
+         * ExplicitPfloecke
          * @description This Ziel's own near-to-far Pflock order, which replaces the Parkour-wide one. Never
          *     empty.
          */
-        "ExplicitPfl\u00F6cke": {
+        ExplicitPfloecke: {
             /** @description The own Pflöcke, near to far. */
-            "pfl\u00F6cke": components["schemas"]["ParkourPflock"][];
+            pfloecke: components["schemas"]["ParkourPflock"][];
         };
         /**
          * FreieRundeStartenRequest
@@ -2724,16 +2724,16 @@ export interface components {
             name: string;
         };
         /**
-         * InheritFromParkourPflöcke
+         * InheritFromParkourPfloecke
          * @description The Parkour-wide order applies to this Ziel. Carries nothing; the discriminator is the
          *     whole message.
          */
-        "InheritFromParkourPfl\u00F6cke": Record<string, unknown>;
+        InheritFromParkourPfloecke: Record<string, unknown>;
         /**
          * @description Country codes currently accepted for Anlage addresses.
          * @enum {string}
          */
-        "L\u00E4ndercode": LNdercode;
+        Laendercode: Laendercode;
         /**
          * @description The mail relay's last probe verdict, tagged by `status`.
          *
@@ -2844,7 +2844,7 @@ export interface components {
             /** @description Whether the Parkour is in use or retired. */
             zustand: components["schemas"]["AnlageZustand"] & unknown;
             /** @description Far to near, in the order the shooter walks them. Never inferred from a colour. */
-            "pfl\u00F6cke": components["schemas"]["ParkourPflock"][];
+            pfloecke: components["schemas"]["ParkourPflock"][];
             /** @description In route order. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
@@ -2856,7 +2856,7 @@ export interface components {
             /** @description Shown name of the new Parkour. */
             name: string;
             /** @description The Pflöcke, far to near. */
-            "pfl\u00F6cke": components["schemas"]["ParkourPflock"][];
+            pfloecke: components["schemas"]["ParkourPflock"][];
             /** @description The Ziele on the route, in walking order. May be empty. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
@@ -2876,12 +2876,27 @@ export interface components {
              * Format: uint64
              * @description How many Pflöcke the route uses.
              */
-            "anzahlPfl\u00F6cke": number;
+            anzahlPfloecke: number;
             /**
              * Format: uint64
              * @description How many Ziele the route places.
              */
             anzahlZiele: number;
+        };
+        /**
+         * ParkourOeffentlich
+         * @description One active Parkour with the Anlage that holds it, for starting a Runde.
+         */
+        ParkourOeffentlich: {
+            /**
+             * Format: uuid
+             * @description The Anlage that offers this Parkour.
+             */
+            anlageId: string;
+            /** @description That Anlage's name. */
+            anlageName: string;
+            /** @description The Parkour with its whole setup. */
+            parkour: components["schemas"]["Parkour"] & unknown;
         };
         /**
          * ParkourPflock
@@ -2905,7 +2920,7 @@ export interface components {
          */
         ParkourSetupRequest: {
             /** @description The Pflöcke, far to near. */
-            "pfl\u00F6cke": components["schemas"]["ParkourPflock"][];
+            pfloecke: components["schemas"]["ParkourPflock"][];
             /** @description The Ziele on the route, in walking order. May be empty. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
@@ -2916,21 +2931,6 @@ export interface components {
         ParkourUmbenennenRequest: {
             /** @description The new shown name. */
             name: string;
-        };
-        /**
-         * ParkourÖffentlich
-         * @description One active Parkour with the Anlage that holds it, for starting a Runde.
-         */
-        "Parkour\u00D6ffentlich": {
-            /**
-             * Format: uuid
-             * @description The Anlage that offers this Parkour.
-             */
-            anlageId: string;
-            /** @description That Anlage's name. */
-            anlageName: string;
-            /** @description The Parkour with its whole setup. */
-            parkour: components["schemas"]["Parkour"] & unknown;
         };
         /**
          * PasswortVergessenRequest
@@ -3191,6 +3191,16 @@ export interface components {
             position?: components["schemas"]["Schussposition"];
         };
         /**
+         * SchussAenderungRequest
+         * @description Replace a Schuss's scoring zone and optional position.
+         */
+        SchussAenderungRequest: {
+            /** @description Where on the Ziel the arrow landed. */
+            wertungszone: components["schemas"]["Wertungszone"] & unknown;
+            /** @description Optional shot position; null clears the stored position. */
+            position?: components["schemas"]["SchusspositionRequest"] & unknown;
+        };
+        /**
          * SchussErstellungRequest
          * @description Register one Schuss inside the caller's own open Runde.
          */
@@ -3223,16 +3233,6 @@ export interface components {
         /** @description One logged arrow. */
         Schussposition_PflockPosition: {
             Pflock: components["schemas"]["PflockPosition"];
-        };
-        /**
-         * SchussÄnderungRequest
-         * @description Replace a Schuss's scoring zone and optional position.
-         */
-        "Schuss\u00C4nderungRequest": {
-            /** @description Where on the Ziel the arrow landed. */
-            wertungszone: components["schemas"]["Wertungszone"] & unknown;
-            /** @description Optional shot position; null clears the stored position. */
-            position?: components["schemas"]["SchusspositionRequest"] & unknown;
         };
         /**
          * SessionResponseContent
@@ -3288,11 +3288,11 @@ export interface components {
              */
             zielnummer: number;
             /** @description The Pflöcke that apply to this Ziel as captured, near to far. */
-            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            pfloecke: components["schemas"]["Pflock"][];
             /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
             wertung?: components["schemas"]["Zielwertung"] & unknown;
             /** @description The logged arrows at this Ziel, in Pfeil order. */
-            "sch\u00FCsse": components["schemas"]["Schuss"][];
+            schuesse: components["schemas"]["Schuss"][];
         };
         /**
          * ZielHinzufuegenRequest
@@ -3308,33 +3308,33 @@ export interface components {
          *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
          *     near-to-far order that replaces it.
          */
-        "ZielPfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke_InheritFromParkourPfl\u00F6cke"] | components["schemas"]["ZielPfl\u00F6cke_ExplicitPfl\u00F6cke"];
+        ZielPfloecke: components["schemas"]["ZielPfloecke_InheritFromParkourPfloecke"] | components["schemas"]["ZielPfloecke_ExplicitPfloecke"];
         /**
          * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
          *
          *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
          *     near-to-far order that replaces it.
          */
-        "ZielPfl\u00F6cke_ExplicitPfl\u00F6cke": {
+        ZielPfloecke_ExplicitPfloecke: {
             /**
              * @example Explicit
              * @enum {string}
              */
-            art: ZielPflCke_ExplicitPflCkeArt;
-        } & components["schemas"]["ExplicitPfl\u00F6cke"];
+            art: ZielPfloecke_ExplicitPfloeckeArt;
+        } & components["schemas"]["ExplicitPfloecke"];
         /**
          * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
          *
          *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
          *     near-to-far order that replaces it.
          */
-        "ZielPfl\u00F6cke_InheritFromParkourPfl\u00F6cke": {
+        ZielPfloecke_InheritFromParkourPfloecke: {
             /**
              * @example InheritFromParkour
              * @enum {string}
              */
-            art: ZielPflCke_InheritFromParkourPflCkeArt;
-        } & components["schemas"]["InheritFromParkourPfl\u00F6cke"];
+            art: ZielPfloecke_InheritFromParkourPfloeckeArt;
+        } & components["schemas"]["InheritFromParkourPfloecke"];
         /**
          * ZielRequest
          * @description Add or edit a Ziel.
@@ -3369,9 +3369,9 @@ export interface components {
              * @description The Ziel that stands here.
              */
             zielId: string;
-            "pfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke"];
+            pfloecke: components["schemas"]["ZielPfloecke"];
             /** @description Distances by Pflock identity; a missing entry means no distance is configured. */
-            "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
+            abstaende: components["schemas"]["PflockAbstand"][];
         };
         /**
          * Zielverwendung
@@ -3388,9 +3388,9 @@ export interface components {
              * @description 0-based position in that Parkour' route.
              */
             position: number;
-            "pfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke"];
+            pfloecke: components["schemas"]["ZielPfloecke"];
             /** @description Pflock identity to metres, near to far. */
-            "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
+            abstaende: components["schemas"]["PflockAbstand"][];
         };
         /**
          * Zielwertung
@@ -3413,7 +3413,7 @@ export interface components {
              * Format: uint64
              * @description How many Schüsse were logged at this Ziel.
              */
-            "anzahlSch\u00FCsse": number;
+            anzahlSchuesse: number;
         };
     };
     responses: never;
@@ -3435,7 +3435,7 @@ export enum BenutzerRolle {
     Benutzer = "Benutzer",
     Systemadministrator = "Systemadministrator"
 }
-export enum LNdercode {
+export enum Laendercode {
     AT = "AT",
     DE = "DE",
     CH = "CH"
@@ -3459,10 +3459,10 @@ export enum Wertungszone {
     Body = "Body",
     Miss = "Miss"
 }
-export enum ZielPflCke_ExplicitPflCkeArt {
+export enum ZielPfloecke_ExplicitPfloeckeArt {
     Explicit = "Explicit"
 }
-export enum ZielPflCke_InheritFromParkourPflCkeArt {
+export enum ZielPfloecke_InheritFromParkourPfloeckeArt {
     InheritFromParkour = "InheritFromParkour"
 }
 export type operations = Record<string, never>;

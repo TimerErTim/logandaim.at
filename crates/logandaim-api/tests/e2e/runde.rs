@@ -24,10 +24,10 @@ async fn anlage_mit_parkour(harness: &E2eHarness) -> (String, String, String, St
             json!({
                 "name": "Breitenstein",
                 "adresse": {
-                    "straße": "Waldweg 1",
+                    "strasse": "Waldweg 1",
                     "postleitzahl": "3100",
                     "ort": "St. Pölten",
-                    "ländercode": "AT",
+                    "laendercode": "AT",
                 },
                 "kontakt": {},
             }),
@@ -55,11 +55,11 @@ async fn anlage_mit_parkour(harness: &E2eHarness) -> (String, String, String, St
             &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Waldrunde",
-                "pflöcke": [{ "id": weit, "farbe": "#c0392b" }],
+                "pfloecke": [{ "id": weit, "farbe": "#c0392b" }],
                 "platzierungen": [{
                     "zielId": ziel_id,
-                    "pflöcke": { "art": "InheritFromParkour" },
-                    "abstände": [{ "pflockId": weit, "meter": 40 }],
+                    "pfloecke": { "art": "InheritFromParkour" },
+                    "abstaende": [{ "pflockId": weit, "meter": 40 }],
                 }],
             }),
             &admin,
@@ -307,14 +307,14 @@ async fn ac9_eine_runde_zeigt_beide_wertungen_und_den_snapshot() {
     // The snapshot, not current master data.
     assert_eq!(body["name"], "Waldrunde");
     assert_eq!(body["herkunft"]["parkourId"], parkour_id);
-    assert_eq!(body["ziele"][0]["pflöcke"][0]["farbe"], "#c0392b");
+    assert_eq!(body["ziele"][0]["pfloecke"][0]["farbe"], "#c0392b");
 
     // Both Wertungen folded at the one Ziel and over the whole Runde.
     let ziel = &body["ziele"][0];
     assert_eq!(ziel["wertung"]["ersterTreffer"], 18);
     assert_eq!(ziel["wertung"]["mehrschuss"], 38);
     assert_eq!(ziel["wertung"]["ersterPfeilGetroffen"], true);
-    assert_eq!(ziel["wertung"]["anzahlSchüsse"], 3);
+    assert_eq!(ziel["wertung"]["anzahlSchuesse"], 3);
     assert_eq!(body["gesamtErsterTreffer"], 18);
     assert_eq!(body["gesamtMehrschuss"], 38);
     assert_eq!(body["zieleMitWertung"], 1);
@@ -449,7 +449,7 @@ async fn ac11_runden_und_schuesse_sind_nur_fuer_eigentuemer_aenderbar() {
     );
     let (status, body) = harness.client.get_json_auth(&runde_path, &eigner).await;
     assert_eq!(status, StatusCode::OK);
-    assert!(body["ziele"][0]["schüsse"].as_array().unwrap().is_empty());
+    assert!(body["ziele"][0]["schuesse"].as_array().unwrap().is_empty());
     assert_eq!(
         harness.client.delete_auth(&runde_path, &eigner).await.0,
         StatusCode::OK
@@ -548,11 +548,11 @@ async fn ac5_schussposition_ist_exklusiv_ganzzahlig_und_wird_beim_lesen_erhalten
         .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
-        body["ziele"][0]["schüsse"][0]["position"]["Distanz"]["meter"],
+        body["ziele"][0]["schuesse"][0]["position"]["Distanz"]["meter"],
         35
     );
     assert_eq!(
-        body["ziele"][0]["schüsse"][1]["position"]["Pflock"]["farbe"],
+        body["ziele"][0]["schuesse"][1]["position"]["Pflock"]["farbe"],
         "#c0392b"
     );
 }
@@ -574,10 +574,10 @@ async fn anlage_mit_eigenem_satz(
             json!({
                 "name": "Breitenstein",
                 "adresse": {
-                    "straße": "Waldweg 1",
+                    "strasse": "Waldweg 1",
                     "postleitzahl": "3100",
                     "ort": "St. Pölten",
-                    "ländercode": "AT",
+                    "laendercode": "AT",
                 },
                 "kontakt": {},
             }),
@@ -619,26 +619,26 @@ async fn anlage_mit_eigenem_satz(
             &format!("/api/anlagen/{anlage_id}/parkour"),
             json!({
                 "name": "Waldrunde",
-                "pflöcke": [{ "id": geteilt, "farbe": "#c0392b" }],
+                "pfloecke": [{ "id": geteilt, "farbe": "#c0392b" }],
                 "platzierungen": [
                     {
                         "zielId": erstes,
-                        "pflöcke": {
+                        "pfloecke": {
                             "art": "Explicit",
-                            "pflöcke": [
+                            "pfloecke": [
                                 { "id": eigen_nah, "farbe": eigen_nah_farbe },
                                 { "id": eigen_weit, "farbe": "#e8b81c" },
                             ],
                         },
-                        "abstände": [
+                        "abstaende": [
                             { "pflockId": eigen_nah, "meter": 15 },
                             { "pflockId": eigen_weit, "meter": 45 },
                         ],
                     },
                     {
                         "zielId": zweites,
-                        "pflöcke": { "art": "InheritFromParkour" },
-                        "abstände": []
+                        "pfloecke": { "art": "InheritFromParkour" },
+                        "abstaende": []
                     },
                 ],
             }),
@@ -674,24 +674,24 @@ async fn ac9_ein_runde_ziel_traegt_die_effektive_pflockmenge() {
     assert_ne!(ziele[0]["zielId"], erstes);
     assert_eq!(ziele[0]["zielnummer"], 1);
     assert_eq!(
-        ziele[0]["pflöcke"].as_array().expect("pflöcke").len(),
+        ziele[0]["pfloecke"].as_array().expect("pfloecke").len(),
         2,
         "#72: das eigene Ziel trägt seinen eigenen Satz: {body}; eigene Farbe: {eigene_farbe}"
     );
-    assert_eq!(ziele[0]["pflöcke"][0]["farbe"], eigene_farbe);
-    assert_eq!(ziele[0]["pflöcke"][0]["abstand"], 15);
-    assert_eq!(ziele[0]["pflöcke"][1]["abstand"], 45);
+    assert_eq!(ziele[0]["pfloecke"][0]["farbe"], eigene_farbe);
+    assert_eq!(ziele[0]["pfloecke"][0]["abstand"], 15);
+    assert_eq!(ziele[0]["pfloecke"][1]["abstand"], 45);
 
     assert_ne!(ziele[1]["zielId"], zweites);
     assert_eq!(ziele[1]["zielnummer"], 1);
     assert_eq!(
-        ziele[1]["pflöcke"].as_array().expect("pflöcke").len(),
+        ziele[1]["pfloecke"].as_array().expect("pfloecke").len(),
         1,
         "#72: das erbende Ziel trägt die Parkour-Pflöcke"
     );
-    assert_eq!(ziele[1]["pflöcke"][0]["farbe"], "#c0392b");
-    assert!(ziele[1]["pflöcke"][0]["abstand"].is_null());
-    assert!(body.get("pflöcke").is_none());
+    assert_eq!(ziele[1]["pfloecke"][0]["farbe"], "#c0392b");
+    assert!(ziele[1]["pfloecke"][0]["abstand"].is_null());
+    assert!(body.get("pfloecke").is_none());
 
     // The inherited Pflock set is captured on this Ziel, independently of the Ziel above.
 }
@@ -882,7 +882,7 @@ async fn ac21_freie_runde_startet_ohne_parkour_und_hat_exklusiven_offenen_slot()
     assert_eq!(status, StatusCode::OK, "AC-21: freie Runde startet: {body}");
     assert_eq!(body["name"], "Wiese");
     assert!(body["herkunft"].is_null());
-    assert!(body.get("pflöcke").is_none());
+    assert!(body.get("pfloecke").is_none());
     assert_eq!(body["ziele"], json!([]));
 
     let (status, _) = harness
@@ -1055,8 +1055,11 @@ async fn ac22_ac23_ac24_ac25_ac26_freie_runde_erfasst_positionen_wertungen_und_z
         .get_json_auth(&format!("/api/runden/{runde_id}"), &anna)
         .await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(reloaded["ziele"][0]["schüsse"].as_array().unwrap().len(), 1);
-    assert_eq!(reloaded["ziele"][0]["schüsse"][0]["zielId"], zweites);
+    assert_eq!(
+        reloaded["ziele"][0]["schuesse"].as_array().unwrap().len(),
+        1
+    );
+    assert_eq!(reloaded["ziele"][0]["schuesse"][0]["zielId"], zweites);
 }
 
 #[test_log::test(pollster::test)]
@@ -1161,7 +1164,7 @@ async fn ac22_freies_ziel_und_runde_sind_nur_fuer_eigentuemer_aenderbar() {
         // Closing answers the whole read model, so the shots it just froze are still in it.
         // A shotless answer here would claim the archer's arrows vanished.
         assert_eq!(abgeschlossen["zustand"], "Abgeschlossen");
-        let schüsse_im_ziel = abgeschlossen["ziele"][0]["schüsse"]
+        let schüsse_im_ziel = abgeschlossen["ziele"][0]["schuesse"]
             .as_array()
             .expect("die Ziele tragen ihre Schüsse");
         assert!(

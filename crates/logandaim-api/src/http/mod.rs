@@ -1098,7 +1098,7 @@ impl LogandaimApiSpec {
     /// Delete the caller's own Benutzer.
     ///
     /// The caller confirms the deletion by re-entering their password.
-    #[oai(path = "/benutzer/löschung", method = "post", tag = "ApiTag::Konto")]
+    #[oai(path = "/benutzer/loeschung", method = "post", tag = "ApiTag::Konto")]
     async fn benutzer_löschen(
         &self,
         #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,

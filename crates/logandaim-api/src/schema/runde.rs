@@ -68,11 +68,15 @@ pub struct Ziel {
     /// 1-based route ordinal.
     pub zielnummer: u32,
     /// The Pflöcke that apply to this Ziel as captured, near to far.
+    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
+    #[serde(rename = "pfloecke")]
     pub pflöcke: Vec<Pflock>,
     /// The Wertung of this Ziel; absent while no Schuss has been logged at it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wertung: Option<Zielwertung>,
     /// The logged arrows at this Ziel, in Pfeil order.
+    #[cfg_attr(feature = "openapi", oai(rename = "schuesse"))]
+    #[serde(rename = "schuesse")]
     pub schüsse: Vec<Schuss>,
 }
 

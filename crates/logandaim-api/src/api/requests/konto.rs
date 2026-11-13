@@ -80,13 +80,18 @@ pub struct PasswortWiederherstellenRequest {
 /// Delete one's own Benutzer: the password is re-entered, and the intent is explicit.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[cfg_attr(
+    feature = "openapi",
+    oai(rename = "BenutzerLoeschungRequest", rename_all = "camelCase")
+)]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BenutzerLöschungRequest {
     /// The account's password, re-entered to prove the caller's identity.
     pub passwort: String,
     /// Must be `true`; a missing flag is a refusal, never a default.
+    #[cfg_attr(feature = "openapi", oai(rename = "bestaetigt"))]
+    #[serde(rename = "bestaetigt")]
     pub bestätigt: bool,
 }
 

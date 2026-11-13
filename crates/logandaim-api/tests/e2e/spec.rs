@@ -139,6 +139,82 @@ fn bearer_schema_ist_veröffentlicht() {
     }
 }
 
+/// Every wire identifier in the published contract is ASCII; prose remains unrestricted.
+#[test_log::test]
+fn wire_identifikatoren_sind_ascii() {
+    fn assert_ascii(value: &str, context: &str) {
+        assert!(
+            value.is_ascii(),
+            "non-ASCII wire identifier in {context}: {value}"
+        );
+    }
+
+    fn schema_identifiers_are_ascii(schema: &Value, context: &str) {
+        if let Some(properties) = schema.get("properties").and_then(Value::as_object) {
+            for (name, property) in properties {
+                assert_ascii(name, &format!("{context} property"));
+                schema_identifiers_are_ascii(property, &format!("{context}.{name}"));
+            }
+        }
+        if let Some(reference) = schema.get("$ref").and_then(Value::as_str) {
+            assert_ascii(reference, &format!("{context} reference"));
+        }
+        if let Some(discriminator) = schema.get("discriminator") {
+            if let Some(name) = discriminator.get("propertyName").and_then(Value::as_str) {
+                assert_ascii(name, &format!("{context} discriminator property"));
+            }
+            if let Some(mapping) = discriminator.get("mapping").and_then(Value::as_object) {
+                for (name, reference) in mapping {
+                    assert_ascii(name, &format!("{context} discriminator value"));
+                    assert_ascii(
+                        reference.as_str().expect("mapping reference"),
+                        &format!("{context} discriminator reference"),
+                    );
+                }
+            }
+        }
+        if let Some(items) = schema.get("enum").and_then(Value::as_array) {
+            for item in items.iter().filter_map(Value::as_str) {
+                assert_ascii(item, &format!("{context} enum value"));
+            }
+        }
+        if let Some(schemas) = schema.get("oneOf").and_then(Value::as_array) {
+            for (index, item) in schemas.iter().enumerate() {
+                schema_identifiers_are_ascii(item, &format!("{context} oneOf[{index}]"));
+            }
+        }
+        if let Some(schemas) = schema.get("anyOf").and_then(Value::as_array) {
+            for (index, item) in schemas.iter().enumerate() {
+                schema_identifiers_are_ascii(item, &format!("{context} anyOf[{index}]"));
+            }
+        }
+        if let Some(schemas) = schema.get("allOf").and_then(Value::as_array) {
+            for (index, item) in schemas.iter().enumerate() {
+                schema_identifiers_are_ascii(item, &format!("{context} allOf[{index}]"));
+            }
+        }
+    }
+
+    let spec = spec();
+    for (path, item) in spec["paths"].as_object().expect("paths") {
+        assert_ascii(path, "operation path");
+        for (method, operation) in item.as_object().expect("path item") {
+            if let Some(parameters) = operation.get("parameters").and_then(Value::as_array) {
+                for parameter in parameters {
+                    assert_ascii(
+                        parameter["name"].as_str().expect("parameter name"),
+                        &format!("{method} {path} parameter"),
+                    );
+                }
+            }
+        }
+    }
+    for (name, schema) in spec["components"]["schemas"].as_object().expect("schemas") {
+        assert_ascii(name, "component schema name");
+        schema_identifiers_are_ascii(schema, &format!("schema {name}"));
+    }
+}
+
 /// Every operation and every published schema is described, because that is the document.
 #[test_log::test]
 fn jede_operation_und_jedes_schema_ist_beschrieben() {

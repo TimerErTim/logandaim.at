@@ -15,6 +15,7 @@ use crate::schema::EmailAdresse;
 /// Country codes currently accepted for Anlage addresses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
+#[cfg_attr(feature = "openapi", oai(rename = "Laendercode"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 pub enum Ländercode {
     AT,
@@ -59,12 +60,16 @@ impl TryFrom<Farbe> for domain::Farbe {
 #[serde(rename_all = "camelCase")]
 pub struct AnlageAdresse {
     /// Street and house number.
+    #[cfg_attr(feature = "openapi", oai(rename = "strasse"))]
+    #[serde(rename = "strasse")]
     pub straße: String,
     /// Postal code of the place.
     pub postleitzahl: String,
     /// The place itself.
     pub ort: String,
     /// Two-letter country code; only `AT`, `DE`, and `CH` are accepted.
+    #[cfg_attr(feature = "openapi", oai(rename = "laendercode"))]
+    #[serde(rename = "laendercode")]
     pub ländercode: Ländercode,
 }
 
@@ -153,8 +158,12 @@ pub struct Zielverwendung {
     pub parkour_id: Uuid,
     /// 0-based position in that Parkour' route.
     pub position: usize,
+    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
+    #[serde(rename = "pfloecke")]
     pub pflöcke: ZielPflöcke,
     /// Pflock identity to metres, near to far.
+    #[cfg_attr(feature = "openapi", oai(rename = "abstaende"))]
+    #[serde(rename = "abstaende")]
     pub abstände: Vec<PflockAbstand>,
 }
 
@@ -194,11 +203,18 @@ pub struct ParkourPflock {
 /// near-to-far order that replaces it.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Union))]
-#[cfg_attr(feature = "openapi", oai(discriminator_name = "art"))]
+#[cfg_attr(
+    feature = "openapi",
+    oai(rename = "ZielPfloecke", discriminator_name = "art")
+)]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(tag = "art")]
 pub enum ZielPflöcke {
+    #[cfg_attr(feature = "openapi", oai(mapping = "InheritFromParkour"))]
+    #[serde(rename = "InheritFromParkour")]
     InheritFromParkour(InheritFromParkourPflöcke),
+    #[cfg_attr(feature = "openapi", oai(mapping = "Explicit"))]
+    #[serde(rename = "Explicit")]
     Explicit(ExplicitPflöcke),
 }
 
@@ -206,7 +222,10 @@ pub enum ZielPflöcke {
 /// whole message.
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[cfg_attr(
+    feature = "openapi",
+    oai(rename = "InheritFromParkourPfloecke", rename_all = "camelCase")
+)]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InheritFromParkourPflöcke {}
@@ -215,11 +234,16 @@ pub struct InheritFromParkourPflöcke {}
 /// empty.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[cfg_attr(
+    feature = "openapi",
+    oai(rename = "ExplicitPfloecke", rename_all = "camelCase")
+)]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExplicitPflöcke {
     /// The own Pflöcke, near to far.
+    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
+    #[serde(rename = "pfloecke")]
     pub pflöcke: Vec<ParkourPflock>,
 }
 
@@ -238,8 +262,12 @@ impl Default for ZielPflöcke {
 pub struct Zielplatzierung {
     /// The Ziel that stands here.
     pub ziel_id: Uuid,
+    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
+    #[serde(rename = "pfloecke")]
     pub pflöcke: ZielPflöcke,
     /// Distances by Pflock identity; a missing entry means no distance is configured.
+    #[cfg_attr(feature = "openapi", oai(rename = "abstaende"))]
+    #[serde(rename = "abstaende")]
     pub abstände: Vec<PflockAbstand>,
 }
 
@@ -257,6 +285,8 @@ pub struct Parkour {
     /// Whether the Parkour is in use or retired.
     pub zustand: AnlageZustand,
     /// Far to near, in the order the shooter walks them. Never inferred from a colour.
+    #[cfg_attr(feature = "openapi", oai(rename = "pfloecke"))]
+    #[serde(rename = "pfloecke")]
     pub pflöcke: Vec<ParkourPflock>,
     /// In route order.
     pub platzierungen: Vec<Zielplatzierung>,
@@ -265,7 +295,10 @@ pub struct Parkour {
 /// One active Parkour with the Anlage that holds it, for starting a Runde.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[cfg_attr(
+    feature = "openapi",
+    oai(rename = "ParkourOeffentlich", rename_all = "camelCase")
+)]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ParkourÖffentlich {
@@ -289,6 +322,8 @@ pub struct ParkourKurz {
     /// Shown name of the Parkour.
     pub name: String,
     /// How many Pflöcke the route uses.
+    #[cfg_attr(feature = "openapi", oai(rename = "anzahlPfloecke"))]
+    #[serde(rename = "anzahlPfloecke")]
     pub anzahl_pflöcke: usize,
     /// How many Ziele the route places.
     pub anzahl_ziele: usize,
@@ -300,7 +335,10 @@ pub struct ParkourKurz {
 /// and is not published.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[cfg_attr(
+    feature = "openapi",
+    oai(rename = "AnlageOeffentlich", rename_all = "camelCase")
+)]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnlageÖffentlich {
@@ -311,6 +349,8 @@ pub struct AnlageÖffentlich {
     /// The place the Anlage is in.
     pub ort: String,
     /// Two-letter country code of that place.
+    #[cfg_attr(feature = "openapi", oai(rename = "laendercode"))]
+    #[serde(rename = "laendercode")]
     pub ländercode: Ländercode,
     /// The Parkour it currently offers, without their setup.
     pub parkour: Vec<ParkourKurz>,
