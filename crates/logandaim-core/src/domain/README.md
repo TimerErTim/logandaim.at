@@ -128,10 +128,11 @@ pub enum Aggregat {
 Compute derived values in getters (`fn betrag(&self) -> Preis`). Never store a value that can be
 computed from other fields, because stored duplicates drift.
 
-### Snapshots
+### Captured values
 
 When a record must keep the value valid at the time of the event (a booked price, a scoring rule
-version), copy that value into the record. Do not look it up from mutable reference data later.
+version, a round's captured route), copy that value into the record. Do not look it up from mutable
+reference data later.
 
 ### References between aggregates
 

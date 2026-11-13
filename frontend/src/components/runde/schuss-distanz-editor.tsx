@@ -33,8 +33,14 @@ export function SchussDistanzEditor({
   const modus = positionsModus(ziel, effektivePflöcke.length);
   const abstände = useMemo(
     () =>
-      new Map(ziel.abstände.map((abstand) => [abstand.pflock, abstand.meter])),
-    [ziel.abstände],
+      new Map(
+        ziel.pflöcke.flatMap((pflock) =>
+          pflock.abstand === undefined
+            ? []
+            : [[pflock.farbe, pflock.abstand] as const],
+        ),
+      ),
+    [ziel.pflöcke],
   );
   const sortedPflöcke = useMemo(() => effektivePflöcke, [effektivePflöcke]);
   const checkpoints = useMemo<Checkpoint[]>(
@@ -46,7 +52,7 @@ export function SchussDistanzEditor({
             ? []
             : [
                 {
-                  id: `${pflock.position}-${pflock.farbe}`,
+                  id: `${pflock.farbe}`,
                   wert: meter,
                   farbe: pflock.farbe,
                   label: pflock.farbe,
@@ -60,7 +66,7 @@ export function SchussDistanzEditor({
   const stakeCheckpoints = useMemo<Checkpoint[]>(
     () =>
       sortedPflöcke.map((pflock, index) => ({
-        id: `${pflock.position}-${pflock.farbe}`,
+        id: `${pflock.farbe}`,
         wert: index,
         farbe: pflock.farbe,
         label: pflock.farbe,

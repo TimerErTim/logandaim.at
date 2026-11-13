@@ -2392,22 +2392,6 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * Abstand
-         * @description One captured distance, named by the Pflock' colour.
-         */
-        Abstand: {
-            /**
-             * A Pflock colour as validated `#rrggbb`.
-             * @description The captured Pflock's colour.
-             */
-            pflock: string;
-            /**
-             * Format: uint32
-             * @description Distance from that Pflock to the Ziel, in metres.
-             */
-            meter: number;
-        };
-        /**
          * Anlage
          * @description The Anlage with its whole master data, as `GET /anlagen/{id}` answers it.
          */
@@ -2428,7 +2412,7 @@ export interface components {
             /** @description The role assignments in this Anlage. */
             verwaltungen: components["schemas"]["AnlageVerwaltung"][];
             /** @description Its physical Ziele. */
-            ziele: components["schemas"]["Ziel"][];
+            ziele: components["schemas"]["AnlageZiel"][];
             /** @description Its Parkour, each with its setup and route. */
             parkour: components["schemas"]["Parkour"][];
         };
@@ -2510,6 +2494,28 @@ export interface components {
          * @enum {string}
          */
         AnlageVerwaltungRolle: AnlageVerwaltungRolle;
+        /**
+         * AnlageZiel
+         * @description One physical Ziel of the Anlage.
+         */
+        AnlageZiel: {
+            /**
+             * Format: uuid
+             * @description Stable identity of this physical target.
+             */
+            id: string;
+            /** @description Animal name shown to the shooter. */
+            tiername: string;
+            /**
+             * Format: uint32
+             * @description 1-based ordinal that tells duplicate animal names apart ("Reh 1", "Reh 2").
+             */
+            zielnummer: number;
+            /** @description Whether the Ziel is in use or retired. */
+            zustand: components["schemas"]["AnlageZustand"] & unknown;
+            /** @description Where this physical Ziel currently lies, across this Anlage's active Parkour. */
+            verwendungen: components["schemas"]["Zielverwendung"][];
+        };
         /**
          * AnlageZugriff
          * @description One Anlage together with the caller's access to it.
@@ -2707,7 +2713,7 @@ export interface components {
          */
         "ExplicitPfl\u00F6cke": {
             /** @description The own Pflöcke, near to far. */
-            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            "pfl\u00F6cke": components["schemas"]["ParkourPflock"][];
         };
         /**
          * FreieRundeStartenRequest
@@ -2838,7 +2844,7 @@ export interface components {
             /** @description Whether the Parkour is in use or retired. */
             zustand: components["schemas"]["AnlageZustand"] & unknown;
             /** @description Far to near, in the order the shooter walks them. Never inferred from a colour. */
-            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            "pfl\u00F6cke": components["schemas"]["ParkourPflock"][];
             /** @description In route order. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
@@ -2850,7 +2856,7 @@ export interface components {
             /** @description Shown name of the new Parkour. */
             name: string;
             /** @description The Pflöcke, far to near. */
-            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            "pfl\u00F6cke": components["schemas"]["ParkourPflock"][];
             /** @description The Ziele on the route, in walking order. May be empty. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
@@ -2878,12 +2884,28 @@ export interface components {
             anzahlZiele: number;
         };
         /**
+         * ParkourPflock
+         * @description One shooting position. Its colour identifies it; no label exists.
+         */
+        ParkourPflock: {
+            /**
+             * Format: uuid
+             * @description Identity of the Pflock inside its Parkour.
+             */
+            id: string;
+            /**
+             * A Pflock colour as validated `#rrggbb`.
+             * @description The Pflock's colour. It is what distinguishes one Pflock from another.
+             */
+            farbe: string;
+        };
+        /**
          * ParkourSetupRequest
          * @description Replace a Parkour' whole shooting setup.
          */
         ParkourSetupRequest: {
             /** @description The Pflöcke, far to near. */
-            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            "pfl\u00F6cke": components["schemas"]["ParkourPflock"][];
             /** @description The Ziele on the route, in walking order. May be empty. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
@@ -2934,19 +2956,22 @@ export interface components {
         };
         /**
          * Pflock
-         * @description One shooting position. Its colour identifies it; no label exists.
+         * @description One Pflock of this Ziel's captured route.
+         *
+         *     `abstand` is the configured distance from this Pflock to its Ziel, in metres; it is absent
+         *     when no distance was configured.
          */
         Pflock: {
             /**
-             * Format: uuid
-             * @description Identity of the Pflock inside its Parkour.
-             */
-            id: string;
-            /**
              * A Pflock colour as validated `#rrggbb`.
-             * @description The Pflock's colour. It is what distinguishes one Pflock from another.
+             * @description The captured Pflock's colour.
              */
             farbe: string;
+            /**
+             * Format: uint32
+             * @description Distance from this Pflock to its Ziel, in metres; absent when unconfigured.
+             */
+            abstand?: number;
         };
         /**
          * PflockAbstand
@@ -3022,7 +3047,7 @@ export interface components {
             id: string;
             /** @description The Anlage/Parkour pair; absent on a `Freie Runde`. */
             herkunft?: components["schemas"]["RundeHerkunft"] & unknown;
-            /** @description The round's name: the captured Parkour's, or the free round's own. */
+            /** @description The round's own name. */
             name: string;
             /** @description Who the Runde belongs to. */
             erfasstVon: components["schemas"]["Erfasser"] & unknown;
@@ -3038,10 +3063,8 @@ export interface components {
              * @description End of the Runde; absent while it is open.
              */
             abgeschlossenAm?: string;
-            /** @description The captured Pflöcke' colours, near to far; empty on a free round. */
-            "pfl\u00F6cke": components["schemas"]["RundePflock"][];
             /** @description The Ziele as captured, with their results. */
-            ziele: components["schemas"]["RundeZiel"][];
+            ziele: components["schemas"]["Ziel"][];
             /**
              * Format: uint32
              * @description First-arrow hits over the whole Runde.
@@ -3073,7 +3096,7 @@ export interface components {
             id: string;
             /** @description The Anlage/Parkour pair; absent on a `Freie Runde`. */
             herkunft?: components["schemas"]["RundeHerkunft"] & unknown;
-            /** @description The round's name: the captured Parkour's, or the free round's own. */
+            /** @description The round's own name. */
             name: string;
             /**
              * Format: uint64
@@ -3100,9 +3123,9 @@ export interface components {
         };
         /**
          * RundeHerkunft
-         * @description The master-data identities a Runde was started from, as one object.
+         * @description The Anlage/Parkour identities a Runde was started from.
          *
-         *     Both ids or neither: the pair is what "this is a Parkour round" means.
+         *     Both ids are present together; free rounds have no provenance.
          */
         RundeHerkunft: {
             /**
@@ -3126,57 +3149,6 @@ export interface components {
              * @description The Parkour to shoot. It must be active.
              */
             parkourId: string;
-        };
-        /**
-         * RundePflock
-         * @description One Pflock of this Runde' captured route, in near-to-far order.
-         *
-         *     A captured route keeps no master-data identity, so the colour is what tells the Pflöcke
-         *     apart.
-         */
-        RundePflock: {
-            /**
-             * A Pflock colour as validated `#rrggbb`.
-             * @description The captured Pflock's colour.
-             */
-            farbe: string;
-            /**
-             * Format: uint64
-             * @description 0-based position, near to far.
-             */
-            position: number;
-        };
-        /**
-         * RundeZiel
-         * @description One target in this Runde's captured route: identity, name, ordinal, distances, and Wertung.
-         *
-         *     A free-round target fills the same shape; its Pflock and distance lists are empty because a
-         *     free round configures none.
-         */
-        RundeZiel: {
-            /**
-             * Format: uuid
-             * @description Identity of the target within this Runde.
-             */
-            zielId: string;
-            /** @description Name captured in the route. */
-            tiername: string;
-            /**
-             * Format: uint32
-             * @description 1-based route ordinal.
-             */
-            zielnummer: number;
-            /**
-             * @description The Pflöcke that apply to this Ziel as captured, near to far: the Ziel's own set when
-             *     it had one, the Parkour-wide set otherwise. Always empty on a free round.
-             */
-            "pfl\u00F6cke": components["schemas"]["RundePflock"][];
-            /** @description The distances as captured. Always empty on a free round. */
-            "abst\u00E4nde": components["schemas"]["Abstand"][];
-            /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
-            wertung?: components["schemas"]["Zielwertung"] & unknown;
-            /** @description The logged arrows at this Ziel, in Pfeil order. */
-            "sch\u00FCsse": components["schemas"]["Schuss"][];
         };
         /**
          * @description `InBearbeitung` or `Abgeschlossen`.
@@ -3298,25 +3270,29 @@ export interface components {
         Wertungszone: Wertungszone;
         /**
          * Ziel
-         * @description One physical Ziel of the Anlage.
+         * @description One target in this Runde's captured route: identity, name, ordinal, Pflöcke, and Wertung.
+         *
+         *     A free-round Ziel has no configured Pflöcke.
          */
         Ziel: {
             /**
              * Format: uuid
-             * @description Stable identity of this physical target.
+             * @description Identity of the target within this Runde.
              */
-            id: string;
-            /** @description Animal name shown to the shooter. */
+            zielId: string;
+            /** @description Name captured in the route. */
             tiername: string;
             /**
              * Format: uint32
-             * @description 1-based ordinal that tells duplicate animal names apart ("Reh 1", "Reh 2").
+             * @description 1-based route ordinal.
              */
             zielnummer: number;
-            /** @description Whether the Ziel is in use or retired. */
-            zustand: components["schemas"]["AnlageZustand"] & unknown;
-            /** @description Where this physical Ziel currently lies, across this Anlage's active Parkour. */
-            verwendungen: components["schemas"]["Zielverwendung"][];
+            /** @description The Pflöcke that apply to this Ziel as captured, near to far. */
+            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
+            wertung?: components["schemas"]["Zielwertung"] & unknown;
+            /** @description The logged arrows at this Ziel, in Pfeil order. */
+            "sch\u00FCsse": components["schemas"]["Schuss"][];
         };
         /**
          * ZielHinzufuegenRequest

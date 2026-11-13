@@ -31,8 +31,8 @@ import {
 import type {
   Anlage,
   Parkour,
+  ParkourPflock,
   ParkourSetupInput,
-  Pflock,
   ZielPflöcke,
   Zielplatzierung,
 } from "@/api/logandaim-api";
@@ -197,7 +197,7 @@ function ParkourInhalt({
   /** No vocabulary colour is left for a new shared row, so the user must pick a custom one. */
   const keineFreieFarbe = freiePflockFarbe(setup.pflöcke) === null;
 
-  function effektivePflöcke(platzierung: Zielplatzierung): Pflock[] {
+  function effektivePflöcke(platzierung: Zielplatzierung): ParkourPflock[] {
     return platzierung.pflöcke.art === "Explicit"
       ? platzierung.pflöcke.pflöcke
       : setup.pflöcke;
@@ -205,7 +205,7 @@ function ParkourInhalt({
 
   function abständeBereinigen(
     abstände: Zielplatzierung["abstände"],
-    pflöcke: readonly Pflock[],
+    pflöcke: readonly ParkourPflock[],
   ) {
     const ids = new Set(pflöcke.map((pflock) => pflock.id));
     return abstände.filter((abstand) => ids.has(abstand.pflockId));
@@ -802,7 +802,7 @@ function SortablePlatzierung({
   index: number;
   tiername: string;
   gesperrt: boolean;
-  pflöcke: Pflock[];
+  pflöcke: ParkourPflock[];
   onAbstandAendern: (
     zielId: string,
     pflockId: string,
@@ -1012,7 +1012,7 @@ function SortablePflock({
   onEntfernen,
   entfernenGesperrt,
 }: {
-  pflock: Pflock;
+  pflock: ParkourPflock;
   index: number;
   gesperrt: boolean;
   onFarbeAendern: (id: string, farbe: string) => void;

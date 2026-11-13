@@ -144,14 +144,17 @@ export type AnlageKontakt = Schemas["AnlageKontakt"];
 export type AnlageVerwaltung = Schemas["AnlageVerwaltung"];
 // `AnlageVerwaltungRolle`, `AnlageZustand`, `RundeZustand`, and `Wertungszone` are
 // re-exported above as enums, which are their own type — a second alias would collide.
-export type Ziel = Schemas["Ziel"];
+export type AnlageZiel = Schemas["AnlageZiel"];
 export type Zielverwendung = Schemas["Zielverwendung"];
-export type Pflock = Schemas["Pflock"];
+export type ParkourPflock = Schemas["ParkourPflock"];
 export type PflockAbstand = Schemas["PflockAbstand"];
+export type Ziel = Schemas["Ziel"];
+/** The response's round-owned target; same wire schema as the domain name. */
+export type RundeZiel = Ziel;
 /** The Ziel-specific ordered set, or the Parkour-wide set when inherited. */
 export type ZielPflöcke =
   | { art: "InheritFromParkour"; [key: string]: unknown }
-  | { art: "Explicit"; pflöcke: Pflock[]; [key: string]: unknown };
+  | { art: "Explicit"; pflöcke: ParkourPflock[]; [key: string]: unknown };
 export type Zielplatzierung = Omit<
   Schemas["Zielplatzierung"],
   "pflöcke" | "abstände"
@@ -178,11 +181,6 @@ export type RundeBasic = Omit<
   RundeWireMitHerkunft<Schemas["RundeBasic"]>,
   "name"
 > & { name: string };
-export type RundePflock = Schemas["RundePflock"];
-export type Abstand = Schemas["Abstand"];
-export type RundeZiel = Omit<Schemas["RundeZiel"], "pflöcke"> & {
-  pflöcke: RundePflock[];
-};
 export type Runde = Omit<
   RundeWireMitHerkunft<Schemas["Runde"]>,
   "ziele" | "name"

@@ -10,7 +10,7 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Anlage, AnlageAktiv, AnlageId, AnlageZielId, EmailAdresse, Erfasser, NeueAnlage, NeueRunde,
-        NeuerSchuss, ParkourId, Runde, RundeId, Rundenherkunft, Schuss, SchussId, SchussZielId,
+        NeuerSchuss, ParkourId, Runde, RundeId, Schuss, SchussId, ZielId,
         konto::{
             Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
             NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
@@ -316,19 +316,19 @@ impl RundeRepository for FakeRundeRepository {
     }
 
     async fn exists_referencing_anlage(&self, id: AnlageId) -> RepositoryResult<bool> {
-        Ok(self
-            .datastore
-            .runden()
-            .values()
-            .any(|runde| matches!(runde.herkunft(), Rundenherkunft::Parkour { anlage_id, .. } if *anlage_id == id)))
+        Ok(self.datastore.runden().values().any(|runde| {
+            runde
+                .herkunft()
+                .is_some_and(|herkunft| herkunft.anlage_id == id)
+        }))
     }
 
     async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool> {
-        Ok(self
-            .datastore
-            .runden()
-            .values()
-            .any(|runde| matches!(runde.herkunft(), Rundenherkunft::Parkour { parkour_id, .. } if *parkour_id == id)))
+        Ok(self.datastore.runden().values().any(|runde| {
+            runde
+                .herkunft()
+                .is_some_and(|herkunft| herkunft.parkour_id == id)
+        }))
     }
 
     async fn exists_referencing_ziel(&self, id: AnlageZielId) -> RepositoryResult<bool> {
@@ -379,10 +379,7 @@ impl SchussRepository for FakeSchussRepository {
             .collect())
     }
 
-    async fn find_by_ziel(
-        &self,
-        ziel_id: SchussZielId,
-    ) -> RepositoryResult<Vec<Versioned<Schuss>>> {
+    async fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>> {
         Ok(self
             .datastore
             .schüsse()

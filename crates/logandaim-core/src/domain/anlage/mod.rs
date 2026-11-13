@@ -19,16 +19,13 @@ use uuid::Uuid;
 pub mod adresse;
 pub mod kontaktdaten;
 pub mod parkour;
-pub mod snapshot;
 pub mod ziel;
 
 pub use adresse::{AnlageAdresse, AnlageAdresseFehler};
 pub use kontaktdaten::{AnlageKontakt, WebsiteUrl, WebsiteUrlFehler};
 pub use parkour::{
-    NeuerParkour, Parkour, ParkourFehler, ParkourId, Pflock, PflockId, ZielPflöcke, Zielplatzierung,
-};
-pub use snapshot::{
-    ParkourSnapshot, PflockSnapshot, SnapshotFehler, ZielPflöckeSnapshot, ZielSnapshot,
+    NeuerParkour, Parkour, ParkourFehler, ParkourId, ParkourPflock, ParkourPflockId, ZielPflöcke,
+    Zielplatzierung,
 };
 pub use ziel::{AnlageZiel, AnlageZielId, NeuesZiel, ZielFehler, Zustand, ZustandUnbekannt};
 
@@ -261,16 +258,6 @@ impl<S> AnlageIn<S> {
     /// The Parkour a Runde may be started on: active, and belonging to an active Anlage.
     pub fn startbarer_parkour(&self, parkour_id: ParkourId) -> Option<&Parkour> {
         self.aktiver_parkour(parkour_id)
-    }
-
-    /// Capture the immutable setup of one Parkour as a value copy (AC-7, AC-9).
-    ///
-    /// A thin wrapper over the capture rule in [`snapshot`], which is where it lives.
-    pub fn snapshot_für(&self, parkour_id: ParkourId) -> Result<ParkourSnapshot, SnapshotFehler> {
-        let parkour = self
-            .parkour_mit_id(parkour_id)
-            .ok_or(SnapshotFehler::ParkourNichtGefunden)?;
-        snapshot::snapshot_aus_parkour(parkour, |ziel_id| self.ziel(ziel_id))
     }
 
     /// Where one physical Ziel is used across this Anlage's Parkours: in which routes, at
@@ -548,7 +535,7 @@ impl AnlageAktiv {
     pub fn parkour_setup_ändern(
         &mut self,
         parkour_id: ParkourId,
-        pflöcke: Vec<Pflock>,
+        pflöcke: Vec<ParkourPflock>,
         platzierungen: Vec<Zielplatzierung>,
     ) -> Result<(), ParkourFehler> {
         for platzierung in &platzierungen {
@@ -744,11 +731,6 @@ impl Anlage {
             Self::Archiviert(anlage) => anlage.ziel_verwendungen(ziel_id),
         }
     }
-
-    /// Capture a Parkour snapshot, delegated to whichever state holds the children.
-    pub fn snapshot_für(&self, parkour_id: ParkourId) -> Result<ParkourSnapshot, SnapshotFehler> {
-        snapshot::snapshot(self, parkour_id)
-    }
 }
 
 /// One Parkour's use of one physical Ziel, as the Anlage sees it.
@@ -765,7 +747,7 @@ pub struct Zielverwendung {
     /// Ziel's own ordered set.
     pub pflöcke: ZielPflöcke,
     /// Distance per Pflock, for the distances that are configured.
-    pub abstände: Vec<(PflockId, Abstand)>,
+    pub abstände: Vec<(ParkourPflockId, Abstand)>,
 }
 
 /// Whether a Benutzer may act on an Anlage at all.
@@ -838,8 +820,11 @@ mod tests {
         NonEmptyString::neu(wert).unwrap()
     }
 
-    fn pflock(id: u128, farbe: &str) -> Pflock {
-        Pflock::neu(PflockId(Uuid::from_u128(id)), Farbe::neu(farbe).unwrap())
+    fn pflock(id: u128, farbe: &str) -> ParkourPflock {
+        ParkourPflock::neu(
+            ParkourPflockId(Uuid::from_u128(id)),
+            Farbe::neu(farbe).unwrap(),
+        )
     }
 
     fn parkour_neu(ziel: AnlageZielId) -> NeuerParkour {
@@ -966,7 +951,9 @@ mod tests {
     }
 
     #[test_log::test]
-    fn ac7_der_snapshot_ist_eine_wertkopie() {
+    fn ac7_der_aufbau_ist_eine_wertkopie() {
+        use crate::domain::runde::Rundenaufbau;
+
         let mut anlage = anlage();
         anlage.ziel_hinzufügen(ziel_id(), name("Keiler"));
         let parkour_id = ParkourId(Uuid::nil());
@@ -974,19 +961,20 @@ mod tests {
             .parkour_hinzufügen(parkour_id, parkour_neu(ziel_id()))
             .unwrap();
 
-        let snapshot = anlage.snapshot_für(parkour_id).unwrap();
-        assert_eq!(snapshot.parkour_name().as_str(), "Waldrunde");
-        assert_eq!(snapshot.ziele()[0].tiername().as_str(), "Keiler");
+        let parkour = anlage.parkour_mit_id(parkour_id).unwrap();
+        let aufbau = Rundenaufbau::aus_parkour(parkour, |id| anlage.ziel(id)).unwrap();
+        assert_eq!(aufbau.ziele()[0].name().as_str(), "Keiler");
 
         // A later edit changes the aggregate, never the captured copy.
         anlage
             .ziel_ändern(ziel_id(), name("Reh"), NonZeroU32::new(1).unwrap())
             .unwrap();
-        assert_eq!(snapshot.ziele()[0].tiername().as_str(), "Keiler");
-        assert_eq!(snapshot.ziele()[0].zielnummer().get(), 1);
+        assert_eq!(aufbau.ziele()[0].name().as_str(), "Keiler");
+        assert_eq!(aufbau.ziele()[0].ordinal().get(), 1);
 
-        let neuer_snapshot = anlage.snapshot_für(parkour_id).unwrap();
-        assert_eq!(neuer_snapshot.ziele()[0].tiername().as_str(), "Reh");
+        let parkour = anlage.parkour_mit_id(parkour_id).unwrap();
+        let neuer_aufbau = Rundenaufbau::aus_parkour(parkour, |id| anlage.ziel(id)).unwrap();
+        assert_eq!(neuer_aufbau.ziele()[0].name().as_str(), "Reh");
     }
 
     #[test_log::test]

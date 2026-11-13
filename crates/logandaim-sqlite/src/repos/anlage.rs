@@ -20,8 +20,8 @@ use logandaim_core::{
     domain::{
         Anlage, AnlageAdresse, AnlageAktiv, AnlageArchiviert, AnlageId, AnlageKontakt,
         AnlageVerwaltung, AnlageVerwaltungRolle, AnlageZiel, AnlageZielId, Farbe, Ländercode,
-        NeueAnlage, NonEmptyString, Parkour, ParkourId, Pflock, PflockId, ZielPflöcke,
-        Zielplatzierung, Zustand,
+        NeueAnlage, NonEmptyString, Parkour, ParkourId, ParkourPflock, ParkourPflockId,
+        ZielPflöcke, Zielplatzierung, Zustand,
     },
     ports::{AnlageRepository, RepositoryError, RepositoryResult},
 };
@@ -147,7 +147,10 @@ async fn lade_parkour(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult
     Ok(parkour)
 }
 
-async fn lade_pflöcke(tx: &Transaction, parkour_id: ParkourId) -> RepositoryResult<Vec<Pflock>> {
+async fn lade_pflöcke(
+    tx: &Transaction,
+    parkour_id: ParkourId,
+) -> RepositoryResult<Vec<ParkourPflock>> {
     let mut rows = tx
         .query(
             r#"SELECT id, farbe FROM "pflock_setups"
@@ -165,8 +168,8 @@ async fn lade_pflöcke(tx: &Transaction, parkour_id: ParkourId) -> RepositoryRes
     {
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
         let farbe: String = row.get(1).contextualize(RepositoryError::Data)?;
-        pflöcke.push(Pflock::neu(
-            PflockId(parse_uuid(&id)?),
+        pflöcke.push(ParkourPflock::neu(
+            ParkourPflockId(parse_uuid(&id)?),
             Farbe::neu(&farbe).change_context(RepositoryError::Data)?,
         ));
     }
@@ -176,7 +179,7 @@ async fn lade_pflöcke(tx: &Transaction, parkour_id: ParkourId) -> RepositoryRes
 async fn lade_platzierungen(
     tx: &Transaction,
     parkour_id: ParkourId,
-    parkour_pflöcke: &[Pflock],
+    parkour_pflöcke: &[ParkourPflock],
 ) -> RepositoryResult<Vec<Zielplatzierung>> {
     let mut rows = tx
         .query(
@@ -216,7 +219,7 @@ async fn lade_platzierungen(
             let meter: i64 = row.get(1).contextualize(RepositoryError::Data)?;
             let meter = u32::try_from(meter).contextualize(RepositoryError::Data)?;
             abstände.push((
-                PflockId(parse_uuid(&pflock_id)?),
+                ParkourPflockId(parse_uuid(&pflock_id)?),
                 logandaim_core::domain::Abstand::neu(meter)
                     .change_context(RepositoryError::Data)?,
             ));
@@ -261,8 +264,8 @@ async fn lade_ziel_pflöcke(
     {
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
         let farbe: String = row.get(1).contextualize(RepositoryError::Data)?;
-        pflöcke.push(Pflock::neu(
-            PflockId(parse_uuid(&id)?),
+        pflöcke.push(ParkourPflock::neu(
+            ParkourPflockId(parse_uuid(&id)?),
             Farbe::neu(&farbe).change_context(RepositoryError::Data)?,
         ));
     }

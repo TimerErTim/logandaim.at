@@ -16,7 +16,7 @@ use error_stack::{IntoReport, Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
-    domain::{AnlageId, AnlageZielId, ParkourId, RundeId, RundenZielId, konto::BenutzerId},
+    domain::{AnlageId, AnlageZielId, ParkourId, RundeId, ZielId, konto::BenutzerId},
     service::{
         AbmeldungFehler, BenutzerLöschenFehler, PasswortWiederherstellenFehler, StammdatenFehler,
     },
@@ -698,7 +698,7 @@ impl LogandaimApiSpec {
             .await
             .unwrap_or(AuthContext::Anonymous);
         self.app_api
-            .runde_ziel_umbenennen(auth, RundeId(runde_id.0), RundenZielId(ziel_id.0), body.0)
+            .runde_ziel_umbenennen(auth, RundeId(runde_id.0), ZielId(ziel_id.0), body.0)
             .await
             .into()
     }
@@ -722,7 +722,7 @@ impl LogandaimApiSpec {
             .await
             .unwrap_or(AuthContext::Anonymous);
         self.app_api
-            .runde_ziel_entfernen(auth, RundeId(runde_id.0), RundenZielId(ziel_id.0))
+            .runde_ziel_entfernen(auth, RundeId(runde_id.0), ZielId(ziel_id.0))
             .await
             .into()
     }

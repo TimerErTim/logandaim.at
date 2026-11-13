@@ -16,8 +16,8 @@ use logandaim_core::{
     ErrorReportExt,
     application::uow::Versioned,
     domain::{
-        Abstand, Erfasser, NeuerSchuss, RundeId, Schuss, SchussId, SchussZielId, Schussposition,
-        Wertungszone, konto::BenutzerId,
+        Abstand, Erfasser, NeuerSchuss, RundeId, Schuss, SchussId, Schussposition, Wertungszone,
+        ZielId, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, SchussRepository},
 };
@@ -74,7 +74,7 @@ fn schuss_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Schuss>> {
             SchussId(parse_uuid(&id)?),
             RundeId(parse_uuid(&runde_id)?),
             zuordnung,
-            SchussZielId(parse_uuid(&ziel_id)?),
+            ZielId(parse_uuid(&ziel_id)?),
             usize::try_from(pfeil).contextualize(RepositoryError::Data)?,
             zone_from_str(&zone)?,
             position,
@@ -190,10 +190,7 @@ impl SchussRepository for SQLiteSchussRepository {
         .await
     }
 
-    async fn find_by_ziel(
-        &self,
-        ziel_id: SchussZielId,
-    ) -> RepositoryResult<Vec<Versioned<Schuss>>> {
+    async fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>> {
         self.finde(
             r#"WHERE ziel_id = ?1 ORDER BY runde_id, pfeil"#,
             [ziel_id.0.to_string()],

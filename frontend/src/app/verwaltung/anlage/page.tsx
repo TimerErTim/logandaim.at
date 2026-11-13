@@ -19,7 +19,7 @@ import {
   type AnlageKontakt,
   AnlageVerwaltungRolle,
   type ParkourInput,
-  type Pflock,
+  type ParkourPflock,
   type ZielInput,
 } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
@@ -470,7 +470,9 @@ function ParkourListe({
   const meldung = useErfolgsmeldung();
   const aktiveZiele = anlage.ziele.filter((ziel) => ziel.zustand === "Aktiv");
   const [name, setName] = useState("");
-  const [pfloecke, setPfloecke] = useState<Pflock[]>(() => [neuerPflock([])]);
+  const [pfloecke, setPfloecke] = useState<ParkourPflock[]>(() => [
+    neuerPflock([]),
+  ]);
   const [ausgewaehlteZiele, setAusgewaehlteZiele] = useState<string[]>([]);
 
   function toggleZiel(zielId: string, ausgewaehlt: boolean) {

@@ -3,11 +3,6 @@
 //! A Runde read is the only place a Wertung is served: there is no `/wertung` endpoint
 //! (SPEC-wertung rule 6). The captured fields are copied verbatim from what was captured,
 //! never re-read from master data (AC-7, AC-9).
-//!
-//! The setup is told by one field, `herkunft`: an object holding the whole Anlage/Parkour pair,
-//! or absent for a `Freie Runde`. One optional object rather than two optional ids, so a client
-//! cannot receive a pair that names two different Parkours, and `herkunft === null` is the
-//! discriminator a capture screen branches on.
 
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -16,9 +11,9 @@ use logandaim_core::domain;
 
 use crate::schema::{Erfasser, Farbe, Schuss, Zielwertung};
 
-/// The master-data identities a Runde was started from, as one object.
+/// The Anlage/Parkour identities a Runde was started from.
 ///
-/// Both ids or neither: the pair is what "this is a Parkour round" means.
+/// Both ids are present together; free rounds have no provenance.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
@@ -31,65 +26,49 @@ pub struct RundeHerkunft {
     pub parkour_id: Uuid,
 }
 
-impl From<(domain::AnlageId, domain::ParkourId)> for RundeHerkunft {
-    fn from((anlage_id, parkour_id): (domain::AnlageId, domain::ParkourId)) -> Self {
+impl From<domain::RundenHerkunft> for RundeHerkunft {
+    fn from(herkunft: domain::RundenHerkunft) -> Self {
         Self {
-            anlage_id: anlage_id.0,
-            parkour_id: parkour_id.0,
+            anlage_id: herkunft.anlage_id.0,
+            parkour_id: herkunft.parkour_id.0,
         }
     }
 }
 
-/// One Pflock of this Runde' captured route, in near-to-far order.
+/// One Pflock of this Ziel's captured route.
 ///
-/// A captured route keeps no master-data identity, so the colour is what tells the Pflöcke
-/// apart.
+/// `abstand` is the configured distance from this Pflock to its Ziel, in metres; it is absent
+/// when no distance was configured.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RundePflock {
+pub struct Pflock {
     /// The captured Pflock's colour.
     pub farbe: Farbe,
-    /// 0-based position, near to far.
-    pub position: usize,
+    /// Distance from this Pflock to its Ziel, in metres; absent when unconfigured.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub abstand: Option<u32>,
 }
 
-/// One captured distance, named by the Pflock' colour.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
-#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
-#[derive(serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Abstand {
-    /// The captured Pflock's colour.
-    pub pflock: Farbe,
-    /// Distance from that Pflock to the Ziel, in metres.
-    pub meter: u32,
-}
-
-/// One target in this Runde's captured route: identity, name, ordinal, distances, and Wertung.
+/// One target in this Runde's captured route: identity, name, ordinal, Pflöcke, and Wertung.
 ///
-/// A free-round target fills the same shape; its Pflock and distance lists are empty because a
-/// free round configures none.
+/// A free-round Ziel has no configured Pflöcke.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RundeZiel {
+pub struct Ziel {
     /// Identity of the target within this Runde.
     pub ziel_id: Uuid,
     /// Name captured in the route.
     pub tiername: String,
     /// 1-based route ordinal.
     pub zielnummer: u32,
-    /// The Pflöcke that apply to this Ziel as captured, near to far: the Ziel's own set when
-    /// it had one, the Parkour-wide set otherwise. Always empty on a free round.
-    pub pflöcke: Vec<RundePflock>,
-    /// The distances as captured. Always empty on a free round.
-    pub abstände: Vec<Abstand>,
+    /// The Pflöcke that apply to this Ziel as captured, near to far.
+    pub pflöcke: Vec<Pflock>,
     /// The Wertung of this Ziel; absent while no Schuss has been logged at it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wertung: Option<Zielwertung>,
@@ -120,7 +99,7 @@ pub struct Runde {
     /// The Anlage/Parkour pair; absent on a `Freie Runde`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub herkunft: Option<RundeHerkunft>,
-    /// The round's name: the captured Parkour's, or the free round's own.
+    /// The round's own name.
     pub name: String,
     /// Who the Runde belongs to.
     pub erfasst_von: Erfasser,
@@ -131,10 +110,8 @@ pub struct Runde {
     /// End of the Runde; absent while it is open.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub abgeschlossen_am: Option<DateTime<Utc>>,
-    /// The captured Pflöcke' colours, near to far; empty on a free round.
-    pub pflöcke: Vec<RundePflock>,
     /// The Ziele as captured, with their results.
-    pub ziele: Vec<RundeZiel>,
+    pub ziele: Vec<Ziel>,
     /// First-arrow hits over the whole Runde.
     pub gesamt_erster_treffer: u32,
     /// Follow-up hits over the whole Runde.
@@ -158,7 +135,7 @@ pub struct RundeBasic {
     /// The Anlage/Parkour pair; absent on a `Freie Runde`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub herkunft: Option<RundeHerkunft>,
-    /// The round's name: the captured Parkour's, or the free round's own.
+    /// The round's own name.
     pub name: String,
     /// Number of Ziele in the captured route.
     pub anzahl_ziele: usize,
@@ -182,23 +159,21 @@ pub struct RundeBasic {
 impl Runde {
     pub fn gelesen(runde: domain::Runde, schüsse: Vec<domain::Schuss>) -> Self {
         let wertungen = runde.ziel_wertungen(schüsse.iter().cloned());
-        let aufbau = runde.aufbau();
-        let pflöcke = aufbau.pflöcke();
-        let ziele = aufbau.ziele();
-        let ziele = ziele
+        let ziele = runde
+            .aufbau()
+            .ziele()
             .iter()
             .zip(wertungen)
-            .map(|(ziel, wertung)| RundeZiel {
+            .map(|(ziel, wertung)| Ziel {
                 ziel_id: ziel.id().0,
                 tiername: ziel.name().to_string(),
                 zielnummer: ziel.ordinal().get(),
-                pflöcke: effective_pflöcke(ziel, pflöcke),
-                abstände: ziel
-                    .abstände()
+                pflöcke: ziel
+                    .pflöcke()
                     .iter()
-                    .map(|(farbe, abstand)| Abstand {
-                        pflock: (*farbe).into(),
-                        meter: abstand.meter(),
+                    .map(|pflock| Pflock {
+                        farbe: pflock.farbe().into(),
+                        abstand: pflock.abstand().map(|abstand| abstand.meter()),
                     })
                     .collect(),
                 wertung: wertung.map(Into::into),
@@ -229,37 +204,15 @@ fn zustand(runde: &domain::Runde) -> RundeZustand {
     }
 }
 
-/// The Pflöcke that apply to one captured Ziel, near to far: its own set when it was
-/// captured with one, the Parkour-wide captured set otherwise.
-///
-/// A `Freies Ziel` captured no Pflock set and its round has no Parkour-wide set, so the answer
-/// is empty — the two lists it could inherit from do not exist.
-fn effective_pflöcke(
-    ziel: &domain::RundenZiel,
-    parkour: &[domain::PflockSnapshot],
-) -> Vec<RundePflock> {
-    // The captured snapshot already assigns each Pflock its position from the array order,
-    // so either set renders as it was captured.
-    ziel.pflöcke()
-        .effektive(parkour)
-        .iter()
-        .map(|pflock| RundePflock {
-            farbe: pflock.farbe().into(),
-            position: pflock.position(),
-        })
-        .collect()
-}
-
 /// A freshly started or freshly closed Runde, before any Wertung is folded.
 ///
 /// `RundeStarten` and `RundeAbschliessen` answer the aggregate, not a read model, so this
 /// impl renders the captured route exactly and leaves every Wertung empty.
 impl From<domain::Runde> for Runde {
     fn from(runde: domain::Runde) -> Self {
-        let (herkunft, name) = herkunft_und_name(&runde);
+        let herkunft = runde.herkunft().copied().map(Into::into);
+        let name = runde.name().to_string();
         let aufbau = runde.aufbau();
-        let pflöcke = aufbau.pflöcke();
-        let ziele = aufbau.ziele();
         Self {
             id: runde.id().0,
             herkunft,
@@ -268,26 +221,19 @@ impl From<domain::Runde> for Runde {
             zustand: zustand(&runde),
             begonnen_am: runde.begonnen_am(),
             abgeschlossen_am: runde.abgeschlossen_am(),
-            pflöcke: pflöcke
+            ziele: aufbau
+                .ziele()
                 .iter()
-                .map(|pflock| RundePflock {
-                    farbe: pflock.farbe().into(),
-                    position: pflock.position(),
-                })
-                .collect(),
-            ziele: ziele
-                .iter()
-                .map(|ziel| RundeZiel {
+                .map(|ziel| Ziel {
                     ziel_id: ziel.id().0,
                     tiername: ziel.name().to_string(),
                     zielnummer: ziel.ordinal().get(),
-                    pflöcke: effective_pflöcke(ziel, pflöcke),
-                    abstände: ziel
-                        .abstände()
+                    pflöcke: ziel
+                        .pflöcke()
                         .iter()
-                        .map(|(farbe, abstand)| Abstand {
-                            pflock: (*farbe).into(),
-                            meter: abstand.meter(),
+                        .map(|pflock| Pflock {
+                            farbe: pflock.farbe().into(),
+                            abstand: pflock.abstand().map(|abstand| abstand.meter()),
                         })
                         .collect(),
                     wertung: None,
@@ -303,7 +249,8 @@ impl From<domain::Runde> for Runde {
 
 impl From<domain::Runde> for RundeBasic {
     fn from(runde: domain::Runde) -> Self {
-        let (herkunft, name) = herkunft_und_name(&runde);
+        let herkunft = runde.herkunft().copied().map(Into::into);
+        let name = runde.name().to_string();
         let anzahl_ziele = runde.aufbau().ziele().len();
         Self {
             id: runde.id().0,
@@ -315,23 +262,5 @@ impl From<domain::Runde> for RundeBasic {
             begonnen_am: runde.begonnen_am(),
             abgeschlossen_am: runde.abgeschlossen_am(),
         }
-    }
-}
-
-/// The wire form of a round's provenance: the Anlage/Parkour pair, or nothing at all.
-///
-/// One field pair, so a client cannot receive two ids naming different Parkours, and the
-/// free round's own name is the round's `name`.
-fn herkunft_und_name(runde: &domain::Runde) -> (Option<RundeHerkunft>, String) {
-    match runde.herkunft() {
-        domain::Rundenherkunft::Parkour {
-            anlage_id,
-            parkour_id,
-            parkour_name,
-        } => (
-            Some(RundeHerkunft::from((*anlage_id, *parkour_id))),
-            parkour_name.to_string(),
-        ),
-        domain::Rundenherkunft::Freie { name } => (None, name.to_string()),
     }
 }

@@ -123,10 +123,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
           <SchussLedger
             ziel={selected}
             reihenfolge={index + 1}
-            editable={
-              runde.zustand === "InBearbeitung" ||
-              runde.zustand === "Abgeschlossen"
-            }
+            editable={runde.zustand === "InBearbeitung"}
             onEdit={(schussId, wertungszone, shotPosition) => {
               setFehler(null);
               schussAendern.mutate(

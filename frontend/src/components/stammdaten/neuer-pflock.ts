@@ -1,4 +1,4 @@
-import type { Pflock } from "@/api/logandaim-api";
+import type { ParkourPflock } from "@/api/logandaim-api";
 
 import { PFLOCK_FARBE_STANDARD, PFLOCK_FARBEN } from "./pflock-farbe-feld";
 
@@ -11,7 +11,9 @@ import { PFLOCK_FARBE_STANDARD, PFLOCK_FARBEN } from "./pflock-farbe-feld";
  * added the row anyway would build a setup the API rejects, and the rejection names no
  * field — so the caller disables "Pflock hinzufügen" and says why instead.
  */
-export function freiePflockFarbe(vorhandene: readonly Pflock[]): string | null {
+export function freiePflockFarbe(
+  vorhandene: readonly ParkourPflock[],
+): string | null {
   const belegt = new Set(
     vorhandene.map((pflock) => pflock.farbe.toLowerCase()),
   );
@@ -29,7 +31,9 @@ export function freiePflockFarbe(vorhandene: readonly Pflock[]): string | null {
  * Call only where `freiePflockFarbe` answered; the fallback keeps the return type
  * simple, and a setup with a repeated colour is refused by the API anyway (AC-6).
  */
-export function neuerPflock(vorhandene: readonly Pflock[]): Pflock {
+export function neuerPflock(
+  vorhandene: readonly ParkourPflock[],
+): ParkourPflock {
   return {
     id: crypto.randomUUID(),
     farbe: freiePflockFarbe(vorhandene) ?? PFLOCK_FARBE_STANDARD,

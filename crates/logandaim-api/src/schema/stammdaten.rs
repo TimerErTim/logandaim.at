@@ -129,7 +129,7 @@ pub struct AnlageVerwaltung {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Ziel {
+pub struct AnlageZiel {
     /// Stable identity of this physical target.
     pub id: Uuid,
     /// Animal name shown to the shooter.
@@ -181,7 +181,7 @@ pub struct PflockAbstand {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Pflock {
+pub struct ParkourPflock {
     /// Identity of the Pflock inside its Parkour.
     pub id: Uuid,
     /// The Pflock's colour. It is what distinguishes one Pflock from another.
@@ -220,7 +220,7 @@ pub struct InheritFromParkourPflöcke {}
 #[serde(rename_all = "camelCase")]
 pub struct ExplicitPflöcke {
     /// The own Pflöcke, near to far.
-    pub pflöcke: Vec<Pflock>,
+    pub pflöcke: Vec<ParkourPflock>,
 }
 
 impl Default for ZielPflöcke {
@@ -257,7 +257,7 @@ pub struct Parkour {
     /// Whether the Parkour is in use or retired.
     pub zustand: AnlageZustand,
     /// Far to near, in the order the shooter walks them. Never inferred from a colour.
-    pub pflöcke: Vec<Pflock>,
+    pub pflöcke: Vec<ParkourPflock>,
     /// In route order.
     pub platzierungen: Vec<Zielplatzierung>,
 }
@@ -338,7 +338,7 @@ pub struct Anlage {
     /// The role assignments in this Anlage.
     pub verwaltungen: Vec<AnlageVerwaltung>,
     /// Its physical Ziele.
-    pub ziele: Vec<Ziel>,
+    pub ziele: Vec<AnlageZiel>,
     /// Its Parkour, each with its setup and route.
     pub parkour: Vec<Parkour>,
 }
@@ -428,8 +428,8 @@ impl From<domain::AnlageVerwaltung> for AnlageVerwaltung {
     }
 }
 
-impl From<domain::Pflock> for Pflock {
-    fn from(pflock: domain::Pflock) -> Self {
+impl From<domain::ParkourPflock> for ParkourPflock {
+    fn from(pflock: domain::ParkourPflock) -> Self {
         Self {
             id: pflock.id().0,
             farbe: pflock.farbe().into(),
@@ -502,7 +502,7 @@ impl From<domain::Zielverwendung> for Zielverwendung {
     }
 }
 
-impl From<domain::AnlageZiel> for Ziel {
+impl From<domain::AnlageZiel> for AnlageZiel {
     fn from(ziel: domain::AnlageZiel) -> Self {
         Self {
             id: ziel.id().0,
@@ -538,7 +538,7 @@ impl From<domain::Anlage> for Anlage {
                 .iter()
                 .map(|ziel| {
                     // The admin page renders where each Ziel stands, so the read attaches it.
-                    let mut ziel: Ziel = ziel.clone().into();
+                    let mut ziel: AnlageZiel = ziel.clone().into();
                     ziel.verwendungen = anlage
                         .ziel_verwendungen(domain::AnlageZielId(ziel.id))
                         .into_iter()

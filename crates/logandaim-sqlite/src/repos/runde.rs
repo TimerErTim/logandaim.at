@@ -24,8 +24,8 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Abstand, AnlageId, AnlageZielId, Erfasser, Farbe, NeueRunde, NonEmptyString, ParkourId,
-        PflockSnapshot, Runde, RundeId, RundenZiel, RundenZielId, Rundenaufbau, Rundenherkunft,
-        ZUSTAND_IN_BEARBEITUNG, ZielPflöckeSnapshot, konto::BenutzerId,
+        Pflock, Runde, RundeId, RundenHerkunft, Rundenaufbau, ZUSTAND_IN_BEARBEITUNG, Ziel, ZielId,
+        konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
 };
@@ -53,8 +53,7 @@ enum RundenaufbauDto {
     Parkour {
         anlage_id: Uuid,
         parkour_id: Uuid,
-        parkour_name: String,
-        pflöcke: Vec<PflockDto>,
+        name: String,
         ziele: Vec<ZielDto>,
     },
     Freie {
@@ -66,7 +65,8 @@ enum RundenaufbauDto {
 #[derive(Debug, Serialize, Deserialize)]
 struct PflockDto {
     farbe: String,
-    position: usize,
+    #[serde(default)]
+    abstand: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,41 +74,9 @@ struct ZielDto {
     ziel_id: Uuid,
     #[serde(default)]
     anlage_ziel_id: Option<Uuid>,
-    #[serde(alias = "name")]
     tiername: String,
-    #[serde(alias = "ordinal")]
     zielnummer: u32,
-    #[serde(default)]
-    pflöcke: ZielPflöckeDto,
-    #[serde(default)]
-    abstände: Vec<(String, u32)>,
-}
-
-/// The stored mirror of `ZielPflöckeSnapshot`, externally tagged by serde.
-///
-/// `Default` is `InheritFromParkour` for constructing new DTOs where applicable.
-#[derive(Debug, Serialize, Deserialize, Default)]
-enum ZielPflöckeDto {
-    #[default]
-    InheritFromParkour,
-    Explicit(Vec<PflockDto>),
-}
-
-impl ZielPflöckeDto {
-    fn aus_snapshot(snapshot: &ZielPflöckeSnapshot) -> Self {
-        match snapshot {
-            ZielPflöckeSnapshot::InheritFromParkour => Self::InheritFromParkour,
-            ZielPflöckeSnapshot::Explicit(eigene) => Self::Explicit(
-                eigene
-                    .iter()
-                    .map(|pflock| PflockDto {
-                        farbe: pflock.farbe().to_hex(),
-                        position: pflock.position(),
-                    })
-                    .collect(),
-            ),
-        }
-    }
+    pflöcke: Vec<PflockDto>,
 }
 
 fn parkour_to_dto(
@@ -120,63 +88,39 @@ fn parkour_to_dto(
     RundenaufbauDto::Parkour {
         anlage_id: anlage_id.0,
         parkour_id: parkour_id.0,
-        parkour_name: parkour_name.to_string(),
-        pflöcke: aufbau
+        name: parkour_name.to_string(),
+        ziele: aufbau.ziele().iter().map(ziel_to_dto).collect(),
+    }
+}
+
+fn ziel_to_dto(ziel: &Ziel) -> ZielDto {
+    ZielDto {
+        ziel_id: ziel.id().0,
+        anlage_ziel_id: ziel.anlage_ziel_id().map(|id| id.0),
+        tiername: ziel.name().to_string(),
+        zielnummer: ziel.ordinal().get(),
+        pflöcke: ziel
             .pflöcke()
             .iter()
             .map(|pflock| PflockDto {
                 farbe: pflock.farbe().to_hex(),
-                position: pflock.position(),
-            })
-            .collect(),
-        ziele: aufbau
-            .ziele()
-            .iter()
-            .map(|ziel| ZielDto {
-                ziel_id: ziel.id().0,
-                anlage_ziel_id: ziel.anlage_ziel_id().map(|id| id.0),
-                tiername: ziel.name().to_string(),
-                zielnummer: ziel.ordinal().get(),
-                pflöcke: ZielPflöckeDto::aus_snapshot(ziel.pflöcke()),
-                abstände: ziel
-                    .abstände()
-                    .iter()
-                    .map(|(farbe, abstand)| (farbe.to_hex(), abstand.meter()))
-                    .collect(),
+                abstand: pflock.abstand().map(|abstand| abstand.meter()),
             })
             .collect(),
     }
 }
 
 /// Serialise one Runde's document: its provenance and its route, in one object.
-fn aufbau_to_json(herkunft: &Rundenherkunft, aufbau: &Rundenaufbau) -> RepositoryResult<String> {
+fn aufbau_to_json(
+    herkunft: Option<&RundenHerkunft>,
+    name: &NonEmptyString,
+    aufbau: &Rundenaufbau,
+) -> RepositoryResult<String> {
     let dto = match herkunft {
-        Rundenherkunft::Parkour {
-            anlage_id,
-            parkour_id,
-            parkour_name,
-        } => parkour_to_dto(*anlage_id, *parkour_id, parkour_name, aufbau),
-        Rundenherkunft::Freie { name } => RundenaufbauDto::Freie {
+        Some(herkunft) => parkour_to_dto(herkunft.anlage_id, herkunft.parkour_id, name, aufbau),
+        None => RundenaufbauDto::Freie {
             name: name.to_string(),
-            ziele: aufbau
-                .ziele()
-                .iter()
-                .map(|ziel| ZielDto {
-                    ziel_id: ziel.id().0,
-                    // A free target has no master-data identity to carry: the round minted
-                    // its own. Writing one here would let a free target be read back wearing
-                    // Anlage provenance that `ersetze_referenzen` never indexes.
-                    anlage_ziel_id: None,
-                    tiername: ziel.name().to_string(),
-                    zielnummer: ziel.ordinal().get(),
-                    pflöcke: ZielPflöckeDto::aus_snapshot(ziel.pflöcke()),
-                    abstände: ziel
-                        .abstände()
-                        .iter()
-                        .map(|(farbe, abstand)| (farbe.to_hex(), abstand.meter()))
-                        .collect(),
-                })
-                .collect(),
+            ziele: aufbau.ziele().iter().map(ziel_to_dto).collect(),
         },
     };
     serde_json::to_string(&dto).contextualize(RepositoryError::Data)
@@ -185,151 +129,69 @@ fn aufbau_to_json(herkunft: &Rundenherkunft, aufbau: &Rundenaufbau) -> Repositor
 /// The two denormalised projection columns, derived from the round's provenance.
 ///
 /// `None` for both on a free round: SQL that filters by Anlage must not see one.
-fn projizierte_ids(herkunft: &Rundenherkunft) -> (Option<String>, Option<String>) {
+fn projizierte_ids(herkunft: Option<&RundenHerkunft>) -> (Option<String>, Option<String>) {
     match herkunft {
-        Rundenherkunft::Parkour {
-            anlage_id,
-            parkour_id,
-            ..
-        } => (
-            Some(anlage_id.0.to_string()),
-            Some(parkour_id.0.to_string()),
+        Some(herkunft) => (
+            Some(herkunft.anlage_id.0.to_string()),
+            Some(herkunft.parkour_id.0.to_string()),
         ),
-        Rundenherkunft::Freie { .. } => (None, None),
+        None => (None, None),
     }
 }
 
 /// Read one stored document back into the provenance and the route it captured.
-fn aufbau_from_json(json: &str) -> RepositoryResult<(Rundenherkunft, Rundenaufbau)> {
+fn aufbau_from_json(
+    json: &str,
+) -> RepositoryResult<(Option<RundenHerkunft>, NonEmptyString, Rundenaufbau)> {
     let dto: RundenaufbauDto = serde_json::from_str(json).contextualize(RepositoryError::Data)?;
-    match dto {
+    let (herkunft, name, ziele) = match dto {
         RundenaufbauDto::Parkour {
             anlage_id,
             parkour_id,
-            parkour_name,
-            pflöcke,
+            name,
             ziele,
-        } => {
-            let pflöcke = pflöcke
+        } => (
+            Some(RundenHerkunft {
+                anlage_id: AnlageId(anlage_id),
+                parkour_id: ParkourId(parkour_id),
+            }),
+            name,
+            ziele,
+        ),
+        RundenaufbauDto::Freie { name, ziele } => (None, name, ziele),
+    };
+    let ziele = ziele
+        .into_iter()
+        .map(|ziel| {
+            if herkunft.is_none() && ziel.anlage_ziel_id.is_some() {
+                return Err(RepositoryError::Data.into());
+            }
+            let pflöcke = ziel
+                .pflöcke
                 .into_iter()
                 .map(|pflock| {
-                    Ok(PflockSnapshot::neu(
-                        (Farbe::neu(&pflock.farbe)).contextualize(RepositoryError::Data)?,
-                        pflock.position,
-                    ))
+                    let farbe = Farbe::neu(&pflock.farbe).contextualize(RepositoryError::Data)?;
+                    let abstand = pflock
+                        .abstand
+                        .map(|meter| Abstand::neu(meter).contextualize(RepositoryError::Data))
+                        .transpose()?;
+                    Ok(Pflock::neu(farbe, abstand))
                 })
                 .collect::<RepositoryResult<Vec<_>>>()?;
-            let ziele = ziele
-                .into_iter()
-                .map(|ziel| {
-                    let abstände = ziel
-                        .abstände
-                        .into_iter()
-                        .map(|(farbe, meter)| {
-                            Ok((
-                                (Farbe::neu(&farbe)).contextualize(RepositoryError::Data)?,
-                                (Abstand::neu(meter)).contextualize(RepositoryError::Data)?,
-                            ))
-                        })
-                        .collect::<RepositoryResult<Vec<_>>>()?;
-                    let pflöcke = match ziel.pflöcke {
-                        ZielPflöckeDto::InheritFromParkour => {
-                            ZielPflöckeSnapshot::InheritFromParkour
-                        }
-                        ZielPflöckeDto::Explicit(eigene) => ZielPflöckeSnapshot::Explicit(
-                            eigene
-                                .into_iter()
-                                .map(|pflock| {
-                                    Ok(PflockSnapshot::neu(
-                                        (Farbe::neu(&pflock.farbe))
-                                            .contextualize(RepositoryError::Data)?,
-                                        pflock.position,
-                                    ))
-                                })
-                                .collect::<RepositoryResult<Vec<_>>>()?,
-                        ),
-                    };
-                    let id = RundenZielId(ziel.ziel_id);
-                    let name = (NonEmptyString::neu(&ziel.tiername))
-                        .contextualize(RepositoryError::Data)?;
-                    let ordinal =
-                        std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?;
-                    Ok(RundenZiel::from_parts(
-                        id,
-                        ziel.anlage_ziel_id.map(AnlageZielId),
-                        name,
-                        ordinal,
-                        pflöcke,
-                        abstände,
-                    ))
-                })
-                .collect::<RepositoryResult<Vec<_>>>()?;
-
-            Ok((
-                Rundenherkunft::Parkour {
-                    anlage_id: AnlageId(anlage_id),
-                    parkour_id: ParkourId(parkour_id),
-                    parkour_name: (NonEmptyString::neu(&parkour_name))
-                        .contextualize(RepositoryError::Data)?,
-                },
-                Rundenaufbau::from_parts(pflöcke, ziele),
+            Ok(Ziel::from_parts(
+                ZielId(ziel.ziel_id),
+                ziel.anlage_ziel_id.map(AnlageZielId),
+                NonEmptyString::neu(&ziel.tiername).contextualize(RepositoryError::Data)?,
+                std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?,
+                pflöcke,
             ))
-        }
-        RundenaufbauDto::Freie { name, ziele } => {
-            let ziele = ziele
-                .into_iter()
-                .map(|ziel| {
-                    let pflöcke = match ziel.pflöcke {
-                        ZielPflöckeDto::InheritFromParkour => {
-                            ZielPflöckeSnapshot::InheritFromParkour
-                        }
-                        ZielPflöckeDto::Explicit(pflöcke) => ZielPflöckeSnapshot::Explicit(
-                            pflöcke
-                                .into_iter()
-                                .map(|pflock| {
-                                    Ok(PflockSnapshot::neu(
-                                        (Farbe::neu(&pflock.farbe))
-                                            .contextualize(RepositoryError::Data)?,
-                                        pflock.position,
-                                    ))
-                                })
-                                .collect::<RepositoryResult<Vec<_>>>()?,
-                        ),
-                    };
-                    let abstände = ziel
-                        .abstände
-                        .into_iter()
-                        .map(|(farbe, meter)| {
-                            Ok((
-                                (Farbe::neu(&farbe)).contextualize(RepositoryError::Data)?,
-                                (Abstand::neu(meter)).contextualize(RepositoryError::Data)?,
-                            ))
-                        })
-                        .collect::<RepositoryResult<Vec<_>>>()?;
-                    // The Freie DTO carries no Anlage identity, so a stored one is corrupt
-                    // rather than provenance: refuse it instead of restoring it.
-                    if ziel.anlage_ziel_id.is_some() {
-                        return Err(RepositoryError::Data.into());
-                    }
-                    Ok(RundenZiel::from_parts(
-                        RundenZielId(ziel.ziel_id),
-                        None,
-                        (NonEmptyString::neu(&ziel.tiername))
-                            .contextualize(RepositoryError::Data)?,
-                        std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?,
-                        pflöcke,
-                        abstände,
-                    ))
-                })
-                .collect::<RepositoryResult<Vec<_>>>()?;
-            Ok((
-                Rundenherkunft::Freie {
-                    name: (NonEmptyString::neu(&name)).contextualize(RepositoryError::Data)?,
-                },
-                Rundenaufbau::from_parts(Vec::new(), ziele),
-            ))
-        }
-    }
+        })
+        .collect::<RepositoryResult<Vec<_>>>()?;
+    Ok((
+        herkunft,
+        NonEmptyString::neu(&name).contextualize(RepositoryError::Data)?,
+        Rundenaufbau::from_parts(ziele),
+    ))
 }
 
 #[cfg(test)]
@@ -338,23 +200,24 @@ mod tests {
 
     #[test]
     fn ac21_snapshot_mit_anlage_und_parkour_ist_lesbar() {
-        let snapshot = r#"{
+        let snapshot = r##"{
             "anlage_id":"00000000-0000-0000-0000-000000000001",
             "parkour_id":"00000000-0000-0000-0000-000000000002",
-            "parkour_name":"Wald",
-            "pflöcke":[],
-            "ziele":[]
-        }"#;
+            "name":"Wald",
+            "ziele":[{
+                "ziel_id":"00000000-0000-0000-0000-000000000003",
+                "anlage_ziel_id":"00000000-0000-0000-0000-000000000004",
+                "tiername":"Scheibe",
+                "zielnummer":1,
+                "pflöcke":[{"farbe":"#123456","abstand":35}]
+            }]
+        }"##;
 
-        let (herkunft, aufbau) = aufbau_from_json(snapshot).unwrap();
-        let Rundenherkunft::Parkour {
-            anlage_id,
-            parkour_id,
-            ..
-        } = &herkunft
-        else {
-            panic!("parkour setup");
-        };
+        let (herkunft, name, aufbau) = aufbau_from_json(snapshot).unwrap();
+        let herkunft = herkunft.expect("parkour setup");
+        let anlage_id = herkunft.anlage_id;
+        let parkour_id = herkunft.parkour_id;
+        assert_eq!(name.to_string(), "Wald");
         assert_eq!(
             anlage_id.0.to_string(),
             "00000000-0000-0000-0000-000000000001"
@@ -363,11 +226,18 @@ mod tests {
             parkour_id.0.to_string(),
             "00000000-0000-0000-0000-000000000002"
         );
-        assert!(aufbau.ziele().is_empty());
+        assert_eq!(aufbau.ziele().len(), 1);
+        let pflock = aufbau.ziele()[0].pflöcke()[0];
+        assert_eq!(pflock.farbe().to_hex(), "#123456");
+        assert_eq!(pflock.abstand().unwrap().meter(), 35);
+        let serialized = aufbau_to_json(Some(&herkunft), &name, &aufbau).unwrap();
+        let json: serde_json::Value = serde_json::from_str(&serialized).unwrap();
+        assert!(json.get("pflöcke").is_none());
+        assert_eq!(json["ziele"][0]["pflöcke"][0]["abstand"], 35);
     }
 
     #[test]
-    fn ac21_legacy_snapshot_without_embedded_anlage_id_is_rejected() {
+    fn ac21_snapshot_without_anlage_id_is_rejected() {
         let legacy_snapshot = r#"{
             "parkour_id":"00000000-0000-0000-0000-000000000002",
             "parkour_name":"Wald",
@@ -411,10 +281,11 @@ fn runde_aus_zeile(row: &Row) -> RepositoryResult<Versioned<Runde>> {
     let begonnen_am_raw: String = row.get(5).contextualize(RepositoryError::Data)?;
     let abgeschlossen_am: Option<String> = row.get(6).contextualize(RepositoryError::Data)?;
 
-    let (herkunft, aufbau) = aufbau_from_json(&snapshot_raw)?;
+    let (herkunft, name, aufbau) = aufbau_from_json(&snapshot_raw)?;
     let runde = Runde::from_parts(
         RundeId(parse_uuid(&id_raw)?),
         zuordnung_aus_zeile(benutzer_id, anonymisiert_am)?,
+        name,
         herkunft,
         aufbau,
         parse_datetime(&begonnen_am_raw)?,
@@ -451,14 +322,9 @@ async fn ersetze_referenzen(tx: &Transaction, runde: &Runde) -> RepositoryResult
     .contextualize_with(libsql_error_to_persistence_error)?;
 
     let mut referenzen: Vec<(&'static str, String)> = Vec::new();
-    if let Rundenherkunft::Parkour {
-        anlage_id,
-        parkour_id,
-        ..
-    } = runde.herkunft()
-    {
-        referenzen.push(("anlage", anlage_id.0.to_string()));
-        referenzen.push(("parkour", parkour_id.0.to_string()));
+    if let Some(herkunft) = runde.herkunft() {
+        referenzen.push(("anlage", herkunft.anlage_id.0.to_string()));
+        referenzen.push(("parkour", herkunft.parkour_id.0.to_string()));
         for ziel in runde.aufbau().ziele() {
             if let Some(anlage_ziel_id) = ziel.anlage_ziel_id() {
                 referenzen.push(("ziel", anlage_ziel_id.0.to_string()));
@@ -498,7 +364,7 @@ impl SQLiteRundeRepository {
             Erfasser::Benutzer(benutzer_id) => (Some(benutzer_id.0.to_string()), None),
             Erfasser::Anonymisiert { am } => (None, Some(format_datetime(am))),
         };
-        let snapshot = aufbau_to_json(runde.herkunft(), runde.aufbau())?;
+        let snapshot = aufbau_to_json(runde.herkunft(), runde.name(), runde.aufbau())?;
         let (anlage_id, parkour_id) = projizierte_ids(runde.herkunft());
         update_versioned(
             tx,
@@ -547,7 +413,7 @@ impl RundeRepository for SQLiteRundeRepository {
                 id.0.to_string(),
                 anlage_id,
                 parkour_id,
-                aufbau_to_json(domain.herkunft(), domain.aufbau())?,
+                aufbau_to_json(domain.herkunft(), domain.name(), domain.aufbau())?,
                 benutzer_id,
                 anonymisiert_am,
                 domain.zustand(),

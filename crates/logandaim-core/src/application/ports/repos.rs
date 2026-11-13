@@ -9,7 +9,7 @@ use crate::domain::konto::{
 };
 use crate::domain::{
     Anlage, AnlageId, AnlageZielId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId,
-    Runde, RundeId, Schuss, SchussId, SchussZielId,
+    Runde, RundeId, Schuss, SchussId, ZielId,
 };
 
 pub type RepositoryResult<T> = ResultReport<T, RepositoryError>;
@@ -106,8 +106,7 @@ pub trait SchussRepository: Send + Sync {
     async fn find_by_runde(&self, runde_id: RundeId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
 
     /// Per-physical-Ziel history, independent of the Runde that produced it.
-    async fn find_by_ziel(&self, ziel_id: SchussZielId)
-    -> RepositoryResult<Vec<Versioned<Schuss>>>;
+    async fn find_by_ziel(&self, ziel_id: ZielId) -> RepositoryResult<Vec<Versioned<Schuss>>>;
 
     async fn find_by_benutzer(
         &self,

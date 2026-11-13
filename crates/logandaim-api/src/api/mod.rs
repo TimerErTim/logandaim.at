@@ -20,8 +20,8 @@ use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
     domain::{
-        AnlageId, AnlageZielId, EmailAdresse, ParkourId, Runde as DomainRunde, RundeId,
-        RundenZielId, SchussId, konto::BenutzerId,
+        AnlageId, AnlageZielId, EmailAdresse, ParkourId, Runde as DomainRunde, RundeId, SchussId,
+        ZielId, konto::BenutzerId,
     },
     ports::{ClientKey, RepositoryError, ThrottleAction},
     service::{
@@ -495,7 +495,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         runde_id: RundeId,
-        ziel_id: RundenZielId,
+        ziel_id: ZielId,
         anfrage: requests::ZielUmbenennenRequest,
     ) -> ResultReport<Runde, RundeZielUmbenennenFehler> {
         let use_case = anfrage
@@ -511,7 +511,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         runde_id: RundeId,
-        ziel_id: RundenZielId,
+        ziel_id: ZielId,
     ) -> ResultReport<Runde, RundeZielEntfernenFehler> {
         let use_case = requests::ziel_entfernen_in_use_case(runde_id, ziel_id);
         let runde = self.app.execute(auth, use_case).await?;

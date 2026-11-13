@@ -27,8 +27,14 @@ export function PositionSteuerung({
   const modus = positionsModus(ziel, effektivePflöcke.length);
   const abstandByFarbe = useMemo(
     () =>
-      new Map(ziel.abstände.map((abstand) => [abstand.pflock, abstand.meter])),
-    [ziel.abstände],
+      new Map(
+        ziel.pflöcke.flatMap((pflock) =>
+          pflock.abstand === undefined
+            ? []
+            : [[pflock.farbe, pflock.abstand] as const],
+        ),
+      ),
+    [ziel.pflöcke],
   );
   const checkpoints = useMemo<Checkpoint[]>(
     () =>

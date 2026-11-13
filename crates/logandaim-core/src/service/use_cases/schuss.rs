@@ -1,8 +1,12 @@
-//! Registering one Schuss inside the caller's own running Runde.
+//! Registering, correcting, and deleting one Schuss inside the caller's own running Runde.
 //!
 //! Authorisation is decided here, from the aggregates the use case loads: the Runde must
 //! belong to the caller and still be open, and the Ziel must have been part of the
 //! captured route (SPEC-stammdaten AC-9, SPEC-wertung rule 1).
+//!
+//! Position validation is a typestate question, so each write asks the open state it holds:
+//! a closed round has no `pruefe_position` at all, and this module refuses it up front
+//! instead of pretending the question has an answer.
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
@@ -11,8 +15,8 @@ use tracing::{info, instrument};
 use crate::{
     application::ExecutionContext,
     domain::{
-        Erfasser, NeuerSchuss, RundeId, Schuss, SchussFehler, SchussId, SchussZielId,
-        Schussposition, Wertungszone, ZielSchüsse,
+        Erfasser, NeuerSchuss, Runde, RundeId, Schuss, SchussFehler, SchussId, Schussposition,
+        Wertungszone, ZielId, ZielSchüsse,
     },
     ports::RepositoryError,
     service::UseCase,
@@ -22,7 +26,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct SchussRegistrieren {
     pub runde_id: RundeId,
-    pub ziel_id: SchussZielId,
+    pub ziel_id: ZielId,
     pub wertungszone: Wertungszone,
     pub position: Option<Schussposition>,
 }
@@ -41,10 +45,10 @@ pub enum SchussRegistrierenFehler {
     NichtGefunden,
     #[error("die Runde ist nicht mehr in Bearbeitung")]
     RundeNichtInBearbeitung,
-    #[error("das Ziel ist nicht Teil des Runden-Snapshots")]
-    ZielNichtImSnapshot,
-    #[error("der Pflock ist nicht Teil des Runden-Snapshots")]
-    PflockNichtImSnapshot,
+    #[error("das Ziel ist nicht Teil des Aufbaus dieser Runde")]
+    ZielNichtImAufbau,
+    #[error("der Pflock ist nicht Teil des Aufbaus dieser Runde")]
+    PflockNichtImAufbau,
     #[error("die Pfeilnummer wurde parallel vergeben; bitte erneut versuchen")]
     PfeilKonflikt,
     #[error("der Schuss konnte nicht gespeichert werden")]
@@ -86,23 +90,28 @@ impl UseCase<Schuss> for SchussRegistrieren {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(SchussRegistrierenFehler::NichtErlaubt));
             }
-            if !runde.ist_in_bearbeitung() {
+
+            // AC-9: a Schuss may only name a Ziel the Runde captured, and only a Pflock that
+            // Ziel's captured set carries — or, on a Freie Runde, any colour at all. The
+            // open typestate owns the question, because a closed round has no answer.
+            let Some(offen) = offene_runde(&runde)? else {
                 return Err(Report::new(
                     SchussRegistrierenFehler::RundeNichtInBearbeitung,
                 ));
-            }
-            // AC-9: a Schuss may only name a Ziel the Runde captured.
-            let Some(ziel_id) = runde.aufbau().ziel_id_für_schuss(self.ziel_id) else {
-                return Err(Report::new(SchussRegistrierenFehler::ZielNichtImSnapshot));
             };
-
-            // AC-9: a Schuss may only name a Pflock the Runde captured at this Ziel, or —
-            // on a Freie Runde — any colour at all. The round owns the question, because the
-            // provenance that decides it lives in its typestate, not in the route
-            // (SPEC-runde rule 19).
-            if runde.pruefe_position(ziel_id, self.position).is_err() {
-                return Err(Report::new(SchussRegistrierenFehler::PflockNichtImSnapshot));
+            if !offen.enthält_ziel(self.ziel_id) {
+                return Err(Report::new(SchussRegistrierenFehler::ZielNichtImAufbau));
             }
+            let position_ok = match &offen {
+                OffeneRunde::MitParkour(runde) => {
+                    runde.pruefe_position(self.ziel_id, self.position)
+                }
+                OffeneRunde::Freie(runde) => runde.pruefe_position(self.ziel_id, self.position),
+            };
+            if position_ok.is_err() {
+                return Err(Report::new(SchussRegistrierenFehler::PflockNichtImAufbau));
+            }
+
             let vorhandene: Vec<Schuss> = uow
                 .schüsse()
                 .find_by_runde(self.runde_id)
@@ -111,9 +120,7 @@ impl UseCase<Schuss> for SchussRegistrieren {
                 .change_context(SchussRegistrierenFehler::Speichern)?
                 .into_iter()
                 .map(|schuss| schuss.into_data())
-                .filter(|schuss| {
-                    runde.aufbau().ziel_id_für_schuss(schuss.ziel_id()) == Some(ziel_id)
-                })
+                .filter(|schuss| schuss.ziel_id() == self.ziel_id)
                 .collect();
             let ziel_schüsse = ZielSchüsse::für_ziel(self.ziel_id, vorhandene)
                 .expect("all filtered Schüsse belong to this Ziel");
@@ -121,7 +128,7 @@ impl UseCase<Schuss> for SchussRegistrieren {
             let neu = NeuerSchuss::neu(
                 self.runde_id,
                 Erfasser::Benutzer(benutzer_id),
-                ziel_id.into(),
+                self.ziel_id,
                 pfeil,
                 self.wertungszone,
                 self.position,
@@ -161,6 +168,35 @@ impl From<SchussFehler> for SchussRegistrierenFehler {
     }
 }
 
+/// The two open typestates, borrowed from the loaded round.
+///
+/// A closed round has no position rule at all, which is why the guard is expressed as "give
+/// me an open round" rather than as a boolean the caller could ignore.
+enum OffeneRunde<'a> {
+    MitParkour(&'a crate::domain::RundeMitParkour),
+    Freie(&'a crate::domain::FreieRunde),
+}
+
+impl<'a> OffeneRunde<'a> {
+    fn enthält_ziel(&self, ziel_id: ZielId) -> bool {
+        match self {
+            Self::MitParkour(runde) => runde.enthält_ziel(ziel_id),
+            Self::Freie(runde) => runde.enthält_ziel(ziel_id),
+        }
+    }
+}
+
+/// The open state of `runde`, or `None` when it is closed.
+fn offene_runde(
+    runde: &Runde,
+) -> Result<Option<OffeneRunde<'_>>, Report<SchussRegistrierenFehler>> {
+    Ok(match runde {
+        Runde::MitParkour(offen) => Some(OffeneRunde::MitParkour(offen)),
+        Runde::FreieRunde(offen) => Some(OffeneRunde::Freie(offen)),
+        Runde::AbgeschlosseneRunde(_) => None,
+    })
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum SchussÄndernFehler {
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
@@ -171,8 +207,10 @@ pub enum SchussÄndernFehler {
     NichtGefunden,
     #[error("die Anfrage ist ungültig")]
     UngültigeAnfrage,
-    #[error("der Pflock ist nicht Teil des Runden-Snapshots")]
-    PflockNichtImSnapshot,
+    #[error("die Runde ist nicht mehr in Bearbeitung")]
+    RundeNichtInBearbeitung,
+    #[error("der Pflock ist nicht Teil des Aufbaus dieser Runde")]
+    PflockNichtImAufbau,
     #[error("die Runde konnte nicht geladen werden")]
     Laden,
     #[error("der Schuss konnte nicht gespeichert werden")]
@@ -214,6 +252,11 @@ impl UseCase<Schuss> for SchussÄndern {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(SchussÄndernFehler::NichtErlaubt));
             }
+            // A closed round freezes its Schüsse too: the typestate has no position rule to
+            // ask, so the write is refused before anything is read.
+            if !runde.ist_in_bearbeitung() {
+                return Err(Report::new(SchussÄndernFehler::RundeNichtInBearbeitung));
+            }
 
             let mut schuss = match uow.schüsse().find_by_id(self.schuss_id).await {
                 Ok(schuss) if schuss.runde_id() == self.runde_id => schuss,
@@ -225,19 +268,18 @@ impl UseCase<Schuss> for SchussÄndern {
                     });
                 }
             };
-            // The Ziel's effective set decides a Parkour round's Pflock; a Freie Runde
-            // accepts any colour. Both go through the round's one validation seam.
-            if runde
-                .pruefe_position(
-                    runde
-                        .aufbau()
-                        .ziel_id_für_schuss(schuss.ziel_id())
-                        .ok_or_else(|| Report::new(SchussÄndernFehler::NichtGefunden))?,
-                    self.position,
-                )
-                .is_err()
-            {
-                return Err(Report::new(SchussÄndernFehler::PflockNichtImSnapshot));
+            // The Ziel's captured set decides a Parkour round's Pflock; a Freie Runde
+            // accepts any colour. Both ask their own open typestate.
+            let position_ok = match &*runde {
+                Runde::MitParkour(offen) => offen.pruefe_position(schuss.ziel_id(), self.position),
+                Runde::FreieRunde(offen) => offen.pruefe_position(schuss.ziel_id(), self.position),
+                // The guard above already refused this; the arm exists so the match is total.
+                Runde::AbgeschlosseneRunde(_) => {
+                    return Err(Report::new(SchussÄndernFehler::RundeNichtInBearbeitung));
+                }
+            };
+            if position_ok.is_err() {
+                return Err(Report::new(SchussÄndernFehler::PflockNichtImAufbau));
             }
             schuss.set_data(
                 schuss
@@ -264,6 +306,8 @@ pub enum SchussLöschenFehler {
     NichtErlaubt,
     #[error("der Schuss wurde nicht gefunden")]
     NichtGefunden,
+    #[error("die Runde ist nicht mehr in Bearbeitung")]
+    RundeNichtInBearbeitung,
     #[error("die Runde konnte nicht geladen werden")]
     Laden,
     #[error("der Schuss konnte nicht gelöscht werden")]
@@ -307,6 +351,10 @@ impl UseCase<()> for SchussLöschen {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(SchussLöschenFehler::NichtErlaubt));
             }
+            // A closed round freezes its Schüsse: deleting one would renumber the rest.
+            if !runde.ist_in_bearbeitung() {
+                return Err(Report::new(SchussLöschenFehler::RundeNichtInBearbeitung));
+            }
 
             let schuss = match uow.schüsse().find_by_id(self.schuss_id).await {
                 Ok(schuss) if schuss.runde_id() == self.runde_id => schuss,
@@ -320,10 +368,7 @@ impl UseCase<()> for SchussLöschen {
                     });
                 }
             };
-            let ziel_id = runde
-                .aufbau()
-                .ziel_id_für_schuss(schuss.ziel_id())
-                .expect("persisted shot target belongs to its round");
+            let ziel_id = schuss.ziel_id();
             let ziel_schüsse = uow
                 .schüsse()
                 .find_by_runde(self.runde_id)
@@ -332,9 +377,9 @@ impl UseCase<()> for SchussLöschen {
                 .change_context(SchussLöschenFehler::Laden)?
                 .into_iter()
                 .map(|row| row.into_data())
-                .filter(|row| runde.aufbau().ziel_id_für_schuss(row.ziel_id()) == Some(ziel_id))
+                .filter(|row| row.ziel_id() == ziel_id)
                 .collect::<Vec<_>>();
-            let verbleibend = ZielSchüsse::für_ziel(ziel_id.into(), ziel_schüsse)
+            let verbleibend = ZielSchüsse::für_ziel(ziel_id, ziel_schüsse)
                 .expect("the target's shot list contains only that target")
                 .ohne_schuss(self.schuss_id);
 

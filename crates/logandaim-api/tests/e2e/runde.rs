@@ -307,7 +307,7 @@ async fn ac9_eine_runde_zeigt_beide_wertungen_und_den_snapshot() {
     // The snapshot, not current master data.
     assert_eq!(body["name"], "Waldrunde");
     assert_eq!(body["herkunft"]["parkourId"], parkour_id);
-    assert_eq!(body["pflöcke"][0]["farbe"], "#c0392b");
+    assert_eq!(body["ziele"][0]["pflöcke"][0]["farbe"], "#c0392b");
 
     // Both Wertungen folded at the one Ziel and over the whole Runde.
     let ziel = &body["ziele"][0];
@@ -679,8 +679,8 @@ async fn ac9_ein_runde_ziel_traegt_die_effektive_pflockmenge() {
         "#72: das eigene Ziel trägt seinen eigenen Satz: {body}; eigene Farbe: {eigene_farbe}"
     );
     assert_eq!(ziele[0]["pflöcke"][0]["farbe"], eigene_farbe);
-    assert_eq!(ziele[0]["pflöcke"][0]["position"], 0);
-    assert_eq!(ziele[0]["pflöcke"][1]["position"], 1);
+    assert_eq!(ziele[0]["pflöcke"][0]["abstand"], 15);
+    assert_eq!(ziele[0]["pflöcke"][1]["abstand"], 45);
 
     assert_ne!(ziele[1]["zielId"], zweites);
     assert_eq!(ziele[1]["zielnummer"], 1);
@@ -690,13 +690,10 @@ async fn ac9_ein_runde_ziel_traegt_die_effektive_pflockmenge() {
         "#72: das erbende Ziel trägt die Parkour-Pflöcke"
     );
     assert_eq!(ziele[1]["pflöcke"][0]["farbe"], "#c0392b");
+    assert!(ziele[1]["pflöcke"][0]["abstand"].is_null());
+    assert!(body.get("pflöcke").is_none());
 
-    // The Parkour-wide list on the Runde stays the Parkour-wide list.
-    assert_eq!(
-        body["pflöcke"].as_array().expect("pflöcke").len(),
-        1,
-        "#72: die Runde führt weiterhin die Parkour-Pflöcke"
-    );
+    // The inherited Pflock set is captured on this Ziel, independently of the Ziel above.
 }
 
 #[test_log::test(pollster::test)]
@@ -885,7 +882,7 @@ async fn ac21_freie_runde_startet_ohne_parkour_und_hat_exklusiven_offenen_slot()
     assert_eq!(status, StatusCode::OK, "AC-21: freie Runde startet: {body}");
     assert_eq!(body["name"], "Wiese");
     assert!(body["herkunft"].is_null());
-    assert_eq!(body["pflöcke"], json!([]));
+    assert!(body.get("pflöcke").is_none());
     assert_eq!(body["ziele"], json!([]));
 
     let (status, _) = harness
