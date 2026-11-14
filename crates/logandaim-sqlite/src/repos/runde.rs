@@ -24,8 +24,8 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Abstand, AnlageId, AnlageZielId, Erfasser, Farbe, FreieRundeInBearbeitung, NeueRunde,
-        NonEmptyString, ParkourId, Pflock, Runde, RundeId, RundeTypestate, RundenHerkunft,
-        Rundenaufbau, Ziel, ZielId, konto::BenutzerId,
+        NonEmptyString, ParkourId, Pflock, Runde, RundeId, RundenHerkunft, Rundenaufbau, Ziel,
+        ZielId, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
 };
@@ -487,7 +487,7 @@ impl RundeRepository for SQLiteRundeRepository {
                 &format!(r#"{SELECT} WHERE benutzer_id = ?1 AND zustand = ?2 LIMIT 1"#),
                 (
                     benutzer_id.0.to_string(),
-                    <FreieRundeInBearbeitung as RundeTypestate>::zustand(),
+                    FreieRundeInBearbeitung::state_str(),
                 ),
             )
             .await

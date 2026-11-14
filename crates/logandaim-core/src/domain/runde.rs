@@ -35,11 +35,6 @@ use super::schuss::{Erfasser, Schuss, Schussposition, ZielSchüsse, Zielwertung}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct RundeId(pub uuid::Uuid);
 
-/// A typestate's persisted lifecycle spelling.
-pub trait RundeTypestate {
-    fn zustand() -> &'static str;
-}
-
 // ---------------------------------------------------------------------------------------
 // Where a Runde came from
 // ---------------------------------------------------------------------------------------
@@ -77,10 +72,8 @@ impl MitParkourInBearbeitung {
     pub fn herkunft(&self) -> &RundenHerkunft {
         &self.herkunft
     }
-}
 
-impl RundeTypestate for MitParkourInBearbeitung {
-    fn zustand() -> &'static str {
+    pub fn state_str() -> &'static str {
         "InBearbeitung"
     }
 }
@@ -92,8 +85,8 @@ impl RundeTypestate for MitParkourInBearbeitung {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct FreieRundeInBearbeitung;
 
-impl RundeTypestate for FreieRundeInBearbeitung {
-    fn zustand() -> &'static str {
+impl FreieRundeInBearbeitung {
+    pub fn state_str() -> &'static str {
         "InBearbeitung"
     }
 }
@@ -117,10 +110,8 @@ impl Abgeschlossen {
     pub fn herkunft(&self) -> Option<&RundenHerkunft> {
         self.herkunft.as_ref()
     }
-}
 
-impl RundeTypestate for Abgeschlossen {
-    fn zustand() -> &'static str {
+    pub fn state_str() -> &'static str {
         "Abgeschlossen"
     }
 }
@@ -864,9 +855,9 @@ impl Runde {
     /// The stored lifecycle spelling, taken from the active variant itself.
     pub fn zustand(&self) -> &'static str {
         match self {
-            Self::MitParkour(_) => <MitParkourInBearbeitung as RundeTypestate>::zustand(),
-            Self::FreieRunde(_) => <FreieRundeInBearbeitung as RundeTypestate>::zustand(),
-            Self::AbgeschlosseneRunde(_) => <Abgeschlossen as RundeTypestate>::zustand(),
+            Self::MitParkour(_) => MitParkourInBearbeitung::state_str(),
+            Self::FreieRunde(_) => FreieRundeInBearbeitung::state_str(),
+            Self::AbgeschlosseneRunde(_) => Abgeschlossen::state_str(),
         }
     }
 
@@ -1356,10 +1347,7 @@ mod tests {
         assert_eq!(runde.name().as_str(), "Wiese daheim");
         assert!(runde.aufbau().ziele().is_empty());
         // Both open states store the same spelling, and the store filters on it (#8).
-        assert_eq!(
-            runde.zustand(),
-            <FreieRundeInBearbeitung as RundeTypestate>::zustand()
-        );
+        assert_eq!(runde.zustand(), FreieRundeInBearbeitung::state_str());
     }
 
     #[test_log::test]

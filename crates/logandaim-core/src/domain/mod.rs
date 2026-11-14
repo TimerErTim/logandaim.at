@@ -66,7 +66,6 @@ pub use runde::Runde;
 pub use runde::RundeId;
 pub use runde::RundeIn;
 pub use runde::RundeMitParkour;
-pub use runde::RundeTypestate;
 pub use runde::RundenHerkunft;
 pub use runde::Rundenaufbau;
 pub use runde::Rundenwertung;
