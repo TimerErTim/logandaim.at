@@ -83,11 +83,11 @@ pub struct PasswortWiederherstellenRequest {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BenutzerLöschungRequest {
+pub struct BenutzerLoeschungRequest {
     /// The account's password, re-entered to prove the caller's identity.
     pub passwort: String,
     /// Must be `true`; a missing flag is a refusal, never a default.
-    pub bestätigt: bool,
+    pub bestaetigt: bool,
 }
 
 impl RegistrierungStartRequest {
@@ -169,13 +169,13 @@ impl PasswortWiederherstellenRequest {
     }
 }
 
-impl BenutzerLöschungRequest {
+impl BenutzerLoeschungRequest {
     pub fn in_use_case(self) -> Result<BenutzerLöschen, Report<BenutzerLöschenFehler>> {
         let passwort = domain::konto::KlartextPasswort::try_from(self.passwort)
             .map_err(|_| Report::new(BenutzerLöschenFehler::UngültigeAnfrage))?;
         Ok(BenutzerLöschen {
             passwort,
-            bestätigt: self.bestätigt,
+            bestätigt: self.bestaetigt,
         })
     }
 }

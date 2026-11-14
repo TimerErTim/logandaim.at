@@ -16,8 +16,8 @@ use crate::domain::konto::{
     PasswortWiederherstellung, PasswortWiederherstellungId, SecretTokenHash, Session, SessionId,
 };
 use crate::domain::{
-    Anlage, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId, Runde, RundeId,
-    Schuss, SchussId, ZielId,
+    Anlage, AnlageId, AnlageZielId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId,
+    Runde, RundeId, Schuss, SchussId, ZielId,
 };
 use crate::ports::{
     AnlageRepository, BenutzerRepository, EmailBestätigungRepository, KontoRepository,
@@ -114,7 +114,7 @@ impl_instrumented_repo!(
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
         fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool>;
         #[instrument(skip(self, id), fields(id = ?id), level = "trace", err(Debug))]
-        fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool>;
+        fn exists_referencing_ziel(&self, id: AnlageZielId) -> RepositoryResult<bool>;
     ]
 );
 

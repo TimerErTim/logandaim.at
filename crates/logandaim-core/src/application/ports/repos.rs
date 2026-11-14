@@ -8,8 +8,8 @@ use crate::domain::konto::{
     PasswortWiederherstellung, PasswortWiederherstellungId, SecretTokenHash, Session, SessionId,
 };
 use crate::domain::{
-    Anlage, AnlageId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId, Runde, RundeId,
-    Schuss, SchussId, ZielId,
+    Anlage, AnlageId, AnlageZielId, EmailAdresse, NeueAnlage, NeueRunde, NeuerSchuss, ParkourId,
+    Runde, RundeId, Schuss, SchussId, ZielId,
 };
 
 pub type RepositoryResult<T> = ResultReport<T, RepositoryError>;
@@ -94,7 +94,7 @@ pub trait RundeRepository: Send + Sync {
     async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool>;
 
     /// Whether any Runde's captured route contains this Ziel identity.
-    async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool>;
+    async fn exists_referencing_ziel(&self, id: AnlageZielId) -> RepositoryResult<bool>;
 }
 
 #[async_trait]

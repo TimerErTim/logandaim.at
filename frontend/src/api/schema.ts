@@ -13,8 +13,7 @@ export interface paths {
         };
         /**
          * Report that the service is up.
-         * @description Answers the literal `OK`. It touches no dependency, so a green answer means the
-         *     process is listening, not that its database is reachable.
+         * @description Returns `OK` when the service is running.
          */
         get: {
             parameters: {
@@ -51,10 +50,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Report whether the mail relay's last probe succeeded.
-         * @description Answers from the last verdict and never waits on the relay; a stale or failed
-         *     verdict starts a fresh probe in the background. `Unknown` until the first probe
-         *     reports.
+         * Report the latest result from the mail relay check.
+         * @description The response describes the latest probe result, or `Unknown` before the first probe.
          */
         get: {
             parameters: {
@@ -92,8 +89,7 @@ export interface paths {
         };
         /**
          * List the Anlagen the caller may administer.
-         * @description Archived Anlagen are not listed. Each row carries the caller's role in that Anlage
-         *     so a client can gate its controls.
+         * @description Each row includes the caller's role in that Anlage.
          */
         get: {
             parameters: {
@@ -135,8 +131,7 @@ export interface paths {
         put?: never;
         /**
          * Create an Anlage. Systemadministrator only.
-         * @description The caller becomes its first Administrator. The address is required, the contact
-         *     details are optional.
+         * @description The caller becomes its first Administrator.
          */
         post: {
             parameters: {
@@ -194,8 +189,7 @@ export interface paths {
         };
         /**
          * List the active Anlagen with the Parkour each offers. No sign-in needed.
-         * @description This is the public directory. It carries no contact data, and a broken token is
-         *     answered as anonymous rather than as an error.
+         * @description This public directory contains no contact data.
          */
         get: {
             parameters: {
@@ -213,7 +207,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["Anlage\u00D6ffentlich"][];
+                        "application/json; charset=utf-8": components["schemas"]["AnlageOeffentlich"][];
                     };
                 };
                 500: {
@@ -251,8 +245,7 @@ export interface paths {
         };
         /**
          * Read one Anlage with its whole master data.
-         * @description An archived Anlage answers only to a Systemadministrator; every write to one is
-         *     refused with `409`.
+         * @description Only a Systemadministrator can access an archived Anlage.
          */
         get: {
             parameters: {
@@ -295,8 +288,7 @@ export interface paths {
         };
         /**
          * Rewrite the Anlage's own fields: name, address, and contact. Administrator only.
-         * @description The whole set is replaced; omitted contact fields become empty. Ziele, Parkour, and
-         *     role assignments are untouched.
+         * @description The whole set is replaced; omitted contact fields become empty.
          */
         put: {
             parameters: {
@@ -311,7 +303,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["Anlage\u00C4nderungRequest"];
+                    "application/json; charset=utf-8": components["schemas"]["AnlageAenderungRequest"];
                 };
             };
             responses: {
@@ -359,7 +351,7 @@ export interface paths {
         put?: never;
         /**
          * Deactivate an Anlage once and for all.
-         * @description Irreversible: no route reactivates one. Reads keep working, writes answer `409`.
+         * @description An archived Anlage remains available for reading but cannot be changed.
          */
         post: {
             parameters: {
@@ -477,8 +469,7 @@ export interface paths {
         };
         /**
          * Find a Benutzer by exact e-mail address, for granting a role.
-         * @description Usable only by a caller who may manage this active Anlage. Answers a single match or
-         *     an empty list.
+         * @description The result contains the matching Benutzer, if one exists.
          */
         get: {
             parameters: {
@@ -646,7 +637,7 @@ export interface paths {
         put?: never;
         /**
          * Add a physical Ziel to the Anlage.
-         * @description A Mitarbeiter may do this; the Anlage's own fields are not touched.
+         * @description The new Ziel is added to the Anlage's target list.
          */
         post: {
             parameters: {
@@ -878,7 +869,7 @@ export interface paths {
         put?: never;
         /**
          * Create a Parkour with its Pflock setup and its route.
-         * @description The Pflöcke and their order are given explicitly; a colour never implies an order.
+         * @description Provide the Pflöcke in the order in which they should appear.
          */
         post: {
             parameters: {
@@ -1107,7 +1098,7 @@ export interface paths {
         };
         /**
          * List every active Parkour of every active Anlage. No sign-in needed.
-         * @description This is the list a client starts a Runde from.
+         * @description Use this list to choose a Parkour when starting a round.
          */
         get: {
             parameters: {
@@ -1125,7 +1116,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json; charset=utf-8": components["schemas"]["Parkour\u00D6ffentlich"][];
+                        "application/json; charset=utf-8": components["schemas"]["ParkourOeffentlich"][];
                     };
                 };
                 500: {
@@ -1154,6 +1145,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runden/mit-parkour": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a Runde on one active Parkour.
+         * @description Later changes to the Parkour do not change the setup captured by this Runde.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["RundeMitParkourStartenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runden": {
         parameters: {
             query?: never;
@@ -1163,7 +1214,7 @@ export interface paths {
         };
         /**
          * List the caller's own Runden, newest first.
-         * @description No one but the caller and a Systemadministrator ever sees a Runde here.
+         * @description Only the owner can see these Runden.
          */
         get: {
             parameters: {
@@ -1203,10 +1254,25 @@ export interface paths {
             };
         };
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/frei": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         /**
-         * Start a Runde on one active Parkour.
-         * @description The setup is captured as a snapshot in the same transaction, so a later change to the
-         *     Parkour cannot alter this Runde.
+         * Start a `Freie Runde`: no Anlage, no Parkour, and its own name.
+         * @description The response identifies this round as having no Anlage or Parkour.
          */
         post: {
             parameters: {
@@ -1219,7 +1285,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["RundeStartenRequest"];
+                    "application/json; charset=utf-8": components["schemas"]["FreieRundeStartenRequest"];
                 };
             };
             responses: {
@@ -1255,6 +1321,174 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/runden/{runde_id}/ziele": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Append one `Freies Ziel` to the caller's own open `Freie Runde`.
+         * @description Targets in a Parkour round cannot be changed.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielHinzufuegenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}/ziele/{ziel_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Rename one `Freies Ziel` in a running free Runde.
+         * @description A name containing only whitespace is invalid. Only an open free round can be changed.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielUmbenennenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Remove one `Freies Ziel` from a free Runde.
+         * @description Removing a target also removes its recorded shots. The response contains the updated round.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/runden/{runde_id}": {
         parameters: {
             query?: never;
@@ -1263,9 +1497,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Read one Runde with its whole snapshot and both Wertungen.
-         * @description The owner and a Systemadministrator may read it; staff may not read another
-         *     Benutzer's Runde.
+         * Read one Runde with its captured route and both Wertungen.
+         * @description The Runde is visible to its owner and to a Systemadministrator.
          */
         get: {
             parameters: {
@@ -1367,7 +1600,7 @@ export interface paths {
         put?: never;
         /**
          * Close the caller's own Runde.
-         * @description Afterwards it refuses further Schüsse and its Wertungen are final.
+         * @description Once closed, the Runde no longer accepts Schüsse.
          */
         post: {
             parameters: {
@@ -1425,7 +1658,7 @@ export interface paths {
         put?: never;
         /**
          * Log one arrow at a Ziel of the caller's own open Runde.
-         * @description The owner comes from the token, and the Ziel must be part of the Runde's snapshot.
+         * @description The target must belong to the round.
          */
         post: {
             parameters: {
@@ -1502,7 +1735,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["Schuss\u00C4nderungRequest"];
+                    "application/json; charset=utf-8": components["schemas"]["SchussAenderungRequest"];
                 };
             };
             responses: {
@@ -1593,8 +1826,7 @@ export interface paths {
         put?: never;
         /**
          * Registration step 1: request a confirmation mail for an e-mail address.
-         * @description Answers `200` whether the address is free or already taken, so the route cannot be
-         *     used to probe for accounts.
+         * @description Returns the same response whether the address is free or already registered.
          */
         post: {
             parameters: {
@@ -1657,8 +1889,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Registration step 2: create the Benutzer and its Konto from the mailed token.
-         * @description Answers the first token pair; the refresh token leaves as the `__Host-` cookie.
+         * Complete registration with the token from the confirmation email.
+         * @description Returns the new session credentials.
          */
         post: {
             parameters: {
@@ -1724,7 +1956,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in with e-mail address and password.
-         * @description Answers an access token in the body and a refresh token in the `__Host-` cookie.
+         * @description Returns the new session credentials.
          */
         post: {
             parameters: {
@@ -1789,8 +2021,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Rotate the refresh token from the `__Host-` cookie.
-         * @description Answers a fresh token pair. A `401` clears the unusable cookie.
+         * Renew the current session.
+         * @description Returns a new session when the refresh token is valid.
          */
         post: {
             parameters: {
@@ -1854,7 +2086,7 @@ export interface paths {
         put?: never;
         /**
          * End the current session.
-         * @description The refresh token is revoked and the cookie is cleared with it.
+         * @description The current session is ended.
          */
         post: {
             parameters: {
@@ -1915,8 +2147,7 @@ export interface paths {
         put?: never;
         /**
          * Request a password reset mail for an e-mail address.
-         * @description Answers `200` whether the address exists or not, so the route cannot be used to probe
-         *     for accounts.
+         * @description Returns the same response whether the address belongs to an account or not.
          */
         post: {
             parameters: {
@@ -1980,7 +2211,7 @@ export interface paths {
         put?: never;
         /**
          * Set a new password from a mailed reset token.
-         * @description The token is single use and ends every session; the cookie is cleared with them.
+         * @description The reset token can be used once. All existing sessions end when the password changes.
          */
         post: {
             parameters: {
@@ -2041,7 +2272,7 @@ export interface paths {
         };
         /**
          * Read the authenticated caller, including its account-level role.
-         * @description Answers `401` when the token is missing or unusable; there is no anonymous answer.
+         * @description Requires a valid sign-in.
          */
         get: {
             parameters: {
@@ -2091,7 +2322,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/benutzer/l\u00F6schung": {
+    "/benutzer/loeschung": {
         parameters: {
             query?: never;
             header?: never;
@@ -2102,8 +2333,7 @@ export interface paths {
         put?: never;
         /**
          * Delete the caller's own Benutzer.
-         * @description The password is re-entered and the intent must be confirmed explicitly. The cookie
-         *     is cleared with the identity.
+         * @description The caller confirms the deletion by re-entering their password.
          */
         post: {
             parameters: {
@@ -2116,7 +2346,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json; charset=utf-8": components["schemas"]["BenutzerL\u00F6schungRequest"];
+                    "application/json; charset=utf-8": components["schemas"]["BenutzerLoeschungRequest"];
                 };
             };
             responses: {
@@ -2162,22 +2392,6 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * Abstand
-         * @description One captured distance, named by the Pflock' colour.
-         */
-        Abstand: {
-            /**
-             * A Pflock colour as validated `#rrggbb`.
-             * @description The captured Pflock's colour.
-             */
-            pflock: string;
-            /**
-             * Format: uint32
-             * @description Distance from that Pflock to the Ziel, in metres.
-             */
-            meter: number;
-        };
-        /**
          * Anlage
          * @description The Anlage with its whole master data, as `GET /anlagen/{id}` answers it.
          */
@@ -2198,7 +2412,7 @@ export interface components {
             /** @description The role assignments in this Anlage. */
             verwaltungen: components["schemas"]["AnlageVerwaltung"][];
             /** @description Its physical Ziele. */
-            ziele: components["schemas"]["Ziel"][];
+            ziele: components["schemas"]["AnlageZiel"][];
             /** @description Its Parkour, each with its setup and route. */
             parkour: components["schemas"]["Parkour"][];
         };
@@ -2208,13 +2422,25 @@ export interface components {
          */
         AnlageAdresse: {
             /** @description Street and house number. */
-            "stra\u00DFe": string;
+            strasse: string;
             /** @description Postal code of the place. */
             postleitzahl: string;
             /** @description The place itself. */
             ort: string;
             /** @description Two-letter country code; only `AT`, `DE`, and `CH` are accepted. */
-            "l\u00E4ndercode": components["schemas"]["L\u00E4ndercode"] & unknown;
+            laendercode: components["schemas"]["Laendercode"] & unknown;
+        };
+        /**
+         * AnlageAenderungRequest
+         * @description Rewrite the Anlage's descriptive fields.
+         */
+        AnlageAenderungRequest: {
+            /** @description Shown name of the Anlage. */
+            name: string;
+            /** @description Its structured address; every address field is required. */
+            adresse: components["schemas"]["AnlageAdresse"] & unknown;
+            /** @description Optional contact details. */
+            kontakt: components["schemas"]["AnlageKontakt"] & unknown;
         };
         /**
          * AnlageErstellungRequest
@@ -2245,6 +2471,28 @@ export interface components {
             telefon?: string;
             /** @description Website of the Anlage. */
             website?: string;
+        };
+        /**
+         * AnlageOeffentlich
+         * @description One active Anlage in the public directory.
+         *
+         *     Public, so it carries no contact data: an email address or phone number is personal data
+         *     and is not published.
+         */
+        AnlageOeffentlich: {
+            /**
+             * Format: uuid
+             * @description Identity of the Anlage.
+             */
+            anlageId: string;
+            /** @description Shown name of the Anlage. */
+            name: string;
+            /** @description The place the Anlage is in. */
+            ort: string;
+            /** @description Two-letter country code of that place. */
+            laendercode: components["schemas"]["Laendercode"] & unknown;
+            /** @description The Parkour it currently offers, without their setup. */
+            parkour: components["schemas"]["ParkourKurz"][];
         };
         /**
          * AnlageVerwaltung
@@ -2281,6 +2529,28 @@ export interface components {
          */
         AnlageVerwaltungRolle: AnlageVerwaltungRolle;
         /**
+         * AnlageZiel
+         * @description One physical Ziel of the Anlage.
+         */
+        AnlageZiel: {
+            /**
+             * Format: uuid
+             * @description Stable identity of this physical target.
+             */
+            id: string;
+            /** @description Animal name shown to the shooter. */
+            tiername: string;
+            /**
+             * Format: uint32
+             * @description 1-based ordinal that tells duplicate animal names apart ("Reh 1", "Reh 2").
+             */
+            zielnummer: number;
+            /** @description Whether the Ziel is in use or retired. */
+            zustand: components["schemas"]["AnlageZustand"] & unknown;
+            /** @description Where this physical Ziel currently lies, across this Anlage's active Parkour. */
+            verwendungen: components["schemas"]["Zielverwendung"][];
+        };
+        /**
          * AnlageZugriff
          * @description One Anlage together with the caller's access to it.
          */
@@ -2299,40 +2569,6 @@ export interface components {
          * @enum {string}
          */
         AnlageZustand: AnlageZustand;
-        /**
-         * AnlageÄnderungRequest
-         * @description Rewrite the Anlage's descriptive fields.
-         */
-        "Anlage\u00C4nderungRequest": {
-            /** @description Shown name of the Anlage. */
-            name: string;
-            /** @description Its structured address; every address field is required. */
-            adresse: components["schemas"]["AnlageAdresse"] & unknown;
-            /** @description Optional contact details. */
-            kontakt: components["schemas"]["AnlageKontakt"] & unknown;
-        };
-        /**
-         * AnlageÖffentlich
-         * @description One active Anlage in the public directory.
-         *
-         *     Public, so it carries no contact data: an email address or phone number is personal data
-         *     and is not published.
-         */
-        "Anlage\u00D6ffentlich": {
-            /**
-             * Format: uuid
-             * @description Identity of the Anlage.
-             */
-            anlageId: string;
-            /** @description Shown name of the Anlage. */
-            name: string;
-            /** @description The place the Anlage is in. */
-            ort: string;
-            /** @description Two-letter country code of that place. */
-            "l\u00E4ndercode": components["schemas"]["L\u00E4ndercode"] & unknown;
-            /** @description The Parkour it currently offers, without their setup. */
-            parkour: components["schemas"]["ParkourKurz"][];
-        };
         /**
          * AnmeldungRequest
          * @description Sign-in with the account's e-mail address and password.
@@ -2406,14 +2642,14 @@ export interface components {
             benutzerId: string;
         };
         /**
-         * BenutzerLöschungRequest
+         * BenutzerLoeschungRequest
          * @description Delete one's own Benutzer: the password is re-entered, and the intent is explicit.
          */
-        "BenutzerL\u00F6schungRequest": {
+        BenutzerLoeschungRequest: {
             /** @description The account's password, re-entered to prove the caller's identity. */
             passwort: string;
             /** @description Must be `true`; a missing flag is a refusal, never a default. */
-            "best\u00E4tigt": boolean;
+            bestaetigt: boolean;
         };
         /**
          * @description `Benutzer` or `Systemadministrator`: the role a Benutzer holds on the whole instance.
@@ -2471,25 +2707,33 @@ export interface components {
             Benutzer: components["schemas"]["BenutzerErfasser"];
         };
         /**
-         * ExplicitPflöcke
+         * ExplicitPfloecke
          * @description This Ziel's own near-to-far Pflock order, which replaces the Parkour-wide one. Never
          *     empty.
          */
-        "ExplicitPfl\u00F6cke": {
+        ExplicitPfloecke: {
             /** @description The own Pflöcke, near to far. */
-            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            pfloecke: components["schemas"]["ParkourPflock"][];
         };
         /**
-         * InheritFromParkourPflöcke
+         * FreieRundeStartenRequest
+         * @description Start a `Freie Runde`: no Anlage, no Parkour, and its own name.
+         */
+        FreieRundeStartenRequest: {
+            /** @description What the archer calls this round; it is the round's own name, not a Parkour's. */
+            name: string;
+        };
+        /**
+         * InheritFromParkourPfloecke
          * @description The Parkour-wide order applies to this Ziel. Carries nothing; the discriminator is the
          *     whole message.
          */
-        "InheritFromParkourPfl\u00F6cke": Record<string, unknown>;
+        InheritFromParkourPfloecke: Record<string, unknown>;
         /**
          * @description Country codes currently accepted for Anlage addresses.
          * @enum {string}
          */
-        "L\u00E4ndercode": LNdercode;
+        Laendercode: Laendercode;
         /**
          * @description The mail relay's last probe verdict, tagged by `status`.
          *
@@ -2600,7 +2844,7 @@ export interface components {
             /** @description Whether the Parkour is in use or retired. */
             zustand: components["schemas"]["AnlageZustand"] & unknown;
             /** @description Far to near, in the order the shooter walks them. Never inferred from a colour. */
-            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            pfloecke: components["schemas"]["ParkourPflock"][];
             /** @description In route order. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
@@ -2612,7 +2856,7 @@ export interface components {
             /** @description Shown name of the new Parkour. */
             name: string;
             /** @description The Pflöcke, far to near. */
-            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            pfloecke: components["schemas"]["ParkourPflock"][];
             /** @description The Ziele on the route, in walking order. May be empty. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
@@ -2632,7 +2876,7 @@ export interface components {
              * Format: uint64
              * @description How many Pflöcke the route uses.
              */
-            "anzahlPfl\u00F6cke": number;
+            anzahlPfloecke: number;
             /**
              * Format: uint64
              * @description How many Ziele the route places.
@@ -2640,12 +2884,43 @@ export interface components {
             anzahlZiele: number;
         };
         /**
+         * ParkourOeffentlich
+         * @description One active Parkour with the Anlage that holds it, for starting a Runde.
+         */
+        ParkourOeffentlich: {
+            /**
+             * Format: uuid
+             * @description The Anlage that offers this Parkour.
+             */
+            anlageId: string;
+            /** @description That Anlage's name. */
+            anlageName: string;
+            /** @description The Parkour with its whole setup. */
+            parkour: components["schemas"]["Parkour"] & unknown;
+        };
+        /**
+         * ParkourPflock
+         * @description One shooting position. Its colour identifies it; no label exists.
+         */
+        ParkourPflock: {
+            /**
+             * Format: uuid
+             * @description Identity of the Pflock inside its Parkour.
+             */
+            id: string;
+            /**
+             * A Pflock colour as validated `#rrggbb`.
+             * @description The Pflock's colour. It is what distinguishes one Pflock from another.
+             */
+            farbe: string;
+        };
+        /**
          * ParkourSetupRequest
          * @description Replace a Parkour' whole shooting setup.
          */
         ParkourSetupRequest: {
             /** @description The Pflöcke, far to near. */
-            "pfl\u00F6cke": components["schemas"]["Pflock"][];
+            pfloecke: components["schemas"]["ParkourPflock"][];
             /** @description The Ziele on the route, in walking order. May be empty. */
             platzierungen: components["schemas"]["Zielplatzierung"][];
         };
@@ -2656,21 +2931,6 @@ export interface components {
         ParkourUmbenennenRequest: {
             /** @description The new shown name. */
             name: string;
-        };
-        /**
-         * ParkourÖffentlich
-         * @description One active Parkour with the Anlage that holds it, for starting a Runde.
-         */
-        "Parkour\u00D6ffentlich": {
-            /**
-             * Format: uuid
-             * @description The Anlage that offers this Parkour.
-             */
-            anlageId: string;
-            /** @description That Anlage's name. */
-            anlageName: string;
-            /** @description The Parkour with its whole setup. */
-            parkour: components["schemas"]["Parkour"] & unknown;
         };
         /**
          * PasswortVergessenRequest
@@ -2696,19 +2956,22 @@ export interface components {
         };
         /**
          * Pflock
-         * @description One shooting position. Its colour identifies it; no label exists.
+         * @description One Pflock of this Ziel's captured route.
+         *
+         *     `abstand` is the configured distance from this Pflock to its Ziel, in metres; it is absent
+         *     when no distance was configured.
          */
         Pflock: {
             /**
-             * Format: uuid
-             * @description Identity of the Pflock inside its Parkour.
-             */
-            id: string;
-            /**
              * A Pflock colour as validated `#rrggbb`.
-             * @description The Pflock's colour. It is what distinguishes one Pflock from another.
+             * @description The captured Pflock's colour.
              */
             farbe: string;
+            /**
+             * Format: uint32
+             * @description Distance from this Pflock to its Ziel, in metres; absent when unconfigured.
+             */
+            abstand?: number;
         };
         /**
          * PflockAbstand
@@ -2782,18 +3045,10 @@ export interface components {
              * @description Identity of the Runde.
              */
             id: string;
-            /**
-             * Format: uuid
-             * @description The Anlage the Parkour belongs to.
-             */
-            anlageId: string;
-            /**
-             * Format: uuid
-             * @description The Parkour this Runde was started on.
-             */
-            parkourId: string;
-            /** @description The Parkour' name as captured at the start, not its current name. */
-            parkourName: string;
+            /** @description The Anlage/Parkour pair; absent on a `Freie Runde`. */
+            herkunft?: components["schemas"]["RundeHerkunft"] & unknown;
+            /** @description The round's own name. */
+            name: string;
             /** @description Who the Runde belongs to. */
             erfasstVon: components["schemas"]["Erfasser"] & unknown;
             /** @description Whether it is still open or already closed. */
@@ -2808,10 +3063,8 @@ export interface components {
              * @description End of the Runde; absent while it is open.
              */
             abgeschlossenAm?: string;
-            /** @description The captured Pflöcke' colours, near to far. */
-            "pfl\u00F6cke": components["schemas"]["RundePflock"][];
             /** @description The Ziele as captured, with their results. */
-            ziele: components["schemas"]["RundeZiel"][];
+            ziele: components["schemas"]["Ziel"][];
             /**
              * Format: uint32
              * @description First-arrow hits over the whole Runde.
@@ -2841,18 +3094,10 @@ export interface components {
              * @description Identity of the Runde.
              */
             id: string;
-            /**
-             * Format: uuid
-             * @description The Anlage the Parkour belongs to.
-             */
-            anlageId: string;
-            /**
-             * Format: uuid
-             * @description The Parkour this Runde was started on.
-             */
-            parkourId: string;
-            /** @description The Parkour' name as captured at the start. */
-            parkourName: string;
+            /** @description The Anlage/Parkour pair; absent on a `Freie Runde`. */
+            herkunft?: components["schemas"]["RundeHerkunft"] & unknown;
+            /** @description The round's own name. */
+            name: string;
             /**
              * Format: uint64
              * @description Number of Ziele in the captured route.
@@ -2877,63 +3122,33 @@ export interface components {
             abgeschlossenAm?: string;
         };
         /**
-         * RundePflock
-         * @description One Pflock of this Runde' captured route, in near-to-far order.
+         * RundeHerkunft
+         * @description The Anlage/Parkour identities a Runde was started from.
          *
-         *     A captured route keeps no master-data identity, so the colour is what tells the Pflöcke
-         *     apart.
+         *     Both ids are present together; free rounds have no provenance.
          */
-        RundePflock: {
+        RundeHerkunft: {
             /**
-             * A Pflock colour as validated `#rrggbb`.
-             * @description The captured Pflock's colour.
+             * Format: uuid
+             * @description The Anlage the Parkour belongs to.
              */
-            farbe: string;
+            anlageId: string;
             /**
-             * Format: uint64
-             * @description 0-based position, near to far.
+             * Format: uuid
+             * @description The Parkour this Runde was started on.
              */
-            position: number;
+            parkourId: string;
         };
         /**
-         * RundeStartenRequest
+         * RundeMitParkourStartenRequest
          * @description Start a Runde on one active Parkour.
          */
-        RundeStartenRequest: {
+        RundeMitParkourStartenRequest: {
             /**
              * Format: uuid
              * @description The Parkour to shoot. It must be active.
              */
             parkourId: string;
-        };
-        /**
-         * RundeZiel
-         * @description One Ziel as this Runde captured it: identity, animal name, ordinal, distances, Wertung.
-         */
-        RundeZiel: {
-            /**
-             * Format: uuid
-             * @description Identity of the Ziel as captured.
-             */
-            zielId: string;
-            /** @description Animal name as captured. */
-            tiername: string;
-            /**
-             * Format: uint32
-             * @description 1-based ordinal as captured, distinguishing duplicate animal names.
-             */
-            zielnummer: number;
-            /**
-             * @description The Pflöcke that apply to this Ziel as captured, near to far: the Ziel's own set when
-             *     it had one, the Parkour-wide set otherwise.
-             */
-            "pfl\u00F6cke": components["schemas"]["RundePflock"][];
-            /** @description The distances as captured. */
-            "abst\u00E4nde": components["schemas"]["Abstand"][];
-            /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
-            wertung?: components["schemas"]["Zielwertung"] & unknown;
-            /** @description The logged arrows at this Ziel, in Pfeil order. */
-            "sch\u00FCsse": components["schemas"]["Schuss"][];
         };
         /**
          * @description `InBearbeitung` or `Abgeschlossen`.
@@ -2976,13 +3191,23 @@ export interface components {
             position?: components["schemas"]["Schussposition"];
         };
         /**
+         * SchussAenderungRequest
+         * @description Replace a Schuss's scoring zone and optional position.
+         */
+        SchussAenderungRequest: {
+            /** @description Where on the Ziel the arrow landed. */
+            wertungszone: components["schemas"]["Wertungszone"] & unknown;
+            /** @description Optional shot position; null clears the stored position. */
+            position?: components["schemas"]["SchusspositionRequest"] & unknown;
+        };
+        /**
          * SchussErstellungRequest
          * @description Register one Schuss inside the caller's own open Runde.
          */
         SchussErstellungRequest: {
             /**
              * Format: uuid
-             * @description The Ziel that was aimed at; it must be part of the Runde's snapshot.
+             * @description The neutral round-local Ziel identity.
              */
             zielId: string;
             /** @description Where on the Ziel the arrow landed. */
@@ -3008,17 +3233,6 @@ export interface components {
         /** @description One logged arrow. */
         Schussposition_PflockPosition: {
             Pflock: components["schemas"]["PflockPosition"];
-        };
-        /**
-         * SchussÄnderungRequest
-         * @description Replace a Schuss's scoring zone and optional position.
-         *     Replace a Schuss's scoring zone and optional position.
-         */
-        "Schuss\u00C4nderungRequest": {
-            /** @description Where on the Ziel the arrow landed. */
-            wertungszone: components["schemas"]["Wertungszone"] & unknown;
-            /** @description Optional shot position; null clears the stored position. */
-            position?: components["schemas"]["SchusspositionRequest"] & unknown;
         };
         /**
          * SessionResponseContent
@@ -3056,25 +3270,37 @@ export interface components {
         Wertungszone: Wertungszone;
         /**
          * Ziel
-         * @description One physical Ziel of the Anlage.
+         * @description One target in this Runde's captured route: identity, name, ordinal, Pflöcke, and Wertung.
+         *
+         *     A free-round Ziel has no configured Pflöcke.
          */
         Ziel: {
             /**
              * Format: uuid
-             * @description Stable identity of this physical target.
+             * @description Identity of the target within this Runde.
              */
-            id: string;
-            /** @description Animal name shown to the shooter. */
+            zielId: string;
+            /** @description Name captured in the route. */
             tiername: string;
             /**
              * Format: uint32
-             * @description 1-based ordinal that tells duplicate animal names apart ("Reh 1", "Reh 2").
+             * @description 1-based route ordinal.
              */
             zielnummer: number;
-            /** @description Whether the Ziel is in use or retired. */
-            zustand: components["schemas"]["AnlageZustand"] & unknown;
-            /** @description Where this physical Ziel currently lies, across this Anlage's active Parkour. */
-            verwendungen: components["schemas"]["Zielverwendung"][];
+            /** @description The Pflöcke that apply to this Ziel as captured, near to far. */
+            pfloecke: components["schemas"]["Pflock"][];
+            /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
+            wertung?: components["schemas"]["Zielwertung"] & unknown;
+            /** @description The logged arrows at this Ziel, in Pfeil order. */
+            schuesse: components["schemas"]["Schuss"][];
+        };
+        /**
+         * ZielHinzufuegenRequest
+         * @description Append one `Freies Ziel` to a free Runde.
+         */
+        ZielHinzufuegenRequest: {
+            /** @description The Ziel's name; absent means "Ziel N" from its ordinal. */
+            name?: string;
         };
         /**
          * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
@@ -3082,33 +3308,33 @@ export interface components {
          *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
          *     near-to-far order that replaces it.
          */
-        "ZielPfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke_InheritFromParkourPfl\u00F6cke"] | components["schemas"]["ZielPfl\u00F6cke_ExplicitPfl\u00F6cke"];
+        ZielPfloecke: components["schemas"]["ZielPfloecke_InheritFromParkourPfloecke"] | components["schemas"]["ZielPfloecke_ExplicitPfloecke"];
         /**
          * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
          *
          *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
          *     near-to-far order that replaces it.
          */
-        "ZielPfl\u00F6cke_ExplicitPfl\u00F6cke": {
+        ZielPfloecke_ExplicitPfloecke: {
             /**
              * @example Explicit
              * @enum {string}
              */
-            art: ZielPflCke_ExplicitPflCkeArt;
-        } & components["schemas"]["ExplicitPfl\u00F6cke"];
+            art: ZielPfloecke_ExplicitPfloeckeArt;
+        } & components["schemas"]["ExplicitPfloecke"];
         /**
          * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
          *
          *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
          *     near-to-far order that replaces it.
          */
-        "ZielPfl\u00F6cke_InheritFromParkourPfl\u00F6cke": {
+        ZielPfloecke_InheritFromParkourPfloecke: {
             /**
              * @example InheritFromParkour
              * @enum {string}
              */
-            art: ZielPflCke_InheritFromParkourPflCkeArt;
-        } & components["schemas"]["InheritFromParkourPfl\u00F6cke"];
+            art: ZielPfloecke_InheritFromParkourPfloeckeArt;
+        } & components["schemas"]["InheritFromParkourPfloecke"];
         /**
          * ZielRequest
          * @description Add or edit a Ziel.
@@ -3127,6 +3353,13 @@ export interface components {
             zielnummer?: number;
         };
         /**
+         * ZielUmbenennenRequest
+         * @description Rename one free Ziel inside its Runde.
+         */
+        ZielUmbenennenRequest: {
+            name: string;
+        };
+        /**
          * Zielplatzierung
          * @description One Ziel's place in a Parkour, with its distances keyed by Pflock identity.
          */
@@ -3136,9 +3369,9 @@ export interface components {
              * @description The Ziel that stands here.
              */
             zielId: string;
-            "pfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke"];
+            pfloecke: components["schemas"]["ZielPfloecke"];
             /** @description Distances by Pflock identity; a missing entry means no distance is configured. */
-            "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
+            abstaende: components["schemas"]["PflockAbstand"][];
         };
         /**
          * Zielverwendung
@@ -3155,9 +3388,9 @@ export interface components {
              * @description 0-based position in that Parkour' route.
              */
             position: number;
-            "pfl\u00F6cke": components["schemas"]["ZielPfl\u00F6cke"];
+            pfloecke: components["schemas"]["ZielPfloecke"];
             /** @description Pflock identity to metres, near to far. */
-            "abst\u00E4nde": components["schemas"]["PflockAbstand"][];
+            abstaende: components["schemas"]["PflockAbstand"][];
         };
         /**
          * Zielwertung
@@ -3180,7 +3413,7 @@ export interface components {
              * Format: uint64
              * @description How many Schüsse were logged at this Ziel.
              */
-            "anzahlSch\u00FCsse": number;
+            anzahlSchuesse: number;
         };
     };
     responses: never;
@@ -3202,7 +3435,7 @@ export enum BenutzerRolle {
     Benutzer = "Benutzer",
     Systemadministrator = "Systemadministrator"
 }
-export enum LNdercode {
+export enum Laendercode {
     AT = "AT",
     DE = "DE",
     CH = "CH"
@@ -3226,10 +3459,10 @@ export enum Wertungszone {
     Body = "Body",
     Miss = "Miss"
 }
-export enum ZielPflCke_ExplicitPflCkeArt {
+export enum ZielPfloecke_ExplicitPfloeckeArt {
     Explicit = "Explicit"
 }
-export enum ZielPflCke_InheritFromParkourPflCkeArt {
+export enum ZielPfloecke_InheritFromParkourPfloeckeArt {
     InheritFromParkour = "InheritFromParkour"
 }
 export type operations = Record<string, never>;

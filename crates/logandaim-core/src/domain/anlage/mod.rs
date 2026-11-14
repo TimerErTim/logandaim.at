@@ -19,18 +19,15 @@ use uuid::Uuid;
 pub mod adresse;
 pub mod kontaktdaten;
 pub mod parkour;
-pub mod snapshot;
 pub mod ziel;
 
 pub use adresse::{AnlageAdresse, AnlageAdresseFehler};
 pub use kontaktdaten::{AnlageKontakt, WebsiteUrl, WebsiteUrlFehler};
 pub use parkour::{
-    NeuerParkour, Parkour, ParkourFehler, ParkourId, Pflock, PflockId, ZielPflöcke, Zielplatzierung,
+    NeuerParkour, Parkour, ParkourFehler, ParkourId, ParkourPflock, ParkourPflockId, ZielPflöcke,
+    Zielplatzierung,
 };
-pub use snapshot::{
-    ParkourSnapshot, PflockSnapshot, SnapshotFehler, ZielPflöckeSnapshot, ZielSnapshot,
-};
-pub use ziel::{NeuesZiel, Ziel, ZielFehler, ZielId, Zustand, ZustandUnbekannt};
+pub use ziel::{AnlageZiel, AnlageZielId, NeuesZiel, ZielFehler, Zustand, ZustandUnbekannt};
 
 use crate::domain::common::{Abstand, NonEmptyString};
 use crate::domain::konto::{Benutzer, BenutzerId};
@@ -180,7 +177,7 @@ pub struct AnlageIn<S> {
     adresse: AnlageAdresse,
     kontakt: AnlageKontakt,
     verwaltungen: Vec<AnlageVerwaltung>,
-    ziele: Vec<Ziel>,
+    ziele: Vec<AnlageZiel>,
     parkour: Vec<Parkour>,
     state: S,
 }
@@ -215,7 +212,7 @@ impl<S> AnlageIn<S> {
         &self.verwaltungen
     }
 
-    pub fn ziele(&self) -> &[Ziel] {
+    pub fn ziele(&self) -> &[AnlageZiel] {
         &self.ziele
     }
 
@@ -242,7 +239,7 @@ impl<S> AnlageIn<S> {
             .any(|verwaltung| verwaltung.rolle == AnlageVerwaltungRolle::Administrator)
     }
 
-    pub fn ziel(&self, ziel_id: ZielId) -> Option<&Ziel> {
+    pub fn ziel(&self, ziel_id: AnlageZielId) -> Option<&AnlageZiel> {
         self.ziele.iter().find(|ziel| ziel.id() == ziel_id)
     }
 
@@ -263,22 +260,12 @@ impl<S> AnlageIn<S> {
         self.aktiver_parkour(parkour_id)
     }
 
-    /// Capture the immutable setup of one Parkour as a value copy (AC-7, AC-9).
-    ///
-    /// A thin wrapper over the capture rule in [`snapshot`], which is where it lives.
-    pub fn snapshot_für(&self, parkour_id: ParkourId) -> Result<ParkourSnapshot, SnapshotFehler> {
-        let parkour = self
-            .parkour_mit_id(parkour_id)
-            .ok_or(SnapshotFehler::ParkourNichtGefunden)?;
-        snapshot::snapshot_aus_parkour(parkour, |ziel_id| self.ziel(ziel_id))
-    }
-
     /// Where one physical Ziel is used across this Anlage's Parkours: in which routes, at
     /// which order position, and at which distances.
     ///
     /// The Parkour's name and list position are not repeated here: a caller holding the
     /// `parkour_id` reads them from this same Anlage.
-    pub fn ziel_verwendungen(&self, ziel_id: ZielId) -> Vec<Zielverwendung> {
+    pub fn ziel_verwendungen(&self, ziel_id: AnlageZielId) -> Vec<Zielverwendung> {
         self.parkour
             .iter()
             .filter(|parkour| !parkour.ist_archiviert())
@@ -322,7 +309,7 @@ impl AnlageAktiv {
         adresse: AnlageAdresse,
         kontakt: AnlageKontakt,
         verwaltungen: Vec<AnlageVerwaltung>,
-        ziele: Vec<Ziel>,
+        ziele: Vec<AnlageZiel>,
         parkour: Vec<Parkour>,
     ) -> Self {
         Self {
@@ -414,10 +401,10 @@ impl AnlageAktiv {
 
     /// Add a physical Ziel at this Anlage. Its ordinal is derived from the Tiername, so two
     /// Ziele named "Reh" become "Reh 1" and "Reh 2" without the caller choosing.
-    pub fn ziel_hinzufügen(&mut self, id: ZielId, tiername: NonEmptyString) -> ZielId {
+    pub fn ziel_hinzufügen(&mut self, id: AnlageZielId, tiername: NonEmptyString) -> AnlageZielId {
         let zielnummer = self.naechste_zielnummer(&tiername);
         self.ziele
-            .push(Ziel::neu(id, NeuesZiel::neu(tiername, zielnummer)));
+            .push(AnlageZiel::neu(id, NeuesZiel::neu(tiername, zielnummer)));
         id
     }
 
@@ -441,7 +428,7 @@ impl AnlageAktiv {
     /// archived Ziele refuse the edit.
     pub fn ziel_ändern(
         &mut self,
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
         tiername: NonEmptyString,
         zielnummer: NonZeroU32,
     ) -> Result<(), AnlageFehler> {
@@ -455,7 +442,7 @@ impl AnlageAktiv {
 
     /// Archive a Ziel and drop it from every current arrangement, keeping its identity
     /// and history (AC-11).
-    pub fn ziel_archivieren(&mut self, ziel_id: ZielId) -> Result<(), AnlageFehler> {
+    pub fn ziel_archivieren(&mut self, ziel_id: AnlageZielId) -> Result<(), AnlageFehler> {
         self.ziele
             .iter_mut()
             .find(|ziel| ziel.id() == ziel_id)
@@ -472,7 +459,7 @@ impl AnlageAktiv {
     }
 
     /// Delete a Ziel outright, for master data with no history (AC-12).
-    pub fn ziel_entfernen(&mut self, ziel_id: ZielId) -> Result<(), AnlageFehler> {
+    pub fn ziel_entfernen(&mut self, ziel_id: AnlageZielId) -> Result<(), AnlageFehler> {
         if self.ziel(ziel_id).is_none() {
             return Err(AnlageFehler::ZielUnbekannt);
         }
@@ -493,10 +480,10 @@ impl AnlageAktiv {
     /// *slot*, never the old target's Schüsse.
     pub fn ziel_ersetzen(
         &mut self,
-        alt: ZielId,
-        neu: ZielId,
+        alt: AnlageZielId,
+        neu: AnlageZielId,
         tiername: NonEmptyString,
-    ) -> Result<ZielId, AnlageFehler> {
+    ) -> Result<AnlageZielId, AnlageFehler> {
         let altes = self.ziel(alt).ok_or(AnlageFehler::ZielUnbekannt)?;
         if altes.ist_archiviert() {
             return Err(AnlageFehler::ZielArchiviert);
@@ -548,7 +535,7 @@ impl AnlageAktiv {
     pub fn parkour_setup_ändern(
         &mut self,
         parkour_id: ParkourId,
-        pflöcke: Vec<Pflock>,
+        pflöcke: Vec<ParkourPflock>,
         platzierungen: Vec<Zielplatzierung>,
     ) -> Result<(), ParkourFehler> {
         for platzierung in &platzierungen {
@@ -605,7 +592,7 @@ impl AnlageArchiviert {
         adresse: AnlageAdresse,
         kontakt: AnlageKontakt,
         verwaltungen: Vec<AnlageVerwaltung>,
-        ziele: Vec<Ziel>,
+        ziele: Vec<AnlageZiel>,
         parkour: Vec<Parkour>,
         deaktiviert_am: DateTime<Utc>,
     ) -> Self {
@@ -694,7 +681,7 @@ impl Anlage {
         }
     }
 
-    pub fn ziele(&self) -> &[Ziel] {
+    pub fn ziele(&self) -> &[AnlageZiel] {
         match self {
             Self::Aktiv(anlage) => anlage.ziele(),
             Self::Archiviert(anlage) => anlage.ziele(),
@@ -715,7 +702,7 @@ impl Anlage {
         }
     }
 
-    pub fn ziel(&self, ziel_id: ZielId) -> Option<&Ziel> {
+    pub fn ziel(&self, ziel_id: AnlageZielId) -> Option<&AnlageZiel> {
         match self {
             Self::Aktiv(anlage) => anlage.ziel(ziel_id),
             Self::Archiviert(anlage) => anlage.ziel(ziel_id),
@@ -738,16 +725,11 @@ impl Anlage {
     }
 
     /// Placement aggregation, delegated so a reader holding the sum never matches on state.
-    pub fn ziel_verwendungen(&self, ziel_id: ZielId) -> Vec<Zielverwendung> {
+    pub fn ziel_verwendungen(&self, ziel_id: AnlageZielId) -> Vec<Zielverwendung> {
         match self {
             Self::Aktiv(anlage) => anlage.ziel_verwendungen(ziel_id),
             Self::Archiviert(anlage) => anlage.ziel_verwendungen(ziel_id),
         }
-    }
-
-    /// Capture a Parkour snapshot, delegated to whichever state holds the children.
-    pub fn snapshot_für(&self, parkour_id: ParkourId) -> Result<ParkourSnapshot, SnapshotFehler> {
-        snapshot::snapshot(self, parkour_id)
     }
 }
 
@@ -765,7 +747,7 @@ pub struct Zielverwendung {
     /// Ziel's own ordered set.
     pub pflöcke: ZielPflöcke,
     /// Distance per Pflock, for the distances that are configured.
-    pub abstände: Vec<(PflockId, Abstand)>,
+    pub abstände: Vec<(ParkourPflockId, Abstand)>,
 }
 
 /// Whether a Benutzer may act on an Anlage at all.
@@ -830,19 +812,22 @@ mod tests {
         BenutzerId(Uuid::from_u128(2))
     }
 
-    fn ziel_id() -> ZielId {
-        ZielId(Uuid::from_u128(10))
+    fn ziel_id() -> AnlageZielId {
+        AnlageZielId(Uuid::from_u128(10))
     }
 
     fn name(wert: &str) -> NonEmptyString {
         NonEmptyString::neu(wert).unwrap()
     }
 
-    fn pflock(id: u128, farbe: &str) -> Pflock {
-        Pflock::neu(PflockId(Uuid::from_u128(id)), Farbe::neu(farbe).unwrap())
+    fn pflock(id: u128, farbe: &str) -> ParkourPflock {
+        ParkourPflock::neu(
+            ParkourPflockId(Uuid::from_u128(id)),
+            Farbe::neu(farbe).unwrap(),
+        )
     }
 
-    fn parkour_neu(ziel: ZielId) -> NeuerParkour {
+    fn parkour_neu(ziel: AnlageZielId) -> NeuerParkour {
         NeuerParkour::neu(
             name("Waldrunde"),
             vec![pflock(1, "#c0392b"), pflock(2, "#1b4f9c")],
@@ -966,7 +951,9 @@ mod tests {
     }
 
     #[test_log::test]
-    fn ac7_der_snapshot_ist_eine_wertkopie() {
+    fn ac7_der_aufbau_ist_eine_wertkopie() {
+        use crate::domain::runde::Rundenaufbau;
+
         let mut anlage = anlage();
         anlage.ziel_hinzufügen(ziel_id(), name("Keiler"));
         let parkour_id = ParkourId(Uuid::nil());
@@ -974,28 +961,29 @@ mod tests {
             .parkour_hinzufügen(parkour_id, parkour_neu(ziel_id()))
             .unwrap();
 
-        let snapshot = anlage.snapshot_für(parkour_id).unwrap();
-        assert_eq!(snapshot.parkour_name().as_str(), "Waldrunde");
-        assert_eq!(snapshot.ziele()[0].tiername().as_str(), "Keiler");
+        let parkour = anlage.parkour_mit_id(parkour_id).unwrap();
+        let aufbau = Rundenaufbau::aus_parkour(parkour, |id| anlage.ziel(id)).unwrap();
+        assert_eq!(aufbau.ziele()[0].name().as_str(), "Keiler");
 
         // A later edit changes the aggregate, never the captured copy.
         anlage
             .ziel_ändern(ziel_id(), name("Reh"), NonZeroU32::new(1).unwrap())
             .unwrap();
-        assert_eq!(snapshot.ziele()[0].tiername().as_str(), "Keiler");
-        assert_eq!(snapshot.ziele()[0].zielnummer().get(), 1);
+        assert_eq!(aufbau.ziele()[0].name().as_str(), "Keiler");
+        assert_eq!(aufbau.ziele()[0].ordinal().get(), 1);
 
-        let neuer_snapshot = anlage.snapshot_für(parkour_id).unwrap();
-        assert_eq!(neuer_snapshot.ziele()[0].tiername().as_str(), "Reh");
+        let parkour = anlage.parkour_mit_id(parkour_id).unwrap();
+        let neuer_aufbau = Rundenaufbau::aus_parkour(parkour, |id| anlage.ziel(id)).unwrap();
+        assert_eq!(neuer_aufbau.ziele()[0].name().as_str(), "Reh");
     }
 
     #[test_log::test]
     fn zielnummer_trennt_gleichnamige_ziele() {
         let mut anlage = anlage();
-        anlage.ziel_hinzufügen(ZielId(Uuid::from_u128(1)), name("Reh"));
-        anlage.ziel_hinzufügen(ZielId(Uuid::from_u128(2)), name("Reh"));
-        anlage.ziel_hinzufügen(ZielId(Uuid::from_u128(3)), name("Reh"));
-        anlage.ziel_hinzufügen(ZielId(Uuid::from_u128(4)), name("Keiler"));
+        anlage.ziel_hinzufügen(AnlageZielId(Uuid::from_u128(1)), name("Reh"));
+        anlage.ziel_hinzufügen(AnlageZielId(Uuid::from_u128(2)), name("Reh"));
+        anlage.ziel_hinzufügen(AnlageZielId(Uuid::from_u128(3)), name("Reh"));
+        anlage.ziel_hinzufügen(AnlageZielId(Uuid::from_u128(4)), name("Keiler"));
 
         let nummern: Vec<(u128, u32)> = anlage
             .ziele()
@@ -1009,11 +997,13 @@ mod tests {
         );
 
         // Archiving does not free an ordinal: names stay unambiguous across history.
-        anlage.ziel_archivieren(ZielId(Uuid::from_u128(2))).unwrap();
-        anlage.ziel_hinzufügen(ZielId(Uuid::from_u128(5)), name("Reh"));
+        anlage
+            .ziel_archivieren(AnlageZielId(Uuid::from_u128(2)))
+            .unwrap();
+        anlage.ziel_hinzufügen(AnlageZielId(Uuid::from_u128(5)), name("Reh"));
         assert_eq!(
             anlage
-                .ziel(ZielId(Uuid::from_u128(5)))
+                .ziel(AnlageZielId(Uuid::from_u128(5)))
                 .unwrap()
                 .zielnummer()
                 .get(),

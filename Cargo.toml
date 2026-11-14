@@ -39,6 +39,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tracing-appender = "0.2"
 test-log = { version = "0.2", default-features = false, features = ["trace"] }
+# Compile-fail harness: an AC that says "this method does not exist" can only be proven by
+# failing to compile, so the typestate promise is a test rather than a comment.
+trybuild = "1.0.122"
 cloudiful-scheduler = { version = "0.4.12", default-features = false }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 

@@ -123,20 +123,39 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
           <SchussLedger
             ziel={selected}
             reihenfolge={index + 1}
-            editable={
-              runde.zustand === "InBearbeitung" ||
-              runde.zustand === "Abgeschlossen"
-            }
-            onEdit={(schussId, wertungszone, shotPosition) =>
-              schussAendern.mutate({
-                rundeId: runde.id,
-                schussId,
-                schuss: { wertungszone, position: shotPosition },
-              })
-            }
-            onDelete={(schussId) =>
-              schussLoeschen.mutate({ rundeId: runde.id, schussId })
-            }
+            editable={runde.zustand === "InBearbeitung"}
+            onEdit={(schussId, wertungszone, shotPosition) => {
+              setFehler(null);
+              schussAendern.mutate(
+                {
+                  rundeId: runde.id,
+                  schussId,
+                  schuss: { wertungszone, position: shotPosition },
+                },
+                {
+                  onError: (error) =>
+                    setFehler(
+                      apiErrorMessage(error, {
+                        fallback: "Der Schuss konnte nicht geändert werden.",
+                      }),
+                    ),
+                },
+              );
+            }}
+            onDelete={(schussId) => {
+              setFehler(null);
+              schussLoeschen.mutate(
+                { rundeId: runde.id, schussId },
+                {
+                  onError: (error) =>
+                    setFehler(
+                      apiErrorMessage(error, {
+                        fallback: "Der Schuss konnte nicht gelöscht werden.",
+                      }),
+                    ),
+                },
+              );
+            }}
           />
         </div>
       </CardContent>
@@ -148,7 +167,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
       <div className="sticky top-0 z-40 -mx-6 flex flex-col gap-2 border-y border-subtle bg-surface px-6 py-3">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1">
           <p className="truncate font-medium text-ink font-serif">
-            {runde.parkourName}
+            {runde.name}
           </p>
           <WertungAnzeige
             ersterTreffer={runde.gesamtErsterTreffer}
@@ -213,7 +232,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
               setZielIndex((index) => Math.min(runde.ziele.length, index + 1))
             }
           >
-            Weiter
+            {zielIndex === runde.ziele.length - 1 ? "Zum Abschluss" : "Weiter"}
           </Button>
         </div>
       </div>

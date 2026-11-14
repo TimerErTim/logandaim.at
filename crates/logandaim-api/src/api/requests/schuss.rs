@@ -65,7 +65,7 @@ fn position_aus_anfrage(position: SchusspositionRequest) -> Result<Schusspositio
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SchussErstellungRequest {
-    /// The Ziel that was aimed at; it must be part of the Runde's snapshot.
+    /// The neutral round-local Ziel identity.
     pub ziel_id: Uuid,
     /// Where on the Ziel the arrow landed.
     pub wertungszone: Wertungszone,
@@ -94,20 +94,19 @@ impl SchussErstellungRequest {
 }
 
 /// Replace a Schuss's scoring zone and optional position.
-/// Replace a Schuss's scoring zone and optional position.
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SchussÄnderungRequest {
+pub struct SchussAenderungRequest {
     /// Where on the Ziel the arrow landed.
     pub wertungszone: Wertungszone,
     /// Optional shot position; null clears the stored position.
     pub position: Option<SchusspositionRequest>,
 }
 
-impl SchussÄnderungRequest {
+impl SchussAenderungRequest {
     pub fn in_use_case(
         self,
         runde_id: RundeId,

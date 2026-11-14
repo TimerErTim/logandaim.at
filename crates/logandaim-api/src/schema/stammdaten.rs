@@ -16,7 +16,7 @@ use crate::schema::EmailAdresse;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "openapi", derive(poem_openapi::Enum))]
 #[derive(serde::Serialize, serde::Deserialize)]
-pub enum Ländercode {
+pub enum Laendercode {
     AT,
     DE,
     CH,
@@ -59,13 +59,13 @@ impl TryFrom<Farbe> for domain::Farbe {
 #[serde(rename_all = "camelCase")]
 pub struct AnlageAdresse {
     /// Street and house number.
-    pub straße: String,
+    pub strasse: String,
     /// Postal code of the place.
     pub postleitzahl: String,
     /// The place itself.
     pub ort: String,
     /// Two-letter country code; only `AT`, `DE`, and `CH` are accepted.
-    pub ländercode: Ländercode,
+    pub laendercode: Laendercode,
 }
 
 /// Optional contact details of an Anlage; each may be absent on its own.
@@ -129,7 +129,7 @@ pub struct AnlageVerwaltung {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Ziel {
+pub struct AnlageZiel {
     /// Stable identity of this physical target.
     pub id: Uuid,
     /// Animal name shown to the shooter.
@@ -153,9 +153,9 @@ pub struct Zielverwendung {
     pub parkour_id: Uuid,
     /// 0-based position in that Parkour' route.
     pub position: usize,
-    pub pflöcke: ZielPflöcke,
+    pub pfloecke: ZielPfloecke,
     /// Pflock identity to metres, near to far.
-    pub abstände: Vec<PflockAbstand>,
+    pub abstaende: Vec<PflockAbstand>,
 }
 
 /// One distance from a Pflock to a Ziel.
@@ -181,7 +181,7 @@ pub struct PflockAbstand {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Pflock {
+pub struct ParkourPflock {
     /// Identity of the Pflock inside its Parkour.
     pub id: Uuid,
     /// The Pflock's colour. It is what distinguishes one Pflock from another.
@@ -197,9 +197,9 @@ pub struct Pflock {
 #[cfg_attr(feature = "openapi", oai(discriminator_name = "art"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(tag = "art")]
-pub enum ZielPflöcke {
-    InheritFromParkour(InheritFromParkourPflöcke),
-    Explicit(ExplicitPflöcke),
+pub enum ZielPfloecke {
+    InheritFromParkour(InheritFromParkourPfloecke),
+    Explicit(ExplicitPfloecke),
 }
 
 /// The Parkour-wide order applies to this Ziel. Carries nothing; the discriminator is the
@@ -209,7 +209,7 @@ pub enum ZielPflöcke {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct InheritFromParkourPflöcke {}
+pub struct InheritFromParkourPfloecke {}
 
 /// This Ziel's own near-to-far Pflock order, which replaces the Parkour-wide one. Never
 /// empty.
@@ -218,14 +218,14 @@ pub struct InheritFromParkourPflöcke {}
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ExplicitPflöcke {
+pub struct ExplicitPfloecke {
     /// The own Pflöcke, near to far.
-    pub pflöcke: Vec<Pflock>,
+    pub pfloecke: Vec<ParkourPflock>,
 }
 
-impl Default for ZielPflöcke {
+impl Default for ZielPfloecke {
     fn default() -> Self {
-        Self::InheritFromParkour(InheritFromParkourPflöcke {})
+        Self::InheritFromParkour(InheritFromParkourPfloecke {})
     }
 }
 
@@ -238,9 +238,9 @@ impl Default for ZielPflöcke {
 pub struct Zielplatzierung {
     /// The Ziel that stands here.
     pub ziel_id: Uuid,
-    pub pflöcke: ZielPflöcke,
+    pub pfloecke: ZielPfloecke,
     /// Distances by Pflock identity; a missing entry means no distance is configured.
-    pub abstände: Vec<PflockAbstand>,
+    pub abstaende: Vec<PflockAbstand>,
 }
 
 /// One Parkour of the Anlage: its name, its Pflöcke, and the route they form.
@@ -257,7 +257,7 @@ pub struct Parkour {
     /// Whether the Parkour is in use or retired.
     pub zustand: AnlageZustand,
     /// Far to near, in the order the shooter walks them. Never inferred from a colour.
-    pub pflöcke: Vec<Pflock>,
+    pub pfloecke: Vec<ParkourPflock>,
     /// In route order.
     pub platzierungen: Vec<Zielplatzierung>,
 }
@@ -268,7 +268,7 @@ pub struct Parkour {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ParkourÖffentlich {
+pub struct ParkourOeffentlich {
     /// The Anlage that offers this Parkour.
     pub anlage_id: Uuid,
     /// That Anlage's name.
@@ -289,7 +289,7 @@ pub struct ParkourKurz {
     /// Shown name of the Parkour.
     pub name: String,
     /// How many Pflöcke the route uses.
-    pub anzahl_pflöcke: usize,
+    pub anzahl_pfloecke: usize,
     /// How many Ziele the route places.
     pub anzahl_ziele: usize,
 }
@@ -303,7 +303,7 @@ pub struct ParkourKurz {
 #[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AnlageÖffentlich {
+pub struct AnlageOeffentlich {
     /// Identity of the Anlage.
     pub anlage_id: Uuid,
     /// Shown name of the Anlage.
@@ -311,7 +311,7 @@ pub struct AnlageÖffentlich {
     /// The place the Anlage is in.
     pub ort: String,
     /// Two-letter country code of that place.
-    pub ländercode: Ländercode,
+    pub laendercode: Laendercode,
     /// The Parkour it currently offers, without their setup.
     pub parkour: Vec<ParkourKurz>,
 }
@@ -338,7 +338,7 @@ pub struct Anlage {
     /// The role assignments in this Anlage.
     pub verwaltungen: Vec<AnlageVerwaltung>,
     /// Its physical Ziele.
-    pub ziele: Vec<Ziel>,
+    pub ziele: Vec<AnlageZiel>,
     /// Its Parkour, each with its setup and route.
     pub parkour: Vec<Parkour>,
 }
@@ -387,7 +387,7 @@ impl TryFrom<AnlageVerwaltungRolle> for domain::AnlageVerwaltungRolle {
     }
 }
 
-impl From<domain::Ländercode> for Ländercode {
+impl From<domain::Ländercode> for Laendercode {
     fn from(code: domain::Ländercode) -> Self {
         match code {
             domain::Ländercode::AT => Self::AT,
@@ -400,10 +400,10 @@ impl From<domain::Ländercode> for Ländercode {
 impl From<domain::AnlageAdresse> for AnlageAdresse {
     fn from(adresse: domain::AnlageAdresse) -> Self {
         Self {
-            straße: adresse.straße().to_owned(),
+            strasse: adresse.straße().to_owned(),
             postleitzahl: adresse.postleitzahl().to_owned(),
             ort: adresse.ort().to_owned(),
-            ländercode: adresse.ländercode().into(),
+            laendercode: adresse.ländercode().into(),
         }
     }
 }
@@ -428,8 +428,8 @@ impl From<domain::AnlageVerwaltung> for AnlageVerwaltung {
     }
 }
 
-impl From<domain::Pflock> for Pflock {
-    fn from(pflock: domain::Pflock) -> Self {
+impl From<domain::ParkourPflock> for ParkourPflock {
+    fn from(pflock: domain::ParkourPflock) -> Self {
         Self {
             id: pflock.id().0,
             farbe: pflock.farbe().into(),
@@ -437,14 +437,14 @@ impl From<domain::Pflock> for Pflock {
     }
 }
 
-impl From<&domain::ZielPflöcke> for ZielPflöcke {
+impl From<&domain::ZielPflöcke> for ZielPfloecke {
     fn from(pflöcke: &domain::ZielPflöcke) -> Self {
         match pflöcke {
             domain::ZielPflöcke::InheritFromParkour => {
-                Self::InheritFromParkour(InheritFromParkourPflöcke {})
+                Self::InheritFromParkour(InheritFromParkourPfloecke {})
             }
-            domain::ZielPflöcke::Explicit(eigene) => Self::Explicit(ExplicitPflöcke {
-                pflöcke: eigene.iter().cloned().map(Into::into).collect(),
+            domain::ZielPflöcke::Explicit(eigene) => Self::Explicit(ExplicitPfloecke {
+                pfloecke: eigene.iter().cloned().map(Into::into).collect(),
             }),
         }
     }
@@ -454,8 +454,8 @@ impl From<domain::Zielplatzierung> for Zielplatzierung {
     fn from(platzierung: domain::Zielplatzierung) -> Self {
         Self {
             ziel_id: platzierung.ziel_id().0,
-            pflöcke: platzierung.pflöcke().into(),
-            abstände: platzierung
+            pfloecke: platzierung.pflöcke().into(),
+            abstaende: platzierung
                 .abstände()
                 .iter()
                 .map(|(pflock_id, abstand)| PflockAbstand {
@@ -473,7 +473,7 @@ impl From<domain::Parkour> for Parkour {
             id: parkour.id().0,
             name: parkour.name().as_str().to_owned(),
             zustand: zustand(parkour.zustand()),
-            pflöcke: parkour.pflöcke().iter().cloned().map(Into::into).collect(),
+            pfloecke: parkour.pflöcke().iter().cloned().map(Into::into).collect(),
             platzierungen: parkour
                 .platzierungen()
                 .iter()
@@ -489,8 +489,8 @@ impl From<domain::Zielverwendung> for Zielverwendung {
         Self {
             parkour_id: verwendung.parkour_id.0,
             position: verwendung.position,
-            pflöcke: (&verwendung.pflöcke).into(),
-            abstände: verwendung
+            pfloecke: (&verwendung.pflöcke).into(),
+            abstaende: verwendung
                 .abstände
                 .into_iter()
                 .map(|(pflock_id, abstand)| PflockAbstand {
@@ -502,8 +502,8 @@ impl From<domain::Zielverwendung> for Zielverwendung {
     }
 }
 
-impl From<domain::Ziel> for Ziel {
-    fn from(ziel: domain::Ziel) -> Self {
+impl From<domain::AnlageZiel> for AnlageZiel {
+    fn from(ziel: domain::AnlageZiel) -> Self {
         Self {
             id: ziel.id().0,
             tiername: ziel.tiername().as_str().to_owned(),
@@ -538,9 +538,9 @@ impl From<domain::Anlage> for Anlage {
                 .iter()
                 .map(|ziel| {
                     // The admin page renders where each Ziel stands, so the read attaches it.
-                    let mut ziel: Ziel = ziel.clone().into();
+                    let mut ziel: AnlageZiel = ziel.clone().into();
                     ziel.verwendungen = anlage
-                        .ziel_verwendungen(domain::ZielId(ziel.id))
+                        .ziel_verwendungen(domain::AnlageZielId(ziel.id))
                         .into_iter()
                         .map(Into::into)
                         .collect();
@@ -557,7 +557,7 @@ impl From<domain::Parkour> for ParkourKurz {
         Self {
             id: parkour.id().0,
             name: parkour.name().as_str().to_owned(),
-            anzahl_pflöcke: parkour.pflöcke().len(),
+            anzahl_pfloecke: parkour.pflöcke().len(),
             anzahl_ziele: parkour.platzierungen().len(),
         }
     }

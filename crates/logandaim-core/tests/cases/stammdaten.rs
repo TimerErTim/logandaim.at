@@ -9,9 +9,9 @@ use std::net::{IpAddr, Ipv4Addr};
 use logandaim_core::{
     application::AuthContext,
     domain::{
-        Abstand, Anlage, AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, EmailAdresse, Farbe,
-        Ländercode, NeuerParkour, NonEmptyString, ParkourId, Pflock, PflockId, Wertungszone,
-        ZielId, ZielPflöcke, Zielplatzierung,
+        Abstand, Anlage, AnlageAdresse, AnlageKontakt, AnlageVerwaltungRolle, AnlageZielId,
+        EmailAdresse, Farbe, Ländercode, NeuerParkour, NonEmptyString, ParkourId, ParkourPflock,
+        ParkourPflockId, Wertungszone, ZielPflöcke, Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
@@ -144,17 +144,17 @@ async fn anlage_erstellen(harness: &Harness, auth: AuthContext, name: &str) -> A
 
 /// Two Pflöcke far to near, plus one placement of `ziel` at 40 m and 20 m.
 fn parkour_setup(
-    ziel: ZielId,
-    pflöcke: Option<(PflockId, PflockId)>,
-) -> (Vec<Pflock>, Vec<Zielplatzierung>) {
+    ziel: AnlageZielId,
+    pflöcke: Option<(ParkourPflockId, ParkourPflockId)>,
+) -> (Vec<ParkourPflock>, Vec<Zielplatzierung>) {
     let (weit_id, nah_id) = pflöcke.unwrap_or_else(|| {
         (
-            PflockId(uuid::Uuid::new_v4()),
-            PflockId(uuid::Uuid::new_v4()),
+            ParkourPflockId(uuid::Uuid::new_v4()),
+            ParkourPflockId(uuid::Uuid::new_v4()),
         )
     });
-    let fern = Pflock::neu(weit_id, Farbe::neu("#c0392b").expect("gültig"));
-    let nah = Pflock::neu(nah_id, Farbe::neu("#1b4f9c").expect("gültig"));
+    let fern = ParkourPflock::neu(weit_id, Farbe::neu("#c0392b").expect("gültig"));
+    let nah = ParkourPflock::neu(nah_id, Farbe::neu("#1b4f9c").expect("gültig"));
     // Near to far: the first Pflock is the nearest, distances strictly increase.
     let platzierung =
         Zielplatzierung::neu(ziel, vec![(nah_id, abstand(20)), (weit_id, abstand(40))])
@@ -167,7 +167,7 @@ async fn anlage_mit_parkour(
     harness: &Harness,
     auth: AuthContext,
     name: &str,
-) -> (Anlage, ZielId, ParkourId) {
+) -> (Anlage, AnlageZielId, ParkourId) {
     let anlage = anlage_erstellen(harness, auth, name).await;
     let anlage_id = anlage.id();
 
@@ -597,7 +597,7 @@ async fn ac4_dasselbe_ziel_darf_in_zwei_parkour_liegen() {
 
 #[test_log::test(pollster::test)]
 async fn ac4_dasselbe_ziel_zweimal_im_selben_parkour_wird_abgelehnt() {
-    let ziel = ZielId(uuid::Uuid::new_v4());
+    let ziel = AnlageZielId(uuid::Uuid::new_v4());
     let (pflöcke, platzierungen) = parkour_setup(ziel, None);
     let ergebnis = NeuerParkour::neu(
         NonEmptyString::neu("Doppelt").expect("gültig"),
@@ -690,12 +690,12 @@ async fn ac5_ersetzen_erzeugt_eine_neue_identitaet() {
 #[test_log::test(pollster::test)]
 async fn ac6_pflock_farben_sind_je_parkour_eindeutig() {
     let doppelt = vec![
-        Pflock::neu(
-            PflockId(uuid::Uuid::new_v4()),
+        ParkourPflock::neu(
+            ParkourPflockId(uuid::Uuid::new_v4()),
             Farbe::neu("#c0392b").expect("gültig"),
         ),
-        Pflock::neu(
-            PflockId(uuid::Uuid::new_v4()),
+        ParkourPflock::neu(
+            ParkourPflockId(uuid::Uuid::new_v4()),
             Farbe::neu("#C0392B").expect("gültig"),
         ),
     ];
@@ -709,12 +709,12 @@ async fn ac6_pflock_farben_sind_je_parkour_eindeutig() {
 
 #[test_log::test(pollster::test)]
 async fn ac6_konfigurierte_abstaende_nehmen_streng_von_nah_nach_fern_zu() {
-    let weit = PflockId(uuid::Uuid::new_v4());
-    let nah = PflockId(uuid::Uuid::new_v4());
-    let ziel = ZielId(uuid::Uuid::new_v4());
+    let weit = ParkourPflockId(uuid::Uuid::new_v4());
+    let nah = ParkourPflockId(uuid::Uuid::new_v4());
+    let ziel = AnlageZielId(uuid::Uuid::new_v4());
     let pflöcke = vec![
-        Pflock::neu(weit, Farbe::neu("#c0392b").expect("gültig")),
-        Pflock::neu(nah, Farbe::neu("#1b4f9c").expect("gültig")),
+        ParkourPflock::neu(weit, Farbe::neu("#c0392b").expect("gültig")),
+        ParkourPflock::neu(nah, Farbe::neu("#1b4f9c").expect("gültig")),
     ];
 
     let gleich = Zielplatzierung::neu(ziel, vec![(weit, abstand(30)), (nah, abstand(30))])
@@ -742,17 +742,17 @@ async fn ac6_konfigurierte_abstaende_nehmen_streng_von_nah_nach_fern_zu() {
 // --------------------------------------------------------------------------- AC-7 / AC-9
 
 #[test_log::test(pollster::test)]
-async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
+async fn ac7_ac9_der_aufbau_bleibt_von_spaeteren_aenderungen_unberuehrt() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
     let (anlage, ziel_id, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
 
     let runde = harness
         .app()
-        .execute(admin, RundeStarten { parkour_id })
+        .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("AC-7: eine Runde startet");
-    let vorher = runde.snapshot().clone();
+    let vorher = runde.aufbau().clone();
     let anlage_id = anlage.id();
 
     harness
@@ -786,19 +786,22 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
 
     // AC-9: the existing Runde still displays L1 exactly.
     let (gelesen, _) = runde_laden(&harness, runde.id()).await;
-    assert_eq!(gelesen.snapshot(), &vorher);
-    let ziel = &gelesen.snapshot().ziele()[0];
-    assert_eq!(ziel.tiername().as_str(), "Keiler");
-    assert_eq!(ziel.zielnummer().get(), 1);
+    assert_eq!(gelesen.aufbau(), &vorher);
+    let ziel = &gelesen.aufbau().ziele()[0];
+    assert_eq!(ziel.name().as_str(), "Keiler");
+    assert_eq!(ziel.ordinal().get(), 1);
     assert_eq!(
-        ziel.abstände(),
-        &[
+        ziel.pflöcke()
+            .iter()
+            .map(|pflock| (pflock.farbe(), pflock.abstand().unwrap()))
+            .collect::<Vec<_>>(),
+        vec![
             (Farbe::neu("#1b4f9c").unwrap(), abstand(20)),
             (Farbe::neu("#c0392b").unwrap(), abstand(40)),
         ]
     );
     assert_eq!(
-        gelesen.snapshot().parkour_name().as_str(),
+        gelesen.name().as_str(),
         "Waldrunde",
         "AC-9: der Name ist Teil des Schnappschusses"
     );
@@ -818,11 +821,12 @@ async fn ac7_ac9_der_snapshot_bleibt_von_spaeteren_aenderungen_unberuehrt() {
     // AC-7: a Runde started after the edit captures L2.
     let neue = harness
         .app()
-        .execute(admin, RundeStarten { parkour_id })
+        .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("AC-7: eine neue Runde startet");
-    assert_eq!(neue.snapshot().ziele()[0].tiername().as_str(), "Reh");
-    assert_ne!(neue.snapshot(), &vorher);
+    let neu = neue.aufbau();
+    assert_eq!(neu.ziele()[0].name().as_str(), "Reh");
+    assert_ne!(neu, &vorher);
 }
 
 // --------------------------------------------------------------------------- AC-8
@@ -835,16 +839,17 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
 
     let erste = harness
         .app()
-        .execute(admin, RundeStarten { parkour_id })
+        .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die erste Runde startet");
+    let erstes_ziel_id = erste.aufbau().ziele().first().expect("ein Ziel").id();
     harness
         .app()
         .execute(
             admin,
             SchussRegistrieren {
                 runde_id: erste.id(),
-                ziel_id,
+                ziel_id: erstes_ziel_id,
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -886,21 +891,17 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
 
     let zweite = harness
         .app()
-        .execute(
-            admin,
-            RundeStarten {
-                parkour_id: zweiter_parkour,
-            },
-        )
+        .execute(admin, RundeStarten::mit_parkour(zweiter_parkour))
         .await
         .expect("die zweite Runde startet");
+    let zweites_ziel_id = zweite.aufbau().ziele().first().expect("ein Ziel").id();
     harness
         .app()
         .execute(
             admin,
             SchussRegistrieren {
                 runde_id: zweite.id(),
-                ziel_id,
+                ziel_id: zweites_ziel_id,
                 wertungszone: Wertungszone::Spot,
                 position: None,
             },
@@ -911,13 +912,19 @@ async fn ac8_die_zielhistorie_bleibt_ueber_runden_und_parkour_hinweg_kontinuierl
     let (eine, eine_schüsse) = runde_laden(&harness, erste.id()).await;
     let (andere, andere_schüsse) = runde_laden(&harness, zweite.id()).await;
 
-    assert_eq!(eine.snapshot().ziele()[0].ziel_id(), ziel_id);
-    assert_eq!(andere.snapshot().ziele()[0].ziel_id(), ziel_id);
+    let eine_aufbau = eine.aufbau();
+    let andere_aufbau = andere.aufbau();
+    assert_eq!(eine_aufbau.ziele()[0].anlage_ziel_id(), Some(ziel_id));
+    assert_eq!(andere_aufbau.ziele()[0].anlage_ziel_id(), Some(ziel_id));
     assert_eq!(eine.wertung(eine_schüsse).erster_treffer(), 18);
     assert_eq!(andere.wertung(andere_schüsse).erster_treffer(), 20);
     assert_eq!(
-        andere.snapshot().ziele()[0].abstände(),
-        &[
+        andere_aufbau.ziele()[0]
+            .pflöcke()
+            .iter()
+            .map(|pflock| (pflock.farbe(), pflock.abstand().unwrap()))
+            .collect::<Vec<_>>(),
+        vec![
             (Farbe::neu("#1b4f9c").unwrap(), abstand(20)),
             (Farbe::neu("#c0392b").unwrap(), abstand(40)),
         ],
@@ -935,7 +942,7 @@ async fn ac10_deaktivieren_verhindert_neue_runden_und_haelt_alte_lesbar() {
 
     let runde = harness
         .app()
-        .execute(admin, RundeStarten { parkour_id })
+        .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("eine Runde vor der Deaktivierung");
 
@@ -953,7 +960,7 @@ async fn ac10_deaktivieren_verhindert_neue_runden_und_haelt_alte_lesbar() {
 
     let fehler = harness
         .app()
-        .execute(admin, RundeStarten { parkour_id })
+        .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect_err("AC-10: keine neuen Runden");
     assert!(matches!(
@@ -1004,7 +1011,7 @@ async fn ac11_ein_referenziertes_ziel_wird_archiviert_nicht_geloescht() {
     let (anlage, ziel_id, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
     harness
         .app()
-        .execute(admin, RundeStarten { parkour_id })
+        .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("eine Runde referenziert das Ziel");
 
@@ -1034,7 +1041,7 @@ async fn ac11_ein_archiviertes_ziel_verweigert_jede_aenderung() {
     let (anlage, ziel_id, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
     harness
         .app()
-        .execute(admin, RundeStarten { parkour_id })
+        .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("eine Runde referenziert das Ziel");
     harness
@@ -1108,7 +1115,7 @@ async fn ac11_ein_referenzierter_parkour_wird_archiviert() {
     let (anlage, _, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
     harness
         .app()
-        .execute(admin, RundeStarten { parkour_id })
+        .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("eine Runde referenziert den Parkour");
 
@@ -1194,7 +1201,7 @@ async fn ac13_ein_mitarbeiter_liest_keine_fremde_runde() {
 
     let fremde_runde = harness
         .app()
-        .execute(admin, RundeStarten { parkour_id })
+        .execute(admin, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("die Runde gehört dem Systemadministrator");
 
@@ -1216,7 +1223,7 @@ async fn ac13_der_systemadministrator_handelt_anlagenuebergreifend() {
 
     let runde = harness
         .app()
-        .execute(anna, RundeStarten { parkour_id })
+        .execute(anna, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("Anna startet eine Runde");
 
@@ -1304,20 +1311,21 @@ async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
     let harness = harness().await;
     let admin = systemadministrator(&harness, "admin@muster.at").await;
     let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
-    let (_, ziel_id, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
+    let (_, _ziel_id, parkour_id) = anlage_mit_parkour(&harness, admin, "Breitenstein").await;
 
     let runde = harness
         .app()
-        .execute(anna, RundeStarten { parkour_id })
+        .execute(anna, RundeStarten::mit_parkour(parkour_id))
         .await
         .expect("Anna startet eine Runde");
+    let runden_ziel_id = runde.aufbau().ziele().first().expect("ein Ziel").id();
     harness
         .app()
         .execute(
             anna,
             SchussRegistrieren {
                 runde_id: runde.id(),
-                ziel_id,
+                ziel_id: runden_ziel_id,
                 wertungszone: Wertungszone::Kill,
                 position: None,
             },
@@ -1355,21 +1363,23 @@ async fn ein_schuss_ueberlebt_das_loeschen_des_benutzers_anonymisiert() {
 /// One Parkour over `ziel_id` whose placement carries its own Pflock set.
 ///
 /// Returns `(parkour-wide pflöcke, own pflöcke, platzierungen)`.
-fn parkour_setup_mit_eigenen(ziel: ZielId) -> (Vec<Pflock>, Vec<Pflock>, Vec<Zielplatzierung>) {
-    let nah = PflockId(uuid::Uuid::new_v4());
-    let weit = PflockId(uuid::Uuid::new_v4());
-    let eigen_nah = PflockId(uuid::Uuid::new_v4());
-    let eigen_weit = PflockId(uuid::Uuid::new_v4());
+fn parkour_setup_mit_eigenen(
+    ziel: AnlageZielId,
+) -> (Vec<ParkourPflock>, Vec<ParkourPflock>, Vec<Zielplatzierung>) {
+    let nah = ParkourPflockId(uuid::Uuid::new_v4());
+    let weit = ParkourPflockId(uuid::Uuid::new_v4());
+    let eigen_nah = ParkourPflockId(uuid::Uuid::new_v4());
+    let eigen_weit = ParkourPflockId(uuid::Uuid::new_v4());
 
     let pflöcke = vec![
-        Pflock::neu(nah, Farbe::neu("#1b4f9c").expect("gültig")),
-        Pflock::neu(weit, Farbe::neu("#c0392b").expect("gültig")),
+        ParkourPflock::neu(nah, Farbe::neu("#1b4f9c").expect("gültig")),
+        ParkourPflock::neu(weit, Farbe::neu("#c0392b").expect("gültig")),
     ];
     // Colour duplicates across the two sets are allowed; over their own order the distances
     // increase near to far.
     let eigene = vec![
-        Pflock::neu(eigen_nah, Farbe::neu("#1b4f9c").expect("gültig")),
-        Pflock::neu(eigen_weit, Farbe::neu("#e8b81c").expect("gültig")),
+        ParkourPflock::neu(eigen_nah, Farbe::neu("#1b4f9c").expect("gültig")),
+        ParkourPflock::neu(eigen_weit, Farbe::neu("#e8b81c").expect("gültig")),
     ];
     let platzierung = Zielplatzierung::neu_mit_eigenen_pflöcken(
         ziel,
@@ -1390,12 +1400,12 @@ async fn ziel_pfloecke_eigen_weist_leere_und_doppelte_farben_ab() {
     ));
     assert!(matches!(
         ZielPflöcke::überschreibe(vec![
-            Pflock::neu(
-                PflockId(uuid::Uuid::new_v4()),
+            ParkourPflock::neu(
+                ParkourPflockId(uuid::Uuid::new_v4()),
                 Farbe::neu("#c0392b").expect("gültig")
             ),
-            Pflock::neu(
-                PflockId(uuid::Uuid::new_v4()),
+            ParkourPflock::neu(
+                ParkourPflockId(uuid::Uuid::new_v4()),
                 Farbe::neu("#C0392B").expect("gültig")
             ),
         ]),

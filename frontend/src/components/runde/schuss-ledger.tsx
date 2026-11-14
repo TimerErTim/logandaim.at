@@ -26,6 +26,8 @@ export function SchussLedger({
   editable,
   onEdit,
   onDelete,
+  positionArt = "parkour",
+  farben = [],
 }: {
   ziel: RundeZiel;
   reihenfolge: number;
@@ -36,6 +38,8 @@ export function SchussLedger({
     position: SchusspositionInput | null,
   ) => void;
   onDelete: (schussId: string) => void;
+  positionArt?: "parkour" | "frei";
+  farben?: string[];
 }) {
   return (
     <div>
@@ -94,6 +98,8 @@ export function SchussLedger({
                     onCommit={(position) =>
                       onEdit(schuss.id, schuss.wertungszone, position)
                     }
+                    positionArt={positionArt}
+                    farben={farben}
                   />
                 </div>
               ) : schuss.position && "Pflock" in schuss.position ? (

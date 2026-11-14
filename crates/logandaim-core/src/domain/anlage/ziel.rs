@@ -2,7 +2,7 @@
 //!
 //! A `Ziel` is an entity inside the `Anlage` aggregate, not a root of its own: it has no
 //! lifecycle outside its Anlage and no repository loads or saves it alone. Callers
-//! outside the aggregate hold [`ZielId`] and nothing else (SPEC-stammdaten rule 9).
+//! outside the aggregate hold [`AnlageZielId`] and nothing else (SPEC-stammdaten rule 9).
 
 use std::num::NonZeroU32;
 
@@ -12,7 +12,7 @@ use crate::domain::common::NonEmptyString;
 
 /// Identity of one physical Ziel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct ZielId(pub Uuid);
+pub struct AnlageZielId(pub Uuid);
 
 /// Lifecycle of an entity inside the aggregate.
 ///
@@ -91,15 +91,15 @@ impl NeuesZiel {
 /// Its identity survives route edits and Parkour changes; only replacing the physical
 /// target creates a new identity (SPEC-stammdaten rule 5, AC-5).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Ziel {
-    id: ZielId,
+pub struct AnlageZiel {
+    id: AnlageZielId,
     tiername: NonEmptyString,
     zielnummer: NonZeroU32,
     zustand: Zustand,
 }
 
-impl Ziel {
-    pub fn neu(id: ZielId, neu: NeuesZiel) -> Self {
+impl AnlageZiel {
+    pub fn neu(id: AnlageZielId, neu: NeuesZiel) -> Self {
         Self {
             id,
             tiername: neu.tiername,
@@ -110,7 +110,7 @@ impl Ziel {
 
     /// Rebuild a persisted Ziel, including its lifecycle state.
     pub fn from_parts(
-        id: ZielId,
+        id: AnlageZielId,
         tiername: NonEmptyString,
         zielnummer: NonZeroU32,
         zustand: Zustand,
@@ -123,7 +123,7 @@ impl Ziel {
         }
     }
 
-    pub fn id(&self) -> ZielId {
+    pub fn id(&self) -> AnlageZielId {
         self.id
     }
 
@@ -210,9 +210,9 @@ mod tests {
         NonZeroU32::new(wert).unwrap()
     }
 
-    fn ziel() -> Ziel {
-        Ziel::neu(
-            ZielId(Uuid::nil()),
+    fn ziel() -> AnlageZiel {
+        AnlageZiel::neu(
+            AnlageZielId(Uuid::nil()),
             NeuesZiel::neu(name("Keiler"), nummer(2)),
         )
     }
@@ -224,12 +224,12 @@ mod tests {
 
     #[test_log::test]
     fn die_zielnummer_unterscheidet_gleichnamige_ziele() {
-        let erstes = Ziel::neu(
-            ZielId(Uuid::from_u128(1)),
+        let erstes = AnlageZiel::neu(
+            AnlageZielId(Uuid::from_u128(1)),
             NeuesZiel::neu(name("Reh"), nummer(1)),
         );
-        let zweites = Ziel::neu(
-            ZielId(Uuid::from_u128(2)),
+        let zweites = AnlageZiel::neu(
+            AnlageZielId(Uuid::from_u128(2)),
             NeuesZiel::neu(name("Reh"), nummer(2)),
         );
         assert_eq!(erstes.tiername(), zweites.tiername());
@@ -287,7 +287,7 @@ mod tests {
     #[test_log::test]
     fn from_parts_roundtrip() {
         let original = ziel();
-        let geladen = Ziel::from_parts(
+        let geladen = AnlageZiel::from_parts(
             original.id(),
             original.tiername().clone(),
             original.zielnummer(),

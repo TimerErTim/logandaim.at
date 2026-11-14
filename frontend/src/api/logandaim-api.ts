@@ -2,9 +2,9 @@ import {
   AnlageVerwaltungRolle,
   AnlageZustand,
   type components,
-  // openapi-typescript transliterates the umlaut in `Ländercode` to `LNdercode`; the
-  // seam keeps the domain spelling so call sites never see the codegen artefact.
-  LNdercode as Ländercode,
+  type ZielPfloecke_ExplicitPfloeckeArt as ExplicitArt,
+  type ZielPfloecke_InheritFromParkourPfloeckeArt as InheritArt,
+  Laendercode as Ländercode,
   RundeZustand,
   Wertungszone,
 } from "./schema";
@@ -17,6 +17,22 @@ export {
   RundeZustand,
   Wertungszone,
 };
+
+export type Domainize<T> = T extends ExplicitArt
+  ? "Explicit"
+  : T extends InheritArt
+    ? "InheritFromParkour"
+    : T extends string | number | boolean | null | undefined
+      ? T
+      : T extends readonly (infer Item)[]
+        ? Domainize<Item>[]
+        : T extends object
+          ? {
+              [K in keyof T as K extends keyof WireToDomain
+                ? WireToDomain[K]
+                : K]: Domainize<T[K]>;
+            }
+          : T;
 
 /**
  * Transport-neutral API surface. Replacing this implementation is the seam for a
@@ -83,6 +99,14 @@ export interface LogandaimApi {
   // ---------------------------------------------------------------- Runden
   rundenAnzeigen(): Promise<RundeBasic[]>;
   rundeStarten(parkourId: string): Promise<Runde>;
+  freieRundeStarten(name: string): Promise<Runde>;
+  freiesZielHinzufuegen(rundeId: string, name?: string): Promise<Runde>;
+  freiesZielUmbenennen(
+    rundeId: string,
+    zielId: string,
+    name: string,
+  ): Promise<Runde>;
+  freiesZielEntfernen(rundeId: string, zielId: string): Promise<Runde>;
   rundeLoeschen(id: string): Promise<void>;
   rundeAnzeigen(id: string): Promise<Runde>;
   rundeAbschliessen(id: string): Promise<Runde>;
@@ -122,7 +146,19 @@ export interface AuthSession {
   subscribe(listener: () => void): () => void;
 }
 
-type Schemas = components["schemas"];
+export type WireToDomain = {
+  strasse: "straße";
+  laendercode: "ländercode";
+  bestaetigt: "bestätigt";
+  pfloecke: "pflöcke";
+  abstaende: "abstände";
+  schuesse: "schüsse";
+  anzahlPfloecke: "anzahlPflöcke";
+  anzahlSchuesse: "anzahlSchüsse";
+};
+export type Schemas = {
+  [K in keyof components["schemas"]]: Domainize<components["schemas"][K]>;
+};
 
 export type Benutzer = Schemas["Benutzer"];
 /** The authenticated caller: the only shape that carries a `rolle`. */
@@ -136,34 +172,40 @@ export type AnlageKontakt = Schemas["AnlageKontakt"];
 export type AnlageVerwaltung = Schemas["AnlageVerwaltung"];
 // `AnlageVerwaltungRolle`, `AnlageZustand`, `RundeZustand`, and `Wertungszone` are
 // re-exported above as enums, which are their own type — a second alias would collide.
-export type Ziel = Schemas["Ziel"];
+export type AnlageZiel = Schemas["AnlageZiel"];
 export type Zielverwendung = Schemas["Zielverwendung"];
-export type Pflock = Schemas["Pflock"];
+export type ParkourPflock = Schemas["ParkourPflock"];
 export type PflockAbstand = Schemas["PflockAbstand"];
+export type Ziel = Schemas["Ziel"];
+/** The response's round-owned target; same wire schema as the domain name. */
+export type RundeZiel = Ziel;
 /** The Ziel-specific ordered set, or the Parkour-wide set when inherited. */
-export type ZielPflöcke =
-  | { art: "InheritFromParkour"; [key: string]: unknown }
-  | { art: "Explicit"; pflöcke: Pflock[]; [key: string]: unknown };
-export type Zielplatzierung = Omit<
-  Schemas["Zielplatzierung"],
-  "pflöcke" | "abstände"
-> & {
-  pflöcke: ZielPflöcke;
-  abstände: PflockAbstand[];
-};
+export type ZielPflöcke = Schemas["ZielPfloecke"];
+export type Zielplatzierung = Schemas["Zielplatzierung"];
 export type Parkour = Omit<Schemas["Parkour"], "platzierungen"> & {
   platzierungen: Zielplatzierung[];
 };
-export type ParkourÖffentlich = Schemas["ParkourÖffentlich"];
-export type AnlageÖffentlich = Schemas["AnlageÖffentlich"];
+export type ParkourÖffentlich = Schemas["ParkourOeffentlich"];
+export type AnlageÖffentlich = Schemas["AnlageOeffentlich"];
 export type ParkourKurz = Schemas["ParkourKurz"];
-export type RundeBasic = Schemas["RundeBasic"];
-export type RundePflock = Schemas["RundePflock"];
-export type Abstand = Schemas["Abstand"];
-export type RundeZiel = Omit<Schemas["RundeZiel"], "pflöcke"> & {
-  pflöcke: RundePflock[];
+export type RundeHerkunft = { anlageId: string; parkourId: string };
+/**
+ * The only widening the generated schema needs: `herkunft` is emitted as absent rather
+ * than as `null`, and a `Freie Runde` reads it as `null`. Nothing else is narrowed —
+ * an `Omit` here would silently erase a field the schema adds later.
+ */
+type RundeWireMitHerkunft<T> = Omit<T, "herkunft"> & {
+  herkunft: RundeHerkunft | null;
 };
-export type Runde = Omit<Schemas["Runde"], "ziele"> & {
+export type RundeBasic = Omit<
+  RundeWireMitHerkunft<Schemas["RundeBasic"]>,
+  "name"
+> & { name: string };
+export type Runde = Omit<
+  RundeWireMitHerkunft<Schemas["Runde"]>,
+  "ziele" | "name"
+> & {
+  name: string;
   ziele: RundeZiel[];
 };
 export type Schuss = Schemas["Schuss"];
@@ -172,19 +214,18 @@ export type Erfasser = Schemas["Erfasser"];
 
 export type AnlageErstellungInput = Schemas["AnlageErstellungRequest"];
 export type ZielInput = Schemas["ZielRequest"];
-type ParkourErstellungRequest = Omit<
+export type ParkourInput = Omit<
   Schemas["ParkourErstellungRequest"],
   "platzierungen"
 > & { platzierungen: Zielplatzierung[] };
-export type ParkourInput = ParkourErstellungRequest;
 export type ParkourSetupInput = Omit<
   Schemas["ParkourSetupRequest"],
   "platzierungen"
 > & { platzierungen: Zielplatzierung[] };
 
 export type SchusspositionInput =
-  | { Distanz: { meter: number } }
-  | { Pflock: { farbe: string } };
+  | Schemas["SchusspositionRequest"]
+  | Schemas["Schussposition"];
 
 export type SchussErstellungInput = {
   zielId: string;

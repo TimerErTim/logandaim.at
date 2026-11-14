@@ -12,6 +12,7 @@ mod v0002_konto;
 mod v0003_stammdaten;
 mod v0004_erfassung;
 mod v0005_ziel_pfloecke;
+mod v0006_freie_runde;
 
 type Registry = MigrationRegistry<dyn UpMigration<libsql::Transaction, libsql::Error>>;
 
@@ -23,6 +24,7 @@ pub static MIGRATIONS: LazyLock<Registry> = LazyLock::new(|| {
     registry.add(v0003_stammdaten::Migration);
     registry.add(v0004_erfassung::Migration);
     registry.add(v0005_ziel_pfloecke::Migration);
+    registry.add(v0006_freie_runde::Migration);
     registry
 });
 

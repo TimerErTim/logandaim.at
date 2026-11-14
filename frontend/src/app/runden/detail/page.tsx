@@ -39,14 +39,6 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { paths } from "@/lib/navigation";
 import { useQueryParam } from "@/lib/use-query-param";
 
@@ -140,10 +132,10 @@ function RundeInhalt({ runde }: { runde: Runde }) {
     <div className="flex min-h-full flex-col">
       {/* The bottom padding keeps the last Ziel clear of the sticky action bar. */}
       <div className="flex-1 space-y-6 p-6 pb-24">
-        <SetBreadcrumbLabel label={runde.parkourName} />
+        <SetBreadcrumbLabel label={runde.name} />
         <PageHeader
           register={["Logbuch", "Historie"]}
-          title={runde.parkourName}
+          title={runde.name}
           plate={runde.id.slice(0, 8)}
           description="Aufstellung zum Start der Runde. Spätere Änderungen an den Stammdaten ändern diese Runde nicht."
           actions={
@@ -206,42 +198,6 @@ function RundeInhalt({ runde }: { runde: Runde }) {
             </div>
           </CardContent>
         </Card>
-        <HatchBand />
-        <section aria-label="Pflöcke" className="space-y-2">
-          <div className="flex items-baseline gap-3">
-            <h2 className="text-sm font-semibold text-ink">Pflöcke</h2>
-            <SheetNumber>{runde.pflöcke.length}</SheetNumber>
-          </div>
-
-          {runde.pflöcke.length === 0 ? (
-            <p className="text-sm text-secondary">
-              Diese Runde hat keine Pflöcke.
-            </p>
-          ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeader className="w-16">Reihe</TableHeader>
-                  <TableHeader>Farbe</TableHeader>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {runde.pflöcke.map((pflock) => (
-                  <TableRow key={`${pflock.position}-${pflock.farbe}`}>
-                    <TableCell>
-                      <SheetNumber className="text-xs">
-                        {pflock.position + 1}
-                      </SheetNumber>
-                    </TableCell>
-                    <TableCell>
-                      <PflockMarker farbe={pflock.farbe} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </section>
         <Perforation />
         <section aria-label="Ziele" className="space-y-4">
           <div className="flex items-baseline gap-3">
@@ -426,38 +382,29 @@ function Zielabschnitt({
         <SheetNumber>{ziel.zielId.slice(0, 8)}</SheetNumber>
       </div>
 
-      <div className="space-y-2">
-        <h4 className="text-xs font-semibold tracking-[0.09em] text-secondary uppercase">
-          Pflöcke für dieses Ziel
-        </h4>
-        {ziel.pflöcke.length === 0 ? (
-          <p className="text-sm text-secondary">Keine Pflöcke erfasst.</p>
-        ) : (
-          <ol className="flex flex-wrap gap-3 text-sm">
-            {ziel.pflöcke.map((pflock, index) => {
-              const abstand = ziel.abstände.find(
-                (eintrag) => eintrag.pflock === pflock.farbe,
-              );
-              return (
-                <li
-                  key={`${pflock.position}-${pflock.farbe}`}
-                  className="inline-flex items-baseline gap-1.5"
-                >
-                  <SheetNumber>{index + 1}</SheetNumber>
-                  <PflockMarker farbe={pflock.farbe} />
-                  {abstand ? (
-                    <span className="font-medium tabular-nums text-ink">
-                      {abstand.meter} m
-                    </span>
-                  ) : (
-                    <span className="text-secondary">Kein Abstand</span>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </div>
+      {ziel.pflöcke.length > 0 ? (
+        <ol
+          aria-label="Pflöcke für dieses Ziel"
+          className="flex flex-wrap gap-3 text-sm"
+        >
+          {ziel.pflöcke.map((pflock, index) => (
+            <li
+              key={`${index}-${pflock.farbe}`}
+              className="inline-flex items-baseline gap-1.5"
+            >
+              <SheetNumber>{index + 1}</SheetNumber>
+              <PflockMarker farbe={pflock.farbe} />
+              {pflock.abstand !== undefined ? (
+                <span className="font-medium tabular-nums text-ink">
+                  {pflock.abstand} m
+                </span>
+              ) : (
+                <span className="text-secondary">Kein Abstand</span>
+              )}
+            </li>
+          ))}
+        </ol>
+      ) : null}
 
       {ziel.wertung ? (
         <dl className="grid gap-3 text-sm sm:grid-cols-4">

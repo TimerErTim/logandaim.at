@@ -1,8 +1,12 @@
-//! Registering one Schuss inside the caller's own running Runde.
+//! Registering, correcting, and deleting one Schuss inside the caller's own running Runde.
 //!
 //! Authorisation is decided here, from the aggregates the use case loads: the Runde must
 //! belong to the caller and still be open, and the Ziel must have been part of the
 //! captured route (SPEC-stammdaten AC-9, SPEC-wertung rule 1).
+//!
+//! Position validation is a typestate question, so each write asks the open state it holds:
+//! a closed round has no `pruefe_position` at all, and this module refuses it up front
+//! instead of pretending the question has an answer.
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
@@ -11,8 +15,8 @@ use tracing::{info, instrument};
 use crate::{
     application::ExecutionContext,
     domain::{
-        Erfasser, NeuerSchuss, RundeId, Schuss, SchussFehler, SchussId, Schussposition,
-        Wertungszone, ZielId, ZielSchüsse,
+        Erfasser, NeuerSchuss, Runde, Schuss, SchussFehler, SchussId, Schussposition, Wertungszone,
+        ZielId, ZielSchüsse, runde::RundeId,
     },
     ports::RepositoryError,
     service::UseCase,
@@ -41,10 +45,10 @@ pub enum SchussRegistrierenFehler {
     NichtGefunden,
     #[error("die Runde ist nicht mehr in Bearbeitung")]
     RundeNichtInBearbeitung,
-    #[error("das Ziel ist nicht Teil des Runden-Snapshots")]
-    ZielNichtImSnapshot,
-    #[error("der Pflock ist nicht Teil des Runden-Snapshots")]
-    PflockNichtImSnapshot,
+    #[error("das Ziel ist nicht Teil des Aufbaus dieser Runde")]
+    ZielNichtImAufbau,
+    #[error("der Pflock ist nicht Teil des Aufbaus dieser Runde")]
+    PflockNichtImAufbau,
     #[error("die Pfeilnummer wurde parallel vergeben; bitte erneut versuchen")]
     PfeilKonflikt,
     #[error("der Schuss konnte nicht gespeichert werden")]
@@ -86,23 +90,32 @@ impl UseCase<Schuss> for SchussRegistrieren {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(SchussRegistrierenFehler::NichtErlaubt));
             }
-            if !runde.ist_in_bearbeitung() {
-                return Err(Report::new(
-                    SchussRegistrierenFehler::RundeNichtInBearbeitung,
-                ));
+
+            // AC-9: a Schuss may only name a Ziel the Runde captured, and only a Pflock that
+            // Ziel's captured set carries — or, on a Freie Runde, any colour at all. Match the
+            // concrete open typestate so a closed round cannot answer the position question.
+            let (enthält_ziel, position_ok) = match &*runde {
+                Runde::MitParkour(offen) => (
+                    offen.enthält_ziel(self.ziel_id),
+                    offen.pruefe_position(self.ziel_id, self.position),
+                ),
+                Runde::FreieRunde(offen) => (
+                    offen.enthält_ziel(self.ziel_id),
+                    offen.pruefe_position(self.ziel_id),
+                ),
+                Runde::AbgeschlosseneRunde(_) => {
+                    return Err(Report::new(
+                        SchussRegistrierenFehler::RundeNichtInBearbeitung,
+                    ));
+                }
+            };
+            if !enthält_ziel {
+                return Err(Report::new(SchussRegistrierenFehler::ZielNichtImAufbau));
             }
-            // AC-9: a Schuss may only name a Ziel the Runde captured.
-            if !runde.enthält_ziel(self.ziel_id) {
-                return Err(Report::new(SchussRegistrierenFehler::ZielNichtImSnapshot));
+            if position_ok.is_err() {
+                return Err(Report::new(SchussRegistrierenFehler::PflockNichtImAufbau));
             }
 
-            // AC-9: a Schuss may only name a Pflock the Runde captured at this Ziel. A Ziel
-            // with its own Pflock set selects only there, never from the Parkour-wide set.
-            if let Some(Schussposition::Pflock(farbe)) = self.position
-                && !runde.snapshot().hat_pflock_am_ziel(self.ziel_id, farbe)
-            {
-                return Err(Report::new(SchussRegistrierenFehler::PflockNichtImSnapshot));
-            }
             let vorhandene: Vec<Schuss> = uow
                 .schüsse()
                 .find_by_runde(self.runde_id)
@@ -169,8 +182,10 @@ pub enum SchussÄndernFehler {
     NichtGefunden,
     #[error("die Anfrage ist ungültig")]
     UngültigeAnfrage,
-    #[error("der Pflock ist nicht Teil des Runden-Snapshots")]
-    PflockNichtImSnapshot,
+    #[error("die Runde ist nicht mehr in Bearbeitung")]
+    RundeNichtInBearbeitung,
+    #[error("der Pflock ist nicht Teil des Aufbaus dieser Runde")]
+    PflockNichtImAufbau,
     #[error("die Runde konnte nicht geladen werden")]
     Laden,
     #[error("der Schuss konnte nicht gespeichert werden")]
@@ -212,6 +227,13 @@ impl UseCase<Schuss> for SchussÄndern {
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(SchussÄndernFehler::NichtErlaubt));
             }
+            // A closed round freezes its Schüsse too: refuse it before reading a Schuss.
+            match &*runde {
+                Runde::MitParkour(_) | Runde::FreieRunde(_) => {}
+                Runde::AbgeschlosseneRunde(_) => {
+                    return Err(Report::new(SchussÄndernFehler::RundeNichtInBearbeitung));
+                }
+            }
 
             let mut schuss = match uow.schüsse().find_by_id(self.schuss_id).await {
                 Ok(schuss) if schuss.runde_id() == self.runde_id => schuss,
@@ -223,12 +245,18 @@ impl UseCase<Schuss> for SchussÄndern {
                     });
                 }
             };
-            // The Pflock must belong to this Ziel's effective set, which is only known once
-            // the Schuss names its Ziel.
-            if let Some(Schussposition::Pflock(farbe)) = self.position
-                && !runde.snapshot().hat_pflock_am_ziel(schuss.ziel_id(), farbe)
-            {
-                return Err(Report::new(SchussÄndernFehler::PflockNichtImSnapshot));
+            // The Ziel's captured set decides a Parkour round's Pflock; a Freie Runde
+            // accepts any colour. Both ask their own open typestate.
+            let position_ok = match &*runde {
+                Runde::MitParkour(offen) => offen.pruefe_position(schuss.ziel_id(), self.position),
+                Runde::FreieRunde(offen) => offen.pruefe_position(schuss.ziel_id()),
+                // The guard above already refused this; the arm exists so the match is total.
+                Runde::AbgeschlosseneRunde(_) => {
+                    return Err(Report::new(SchussÄndernFehler::RundeNichtInBearbeitung));
+                }
+            };
+            if position_ok.is_err() {
+                return Err(Report::new(SchussÄndernFehler::PflockNichtImAufbau));
             }
             schuss.set_data(
                 schuss
@@ -255,6 +283,8 @@ pub enum SchussLöschenFehler {
     NichtErlaubt,
     #[error("der Schuss wurde nicht gefunden")]
     NichtGefunden,
+    #[error("die Runde ist nicht mehr in Bearbeitung")]
+    RundeNichtInBearbeitung,
     #[error("die Runde konnte nicht geladen werden")]
     Laden,
     #[error("der Schuss konnte nicht gelöscht werden")]
@@ -297,6 +327,13 @@ impl UseCase<()> for SchussLöschen {
             };
             if !runde.gehört_zu(benutzer_id) {
                 return Err(Report::new(SchussLöschenFehler::NichtErlaubt));
+            }
+            // A closed round freezes its Schüsse: deleting one would renumber the rest.
+            match &*runde {
+                Runde::MitParkour(_) | Runde::FreieRunde(_) => {}
+                Runde::AbgeschlosseneRunde(_) => {
+                    return Err(Report::new(SchussLöschenFehler::RundeNichtInBearbeitung));
+                }
             }
 
             let schuss = match uow.schüsse().find_by_id(self.schuss_id).await {
