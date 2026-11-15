@@ -11,7 +11,10 @@ export function positionsModus(
   pflockAnzahl: number,
 ): PositionsModus {
   if (pflockAnzahl === 1) return "single";
-  return ziel.abstände.length >= 2 ? "meter" : "staken";
+  return ziel.pfloecke.filter((pflock) => typeof pflock.abstand === "number")
+    .length >= 2
+    ? "meter"
+    : "staken";
 }
 
 export function anfangsPosition(
@@ -22,8 +25,13 @@ export function anfangsPosition(
     .sort((a, b) => a.pfeil - b.pfeil)
     .at(-1)?.position;
   if (letzte) return letzte as SchusspositionInput;
-  const naechster = [...ziel.abstände].sort((a, b) => a.meter - b.meter)[0];
-  return naechster ? { Pflock: { farbe: naechster.pflock } } : null;
+  const naechster = ziel.pfloecke
+    .filter(
+      (pflock): pflock is typeof pflock & { abstand: number } =>
+        typeof pflock.abstand === "number",
+    )
+    .sort((a, b) => a.abstand - b.abstand)[0];
+  return naechster ? { Pflock: { farbe: naechster.farbe } } : null;
 }
 
 export function formatPosition(position: SchusspositionInput | null): string {

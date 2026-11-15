@@ -19,7 +19,10 @@ use error_stack::{IntoReport, Report, ResultExt};
 use logandaim_core::{
     App, ResultReport,
     application::AuthContext,
-    domain::{AnlageId, EmailAdresse, ParkourId, RundeId, SchussId, ZielId, konto::BenutzerId},
+    domain::{
+        AnlageId, AnlageZielId, EmailAdresse, ParkourId, Runde as DomainRunde, RundeId, SchussId,
+        ZielId, konto::BenutzerId,
+    },
     ports::{ClientKey, RepositoryError, ThrottleAction},
     service::{
         Abmeldung, AbmeldungFehler, AnlageBeschreibendeDatenÄndern, AnlageDeaktivieren,
@@ -29,10 +32,11 @@ use logandaim_core::{
         PasswortVergessen, PasswortVergessenFehler, PasswortWiederherstellen,
         PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
         RegistrierungStarten, RegistrierungStartenFehler, RundeAbschliessen,
-        RundeAbschliessenFehler, RundeStarten, RundeStartenFehler, SchussLöschen,
-        SchussLöschenFehler, SchussRegistrieren, SchussRegistrierenFehler, SchussÄndernFehler,
-        SessionAusgestellt, StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen,
-        ZielÄndern, darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
+        RundeAbschliessenFehler, RundeStarten, RundeStartenFehler, RundeZielEntfernenFehler,
+        RundeZielHinzufügenFehler, RundeZielUmbenennenFehler, SchussLöschen, SchussLöschenFehler,
+        SchussRegistrieren, SchussRegistrierenFehler, SchussÄndernFehler, SessionAusgestellt,
+        StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern,
+        darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
     },
 };
 use tracing::warn;
@@ -43,7 +47,7 @@ pub mod requests;
 use self::errors::{RundeAnzeigenFehler, RundenAnzeigenFehler};
 
 use crate::schema::{
-    Anlage, AnlageZugriff, AnlageÖffentlich, Benutzer, ParkourKurz, ParkourÖffentlich, Runde,
+    Anlage, AnlageOeffentlich, AnlageZugriff, Benutzer, ParkourKurz, ParkourOeffentlich, Runde,
     RundeBasic, Schuss,
 };
 
@@ -197,7 +201,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        anfrage: requests::AnlageÄnderungRequest,
+        anfrage: requests::AnlageAenderungRequest,
     ) -> ResultReport<Anlage, StammdatenFehler> {
         let use_case: AnlageBeschreibendeDatenÄndern = anfrage.in_use_case(anlage_id)?;
         let anlage = self.app.execute(auth, use_case).await?;
@@ -274,7 +278,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
         anfrage: requests::ZielRequest,
     ) -> ResultReport<Anlage, StammdatenFehler> {
         let use_case: ZielÄndern = anfrage.als_ändern(anlage_id, ziel_id)?;
@@ -287,7 +291,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
         anfrage: requests::ZielRequest,
     ) -> ResultReport<Anlage, StammdatenFehler> {
         let use_case: ZielErsetzen = anfrage.als_ersetzen(anlage_id, ziel_id)?;
@@ -300,7 +304,7 @@ impl LogandaimAppApi {
         &self,
         auth: AuthContext,
         anlage_id: AnlageId,
-        ziel_id: ZielId,
+        ziel_id: AnlageZielId,
     ) -> ResultReport<Anlage, StammdatenFehler> {
         let use_case = ZielEntfernen { anlage_id, ziel_id };
         let anlage = self.app.execute(auth, use_case).await?;
@@ -363,7 +367,7 @@ impl LogandaimAppApi {
     pub async fn parkour_anzeigen(
         &self,
         auth: AuthContext,
-    ) -> ResultReport<Vec<ParkourÖffentlich>, StammdatenFehler> {
+    ) -> ResultReport<Vec<ParkourOeffentlich>, StammdatenFehler> {
         self.app
             .execute_fn(auth, async |ctx| {
                 let uow = ctx
@@ -385,7 +389,7 @@ impl LogandaimAppApi {
                             if parkour.ist_archiviert() {
                                 continue;
                             }
-                            offen.push(ParkourÖffentlich {
+                            offen.push(ParkourOeffentlich {
                                 anlage_id: anlage.id().0,
                                 anlage_name: anlage.name().to_string(),
                                 parkour: parkour.clone().into(),
@@ -403,11 +407,11 @@ impl LogandaimAppApi {
 
     /// The public Anlagen directory: active Anlagen with a short Parkour list.
     ///
-    /// Needs no identity, and carries no contact data (see [`AnlageÖffentlich`]).
+    /// Needs no identity, and carries no contact data (see [`AnlageOeffentlich`]).
     pub async fn anlagen_verzeichnis(
         &self,
         auth: AuthContext,
-    ) -> ResultReport<Vec<AnlageÖffentlich>, StammdatenFehler> {
+    ) -> ResultReport<Vec<AnlageOeffentlich>, StammdatenFehler> {
         self.app
             .execute_fn(auth, async |ctx| {
                 let uow = ctx
@@ -426,11 +430,11 @@ impl LogandaimAppApi {
                     Ok::<_, Report<StammdatenFehler>>(
                         anlagen
                             .into_iter()
-                            .map(|anlage| AnlageÖffentlich {
+                            .map(|anlage| AnlageOeffentlich {
                                 anlage_id: anlage.id().0,
                                 name: anlage.name().to_string(),
                                 ort: anlage.adresse().ort().to_owned(),
-                                ländercode: anlage.adresse().ländercode().into(),
+                                laendercode: anlage.adresse().ländercode().into(),
                                 parkour: anlage
                                     .parkour()
                                     .iter()
@@ -452,13 +456,100 @@ impl LogandaimAppApi {
     // ---------------------------------------------------------------- Runde
 
     /// Start a Runde; the snapshot is captured in the same transaction (AC-7).
-    pub async fn runde_starten(
+    pub async fn runde_mit_parkour_starten(
         &self,
         auth: AuthContext,
-        anfrage: requests::RundeStartenRequest,
+        anfrage: requests::RundeMitParkourStartenRequest,
     ) -> ResultReport<Runde, RundeStartenFehler> {
         let runde = self.app.execute(auth, RundeStarten::from(anfrage)).await?;
         Ok(runde.into())
+    }
+
+    /// Start a `Freie Runde` from its validated request.
+    pub async fn freie_runde_starten(
+        &self,
+        auth: AuthContext,
+        anfrage: requests::FreieRundeStartenRequest,
+    ) -> ResultReport<Runde, RundeStartenFehler> {
+        let use_case = RundeStarten::try_from(anfrage)
+            .map_err(|error| error.change_context(RundeStartenFehler::UngültigeAnfrage))?;
+        let runde = self.app.execute(auth, use_case).await?;
+        Ok(runde.into())
+    }
+
+    /// Append one `Freies Ziel` to a free Runde and answer the updated read model.
+    pub async fn runde_ziel_hinzufuegen(
+        &self,
+        auth: AuthContext,
+        runde_id: RundeId,
+        anfrage: requests::ZielHinzufuegenRequest,
+    ) -> ResultReport<Runde, RundeZielHinzufügenFehler> {
+        let use_case = anfrage.in_use_case(runde_id)?;
+        let runde = self.app.execute(auth, use_case).await?;
+        self.runde_mit_schuessen(runde, runde_id, || RundeZielHinzufügenFehler::RundeLaden)
+            .await
+    }
+
+    /// Rename one `Freies Ziel` and answer the updated read model.
+    pub async fn runde_ziel_umbenennen(
+        &self,
+        auth: AuthContext,
+        runde_id: RundeId,
+        ziel_id: ZielId,
+        anfrage: requests::ZielUmbenennenRequest,
+    ) -> ResultReport<Runde, RundeZielUmbenennenFehler> {
+        let use_case = anfrage
+            .in_use_case(runde_id, ziel_id.0)
+            .map_err(|error| error.change_context(RundeZielUmbenennenFehler::UngültigeAnfrage))?;
+        let runde = self.app.execute(auth, use_case).await?;
+        self.runde_mit_schuessen(runde, runde_id, || RundeZielUmbenennenFehler::RundeLaden)
+            .await
+    }
+
+    /// Remove one `Freies Ziel`, with its Schüsse, and answer the updated read model.
+    pub async fn runde_ziel_entfernen(
+        &self,
+        auth: AuthContext,
+        runde_id: RundeId,
+        ziel_id: ZielId,
+    ) -> ResultReport<Runde, RundeZielEntfernenFehler> {
+        let use_case = requests::ziel_entfernen_in_use_case(runde_id, ziel_id);
+        let runde = self.app.execute(auth, use_case).await?;
+        self.runde_mit_schuessen(runde, runde_id, || RundeZielEntfernenFehler::RundeLaden)
+            .await
+    }
+
+    /// Render a Runde a write answered as the full read model, folding its Schüsse.
+    ///
+    /// A Ziel edit changes *which* Schüsse belong to the round, so a bare aggregate would
+    /// answer empty Wertungen and an empty ledger; a caller must see the round as it now
+    /// stands. The read is owner-free because the write already proved the caller may see it.
+    async fn runde_mit_schuessen<E>(
+        &self,
+        runde: DomainRunde,
+        runde_id: RundeId,
+        ladefehler: impl Fn() -> E + Send + Sync,
+    ) -> ResultReport<Runde, E>
+    where
+        E: logandaim_core::ThreadSafeError + Send + Sync,
+    {
+        let schüsse = self
+            .app
+            .execute_fn(AuthContext::Anonymous, async |ctx| {
+                let uow = ctx.enter().await.change_context(ladefehler())?;
+                let schüsse = uow
+                    .schüsse()
+                    .find_by_runde(runde_id)
+                    .await
+                    .map_err(IntoReport::into_report)
+                    .change_context(ladefehler())?
+                    .into_iter()
+                    .map(|schuss| schuss.into_data())
+                    .collect();
+                uow.finish(Ok::<_, Report<E>>(schüsse), ladefehler()).await
+            })
+            .await?;
+        Ok(Runde::gelesen(runde, schüsse))
     }
 
     /// One Runde with both Wertungen; owner or Systemadministrator (AC-9, AC-13).
@@ -561,13 +652,13 @@ impl LogandaimAppApi {
                         .change_context(RundenAnzeigenFehler::Laden)?;
                     let mut erfasste_ziele: std::collections::HashMap<
                         RundeId,
-                        std::collections::HashSet<ZielId>,
+                        std::collections::HashSet<uuid::Uuid>,
                     > = std::collections::HashMap::new();
                     for schuss in schüsse {
                         erfasste_ziele
                             .entry(schuss.runde_id())
                             .or_default()
-                            .insert(schuss.ziel_id());
+                            .insert(schuss.ziel_id().0);
                     }
                     // Newest first: the list a caller opens to find the latest Runde.
                     runden.sort_by_key(|runde| std::cmp::Reverse(runde.begonnen_am()));
@@ -610,7 +701,10 @@ impl LogandaimAppApi {
             .app
             .execute(auth, RundeAbschliessen { runde_id })
             .await?;
-        Ok(runde.into())
+        // Closing changes only the round's state, but the answer is the whole read model:
+        // reporting it shotless would claim the archer's twenty arrows vanished.
+        self.runde_mit_schuessen(runde, runde_id, || RundeAbschliessenFehler::RundeLaden)
+            .await
     }
 
     // ---------------------------------------------------------------- Schuss
@@ -622,7 +716,9 @@ impl LogandaimAppApi {
         runde_id: RundeId,
         anfrage: requests::SchussErstellungRequest,
     ) -> ResultReport<Schuss, SchussRegistrierenFehler> {
-        let use_case: SchussRegistrieren = anfrage.in_use_case(runde_id)?;
+        let use_case: SchussRegistrieren = anfrage
+            .in_use_case(runde_id)
+            .map_err(|error| error.change_context(SchussRegistrierenFehler::UngültigeAnfrage))?;
         let schuss = self.app.execute(auth, use_case).await?;
         Ok(schuss.into())
     }
@@ -632,7 +728,7 @@ impl LogandaimAppApi {
         auth: AuthContext,
         runde_id: RundeId,
         schuss_id: SchussId,
-        anfrage: requests::SchussÄnderungRequest,
+        anfrage: requests::SchussAenderungRequest,
     ) -> ResultReport<Schuss, SchussÄndernFehler> {
         let use_case = anfrage.in_use_case(runde_id, schuss_id)?;
         self.app.execute(auth, use_case).await.map(Into::into)
@@ -839,7 +935,7 @@ impl LogandaimAppApi {
     pub async fn benutzer_löschen(
         &self,
         auth: AuthContext,
-        anfrage: requests::BenutzerLöschungRequest,
+        anfrage: requests::BenutzerLoeschungRequest,
     ) -> ResultReport<(), BenutzerLöschenFehler> {
         let use_case: BenutzerLöschen = anfrage.in_use_case()?;
         self.app.execute(auth, use_case).await

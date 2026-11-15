@@ -23,12 +23,18 @@ export function PositionSteuerung({
   value: SchusspositionInput | null;
   onChange: (position: SchusspositionInput | null) => void;
 }) {
-  const effektivePflöcke = ziel.pflöcke;
+  const effektivePflöcke = ziel.pfloecke;
   const modus = positionsModus(ziel, effektivePflöcke.length);
   const abstandByFarbe = useMemo(
     () =>
-      new Map(ziel.abstände.map((abstand) => [abstand.pflock, abstand.meter])),
-    [ziel.abstände],
+      new Map(
+        ziel.pfloecke.flatMap((pflock) =>
+          typeof pflock.abstand !== "number"
+            ? []
+            : [[pflock.farbe, pflock.abstand] as const],
+        ),
+      ),
+    [ziel.pfloecke],
   );
   const checkpoints = useMemo<Checkpoint[]>(
     () =>

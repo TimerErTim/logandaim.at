@@ -392,18 +392,66 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   // ---------------------------------------------------------------- Runden
 
   async rundenAnzeigen(): Promise<RundeBasic[]> {
-    return this.authenticated(() =>
+    const runden = await this.authenticated(() =>
       this.client.GET("/runden", { headers: this.authorizationHeaders() }),
     );
+    return runden;
   }
 
   async rundeStarten(parkourId: string): Promise<Runde> {
-    return this.authenticated(() =>
-      this.client.POST("/runden", {
+    const runde = await this.authenticated(() =>
+      this.client.POST("/runden/mit-parkour", {
         body: { parkourId },
         headers: this.authorizationHeaders(),
       }),
     );
+    return runde;
+  }
+
+  async freieRundeStarten(name: string): Promise<Runde> {
+    const runde = await this.authenticated(() =>
+      this.client.POST("/runden/frei", {
+        body: { name },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+    return runde;
+  }
+
+  async freiesZielHinzufuegen(rundeId: string, name?: string): Promise<Runde> {
+    const runde = await this.authenticated(() =>
+      this.client.POST("/runden/{runde_id}/ziele", {
+        params: { path: { runde_id: rundeId } },
+        body: name === undefined ? {} : { name },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+    return runde;
+  }
+
+  async freiesZielUmbenennen(
+    rundeId: string,
+    zielId: string,
+    name: string,
+  ): Promise<Runde> {
+    const runde = await this.authenticated(() =>
+      this.client.PUT("/runden/{runde_id}/ziele/{ziel_id}", {
+        params: { path: { runde_id: rundeId, ziel_id: zielId } },
+        body: { name },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+    return runde;
+  }
+
+  async freiesZielEntfernen(rundeId: string, zielId: string): Promise<Runde> {
+    const runde = await this.authenticated(() =>
+      this.client.DELETE("/runden/{runde_id}/ziele/{ziel_id}", {
+        params: { path: { runde_id: rundeId, ziel_id: zielId } },
+        headers: this.authorizationHeaders(),
+      }),
+    );
+    return runde;
   }
 
   async rundeLoeschen(id: string): Promise<void> {
@@ -416,21 +464,23 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
   }
 
   async rundeAnzeigen(id: string): Promise<Runde> {
-    return this.authenticated(() =>
+    const runde = await this.authenticated(() =>
       this.client.GET("/runden/{runde_id}", {
         params: { path: { runde_id: id } },
         headers: this.authorizationHeaders(),
       }),
     );
+    return runde;
   }
 
   async rundeAbschliessen(id: string): Promise<Runde> {
-    return this.authenticated(() =>
+    const runde = await this.authenticated(() =>
       this.client.POST("/runden/{runde_id}/abschluss", {
         params: { path: { runde_id: id } },
         headers: this.authorizationHeaders(),
       }),
     );
+    return runde;
   }
 
   async schussRegistrieren(
@@ -524,10 +574,10 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     );
   }
 
-  async benutzerLoeschen(passwort: string, bestätigt: boolean): Promise<void> {
+  async benutzerLoeschen(passwort: string, bestaetigt: boolean): Promise<void> {
     await this.authenticated(() =>
-      this.client.POST("/benutzer/löschung", {
-        body: { passwort, bestätigt },
+      this.client.POST("/benutzer/loeschung", {
+        body: { passwort, bestaetigt: bestaetigt },
         headers: this.authorizationHeaders(),
       }),
     );

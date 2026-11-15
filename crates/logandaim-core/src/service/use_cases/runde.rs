@@ -1,9 +1,11 @@
-//! Starting and closing a Runde.
+//! Starting, closing, deleting a Runde, and editing a free round's Ziel list.
 //!
 //! `RundeStarten` captures the Parkour setup as a value copy inside the same transaction that
 //! creates the Runde, so no later master-data edit can reach it (SPEC-stammdaten AC-7/AC-9).
-//! Reading a Runde is the API facade's: it opens its own transaction, folds the Wertung with
-//! the domain's `ZielSchüsse`/`Runde::wertung`, and defines the shape it answers.
+//! A `Freie Runde` skips master data entirely: it names itself and owns its Ziele
+//! (SPEC-runde rules 17–18). Reading a Runde is the API facade's: it opens its own
+//! transaction, folds the Wertung with the domain's `ZielSchüsse`/`Runde::wertung`, and
+//! defines the shape it answers.
 
 use async_trait::async_trait;
 use error_stack::{IntoReport, Report, ResultExt};
@@ -11,7 +13,9 @@ use tracing::{info, instrument};
 
 use crate::{
     application::ExecutionContext,
-    domain::{Erfasser, NeueRunde, Runde, RundeId},
+    domain::{
+        Erfasser, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId, Rundenaufbau, ZielId,
+    },
     ports::RepositoryError,
     service::UseCase,
 };
@@ -24,6 +28,8 @@ use crate::{
 pub enum RundeStartenFehler {
     #[error("für diese Aktion ist eine Anmeldung erforderlich")]
     NichtAngemeldet,
+    #[error("die Anfrage ist ungültig")]
+    UngültigeAnfrage,
     #[error("der Parkour wurde nicht gefunden")]
     NichtGefunden,
     #[error("der Parkour oder seine Anlage ist nicht mehr aktiv")]
@@ -36,23 +42,47 @@ pub enum RundeStartenFehler {
     Starten,
 }
 
-/// Start a Runde at one active Parkour of one active Anlage.
+/// Where a Runde's setup comes from: a master-data Parkour, or the archer's own name.
+///
+/// A variant, so "a free round that also names a Parkour" is unrepresentable.
+#[derive(Debug, Clone)]
+pub enum Rundenquelle {
+    Parkour(ParkourId),
+    Frei { name: NonEmptyString },
+}
+
+/// Start a Runde: at one active Parkour, or as a `Freie Runde` with no Parkour at all.
 #[derive(Debug, Clone)]
 pub struct RundeStarten {
-    pub parkour_id: crate::domain::ParkourId,
+    pub quelle: Rundenquelle,
+}
+
+impl RundeStarten {
+    pub fn mit_parkour(parkour_id: ParkourId) -> Self {
+        Self {
+            quelle: Rundenquelle::Parkour(parkour_id),
+        }
+    }
+
+    pub fn ohne_parkour(name: NonEmptyString) -> Self {
+        Self {
+            quelle: Rundenquelle::Frei { name },
+        }
+    }
 }
 
 #[async_trait]
 impl UseCase<Runde> for RundeStarten {
     type Error = Report<RundeStartenFehler>;
 
-    #[instrument(skip_all, fields(parkour_id = ?self.parkour_id), err(Debug))]
+    #[instrument(skip_all, fields(quelle = ?self.quelle), err(Debug))]
     async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
         let benutzer_id = ctx
             .auth()
             .require_benutzer_id()
             .change_context(RundeStartenFehler::NichtAngemeldet)?;
         let jetzt = ctx.clock().now();
+        let erfasser = Erfasser::Benutzer(benutzer_id);
 
         let uow = ctx
             .enter()
@@ -60,32 +90,51 @@ impl UseCase<Runde> for RundeStarten {
             .change_context(RundeStartenFehler::AnlageLaden)?;
 
         let ergebnis = async {
-            // The owning Anlage is a repository question: the adapter knows which row holds
-            // this Parkour, so no caller walks a list of aggregates to find it.
-            let anlage = match uow.anlagen().find_by_parkour_id(self.parkour_id).await {
-                Ok(anlage) => anlage,
-                Err(fehler) => {
-                    return Err(match fehler.current_context() {
-                        RepositoryError::NotFound => Report::new(RundeStartenFehler::NichtGefunden),
-                        _ => fehler.change_context(RundeStartenFehler::AnlageLaden),
-                    });
+            let neue = match &self.quelle {
+                Rundenquelle::Parkour(parkour_id) => {
+                    // The owning Anlage is a repository question: the adapter knows which row
+                    // holds this Parkour, so no caller walks a list of aggregates to find it.
+                    let anlage = match uow.anlagen().find_by_parkour_id(*parkour_id).await {
+                        Ok(anlage) => anlage,
+                        Err(fehler) => {
+                            return Err(match fehler.current_context() {
+                                RepositoryError::NotFound => {
+                                    Report::new(RundeStartenFehler::NichtGefunden)
+                                }
+                                _ => fehler.change_context(RundeStartenFehler::AnlageLaden),
+                            });
+                        }
+                    };
+
+                    // "No such Parkour" is 404; "exists but archived" is 409 — and so is a
+                    // Parkour whose Anlage was deactivated (AC-10).
+                    let Some(parkour) = anlage
+                        .aktiver_parkour(*parkour_id)
+                        .filter(|_| !anlage.ist_archiviert())
+                    else {
+                        return Err(Report::new(RundeStartenFehler::NichtAktiv));
+                    };
+
+                    // AC-7/AC-9: one value copy, taken in this transaction.
+                    let aufbau = Rundenaufbau::aus_parkour(parkour, |ziel_id| anlage.ziel(ziel_id))
+                        .map_err(|_| Report::new(RundeStartenFehler::NichtGefunden))?;
+                    NeueRunde::mit_parkour(
+                        anlage.id(),
+                        parkour.id(),
+                        parkour.name().clone(),
+                        aufbau,
+                        erfasser,
+                        jetzt,
+                    )
+                }
+                Rundenquelle::Frei { name } => {
+                    NeueRunde::ohne_parkour(name.clone(), erfasser, jetzt)
                 }
             };
 
-            // "No such Parkour" is 404; "exists but archived" is 409 — and so is a Parkour
-            // whose Anlage was deactivated, because no Runde may start there (AC-10).
-            let Some(parkour) = anlage
-                .aktiver_parkour(self.parkour_id)
-                .filter(|_| !anlage.ist_archiviert())
-            else {
-                return Err(Report::new(RundeStartenFehler::NichtAktiv));
-            };
-
-            // AC-7/AC-9: one value copy, taken in this transaction.
-            let Ok(snapshot) = anlage.snapshot_für(parkour.id()) else {
-                return Err(Report::new(RundeStartenFehler::NichtGefunden));
-            };
-            let anlage_id = anlage.id();
+            // The one-open-Runde rule covers both setups: a free round and a Parkour round
+            // fill the same slot (SPEC-runde rule 20). Checked after the setup, so a missing
+            // or archived Parkour still answers its own 404/409 rather than "a round runs".
             match uow.runden().find_offen_by_benutzer(benutzer_id).await {
                 Ok(_) => {
                     return Err(Report::new(RundeStartenFehler::RundeLaeuft));
@@ -97,12 +146,7 @@ impl UseCase<Runde> for RundeStarten {
             }
 
             uow.runden()
-                .create(NeueRunde::neu(
-                    anlage_id,
-                    Erfasser::Benutzer(benutzer_id),
-                    snapshot,
-                    jetzt,
-                ))
+                .create(neue)
                 .await
                 .map_err(IntoReport::into_report)
                 .map_err(|fehler| match fehler.current_context() {
@@ -118,9 +162,319 @@ impl UseCase<Runde> for RundeStarten {
         let runde = uow.finish(ergebnis, RundeStartenFehler::Starten).await?;
         info!(
             id = ?runde.id(),
-            parkour_id = ?runde.parkour_id(),
+            herkunft = ?runde.herkunft(),
             "runde gestartet"
         );
+        Ok(runde)
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// ZielHinzufügen / ZielEntfernen (the free round's JIT Ziel list)
+// ---------------------------------------------------------------------------------------
+
+/// Why a free-round Ziel write is refused, decided by one predicate for all three writes.
+///
+/// A round that is free but closed and a round that is a Parkour round are different
+/// refusals: the first is frozen, the second was never editable. Deciding this once keeps the
+/// three writes from answering two different errors for the same round.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ZielSchreibfehler {
+    /// A closed free round: its Ziel list is frozen (AC-22).
+    NichtInBearbeitung,
+    /// A Parkour round: its route is captured, never edited.
+    KeineFreieRunde,
+}
+
+fn ziel_schreibfehler(runde: &Runde) -> ZielSchreibfehler {
+    if runde.ist_freie_runde() {
+        ZielSchreibfehler::NichtInBearbeitung
+    } else {
+        ZielSchreibfehler::KeineFreieRunde
+    }
+}
+
+impl ZielSchreibfehler {
+    fn als_hinzufuegen(self) -> RundeZielHinzufügenFehler {
+        match self {
+            Self::NichtInBearbeitung => RundeZielHinzufügenFehler::RundeNichtInBearbeitung,
+            Self::KeineFreieRunde => RundeZielHinzufügenFehler::RundeIstKeineFreieRunde,
+        }
+    }
+
+    fn als_entfernen(self) -> RundeZielEntfernenFehler {
+        match self {
+            Self::NichtInBearbeitung => RundeZielEntfernenFehler::RundeNichtInBearbeitung,
+            Self::KeineFreieRunde => RundeZielEntfernenFehler::RundeIstKeineFreieRunde,
+        }
+    }
+
+    fn als_umbenennen(self) -> RundeZielUmbenennenFehler {
+        match self {
+            Self::NichtInBearbeitung => RundeZielUmbenennenFehler::RundeNichtInBearbeitung,
+            Self::KeineFreieRunde => RundeZielUmbenennenFehler::RundeIstKeineFreieRunde,
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RundeZielHinzufügenFehler {
+    #[error("die Anfrage ist ungültig")]
+    UngültigeAnfrage,
+    #[error("für diese Aktion ist eine Anmeldung erforderlich")]
+    NichtAngemeldet,
+    #[error("diese Runde gehört nicht zu diesem Benutzer")]
+    NichtErlaubt,
+    #[error("die Runde wurde nicht gefunden")]
+    NichtGefunden,
+    #[error("diese Runde ist keine freie Runde")]
+    RundeIstKeineFreieRunde,
+    #[error("die Runde ist nicht mehr in Bearbeitung")]
+    RundeNichtInBearbeitung,
+    #[error("die Runde konnte nicht geladen werden")]
+    RundeLaden,
+    #[error("die Runde konnte nicht gespeichert werden")]
+    Speichern,
+}
+
+/// Append one `Freies Ziel` to the caller's own open `Freie Runde`.
+#[derive(Debug, Clone)]
+pub struct RundeZielHinzufügen {
+    pub runde_id: RundeId,
+    pub name: Option<NonEmptyString>,
+}
+
+#[async_trait]
+impl UseCase<Runde> for RundeZielHinzufügen {
+    type Error = Report<RundeZielHinzufügenFehler>;
+
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id), err(Debug))]
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
+        let benutzer_id = ctx
+            .auth()
+            .require_benutzer_id()
+            .change_context(RundeZielHinzufügenFehler::NichtAngemeldet)?;
+        let uow = ctx
+            .enter()
+            .await
+            .change_context(RundeZielHinzufügenFehler::RundeLaden)?;
+
+        let ergebnis = async {
+            let mut runde = match uow.runden().find_by_id(self.runde_id).await {
+                Ok(runde) => runde,
+                Err(fehler) => Err(match fehler.current_context() {
+                    RepositoryError::NotFound => {
+                        Report::new(RundeZielHinzufügenFehler::NichtGefunden)
+                    }
+                    _ => fehler.change_context(RundeZielHinzufügenFehler::RundeLaden),
+                })?,
+            };
+            if !runde.gehört_zu(benutzer_id) {
+                return Err(Report::new(RundeZielHinzufügenFehler::NichtErlaubt));
+            }
+            let Runde::FreieRunde(mut freie_runde) = runde.cloned_data() else {
+                return Err(Report::new(ziel_schreibfehler(&runde).als_hinzufuegen()));
+            };
+            // The round mints the identity, so an append can never collide (#18).
+            freie_runde.ziel_hinzufügen(self.name);
+
+            runde.set_data(freie_runde.into());
+            uow.runden()
+                .update(&mut runde)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeZielHinzufügenFehler::Speichern)?;
+            Ok(runde.into_data())
+        }
+        .await;
+
+        let runde = uow
+            .finish(ergebnis, RundeZielHinzufügenFehler::RundeLaden)
+            .await?;
+        info!(id = ?runde.id(), "freies ziel hinzugefügt");
+        Ok(runde)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RundeZielEntfernenFehler {
+    #[error("für diese Aktion ist eine Anmeldung erforderlich")]
+    NichtAngemeldet,
+    #[error("diese Runde gehört nicht zu diesem Benutzer")]
+    NichtErlaubt,
+    #[error("die Runde wurde nicht gefunden")]
+    NichtGefunden,
+    #[error("das Ziel wurde in dieser Runde nicht gefunden")]
+    ZielNichtGefunden,
+    #[error("diese Runde ist keine freie Runde")]
+    RundeIstKeineFreieRunde,
+    #[error("die Runde konnte nicht geladen werden")]
+    RundeLaden,
+    #[error("die Runde ist nicht mehr in Bearbeitung")]
+    RundeNichtInBearbeitung,
+    #[error("das Ziel konnte nicht entfernt werden")]
+    Entfernen,
+    #[error("die Runde konnte nicht gespeichert werden")]
+    Speichern,
+}
+
+/// Remove one `Freies Ziel` and, in the same transaction, every Schuss logged at it.
+#[derive(Debug, Clone)]
+pub struct RundeZielEntfernen {
+    pub runde_id: RundeId,
+    pub ziel_id: ZielId,
+}
+
+#[async_trait]
+impl UseCase<Runde> for RundeZielEntfernen {
+    type Error = Report<RundeZielEntfernenFehler>;
+
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id, ziel_id = ?self.ziel_id), err(Debug))]
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
+        let benutzer_id = ctx
+            .auth()
+            .require_benutzer_id()
+            .change_context(RundeZielEntfernenFehler::NichtAngemeldet)?;
+        let uow = ctx
+            .enter()
+            .await
+            .change_context(RundeZielEntfernenFehler::RundeLaden)?;
+
+        let ergebnis = async {
+            let mut runde = match uow.runden().find_by_id(self.runde_id).await {
+                Ok(runde) => runde,
+                Err(fehler) => Err(match fehler.current_context() {
+                    RepositoryError::NotFound => {
+                        Report::new(RundeZielEntfernenFehler::NichtGefunden)
+                    }
+                    _ => fehler.change_context(RundeZielEntfernenFehler::RundeLaden),
+                })?,
+            };
+            if !runde.gehört_zu(benutzer_id) {
+                return Err(Report::new(RundeZielEntfernenFehler::NichtErlaubt));
+            }
+            let Runde::FreieRunde(mut freie_runde) = runde.cloned_data() else {
+                return Err(Report::new(ziel_schreibfehler(&runde).als_entfernen()));
+            };
+            if freie_runde.ziel_entfernen(self.ziel_id).is_none() {
+                return Err(Report::new(RundeZielEntfernenFehler::ZielNichtGefunden));
+            }
+
+            // The cascade is the point: a removed Ziel takes its Schüsse with it, in this
+            // transaction, so a half-removed Ziel cannot survive (SPEC-runde rule 18).
+            for schuss in uow
+                .schüsse()
+                .find_by_runde(self.runde_id)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeZielEntfernenFehler::Entfernen)?
+            {
+                if schuss.ziel_id() == self.ziel_id {
+                    uow.schüsse()
+                        .delete(schuss)
+                        .await
+                        .map_err(IntoReport::into_report)
+                        .change_context(RundeZielEntfernenFehler::Entfernen)?;
+                }
+            }
+
+            runde.set_data(freie_runde.into());
+            uow.runden()
+                .update(&mut runde)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeZielEntfernenFehler::Speichern)?;
+            Ok(runde.into_data())
+        }
+        .await;
+
+        let runde = uow
+            .finish(ergebnis, RundeZielEntfernenFehler::RundeLaden)
+            .await?;
+        info!(id = ?runde.id(), ziel_id = ?self.ziel_id, "freies ziel entfernt");
+        Ok(runde)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RundeZielUmbenennenFehler {
+    #[error("die Anfrage ist ungültig")]
+    UngültigeAnfrage,
+    #[error("für diese Aktion ist eine Anmeldung erforderlich")]
+    NichtAngemeldet,
+    #[error("diese Runde gehört nicht zu diesem Benutzer")]
+    NichtErlaubt,
+    #[error("die Runde wurde nicht gefunden")]
+    NichtGefunden,
+    #[error("das Ziel wurde in dieser Runde nicht gefunden")]
+    ZielNichtGefunden,
+    #[error("diese Runde ist keine freie Runde")]
+    RundeIstKeineFreieRunde,
+    #[error("die Runde ist nicht mehr in Bearbeitung")]
+    RundeNichtInBearbeitung,
+    #[error("die Runde konnte nicht geladen werden")]
+    RundeLaden,
+    #[error("die Runde konnte nicht gespeichert werden")]
+    Speichern,
+}
+
+/// Rename a target in the caller's own running `Freie Runde`.
+#[derive(Debug, Clone)]
+pub struct RundeZielUmbenennen {
+    pub runde_id: RundeId,
+    pub ziel_id: ZielId,
+    pub name: NonEmptyString,
+}
+
+#[async_trait]
+impl UseCase<Runde> for RundeZielUmbenennen {
+    type Error = Report<RundeZielUmbenennenFehler>;
+
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id, ziel_id = ?self.ziel_id), err(Debug))]
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
+        let benutzer_id = ctx
+            .auth()
+            .require_benutzer_id()
+            .change_context(RundeZielUmbenennenFehler::NichtAngemeldet)?;
+        let uow = ctx
+            .enter()
+            .await
+            .change_context(RundeZielUmbenennenFehler::RundeLaden)?;
+
+        let ergebnis = async {
+            let mut runde = match uow.runden().find_by_id(self.runde_id).await {
+                Ok(runde) => runde,
+                Err(fehler) => Err(match fehler.current_context() {
+                    RepositoryError::NotFound => {
+                        Report::new(RundeZielUmbenennenFehler::NichtGefunden)
+                    }
+                    _ => fehler.change_context(RundeZielUmbenennenFehler::RundeLaden),
+                })?,
+            };
+            if !runde.gehört_zu(benutzer_id) {
+                return Err(Report::new(RundeZielUmbenennenFehler::NichtErlaubt));
+            }
+            let Runde::FreieRunde(mut freie_runde) = runde.cloned_data() else {
+                return Err(Report::new(ziel_schreibfehler(&runde).als_umbenennen()));
+            };
+            if !freie_runde.ziel_umbenennen(self.ziel_id, self.name) {
+                return Err(Report::new(RundeZielUmbenennenFehler::ZielNichtGefunden));
+            }
+            runde.set_data(freie_runde.into());
+
+            uow.runden()
+                .update(&mut runde)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeZielUmbenennenFehler::Speichern)?;
+            Ok(runde.into_data())
+        }
+        .await;
+
+        let runde = uow
+            .finish(ergebnis, RundeZielUmbenennenFehler::RundeLaden)
+            .await?;
+        info!(id = ?runde.id(), ziel_id = ?self.ziel_id, "freies ziel umbenannt");
         Ok(runde)
     }
 }
@@ -259,10 +613,14 @@ impl UseCase<Runde> for RundeAbschliessen {
                 return Err(Report::new(RundeAbschliessenFehler::NichtErlaubt));
             }
             // The typestate makes closing once-only: a closed Runde has no `abschliessen`.
-            let Runde::InBearbeitung(offen) = runde.cloned_data() else {
-                return Err(Report::new(RundeAbschliessenFehler::BereitsAbgeschlossen));
+            let offen = match runde.cloned_data() {
+                Runde::MitParkour(offen) => offen.abschliessen(jetzt),
+                Runde::FreieRunde(offen) => offen.abschliessen(jetzt),
+                Runde::AbgeschlosseneRunde(_) => {
+                    return Err(Report::new(RundeAbschliessenFehler::BereitsAbgeschlossen));
+                }
             };
-            runde.set_data(offen.abschliessen(jetzt).into());
+            runde.set_data(offen.into());
 
             uow.runden()
                 .update(&mut runde)

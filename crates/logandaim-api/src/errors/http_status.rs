@@ -8,6 +8,7 @@ use logandaim_core::service::{
     AbmeldungFehler, AnmeldungFehler, BenutzerLöschenFehler, ErneuerungFehler,
     PasswortVergessenFehler, PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler,
     RegistrierungStartenFehler, RundeAbschliessenFehler, RundeLöschenFehler, RundeStartenFehler,
+    RundeZielEntfernenFehler, RundeZielHinzufügenFehler, RundeZielUmbenennenFehler,
     SchussLöschenFehler, SchussRegistrierenFehler, SchussÄndernFehler, SessionPrüfenFehler,
     StammdatenFehler, SystemadministratorBefördernFehler,
 };
@@ -132,7 +133,8 @@ http_status!(SchussÄndernFehler {
     NichtErlaubt => StatusCode::FORBIDDEN,
     NichtGefunden => StatusCode::NOT_FOUND,
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
-    PflockNichtImSnapshot => StatusCode::CONFLICT,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
+    PflockNichtImAufbau => StatusCode::CONFLICT,
     Laden => StatusCode::INTERNAL_SERVER_ERROR,
     Speichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
@@ -141,6 +143,7 @@ http_status!(SchussLöschenFehler {
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
     NichtErlaubt => StatusCode::FORBIDDEN,
     NichtGefunden => StatusCode::NOT_FOUND,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
     Laden => StatusCode::INTERNAL_SERVER_ERROR,
     Löschen => StatusCode::INTERNAL_SERVER_ERROR,
     Speichern => StatusCode::INTERNAL_SERVER_ERROR,
@@ -152,8 +155,8 @@ http_status!(SchussRegistrierenFehler {
     UngültigeAnfrage => StatusCode::BAD_REQUEST,
     NichtGefunden => StatusCode::NOT_FOUND,
     RundeNichtInBearbeitung => StatusCode::CONFLICT,
-    ZielNichtImSnapshot => StatusCode::CONFLICT,
-    PflockNichtImSnapshot => StatusCode::CONFLICT,
+    ZielNichtImAufbau => StatusCode::CONFLICT,
+    PflockNichtImAufbau => StatusCode::CONFLICT,
     PfeilKonflikt => StatusCode::CONFLICT,
     Speichern => StatusCode::INTERNAL_SERVER_ERROR,
     RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
@@ -175,11 +178,48 @@ http_status!(StammdatenFehler {
 
 http_status!(RundeStartenFehler {
     NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    UngültigeAnfrage => StatusCode::BAD_REQUEST,
     NichtGefunden => StatusCode::NOT_FOUND,
     NichtAktiv => StatusCode::CONFLICT,
     RundeLaeuft => StatusCode::CONFLICT,
     AnlageLaden => StatusCode::INTERNAL_SERVER_ERROR,
     Starten => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
+http_status!(RundeZielHinzufügenFehler {
+    UngültigeAnfrage => StatusCode::BAD_REQUEST,
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    RundeIstKeineFreieRunde => StatusCode::CONFLICT,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
+    RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
+    Speichern => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
+http_status!(RundeZielUmbenennenFehler {
+    UngültigeAnfrage => StatusCode::BAD_REQUEST,
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    ZielNichtGefunden => StatusCode::NOT_FOUND,
+    RundeIstKeineFreieRunde => StatusCode::CONFLICT,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
+    RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
+    Speichern => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
+http_status!(RundeZielEntfernenFehler {
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    // A Ziel that is not in this round is as absent as a round that does not exist.
+    ZielNichtGefunden => StatusCode::NOT_FOUND,
+    RundeIstKeineFreieRunde => StatusCode::CONFLICT,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
+    RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
+    Entfernen => StatusCode::INTERNAL_SERVER_ERROR,
+    Speichern => StatusCode::INTERNAL_SERVER_ERROR,
 });
 
 http_status!(RundeAnzeigenFehler {
@@ -438,7 +478,7 @@ mod tests {
             StatusCode::CONFLICT
         );
         assert_eq!(
-            status(SchussRegistrierenFehler::ZielNichtImSnapshot),
+            status(SchussRegistrierenFehler::ZielNichtImAufbau),
             StatusCode::CONFLICT
         );
         assert_eq!(

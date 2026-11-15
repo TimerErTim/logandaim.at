@@ -10,22 +10,13 @@ use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 use super::konto::BenutzerId;
+pub use super::runde::RundeId;
+use super::runde::ZielId;
 use crate::domain::{Abstand, common::Farbe};
-
-/// Identity of one physical Ziel.
-///
-/// Re-exported from the `anlage` aggregate: a `Schuss` references a Ziel by identity
-/// only, never by loading the entity (SPEC-stammdaten rule 9).
-pub use super::anlage::ZielId;
 
 /// Identity of one logged Schuss.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct SchussId(pub Uuid);
-
-/// Identity of the Runde a Schuss belongs to. The Schuss carries the link, so a Runde
-/// never holds a mutable child collection.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct RundeId(pub Uuid);
 
 /// Scoring zone hit by one Schuss on a 3D target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -103,6 +94,11 @@ impl Erfasser {
     }
 }
 
+/// Where a Schuss was shot from. Exactly one of the two forms is stored (SPEC-runde rule 4).
+///
+/// `Pflock` is the stake's colour on a Parkour round. A `Freie Runde` configures no Pflöcke,
+/// so there the same form carries the colour the archer picked for that shot (rule 19); no
+/// third variant is needed, because both are "a colour, not a distance".
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Schussposition {
     Distanz(Abstand),
@@ -175,7 +171,7 @@ impl NeuerSchuss {
 /// One arrow shot at one Ziel.
 ///
 /// The only aggregate invariant is `pfeil != 0`; membership in a Runde is a use-case
-/// concern, validated against that Runde's snapshot (AC-9). The Erfasser is fixed at
+/// concern, validated against that Runde's captured route (AC-9). The Erfasser is fixed at
 /// construction: there is no mutator that could reassign it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Schuss {

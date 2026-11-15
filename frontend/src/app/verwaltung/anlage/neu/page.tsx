@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/api/auth-provider";
 import { apiErrorMessage } from "@/api/errors";
 import { useBenutzerQuery, useStammdatenMutations } from "@/api/hooks";
-import { type AnlageErstellungInput, Ländercode } from "@/api/logandaim-api";
+import { type AnlageErstellungInput, Laendercode } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -22,18 +22,18 @@ import { paths } from "@/lib/navigation";
 const leer: AnlageErstellungInput = {
   name: "",
   adresse: {
-    straße: "",
+    strasse: "",
     postleitzahl: "",
     ort: "",
-    ländercode: Ländercode.AT,
+    laendercode: Laendercode.AT,
   },
   kontakt: {},
 };
 
-const laender: Array<{ code: Ländercode; name: string }> = [
-  { code: Ländercode.AT, name: "Österreich" },
-  { code: Ländercode.DE, name: "Deutschland" },
-  { code: Ländercode.CH, name: "Schweiz" },
+const laender: Array<{ code: Laendercode; name: string }> = [
+  { code: Laendercode.AT, name: "Österreich" },
+  { code: Laendercode.DE, name: "Deutschland" },
+  { code: Laendercode.CH, name: "Schweiz" },
 ];
 
 export default function AnlageNeuPage() {
@@ -109,11 +109,11 @@ export default function AnlageNeuPage() {
             </Field>
             <Field label="Straße und Hausnummer">
               <Input
-                value={form.adresse.straße}
+                value={form.adresse.strasse}
                 onChange={(event) =>
                   setForm((old) => ({
                     ...old,
-                    adresse: { ...old.adresse, straße: event.target.value },
+                    adresse: { ...old.adresse, strasse: event.target.value },
                   }))
                 }
                 required
@@ -148,13 +148,13 @@ export default function AnlageNeuPage() {
             </Field>
             <Field label="Land">
               <Select
-                value={form.adresse.ländercode}
+                value={form.adresse.laendercode}
                 onChange={(event) =>
                   setForm((old) => ({
                     ...old,
                     adresse: {
                       ...old.adresse,
-                      ländercode: event.target.value as Ländercode,
+                      laendercode: event.target.value as Laendercode,
                     },
                   }))
                 }

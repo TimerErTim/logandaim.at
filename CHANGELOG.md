@@ -14,5 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A public Parkour list that needs no sign-in.
 - A Runden view: run a Runde and see its Wertungen per Ziel and for the whole Runde.
 - Ziel-specific Pflöcke and per-Ziel distances in the administration area.
+- Free Runden that need no Parkour: start one under your own name, add, rename, and remove Ziele
+  while shooting, and record each arrow with a colour or an exact distance.
 
 [Unreleased]: https://github.com/TimerErTim/logandaim.at/commits/main

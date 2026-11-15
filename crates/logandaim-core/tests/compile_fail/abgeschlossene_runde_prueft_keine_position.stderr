@@ -1,0 +1,9 @@
+error[E0599]: no method named `pruefe_position` found for struct `RundeIn<Abgeschlossen>` in the current scope
+  --> tests/compile_fail/abgeschlossene_runde_prueft_keine_position.rs:26:19
+   |
+26 |     let _ = runde.pruefe_position(ZielId(Uuid::nil()), None);
+   |                   ^^^^^^^^^^^^^^^ method not found in `RundeIn<Abgeschlossen>`
+   |
+   = note: the method was found for
+           - `RundeIn<FreieRundeInBearbeitung>`
+           - `RundeIn<MitParkourInBearbeitung>`

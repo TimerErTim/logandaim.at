@@ -2,20 +2,21 @@ import {
   AnlageVerwaltungRolle,
   AnlageZustand,
   type components,
-  // openapi-typescript transliterates the umlaut in `Ländercode` to `LNdercode`; the
-  // seam keeps the domain spelling so call sites never see the codegen artefact.
-  LNdercode as Ländercode,
+  Laendercode,
   RundeZustand,
   Wertungszone,
+  ZielPfloecke_ExplicitPfloeckeArt,
+  ZielPfloecke_InheritFromParkourPfloeckeArt,
 } from "./schema";
 
-/** Re-exported so components import their vocabulary from one place. */
 export {
   AnlageVerwaltungRolle,
   AnlageZustand,
-  Ländercode,
+  Laendercode,
   RundeZustand,
   Wertungszone,
+  ZielPfloecke_ExplicitPfloeckeArt,
+  ZielPfloecke_InheritFromParkourPfloeckeArt,
 };
 
 /**
@@ -83,6 +84,14 @@ export interface LogandaimApi {
   // ---------------------------------------------------------------- Runden
   rundenAnzeigen(): Promise<RundeBasic[]>;
   rundeStarten(parkourId: string): Promise<Runde>;
+  freieRundeStarten(name: string): Promise<Runde>;
+  freiesZielHinzufuegen(rundeId: string, name?: string): Promise<Runde>;
+  freiesZielUmbenennen(
+    rundeId: string,
+    zielId: string,
+    name: string,
+  ): Promise<Runde>;
+  freiesZielEntfernen(rundeId: string, zielId: string): Promise<Runde>;
   rundeLoeschen(id: string): Promise<void>;
   rundeAnzeigen(id: string): Promise<Runde>;
   rundeAbschliessen(id: string): Promise<Runde>;
@@ -104,7 +113,7 @@ export interface LogandaimApi {
   passwortVergessen(eMailAdresse: string): Promise<void>;
   passwortWiederherstellen(token: string, neuesPasswort: string): Promise<void>;
   benutzerAbrufen(): Promise<AuthenticatedBenutzer>;
-  benutzerLoeschen(passwort: string, bestätigt: boolean): Promise<void>;
+  benutzerLoeschen(passwort: string, bestaetigt: boolean): Promise<void>;
 }
 
 /** Authentication lifecycle exposed without transport credentials or protocol details. */
@@ -122,69 +131,51 @@ export interface AuthSession {
   subscribe(listener: () => void): () => void;
 }
 
-type Schemas = components["schemas"];
-
-export type Benutzer = Schemas["Benutzer"];
+export type Benutzer = components["schemas"]["Benutzer"];
 /** The authenticated caller: the only shape that carries a `rolle`. */
-export type AuthenticatedBenutzer = Schemas["AuthenticatedBenutzer"];
-export type Anlage = Omit<Schemas["Anlage"], "parkour"> & {
-  parkour: Parkour[];
+export type AuthenticatedBenutzer =
+  components["schemas"]["AuthenticatedBenutzer"];
+export type Anlage = components["schemas"]["Anlage"];
+export type AnlageZugriff = components["schemas"]["AnlageZugriff"];
+export type AnlageAdresse = components["schemas"]["AnlageAdresse"];
+export type AnlageKontakt = components["schemas"]["AnlageKontakt"];
+export type AnlageVerwaltung = components["schemas"]["AnlageVerwaltung"];
+export type AnlageZiel = components["schemas"]["AnlageZiel"];
+export type ZielPfloecke = components["schemas"]["ZielPfloecke"];
+export type ZielPfloeckeExplicit =
+  components["schemas"]["ZielPfloecke_ExplicitPfloecke"];
+export type ZielPfloeckeInheritFromParkour =
+  components["schemas"]["ZielPfloecke_InheritFromParkourPfloecke"];
+export type Zielverwendung = components["schemas"]["Zielverwendung"];
+export type ParkourPflock = components["schemas"]["ParkourPflock"];
+export type PflockAbstand = components["schemas"]["PflockAbstand"];
+export type Ziel = components["schemas"]["Ziel"];
+type RundenPflock = Omit<components["schemas"]["Pflock"], "abstand"> & {
+  abstand?: number | null;
 };
-export type AnlageZugriff = Schemas["AnlageZugriff"];
-export type AnlageAdresse = Schemas["AnlageAdresse"];
-export type AnlageKontakt = Schemas["AnlageKontakt"];
-export type AnlageVerwaltung = Schemas["AnlageVerwaltung"];
-// `AnlageVerwaltungRolle`, `AnlageZustand`, `RundeZustand`, and `Wertungszone` are
-// re-exported above as enums, which are their own type — a second alias would collide.
-export type Ziel = Schemas["Ziel"];
-export type Zielverwendung = Schemas["Zielverwendung"];
-export type Pflock = Schemas["Pflock"];
-export type PflockAbstand = Schemas["PflockAbstand"];
-/** The Ziel-specific ordered set, or the Parkour-wide set when inherited. */
-export type ZielPflöcke =
-  | { art: "InheritFromParkour"; [key: string]: unknown }
-  | { art: "Explicit"; pflöcke: Pflock[]; [key: string]: unknown };
-export type Zielplatzierung = Omit<
-  Schemas["Zielplatzierung"],
-  "pflöcke" | "abstände"
-> & {
-  pflöcke: ZielPflöcke;
-  abstände: PflockAbstand[];
-};
-export type Parkour = Omit<Schemas["Parkour"], "platzierungen"> & {
-  platzierungen: Zielplatzierung[];
-};
-export type ParkourÖffentlich = Schemas["ParkourÖffentlich"];
-export type AnlageÖffentlich = Schemas["AnlageÖffentlich"];
-export type ParkourKurz = Schemas["ParkourKurz"];
-export type RundeBasic = Schemas["RundeBasic"];
-export type RundePflock = Schemas["RundePflock"];
-export type Abstand = Schemas["Abstand"];
-export type RundeZiel = Omit<Schemas["RundeZiel"], "pflöcke"> & {
-  pflöcke: RundePflock[];
-};
-export type Runde = Omit<Schemas["Runde"], "ziele"> & {
-  ziele: RundeZiel[];
-};
-export type Schuss = Schemas["Schuss"];
-export type Zielwertung = Schemas["Zielwertung"];
-export type Erfasser = Schemas["Erfasser"];
+export type RundeZiel = Omit<Ziel, "pfloecke"> & { pfloecke: RundenPflock[] };
+export type Zielplatzierung = components["schemas"]["Zielplatzierung"];
+export type Parkour = components["schemas"]["Parkour"];
+export type ParkourÖffentlich = components["schemas"]["ParkourOeffentlich"];
+export type AnlageOeffentlich = components["schemas"]["AnlageOeffentlich"];
+export type AnlageÖffentlich = AnlageOeffentlich;
+export type ParkourKurz = components["schemas"]["ParkourKurz"];
+export type RundeHerkunft = components["schemas"]["RundeHerkunft"];
+export type RundeBasic = components["schemas"]["RundeBasic"];
+export type Runde = components["schemas"]["Runde"];
+export type Schuss = components["schemas"]["Schuss"];
+export type Zielwertung = components["schemas"]["Zielwertung"];
+export type Erfasser = components["schemas"]["Erfasser"];
 
-export type AnlageErstellungInput = Schemas["AnlageErstellungRequest"];
-export type ZielInput = Schemas["ZielRequest"];
-type ParkourErstellungRequest = Omit<
-  Schemas["ParkourErstellungRequest"],
-  "platzierungen"
-> & { platzierungen: Zielplatzierung[] };
-export type ParkourInput = ParkourErstellungRequest;
-export type ParkourSetupInput = Omit<
-  Schemas["ParkourSetupRequest"],
-  "platzierungen"
-> & { platzierungen: Zielplatzierung[] };
+export type AnlageErstellungInput =
+  components["schemas"]["AnlageErstellungRequest"];
+export type ZielInput = components["schemas"]["ZielRequest"];
+export type ParkourInput = components["schemas"]["ParkourErstellungRequest"];
+export type ParkourSetupInput = components["schemas"]["ParkourSetupRequest"];
 
 export type SchusspositionInput =
-  | { Distanz: { meter: number } }
-  | { Pflock: { farbe: string } };
+  | components["schemas"]["SchusspositionRequest"]
+  | components["schemas"]["Schussposition"];
 
 export type SchussErstellungInput = {
   zielId: string;

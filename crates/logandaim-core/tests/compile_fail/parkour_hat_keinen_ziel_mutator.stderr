@@ -1,0 +1,23 @@
+error[E0599]: no method named `ziel_hinzufügen` found for struct `RundeIn<MitParkourInBearbeitung>` in the current scope
+  --> tests/compile_fail/parkour_hat_keinen_ziel_mutator.rs:32:11
+   |
+32 |     runde.ziel_hinzufügen(None);
+   |           ^^^^^^^^^^^^^^^ method not found in `RundeIn<MitParkourInBearbeitung>`
+   |
+   = note: the method was found for `RundeIn<FreieRundeInBearbeitung>`
+
+error[E0599]: no method named `ziel_entfernen` found for struct `RundeIn<MitParkourInBearbeitung>` in the current scope
+  --> tests/compile_fail/parkour_hat_keinen_ziel_mutator.rs:33:11
+   |
+33 |     runde.ziel_entfernen(ZielId(Uuid::nil()));
+   |           ^^^^^^^^^^^^^^ method not found in `RundeIn<MitParkourInBearbeitung>`
+   |
+   = note: the method was found for `RundeIn<FreieRundeInBearbeitung>`
+
+error[E0599]: no method named `ziel_umbenennen` found for struct `RundeIn<MitParkourInBearbeitung>` in the current scope
+  --> tests/compile_fail/parkour_hat_keinen_ziel_mutator.rs:34:11
+   |
+34 |     runde.ziel_umbenennen(ZielId(Uuid::nil()), NonEmptyString::neu("Neu").unwrap());
+   |           ^^^^^^^^^^^^^^^ method not found in `RundeIn<MitParkourInBearbeitung>`
+   |
+   = note: the method was found for `RundeIn<FreieRundeInBearbeitung>`

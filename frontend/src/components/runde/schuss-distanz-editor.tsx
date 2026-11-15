@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/cn";
 import { positionsModus } from "@/lib/runden-position";
+import { FreieFarbeFeld } from "./freie-farbe-feld";
 import { PflockPlatzhalter } from "./pflock-platzhalter";
 
 export function SchussDistanzEditor({
@@ -18,30 +19,40 @@ export function SchussDistanzEditor({
   ziel,
   position,
   onCommit,
+  positionArt = "parkour",
+  farben = [],
 }: {
   pfeil: number;
   ziel: RundeZiel;
   position: SchusspositionInput | null;
   onCommit: (position: SchusspositionInput) => void;
+  positionArt?: "parkour" | "frei";
+  farben?: string[];
 }) {
-  const effektivePflöcke = ziel.pflöcke;
+  const effektivePflöcke = ziel.pfloecke;
   const modus = positionsModus(ziel, effektivePflöcke.length);
-  const abstände = useMemo(
+  const abstaende = useMemo(
     () =>
-      new Map(ziel.abstände.map((abstand) => [abstand.pflock, abstand.meter])),
-    [ziel.abstände],
+      new Map(
+        ziel.pfloecke.flatMap((pflock) =>
+          typeof pflock.abstand !== "number"
+            ? []
+            : [[pflock.farbe, pflock.abstand] as const],
+        ),
+      ),
+    [ziel.pfloecke],
   );
   const sortedPflöcke = useMemo(() => effektivePflöcke, [effektivePflöcke]);
   const checkpoints = useMemo<Checkpoint[]>(
     () =>
       sortedPflöcke
         .flatMap((pflock) => {
-          const meter = abstände.get(pflock.farbe);
+          const meter = abstaende.get(pflock.farbe);
           return meter === undefined
             ? []
             : [
                 {
-                  id: `${pflock.position}-${pflock.farbe}`,
+                  id: `${pflock.farbe}`,
                   wert: meter,
                   farbe: pflock.farbe,
                   label: pflock.farbe,
@@ -50,12 +61,12 @@ export function SchussDistanzEditor({
               ];
         })
         .sort((a, b) => a.wert - b.wert),
-    [sortedPflöcke, abstände],
+    [sortedPflöcke, abstaende],
   );
   const stakeCheckpoints = useMemo<Checkpoint[]>(
     () =>
       sortedPflöcke.map((pflock, index) => ({
-        id: `${pflock.position}-${pflock.farbe}`,
+        id: `${pflock.farbe}`,
         wert: index,
         farbe: pflock.farbe,
         label: pflock.farbe,
@@ -79,8 +90,15 @@ export function SchussDistanzEditor({
   const [draft, setDraft] = useState(
     storedMeter === undefined ? "" : String(storedMeter),
   );
+  const previousPositionKey = useRef(
+    `${storedMeter ?? ""}:${storedStake ?? ""}`,
+  );
+  const cancelDraft = useRef(false);
 
   useEffect(() => {
+    const nextPositionKey = `${storedMeter ?? ""}:${storedStake ?? ""}`;
+    if (previousPositionKey.current === nextPositionKey) return;
+    previousPositionKey.current = nextPositionKey;
     committedMeter.current = storedMeter;
     committedStake.current = storedStake;
     setDraftStake(storedStake);
@@ -97,7 +115,7 @@ export function SchussDistanzEditor({
     max,
     Math.max(min, Number(draft) || storedMeter || min),
   );
-  const valid = /^[1-9]\d*$/.test(draft);
+  const valid = /^[1-9]\d*$/.test(draft) && Number(draft) <= 4_294_967_295;
   const saveMeter = (meter: number) => {
     committedMeter.current = meter;
     committedStake.current = undefined;
@@ -135,6 +153,7 @@ export function SchussDistanzEditor({
   };
 
   const pflockPlaceholder = draft === "" && draftStake !== undefined;
+  const freiesFarbFeld = positionArt === "frei" && pflockPlaceholder;
 
   return (
     <div className="min-w-0">
@@ -143,10 +162,10 @@ export function SchussDistanzEditor({
           <PopoverPrimitive.Anchor asChild>
             <div className="relative w-full">
               <Input
-                aria-label={`Exakte Entfernung für Schuss ${pfeil} in Metern`}
+                aria-label={`${positionArt === "frei" ? "Position" : "Exakte Entfernung"} für Schuss ${pfeil}${positionArt === "frei" ? "" : " in Metern"}`}
                 aria-invalid={draft !== "" && !valid}
                 inputMode="numeric"
-                value={draft}
+                value={freiesFarbFeld ? "" : draft}
                 placeholder={pflockPlaceholder ? "" : "Meter"}
                 onChange={(event) => {
                   const next = event.target.value;
@@ -154,24 +173,33 @@ export function SchussDistanzEditor({
                   if (next !== "") setDraftStake(undefined);
                 }}
                 onFocus={() => setOpen(true)}
-                onBlur={commitDraft}
+                onBlur={() => {
+                  if (cancelDraft.current) {
+                    cancelDraft.current = false;
+                    return;
+                  }
+                  commitDraft();
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
                     event.currentTarget.blur();
                   }
                   if (event.key === "Escape") {
+                    cancelDraft.current = true;
                     setDraft(
                       committedMeter.current === undefined
                         ? ""
                         : String(committedMeter.current),
                     );
                     setDraftStake(committedStake.current);
+                    event.currentTarget.blur();
                   }
                 }}
                 className={cn(
                   "h-11 w-full px-2 tabular-nums",
                   pflockPlaceholder && "text-transparent caret-ink",
+                  freiesFarbFeld && "pl-12",
                 )}
               />
               {pflockPlaceholder ? (
@@ -187,15 +215,23 @@ export function SchussDistanzEditor({
               onCloseAutoFocus={(event) => event.preventDefault()}
               onPointerDown={(event) => {
                 if (
+                  positionArt === "frei" &&
                   event.target instanceof Element &&
-                  event.target.closest('[role="slider"]')
+                  event.target.closest("button")
                 ) {
                   event.preventDefault();
                 }
               }}
               className="paper-overlay z-50 w-[min(20rem,calc(100vw-2rem))] rounded-sm border border-subtle bg-elevated p-4 text-ink"
             >
-              {canUseMeterSlider ? (
+              {positionArt === "frei" ? (
+                <FreieFarbeFeld
+                  farben={farben}
+                  label={`Farbe für Schuss ${pfeil}`}
+                  value={draftStake ?? null}
+                  onChange={(farbe) => saveStake(farbe)}
+                />
+              ) : canUseMeterSlider ? (
                 <CheckpointSlider
                   checkpoints={checkpoints}
                   value={sliderValue}

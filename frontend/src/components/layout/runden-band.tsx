@@ -41,7 +41,7 @@ export function RundenBand() {
       className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-subtle bg-surface px-6 py-4"
     >
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-ink">{offen.parkourName}</p>
+        <p className="font-medium text-ink">{offen.name}</p>
         <p aria-live="off" className="text-xs tabular-nums text-secondary">
           Seit {minutes} Min.
         </p>

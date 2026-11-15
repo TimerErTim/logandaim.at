@@ -26,6 +26,8 @@ export function SchussLedger({
   editable,
   onEdit,
   onDelete,
+  positionArt = "parkour",
+  farben = [],
 }: {
   ziel: RundeZiel;
   reihenfolge: number;
@@ -36,6 +38,8 @@ export function SchussLedger({
     position: SchusspositionInput | null,
   ) => void;
   onDelete: (schussId: string) => void;
+  positionArt?: "parkour" | "frei";
+  farben?: string[];
 }) {
   return (
     <div>
@@ -53,7 +57,7 @@ export function SchussLedger({
         aria-label={`Schüsse bei Ziel ${reihenfolge}`}
         className="divide-y divide-subtle"
       >
-        {ziel.schüsse.map((schuss: Schuss) => (
+        {ziel.schuesse.map((schuss: Schuss) => (
           <li
             key={schuss.id}
             className="flex min-h-11 items-center gap-2 py-2 sm:gap-3"
@@ -94,6 +98,8 @@ export function SchussLedger({
                     onCommit={(position) =>
                       onEdit(schuss.id, schuss.wertungszone, position)
                     }
+                    positionArt={positionArt}
+                    farben={farben}
                   />
                 </div>
               ) : schuss.position && "Pflock" in schuss.position ? (
@@ -120,7 +126,7 @@ export function SchussLedger({
             ) : null}
           </li>
         ))}
-        {ziel.schüsse.length === 0 ? (
+        {ziel.schuesse.length === 0 ? (
           <li className="py-2 text-sm text-secondary">
             Noch kein Schuss erfasst.
           </li>

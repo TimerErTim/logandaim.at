@@ -177,7 +177,7 @@ pub struct Zielwertung {
     /// Whether the very first arrow hit.
     pub erster_pfeil_getroffen: bool,
     /// How many Schüsse were logged at this Ziel.
-    pub anzahl_schüsse: usize,
+    pub anzahl_schuesse: usize,
 }
 
 impl From<domain::Schuss> for Schuss {
@@ -200,7 +200,7 @@ impl From<domain::Zielwertung> for Zielwertung {
             erster_treffer: wertung.erster_treffer(),
             mehrschuss: wertung.mehrschuss(),
             erster_pfeil_getroffen: wertung.erster_pfeil_getroffen(),
-            anzahl_schüsse: wertung.anzahl_schüsse().get(),
+            anzahl_schuesse: wertung.anzahl_schüsse().get(),
         }
     }
 }

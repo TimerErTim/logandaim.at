@@ -9,8 +9,8 @@ use logandaim_core::{
     ResultReport,
     application::uow::Versioned,
     domain::{
-        Anlage, AnlageAktiv, AnlageId, EmailAdresse, Erfasser, NeueAnlage, NeueRunde, NeuerSchuss,
-        ParkourId, Runde, RundeId, RundeInBearbeitung, Schuss, SchussId, ZielId,
+        Anlage, AnlageAktiv, AnlageId, AnlageZielId, EmailAdresse, Erfasser, NeueAnlage, NeueRunde,
+        NeuerSchuss, ParkourId, Runde, RundeId, Schuss, SchussId, ZielId,
         konto::{
             Benutzer, BenutzerId, BestätigungId, EmailBestätigung, Konto, KontoId, NeueBestätigung,
             NeuePasswortWiederherstellung, NeueSession, NeuerBenutzer, NeuesKonto,
@@ -267,7 +267,7 @@ impl RundeRepository for FakeRundeRepository {
             return Err(Report::new(RepositoryError::Conflict));
         }
         let id = RundeId(Uuid::new_v4());
-        let erstellt = Versioned::init(Runde::InBearbeitung(RundeInBearbeitung::neu(id, runde)));
+        let erstellt = Versioned::init(Runde::aus_neu(id, runde));
         runden.insert(id, erstellt.clone());
         Ok(erstellt)
     }
@@ -316,27 +316,29 @@ impl RundeRepository for FakeRundeRepository {
     }
 
     async fn exists_referencing_anlage(&self, id: AnlageId) -> RepositoryResult<bool> {
-        Ok(self
-            .datastore
-            .runden()
-            .values()
-            .any(|runde| runde.anlage_id() == id))
+        Ok(self.datastore.runden().values().any(|runde| {
+            runde
+                .herkunft()
+                .is_some_and(|herkunft| herkunft.anlage_id == id)
+        }))
     }
 
     async fn exists_referencing_parkour(&self, id: ParkourId) -> RepositoryResult<bool> {
-        Ok(self
-            .datastore
-            .runden()
-            .values()
-            .any(|runde| runde.parkour_id() == id))
+        Ok(self.datastore.runden().values().any(|runde| {
+            runde
+                .herkunft()
+                .is_some_and(|herkunft| herkunft.parkour_id == id)
+        }))
     }
 
-    async fn exists_referencing_ziel(&self, id: ZielId) -> RepositoryResult<bool> {
-        Ok(self
-            .datastore
-            .runden()
-            .values()
-            .any(|runde| runde.enthält_ziel(id)))
+    async fn exists_referencing_ziel(&self, id: AnlageZielId) -> RepositoryResult<bool> {
+        Ok(self.datastore.runden().values().any(|runde| {
+            runde
+                .aufbau()
+                .ziele()
+                .iter()
+                .any(|ziel| ziel.anlage_ziel_id() == Some(id))
+        }))
     }
 }
 

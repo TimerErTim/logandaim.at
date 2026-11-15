@@ -19,8 +19,9 @@ use logandaim_core::{
     application::uow::Versioned,
     domain::{
         Anlage, AnlageAdresse, AnlageAktiv, AnlageArchiviert, AnlageId, AnlageKontakt,
-        AnlageVerwaltung, AnlageVerwaltungRolle, Farbe, Ländercode, NeueAnlage, NonEmptyString,
-        Parkour, ParkourId, Pflock, PflockId, Ziel, ZielId, ZielPflöcke, Zielplatzierung, Zustand,
+        AnlageVerwaltung, AnlageVerwaltungRolle, AnlageZiel, AnlageZielId, Farbe, Ländercode,
+        NeueAnlage, NonEmptyString, Parkour, ParkourId, ParkourPflock, ParkourPflockId,
+        ZielPflöcke, Zielplatzierung, Zustand,
     },
     ports::{AnlageRepository, RepositoryError, RepositoryResult},
 };
@@ -80,7 +81,7 @@ async fn lade_verwaltungen(
     Ok(verwaltungen)
 }
 
-async fn lade_ziele(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult<Vec<Ziel>> {
+async fn lade_ziele(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult<Vec<AnlageZiel>> {
     let mut rows = tx
         .query(
             r#"SELECT id, tiername, zielnummer, zustand FROM "ziele"
@@ -101,8 +102,8 @@ async fn lade_ziele(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult<V
         let zielnummer: i64 = row.get(2).contextualize(RepositoryError::Data)?;
         let zustand: String = row.get(3).contextualize(RepositoryError::Data)?;
         let zielnummer = u32::try_from(zielnummer).contextualize(RepositoryError::Data)?;
-        ziele.push(Ziel::from_parts(
-            ZielId(parse_uuid(&id)?),
+        ziele.push(AnlageZiel::from_parts(
+            AnlageZielId(parse_uuid(&id)?),
             NonEmptyString::neu(&tiername).change_context(RepositoryError::Data)?,
             NonZeroU32::new(zielnummer).ok_or(RepositoryError::Data)?,
             zustand_from_str(&zustand)?,
@@ -146,7 +147,10 @@ async fn lade_parkour(tx: &Transaction, anlage_id: AnlageId) -> RepositoryResult
     Ok(parkour)
 }
 
-async fn lade_pflöcke(tx: &Transaction, parkour_id: ParkourId) -> RepositoryResult<Vec<Pflock>> {
+async fn lade_pflöcke(
+    tx: &Transaction,
+    parkour_id: ParkourId,
+) -> RepositoryResult<Vec<ParkourPflock>> {
     let mut rows = tx
         .query(
             r#"SELECT id, farbe FROM "pflock_setups"
@@ -164,8 +168,8 @@ async fn lade_pflöcke(tx: &Transaction, parkour_id: ParkourId) -> RepositoryRes
     {
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
         let farbe: String = row.get(1).contextualize(RepositoryError::Data)?;
-        pflöcke.push(Pflock::neu(
-            PflockId(parse_uuid(&id)?),
+        pflöcke.push(ParkourPflock::neu(
+            ParkourPflockId(parse_uuid(&id)?),
             Farbe::neu(&farbe).change_context(RepositoryError::Data)?,
         ));
     }
@@ -175,7 +179,7 @@ async fn lade_pflöcke(tx: &Transaction, parkour_id: ParkourId) -> RepositoryRes
 async fn lade_platzierungen(
     tx: &Transaction,
     parkour_id: ParkourId,
-    parkour_pflöcke: &[Pflock],
+    parkour_pflöcke: &[ParkourPflock],
 ) -> RepositoryResult<Vec<Zielplatzierung>> {
     let mut rows = tx
         .query(
@@ -192,7 +196,7 @@ async fn lade_platzierungen(
         .contextualize_with(libsql_error_to_persistence_error)?
     {
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
-        ziel_ids.push(ZielId(parse_uuid(&id)?));
+        ziel_ids.push(AnlageZielId(parse_uuid(&id)?));
     }
 
     let mut platzierungen = Vec::with_capacity(ziel_ids.len());
@@ -215,7 +219,7 @@ async fn lade_platzierungen(
             let meter: i64 = row.get(1).contextualize(RepositoryError::Data)?;
             let meter = u32::try_from(meter).contextualize(RepositoryError::Data)?;
             abstände.push((
-                PflockId(parse_uuid(&pflock_id)?),
+                ParkourPflockId(parse_uuid(&pflock_id)?),
                 logandaim_core::domain::Abstand::neu(meter)
                     .change_context(RepositoryError::Data)?,
             ));
@@ -241,7 +245,7 @@ async fn lade_platzierungen(
 async fn lade_ziel_pflöcke(
     tx: &Transaction,
     parkour_id: ParkourId,
-    ziel_id: ZielId,
+    ziel_id: AnlageZielId,
 ) -> RepositoryResult<ZielPflöcke> {
     let mut rows = tx
         .query(
@@ -260,8 +264,8 @@ async fn lade_ziel_pflöcke(
     {
         let id: String = row.get(0).contextualize(RepositoryError::Data)?;
         let farbe: String = row.get(1).contextualize(RepositoryError::Data)?;
-        pflöcke.push(Pflock::neu(
-            PflockId(parse_uuid(&id)?),
+        pflöcke.push(ParkourPflock::neu(
+            ParkourPflockId(parse_uuid(&id)?),
             Farbe::neu(&farbe).change_context(RepositoryError::Data)?,
         ));
     }
