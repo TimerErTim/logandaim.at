@@ -11,7 +11,6 @@ import type {
   AuthPhase,
   AuthSession,
   Benutzer,
-  Domainize,
   LogandaimApi,
   ParkourInput,
   ParkourSetupInput,
@@ -25,58 +24,7 @@ import type {
 } from "./logandaim-api";
 import type { paths } from "./schema";
 
-// The client crosses a domain-name mapping boundary at fetch; wire shapes remain defined by OpenAPI.
-type DomainizeContent<Content> = {
-  [Type in keyof Content]: Type extends `application/json${string}`
-    ? Domainize<Content[Type]>
-    : Content[Type];
-};
-type DomainizeBody<Body> = Body extends { content: infer Content }
-  ? Omit<Body, "content"> & { content: DomainizeContent<Content> }
-  : Body;
-type DomainizeResponses<Responses> = {
-  [Status in keyof Responses]: DomainizeBody<Responses[Status]>;
-};
-type DomainizeOperation<Operation> = Operation extends {
-  responses: infer Responses;
-}
-  ? Omit<Operation, "responses" | "requestBody"> & {
-      responses: DomainizeResponses<Responses>;
-    } & (Operation extends { requestBody: infer Body }
-        ? { requestBody: DomainizeBody<Body> }
-        : Record<never, never>)
-  : Operation;
-type DomainPaths = {
-  [Path in keyof paths]: {
-    [Method in keyof paths[Path]]: DomainizeOperation<paths[Path][Method]>;
-  };
-};
-type JsonClient = ReturnType<typeof createClient<DomainPaths>>;
-
-const wireToDomain: Record<string, string> = {
-  strasse: "straße",
-  laendercode: "ländercode",
-  bestaetigt: "bestätigt",
-  pfloecke: "pflöcke",
-  abstaende: "abstände",
-  schuesse: "schüsse",
-  anzahlPfloecke: "anzahlPflöcke",
-  anzahlSchuesse: "anzahlSchüsse",
-};
-const domainToWire = Object.fromEntries(
-  Object.entries(wireToDomain).map(([wire, domain]) => [domain, wire]),
-);
-
-function mapApiKeys(value: unknown, names: Record<string, string>): unknown {
-  if (Array.isArray(value)) return value.map((item) => mapApiKeys(item, names));
-  if (value === null || typeof value !== "object") return value;
-  return Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [
-      names[key] ?? key,
-      mapApiKeys(item, names),
-    ]),
-  );
-}
+type JsonClient = ReturnType<typeof createClient<paths>>;
 
 async function unwrap<T>(result: {
   data?: T;
@@ -101,35 +49,10 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl.replace(/\/$/, "");
-    this.client = createClient<DomainPaths>({
+    this.client = createClient<paths>({
       baseUrl: this.baseUrl,
-      fetch: async (request) => {
-        let outgoing = request;
-        if (request.headers.get("content-type")?.includes("application/json")) {
-          const body = await request.clone().json();
-          outgoing = new Request(request, {
-            body: JSON.stringify(mapApiKeys(body, domainToWire)),
-          });
-        }
-        const response = await fetch(
-          new Request(outgoing, { credentials: "include" }),
-        );
-        if (
-          !response.headers.get("content-type")?.includes("application/json")
-        ) {
-          return response;
-        }
-        const body = mapApiKeys(await response.clone().json(), wireToDomain);
-        const headers = new Headers(response.headers);
-        headers.delete("content-length");
-        headers.delete("content-encoding");
-        const mappedResponse = new Response(JSON.stringify(body), {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-        return mappedResponse;
-      },
+      fetch: (request) =>
+        fetch(new Request(request, { credentials: "include" })),
     });
   }
 
@@ -651,10 +574,10 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     );
   }
 
-  async benutzerLoeschen(passwort: string, bestätigt: boolean): Promise<void> {
+  async benutzerLoeschen(passwort: string, bestaetigt: boolean): Promise<void> {
     await this.authenticated(() =>
       this.client.POST("/benutzer/loeschung", {
-        body: { passwort, bestätigt: bestätigt },
+        body: { passwort, bestaetigt: bestaetigt },
         headers: this.authorizationHeaders(),
       }),
     );

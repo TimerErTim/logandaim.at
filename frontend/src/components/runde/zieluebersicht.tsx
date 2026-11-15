@@ -15,7 +15,7 @@ export function Zieluebersicht({
   onSelect: (index: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const erfasste = ziele.filter((ziel) => ziel.schüsse.length > 0).length;
+  const erfasste = ziele.filter((ziel) => ziel.schuesse.length > 0).length;
   return (
     <div className="relative">
       <Button
@@ -49,7 +49,7 @@ export function Zieluebersicht({
                   setExpanded(false);
                 }}
               >
-                Ziel {index + 1}: {ziel.tiername} · {ziel.schüsse.length}{" "}
+                Ziel {index + 1}: {ziel.tiername} · {ziel.schuesse.length}{" "}
                 Schüsse
               </Button>
             </li>

@@ -21,6 +21,7 @@ import {
   type ParkourInput,
   type ParkourPflock,
   type ZielInput,
+  ZielPfloecke_InheritFromParkourPfloeckeArt,
 } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
@@ -147,7 +148,7 @@ function AnlageInhalt({ anlage }: { anlage: Anlage }) {
       <PageHeader
         register={["Verwaltung", "Anlagen"]}
         title={anlage.name}
-        description={`${anlage.adresse.straße}, ${anlage.adresse.postleitzahl} ${anlage.adresse.ort} (${anlage.adresse.ländercode})`}
+        description={`${anlage.adresse.strasse}, ${anlage.adresse.postleitzahl} ${anlage.adresse.ort} (${anlage.adresse.laendercode})`}
         actions={
           <>
             <Badge variant={deaktiviert ? "warning" : "success"}>
@@ -501,12 +502,14 @@ function ParkourListe({
     event.preventDefault();
     const eingabe: ParkourInput = {
       name,
-      pflöcke: pfloecke,
+      pfloecke: pfloecke,
       // A new Parkour has no distances yet, so every placement starts empty.
       platzierungen: ausgewaehlteZiele.map((zielId) => ({
         zielId,
-        pflöcke: { art: "InheritFromParkour" },
-        abstände: [],
+        pfloecke: {
+          art: ZielPfloecke_InheritFromParkourPfloeckeArt.InheritFromParkour,
+        },
+        abstaende: [],
       })),
     };
     meldung.verwerfen();
@@ -696,7 +699,7 @@ function ParkourListe({
                   <TableCell className="font-medium">{parkour.name}</TableCell>
                   <TableCell>
                     <span className="flex flex-wrap gap-3 text-sm">
-                      {parkour.pflöcke.map((pflock) => (
+                      {parkour.pfloecke.map((pflock) => (
                         <PflockMarker key={pflock.id} farbe={pflock.farbe} />
                       ))}
                     </span>
@@ -1050,11 +1053,11 @@ function Stammdaten({
               </Field>
               <Field label="Straße und Hausnummer">
                 <Input
-                  value={adresse.straße}
+                  value={adresse.strasse}
                   onChange={(event) =>
                     setAdresse((old) => ({
                       ...old,
-                      straße: event.target.value,
+                      strasse: event.target.value,
                     }))
                   }
                   disabled={gesperrt}
@@ -1086,12 +1089,12 @@ function Stammdaten({
               </Field>
               <Field label="Land">
                 <Select
-                  value={adresse.ländercode}
+                  value={adresse.laendercode}
                   onChange={(event) =>
                     setAdresse((old) => ({
                       ...old,
-                      ländercode: event.target
-                        .value as AnlageAdresse["ländercode"],
+                      laendercode: event.target
+                        .value as AnlageAdresse["laendercode"],
                     }))
                   }
                   disabled={gesperrt}

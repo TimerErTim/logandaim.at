@@ -12,11 +12,11 @@ import {
   useStammdatenMutations,
 } from "@/api/hooks";
 import type {
-  AnlageÖffentlich,
+  AnlageOeffentlich,
   AuthPhase,
   ParkourKurz,
 } from "@/api/logandaim-api";
-import { Ländercode } from "@/api/logandaim-api";
+import { Laendercode } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
 import { Alert } from "@/components/ui/alert";
@@ -38,10 +38,10 @@ import {
 import { paths } from "@/lib/navigation";
 import { useQueryParam } from "@/lib/use-query-param";
 
-const laender: Record<Ländercode, string> = {
-  [Ländercode.AT]: "Österreich",
-  [Ländercode.DE]: "Deutschland",
-  [Ländercode.CH]: "Schweiz",
+const laender: Record<Laendercode, string> = {
+  [Laendercode.AT]: "Österreich",
+  [Laendercode.DE]: "Deutschland",
+  [Laendercode.CH]: "Schweiz",
 };
 
 /**
@@ -112,7 +112,7 @@ export default function AnlageDetailPage() {
   return <AnlageBlatt anlage={anlage} />;
 }
 
-function AnlageBlatt({ anlage }: { anlage: AnlageÖffentlich }) {
+function AnlageBlatt({ anlage }: { anlage: AnlageOeffentlich }) {
   const phase = useAuth();
 
   return (
@@ -158,7 +158,7 @@ function AnlageBlatt({ anlage }: { anlage: AnlageÖffentlich }) {
       <Perforation />
 
       <MarginNote label="Anschrift">
-        {anlage.ort} · {laender[anlage.ländercode]}
+        {anlage.ort} · {laender[anlage.laendercode]}
       </MarginNote>
     </div>
   );
@@ -214,7 +214,7 @@ function ParkourLedger({
                   {eintrag.anzahlZiele}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {eintrag.anzahlPflöcke}
+                  {eintrag.anzahlPfloecke}
                 </TableCell>
                 <TableCell className="text-right">
                   {phase === "authenticated" ? (

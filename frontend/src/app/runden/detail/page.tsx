@@ -382,12 +382,12 @@ function Zielabschnitt({
         <SheetNumber>{ziel.zielId.slice(0, 8)}</SheetNumber>
       </div>
 
-      {ziel.pflöcke.length > 0 ? (
+      {ziel.pfloecke.length > 0 ? (
         <ol
           aria-label="Pflöcke für dieses Ziel"
           className="flex flex-wrap gap-3 text-sm"
         >
-          {ziel.pflöcke.map((pflock, index) => (
+          {ziel.pfloecke.map((pflock, index) => (
             <li
               key={`${index}-${pflock.farbe}`}
               className="inline-flex items-baseline gap-1.5"
@@ -431,7 +431,7 @@ function Zielabschnitt({
           <div className="flex items-baseline justify-between gap-2 sm:block">
             <dt className="text-secondary">Schüsse</dt>
             <dd className="font-medium tabular-nums">
-              {ziel.wertung.anzahlSchüsse}
+              {ziel.wertung.anzahlSchuesse}
             </dd>
           </div>
         </dl>
@@ -444,10 +444,10 @@ function Zielabschnitt({
       {offen ? (
         <SchussErfassung
           tiername={ziel.tiername}
-          naechsterPfeil={(ziel.wertung?.anzahlSchüsse ?? 0) + 1}
+          naechsterPfeil={(ziel.wertung?.anzahlSchuesse ?? 0) + 1}
           ausstehend={ausstehend}
           onErfassen={(zone) =>
-            onErfassen(zone, (ziel.wertung?.anzahlSchüsse ?? 0) + 1)
+            onErfassen(zone, (ziel.wertung?.anzahlSchuesse ?? 0) + 1)
           }
         />
       ) : null}

@@ -79,11 +79,11 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
   /** The Ziel that received the latest entry; its card carries the active ring. */
   const [aktivesZiel, setAktivesZiel] = useState<string | null>(null);
   const shots = runde.ziele.reduce(
-    (count, ziel) => count + ziel.schüsse.length,
+    (count, ziel) => count + ziel.schuesse.length,
     0,
   );
   const usedColours = runde.ziele.flatMap((ziel) =>
-    ziel.schüsse.flatMap((shot) =>
+    ziel.schuesse.flatMap((shot) =>
       shot.position && "Pflock" in shot.position
         ? [shot.position.Pflock.farbe]
         : [],
@@ -109,7 +109,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
 
   const confirmRemove = () => {
     if (!entfernen) return;
-    const deletedShots = entfernen.schüsse.length;
+    const deletedShots = entfernen.schuesse.length;
     setFehler(null);
     freiesZielEntfernen.mutate(
       { rundeId: runde.id, zielId: entfernen.zielId },
@@ -162,7 +162,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
   const targetCard = (ziel: Runde["ziele"][number], order: number) => {
     const position = Object.hasOwn(positionen, ziel.zielId)
       ? positionen[ziel.zielId]
-      : anfangsPosition(ziel, ziel.schüsse);
+      : anfangsPosition(ziel, ziel.schuesse);
     return (
       <Card
         key={ziel.zielId}
@@ -346,7 +346,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
     );
   };
 
-  const done = runde.ziele.filter((ziel) => ziel.schüsse.length > 0).length;
+  const done = runde.ziele.filter((ziel) => ziel.schuesse.length > 0).length;
   const leer = runde.ziele.length === 0;
   /**
    * A round with no target must not reach its summary while it is open: pressing the
@@ -460,7 +460,7 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
           <DialogHeader>
             <DialogTitle>Ziel entfernen?</DialogTitle>
             <DialogDescription>
-              {entfernen?.schüsse.length ?? 0} Schüsse werden mit diesem Ziel
+              {entfernen?.schuesse.length ?? 0} Schüsse werden mit diesem Ziel
               gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.
             </DialogDescription>
           </DialogHeader>

@@ -246,11 +246,11 @@ export function useAuthMutations() {
     deleteAccount: useMutation({
       mutationFn: ({
         passwort,
-        bestätigt,
+        bestaetigt,
       }: {
         passwort: string;
-        bestätigt: boolean;
-      }) => api.benutzerLoeschen(passwort, bestätigt),
+        bestaetigt: boolean;
+      }) => api.benutzerLoeschen(passwort, bestaetigt),
       ...SITE_HANDLED,
       onSettled: clear,
     }),

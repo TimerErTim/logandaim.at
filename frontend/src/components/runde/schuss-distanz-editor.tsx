@@ -29,25 +29,25 @@ export function SchussDistanzEditor({
   positionArt?: "parkour" | "frei";
   farben?: string[];
 }) {
-  const effektivePflöcke = ziel.pflöcke;
+  const effektivePflöcke = ziel.pfloecke;
   const modus = positionsModus(ziel, effektivePflöcke.length);
-  const abstände = useMemo(
+  const abstaende = useMemo(
     () =>
       new Map(
-        ziel.pflöcke.flatMap((pflock) =>
+        ziel.pfloecke.flatMap((pflock) =>
           typeof pflock.abstand !== "number"
             ? []
             : [[pflock.farbe, pflock.abstand] as const],
         ),
       ),
-    [ziel.pflöcke],
+    [ziel.pfloecke],
   );
   const sortedPflöcke = useMemo(() => effektivePflöcke, [effektivePflöcke]);
   const checkpoints = useMemo<Checkpoint[]>(
     () =>
       sortedPflöcke
         .flatMap((pflock) => {
-          const meter = abstände.get(pflock.farbe);
+          const meter = abstaende.get(pflock.farbe);
           return meter === undefined
             ? []
             : [
@@ -61,7 +61,7 @@ export function SchussDistanzEditor({
               ];
         })
         .sort((a, b) => a.wert - b.wert),
-    [sortedPflöcke, abstände],
+    [sortedPflöcke, abstaende],
   );
   const stakeCheckpoints = useMemo<Checkpoint[]>(
     () =>

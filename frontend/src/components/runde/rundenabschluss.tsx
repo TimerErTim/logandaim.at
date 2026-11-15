@@ -16,7 +16,7 @@ export function Rundenabschluss({ runde }: { runde: Runde }) {
   const { rundeAbschliessen } = useStammdatenMutations();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const done = runde.ziele.filter((ziel) => ziel.schüsse.length > 0).length;
+  const done = runde.ziele.filter((ziel) => ziel.schuesse.length > 0).length;
   const abgeschlossen = runde.zustand === "Abgeschlossen";
   return (
     <Card>

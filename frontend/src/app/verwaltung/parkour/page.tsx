@@ -28,13 +28,16 @@ import {
   useErfolgsmeldung,
   useStammdatenMutations,
 } from "@/api/hooks";
-import type {
-  Anlage,
-  Parkour,
-  ParkourPflock,
-  ParkourSetupInput,
-  ZielPflöcke,
-  Zielplatzierung,
+import {
+  type Anlage,
+  type Parkour,
+  type ParkourPflock,
+  type ParkourSetupInput,
+  type ZielPfloecke,
+  ZielPfloecke_ExplicitPfloeckeArt,
+  ZielPfloecke_InheritFromParkourPfloeckeArt,
+  type ZielPfloeckeExplicit,
+  type Zielplatzierung,
 } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
@@ -164,19 +167,21 @@ function ParkourInhalt({
   const [name, setName] = useState(parkour.name);
   const [entfernenOffen, setEntfernenOffen] = useState(false);
   const [setup, setSetup] = useState<ParkourSetupInput>(() => ({
-    pflöcke: parkour.pflöcke.map((pflock) => ({ ...pflock })),
+    pfloecke: parkour.pfloecke.map((pflock) => ({ ...pflock })),
     platzierungen: parkour.platzierungen.map((platzierung) => ({
       zielId: platzierung.zielId,
-      pflöcke:
-        platzierung.pflöcke.art === "Explicit"
+      pfloecke:
+        platzierung.pfloecke.art === "Explicit"
           ? {
-              art: "Explicit",
-              pflöcke: platzierung.pflöcke.pflöcke.map((pflock) => ({
+              art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+              pfloecke: platzierung.pfloecke.pfloecke.map((pflock) => ({
                 ...pflock,
               })),
             }
-          : { art: "InheritFromParkour" },
-      abstände: platzierung.abstände.map((abstand) => ({ ...abstand })),
+          : {
+              art: ZielPfloecke_InheritFromParkourPfloeckeArt.InheritFromParkour,
+            },
+      abstaende: platzierung.abstaende.map((abstand) => ({ ...abstand })),
     })),
   }));
   // The draft as it was last read from or written to the server, so the page can say
@@ -193,28 +198,28 @@ function ParkourInhalt({
   );
 
   /** One Pflock cannot be removed: the domain refuses a setup without any (`KeinePflöcke`). */
-  const letzterPflock = setup.pflöcke.length <= 1;
+  const letzterPflock = setup.pfloecke.length <= 1;
   /** No vocabulary colour is left for a new shared row, so the user must pick a custom one. */
-  const keineFreieFarbe = freiePflockFarbe(setup.pflöcke) === null;
+  const keineFreieFarbe = freiePflockFarbe(setup.pfloecke) === null;
 
   function effektivePflöcke(platzierung: Zielplatzierung): ParkourPflock[] {
-    return platzierung.pflöcke.art === "Explicit"
-      ? platzierung.pflöcke.pflöcke
-      : setup.pflöcke;
+    return platzierung.pfloecke.art === "Explicit"
+      ? platzierung.pfloecke.pfloecke
+      : setup.pfloecke;
   }
 
-  function abständeBereinigen(
-    abstände: Zielplatzierung["abstände"],
-    pflöcke: readonly ParkourPflock[],
+  function abstaendeBereinigen(
+    abstaende: Zielplatzierung["abstaende"],
+    pfloecke: readonly ParkourPflock[],
   ) {
-    const ids = new Set(pflöcke.map((pflock) => pflock.id));
-    return abstände.filter((abstand) => ids.has(abstand.pflockId));
+    const ids = new Set(pfloecke.map((pflock) => pflock.id));
+    return abstaende.filter((abstand) => ids.has(abstand.pflockId));
   }
 
   function pflockFarbeAendern(id: string, farbe: string) {
     setSetup((bisher) => ({
       ...bisher,
-      pflöcke: bisher.pflöcke.map((pflock) =>
+      pfloecke: bisher.pfloecke.map((pflock) =>
         pflock.id === id ? { ...pflock, farbe } : pflock,
       ),
     }));
@@ -224,7 +229,7 @@ function ParkourInhalt({
   function pflockVerschieben(von: number, nach: number) {
     setSetup((bisher) => ({
       ...bisher,
-      pflöcke: arrayMove(bisher.pflöcke, von, nach),
+      pfloecke: arrayMove(bisher.pfloecke, von, nach),
     }));
   }
 
@@ -239,11 +244,11 @@ function ParkourInhalt({
    * and the dirty note beside "Aufstellung speichern" says the draft is not stored yet.
    */
   function pflockHinzufuegen() {
-    if (freiePflockFarbe(setup.pflöcke) === null) return;
+    if (freiePflockFarbe(setup.pfloecke) === null) return;
     setSetup((bisher) => {
-      const neu = neuerPflock(bisher.pflöcke);
+      const neu = neuerPflock(bisher.pfloecke);
       // The new row has no distances yet, so no placement needs an entry for it.
-      return { ...bisher, pflöcke: [...bisher.pflöcke, neu] };
+      return { ...bisher, pfloecke: [...bisher.pfloecke, neu] };
     });
     // The row exists in the draft only; the "Nicht gespeichert" note below says so.
     pflockMeldung.melden("Pflock hinzugefügt.");
@@ -260,25 +265,32 @@ function ParkourInhalt({
    * action is disabled at one and the list says why.
    */
   function pflockEntfernen(id: string) {
-    if (setup.pflöcke.length <= 1) return;
+    if (setup.pfloecke.length <= 1) return;
     setSetup((bisher) => {
-      if (bisher.pflöcke.length <= 1) return bisher;
+      if (bisher.pfloecke.length <= 1) return bisher;
       return {
         ...bisher,
-        pflöcke: bisher.pflöcke.filter((pflock) => pflock.id !== id),
+        pfloecke: bisher.pfloecke.filter((pflock) => pflock.id !== id),
         platzierungen: bisher.platzierungen.map((platzierung) => {
           const eigene =
-            platzierung.pflöcke.art === "Explicit"
-              ? platzierung.pflöcke.pflöcke.filter((pflock) => pflock.id !== id)
+            platzierung.pfloecke.art === "Explicit"
+              ? platzierung.pfloecke.pfloecke.filter(
+                  (pflock) => pflock.id !== id,
+                )
               : null;
-          const pflöcke = eigene
-            ? ({ art: "Explicit", pflöcke: eigene } satisfies ZielPflöcke)
-            : platzierung.pflöcke;
-          const nächstePlatzierung = { ...platzierung, pflöcke };
+          const pfloecke = eigene
+            ? ({
+                art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+                pfloecke: eigene,
+              } satisfies ZielPfloeckeExplicit)
+            : platzierung.pfloecke;
+          const nächstePlatzierung = { ...platzierung, pfloecke };
           return {
             ...nächstePlatzierung,
-            abstände: abständeBereinigen(
-              platzierung.abstände.filter((abstand) => abstand.pflockId !== id),
+            abstaende: abstaendeBereinigen(
+              platzierung.abstaende.filter(
+                (abstand) => abstand.pflockId !== id,
+              ),
               effektivePflöcke(nächstePlatzierung),
             ),
           };
@@ -303,8 +315,8 @@ function ParkourInhalt({
         platzierung.zielId === zielId
           ? {
               ...platzierung,
-              abstände: effektivePflöcke(platzierung).map((pflock) => {
-                const bisheriger = platzierung.abstände.find(
+              abstaende: effektivePflöcke(platzierung).map((pflock) => {
+                const bisheriger = platzierung.abstaende.find(
                   (abstand) => abstand.pflockId === pflock.id,
                 );
                 return {
@@ -318,20 +330,20 @@ function ParkourInhalt({
     }));
   }
 
-  function zielPflöckeAendern(zielId: string, pflöcke: ZielPflöcke) {
+  function zielPflöckeAendern(zielId: string, pfloecke: ZielPfloecke) {
     setSetup((bisher) => ({
       ...bisher,
       platzierungen: bisher.platzierungen.map((platzierung) => {
         if (platzierung.zielId !== zielId) return platzierung;
         const bisherigePflöcke =
-          platzierung.pflöcke.art === "Explicit"
-            ? platzierung.pflöcke.pflöcke
-            : bisher.pflöcke;
+          platzierung.pfloecke.art === "Explicit"
+            ? platzierung.pfloecke.pfloecke
+            : bisher.pfloecke;
         const nächstePflöcke =
-          pflöcke.art === "Explicit" ? pflöcke.pflöcke : bisher.pflöcke;
-        const abstände = nächstePflöcke.flatMap((pflock) => {
+          pfloecke.art === "Explicit" ? pfloecke.pfloecke : bisher.pfloecke;
+        const abstaende = nächstePflöcke.flatMap((pflock) => {
           const bisheriger =
-            platzierung.abstände.find(
+            platzierung.abstaende.find(
               (abstand) => abstand.pflockId === pflock.id,
             ) ??
             (() => {
@@ -339,7 +351,7 @@ function ParkourInhalt({
                 (eintrag) => eintrag.farbe === pflock.farbe,
               );
               return farbe
-                ? platzierung.abstände.find(
+                ? platzierung.abstaende.find(
                     (abstand) => abstand.pflockId === farbe.id,
                   )
                 : undefined;
@@ -348,7 +360,7 @@ function ParkourInhalt({
             ? [{ pflockId: pflock.id, meter: bisheriger.meter }]
             : [];
         });
-        return { ...platzierung, pflöcke, abstände };
+        return { ...platzierung, pfloecke, abstaende };
       }),
     }));
   }
@@ -359,13 +371,19 @@ function ParkourInhalt({
       platzierungen: bisher.platzierungen.map((platzierung) => {
         if (
           platzierung.zielId !== zielId ||
-          platzierung.pflöcke.art !== "Explicit"
+          platzierung.pfloecke.art !== "Explicit"
         )
           return platzierung;
-        const pflöcke = platzierung.pflöcke.pflöcke.map((pflock) =>
+        const pfloecke = platzierung.pfloecke.pfloecke.map((pflock) =>
           pflock.id === id ? { ...pflock, farbe } : pflock,
         );
-        return { ...platzierung, pflöcke: { art: "Explicit", pflöcke } };
+        return {
+          ...platzierung,
+          pfloecke: {
+            art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+            pfloecke,
+          },
+        };
       }),
     }));
   }
@@ -376,16 +394,16 @@ function ParkourInhalt({
       platzierungen: bisher.platzierungen.map((platzierung) => {
         if (
           platzierung.zielId !== zielId ||
-          platzierung.pflöcke.art !== "Explicit"
+          platzierung.pfloecke.art !== "Explicit"
         )
           return platzierung;
-        const pflöcke = platzierung.pflöcke.pflöcke;
-        if (freiePflockFarbe(pflöcke) === null) return platzierung;
+        const pfloecke = platzierung.pfloecke.pfloecke;
+        if (freiePflockFarbe(pfloecke) === null) return platzierung;
         return {
           ...platzierung,
-          pflöcke: {
-            art: "Explicit",
-            pflöcke: [...pflöcke, neuerPflock(pflöcke)],
+          pfloecke: {
+            art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+            pfloecke: [...pfloecke, neuerPflock(pfloecke)],
           },
         };
       }),
@@ -398,17 +416,20 @@ function ParkourInhalt({
       platzierungen: bisher.platzierungen.map((platzierung) => {
         if (
           platzierung.zielId !== zielId ||
-          platzierung.pflöcke.art !== "Explicit"
+          platzierung.pfloecke.art !== "Explicit"
         )
           return platzierung;
-        const pflöcke = platzierung.pflöcke.pflöcke.filter(
+        const pfloecke = platzierung.pfloecke.pfloecke.filter(
           (pflock) => pflock.id !== pflockId,
         );
-        if (pflöcke.length === 0) return platzierung;
+        if (pfloecke.length === 0) return platzierung;
         return {
           ...platzierung,
-          pflöcke: { art: "Explicit", pflöcke },
-          abstände: abständeBereinigen(platzierung.abstände, pflöcke),
+          pfloecke: {
+            art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+            pfloecke,
+          },
+          abstaende: abstaendeBereinigen(platzierung.abstaende, pfloecke),
         };
       }),
     }));
@@ -418,12 +439,12 @@ function ParkourInhalt({
     setSetup((bisher) => ({
       ...bisher,
       platzierungen: bisher.platzierungen.map((platzierung) =>
-        platzierung.zielId === zielId && platzierung.pflöcke.art === "Explicit"
+        platzierung.zielId === zielId && platzierung.pfloecke.art === "Explicit"
           ? {
               ...platzierung,
-              pflöcke: {
-                art: "Explicit",
-                pflöcke: arrayMove(platzierung.pflöcke.pflöcke, von, nach),
+              pfloecke: {
+                art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+                pfloecke: arrayMove(platzierung.pfloecke.pfloecke, von, nach),
               },
             }
           : platzierung,
@@ -524,9 +545,9 @@ function ParkourInhalt({
       <section aria-label="Pflöcke" className="space-y-2">
         <div className="flex items-baseline gap-3">
           <h2 className="text-sm font-semibold text-ink">Pflöcke</h2>
-          <SheetNumber>{setup.pflöcke.length}</SheetNumber>
+          <SheetNumber>{setup.pfloecke.length}</SheetNumber>
         </div>
-        {setup.pflöcke.length === 0 ? (
+        {setup.pfloecke.length === 0 ? (
           <p className="text-sm text-secondary">Noch kein Pflock erfasst.</p>
         ) : (
           <DndContext
@@ -536,10 +557,10 @@ function ParkourInhalt({
               if (!over || active.id === over.id) {
                 return;
               }
-              const von = setup.pflöcke.findIndex(
+              const von = setup.pfloecke.findIndex(
                 (pflock) => pflock.id === active.id,
               );
-              const nach = setup.pflöcke.findIndex(
+              const nach = setup.pfloecke.findIndex(
                 (pflock) => pflock.id === over.id,
               );
               if (von >= 0 && nach >= 0) {
@@ -548,10 +569,10 @@ function ParkourInhalt({
             }}
           >
             <SortableContext
-              items={setup.pflöcke.map((pflock) => pflock.id)}
+              items={setup.pfloecke.map((pflock) => pflock.id)}
               strategy={verticalListSortingStrategy}
             >
-              {setup.pflöcke.map((pflock, index) => (
+              {setup.pfloecke.map((pflock, index) => (
                 <SortablePflock
                   key={pflock.id}
                   pflock={pflock}
@@ -642,9 +663,9 @@ function ParkourInhalt({
                     index={index}
                     tiername={ziel?.tiername ?? "Ziel"}
                     gesperrt={gesperrt}
-                    pflöcke={setup.pflöcke}
+                    pfloecke={setup.pfloecke}
                     onAbstandAendern={abstandAendern}
-                    onZielPflöckeAendern={zielPflöckeAendern}
+                    onZielPfloeckeAendern={zielPflöckeAendern}
                     onZielPflockFarbeAendern={zielPflockFarbeAendern}
                     onZielPflockHinzufuegen={zielPflockHinzufuegen}
                     onZielPflockEntfernen={zielPflockEntfernen}
@@ -790,9 +811,9 @@ function SortablePlatzierung({
   index,
   tiername,
   gesperrt,
-  pflöcke,
+  pfloecke,
   onAbstandAendern,
-  onZielPflöckeAendern,
+  onZielPfloeckeAendern,
   onZielPflockFarbeAendern,
   onZielPflockHinzufuegen,
   onZielPflockEntfernen,
@@ -802,13 +823,13 @@ function SortablePlatzierung({
   index: number;
   tiername: string;
   gesperrt: boolean;
-  pflöcke: ParkourPflock[];
+  pfloecke: ParkourPflock[];
   onAbstandAendern: (
     zielId: string,
     pflockId: string,
     meter: number | undefined,
   ) => void;
-  onZielPflöckeAendern: (zielId: string, pflöcke: ZielPflöcke) => void;
+  onZielPfloeckeAendern: (zielId: string, pfloecke: ZielPfloecke) => void;
   onZielPflockFarbeAendern: (zielId: string, id: string, farbe: string) => void;
   onZielPflockHinzufuegen: (zielId: string) => void;
   onZielPflockEntfernen: (zielId: string, pflockId: string) => void;
@@ -830,11 +851,11 @@ function SortablePlatzierung({
   );
 
   const effektive =
-    platzierung.pflöcke.art === "Explicit"
-      ? platzierung.pflöcke.pflöcke
-      : pflöcke;
+    platzierung.pfloecke.art === "Explicit"
+      ? platzierung.pfloecke.pfloecke
+      : pfloecke;
   const abstandById = new Map(
-    platzierung.abstände.map((abstand) => [abstand.pflockId, abstand.meter]),
+    platzierung.abstaende.map((abstand) => [abstand.pflockId, abstand.meter]),
   );
 
   return (
@@ -876,16 +897,16 @@ function SortablePlatzierung({
             type="button"
             variant="secondary"
             className={
-              platzierung.pflöcke.art === "InheritFromParkour"
+              platzierung.pfloecke.art === "InheritFromParkour"
                 ? "border-primary bg-primary-subtle"
                 : undefined
             }
             size="sm"
-            aria-pressed={platzierung.pflöcke.art === "InheritFromParkour"}
+            aria-pressed={platzierung.pfloecke.art === "InheritFromParkour"}
             disabled={gesperrt}
             onClick={() =>
-              onZielPflöckeAendern(platzierung.zielId, {
-                art: "InheritFromParkour",
+              onZielPfloeckeAendern(platzierung.zielId, {
+                art: ZielPfloecke_InheritFromParkourPfloeckeArt.InheritFromParkour,
               })
             }
           >
@@ -894,16 +915,16 @@ function SortablePlatzierung({
           <Button
             type="button"
             variant={
-              platzierung.pflöcke.art === "Explicit" ? "primary" : "secondary"
+              platzierung.pfloecke.art === "Explicit" ? "primary" : "secondary"
             }
             size="sm"
-            aria-pressed={platzierung.pflöcke.art === "Explicit"}
+            aria-pressed={platzierung.pfloecke.art === "Explicit"}
             disabled={gesperrt}
             onClick={() => {
-              if (platzierung.pflöcke.art === "Explicit") return;
-              onZielPflöckeAendern(platzierung.zielId, {
-                art: "Explicit",
-                pflöcke: effektive.map((pflock) => ({
+              if (platzierung.pfloecke.art === "Explicit") return;
+              onZielPfloeckeAendern(platzierung.zielId, {
+                art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+                pfloecke: effektive.map((pflock) => ({
                   ...pflock,
                   id: crypto.randomUUID(),
                 })),
@@ -913,7 +934,7 @@ function SortablePlatzierung({
             Eigene Pflöcke
           </Button>
         </div>
-        {platzierung.pflöcke.art === "Explicit" ? (
+        {platzierung.pfloecke.art === "Explicit" ? (
           <DndContext
             sensors={zielPflockSensors}
             collisionDetection={closestCenter}
@@ -951,7 +972,7 @@ function SortablePlatzierung({
             </SortableContext>
           </DndContext>
         ) : null}
-        {platzierung.pflöcke.art === "Explicit" ? (
+        {platzierung.pfloecke.art === "Explicit" ? (
           <Button
             type="button"
             variant="secondary"

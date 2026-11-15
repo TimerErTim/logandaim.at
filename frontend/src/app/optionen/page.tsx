@@ -39,7 +39,7 @@ export default function OptionsPage() {
 
   function deleteAccount() {
     auth.deleteAccount.mutate(
-      { passwort: password, bestätigt: true },
+      { passwort: password, bestaetigt: true },
       {
         onSuccess: () => {
           setDialogOpen(false);

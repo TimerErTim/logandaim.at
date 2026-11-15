@@ -29,7 +29,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
   const [zielIndex, setZielIndex] = useState(0);
   const ziel = runde.ziele[zielIndex];
   const schussAnzahl = runde.ziele.reduce(
-    (gesamt, eintrag) => gesamt + eintrag.schüsse.length,
+    (gesamt, eintrag) => gesamt + eintrag.schuesse.length,
     0,
   );
   const [positionen, setPositionen] = useState<
@@ -51,7 +51,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
   ) => {
     const position =
       positionen[selected.zielId] ??
-      anfangsPosition(selected, selected.schüsse);
+      anfangsPosition(selected, selected.schuesse);
     meldung.verwerfen();
     setFehler(null);
     schussRegistrieren.mutate(
@@ -98,7 +98,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
             ziel={selected}
             value={
               positionen[selected.zielId] ??
-              anfangsPosition(selected, selected.schüsse)
+              anfangsPosition(selected, selected.schuesse)
             }
             onChange={(next) =>
               setPositionen((current) => ({
@@ -180,7 +180,7 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
           <div className="flex items-center justify-self-end gap-1 text-sm tabular-nums text-secondary">
             <span>
               {
-                runde.ziele.filter((eintrag) => eintrag.schüsse.length > 0)
+                runde.ziele.filter((eintrag) => eintrag.schuesse.length > 0)
                   .length
               }{" "}
               / {runde.ziele.length} Ziele
@@ -195,13 +195,13 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
         <Progress
           value={
             runde.ziele.length
-              ? (runde.ziele.filter((eintrag) => eintrag.schüsse.length > 0)
+              ? (runde.ziele.filter((eintrag) => eintrag.schuesse.length > 0)
                   .length /
                   runde.ziele.length) *
                 100
               : 0
           }
-          aria-label={`Zielfortschritt: ${runde.ziele.filter((eintrag) => eintrag.schüsse.length > 0).length} von ${runde.ziele.length}`}
+          aria-label={`Zielfortschritt: ${runde.ziele.filter((eintrag) => eintrag.schuesse.length > 0).length} von ${runde.ziele.length}`}
         />
       </div>
       {fehler ? <Alert variant="error">{fehler}</Alert> : null}
