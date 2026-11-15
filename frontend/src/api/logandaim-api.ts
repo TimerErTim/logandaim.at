@@ -91,6 +91,11 @@ export interface LogandaimApi {
     zielId: string,
     name: string,
   ): Promise<Runde>;
+  zielNotizSpeichern(
+    rundeId: string,
+    zielId: string,
+    notiz: string,
+  ): Promise<Runde>;
   freiesZielEntfernen(rundeId: string, zielId: string): Promise<Runde>;
   rundeLoeschen(id: string): Promise<void>;
   rundeAnzeigen(id: string): Promise<Runde>;

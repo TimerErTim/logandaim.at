@@ -11,7 +11,7 @@ use logandaim_core::{
     domain::{
         Abstand, AnlageAdresse, AnlageId, AnlageKontakt, AnlageZielId, EmailAdresse, Erfasser,
         Farbe, Ländercode, NonEmptyString, ParkourId, ParkourPflock, ParkourPflockId, RundeId,
-        Schussposition, Wertungszone, ZielId, Zielplatzierung,
+        Schussposition, Wertungszone, ZielId, Zielnotiz, Zielplatzierung,
         konto::KlartextPasswort,
         konto::{BenutzerId, SecretToken},
     },
@@ -21,9 +21,10 @@ use logandaim_core::{
         RegistrierungAbschließen, RegistrierungStarten, RundeAbschliessen, RundeAbschliessenFehler,
         RundeLöschen, RundeStarten, RundeStartenFehler, RundeZielEntfernen,
         RundeZielEntfernenFehler, RundeZielHinzufügen, RundeZielHinzufügenFehler,
-        RundeZielUmbenennen, RundeZielUmbenennenFehler, SchussLöschen, SchussLöschenFehler,
-        SchussRegistrieren, SchussRegistrierenFehler, SchussÄndern, SchussÄndernFehler,
-        SessionAusgestellt, SystemadministratorBefördern, ZielHinzufügen,
+        RundeZielNotizSetzen, RundeZielNotizSetzenFehler, RundeZielUmbenennen,
+        RundeZielUmbenennenFehler, SchussLöschen, SchussLöschenFehler, SchussRegistrieren,
+        SchussRegistrierenFehler, SchussÄndern, SchussÄndernFehler, SessionAusgestellt,
+        SystemadministratorBefördern, ZielHinzufügen,
     },
 };
 
@@ -1304,6 +1305,166 @@ async fn ac22_freie_ziele_werden_jit_hinzugefuegt_und_entfernt() {
     assert!(matches!(
         fehler.current_context(),
         RundeZielEntfernenFehler::ZielNichtGefunden
+    ));
+}
+
+#[test_log::test(pollster::test)]
+async fn ac29_zielnotiz_wird_gesetzt_ersetzt_geloescht_und_persistiert() {
+    let harness = harness().await;
+    let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
+    let mut runde = freie_runde(&harness, anna, "Wiese").await;
+    runde = harness
+        .app()
+        .execute(
+            anna,
+            RundeZielHinzufügen {
+                runde_id: runde.id(),
+                name: None,
+            },
+        )
+        .await
+        .unwrap();
+    let ziel_id = runde.aufbau().ziele()[0].id();
+
+    for wert in ["  Spur am Waldrand  ", "Fährte beim Bach"] {
+        runde = harness
+            .app()
+            .execute(
+                anna,
+                RundeZielNotizSetzen {
+                    runde_id: runde.id(),
+                    ziel_id,
+                    notiz: Some(Zielnotiz::neu(wert).unwrap()),
+                },
+            )
+            .await
+            .expect("note is saved");
+    }
+    assert_eq!(
+        runde
+            .aufbau()
+            .ziel(ziel_id)
+            .unwrap()
+            .notiz()
+            .unwrap()
+            .as_str(),
+        "Fährte beim Bach"
+    );
+
+    let (loaded, _) = super::helpers::runde_laden(&harness, runde.id()).await;
+    assert_eq!(
+        loaded
+            .aufbau()
+            .ziel(ziel_id)
+            .unwrap()
+            .notiz()
+            .unwrap()
+            .as_str(),
+        "Fährte beim Bach"
+    );
+
+    let cleared = harness
+        .app()
+        .execute(
+            anna,
+            RundeZielNotizSetzen {
+                runde_id: runde.id(),
+                ziel_id,
+                notiz: None,
+            },
+        )
+        .await
+        .expect("blank note clears");
+    assert!(cleared.aufbau().ziel(ziel_id).unwrap().notiz().is_none());
+}
+
+#[test_log::test(pollster::test)]
+async fn ac30_zielnotiz_ist_eigentuemergebunden_und_beim_abschluss_eingefroren() {
+    let harness = harness().await;
+    let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
+    let bea = benutzer_mit_ip(&harness, "bea@muster.at", 3).await;
+    let runde = freie_runde(&harness, anna, "Wiese").await;
+    let mit_ziel = harness
+        .app()
+        .execute(
+            anna,
+            RundeZielHinzufügen {
+                runde_id: runde.id(),
+                name: None,
+            },
+        )
+        .await
+        .unwrap();
+    let ziel_id = mit_ziel.aufbau().ziele()[0].id();
+    let fremd = harness
+        .app()
+        .execute(
+            bea,
+            RundeZielNotizSetzen {
+                runde_id: runde.id(),
+                ziel_id,
+                notiz: Some(Zielnotiz::neu("Fremd").unwrap()),
+            },
+        )
+        .await
+        .expect_err("foreign owner is refused");
+    assert!(matches!(
+        fremd.current_context(),
+        RundeZielNotizSetzenFehler::NichtErlaubt
+    ));
+    let fehlend = harness
+        .app()
+        .execute(
+            anna,
+            RundeZielNotizSetzen {
+                runde_id: runde.id(),
+                ziel_id: ZielId(uuid::Uuid::new_v4()),
+                notiz: None,
+            },
+        )
+        .await
+        .expect_err("unknown target is refused");
+    assert!(matches!(
+        fehlend.current_context(),
+        RundeZielNotizSetzenFehler::ZielNichtGefunden
+    ));
+    harness
+        .app()
+        .execute(
+            anna,
+            RundeZielNotizSetzen {
+                runde_id: runde.id(),
+                ziel_id,
+                notiz: Some(Zielnotiz::neu("Bleibt stehen").unwrap()),
+            },
+        )
+        .await
+        .unwrap();
+    harness
+        .app()
+        .execute(
+            anna,
+            RundeAbschliessen {
+                runde_id: runde.id(),
+            },
+        )
+        .await
+        .unwrap();
+    let geschlossen = harness
+        .app()
+        .execute(
+            anna,
+            RundeZielNotizSetzen {
+                runde_id: runde.id(),
+                ziel_id,
+                notiz: None,
+            },
+        )
+        .await
+        .expect_err("completed round is frozen");
+    assert!(matches!(
+        geschlossen.current_context(),
+        RundeZielNotizSetzenFehler::RundeNichtInBearbeitung
     ));
 }
 

@@ -15,6 +15,7 @@ use crate::{
     application::ExecutionContext,
     domain::{
         Erfasser, NeueRunde, NonEmptyString, ParkourId, Runde, RundeId, Rundenaufbau, ZielId,
+        Zielnotiz,
     },
     ports::RepositoryError,
     service::UseCase,
@@ -392,6 +393,98 @@ impl UseCase<Runde> for RundeZielEntfernen {
             .finish(ergebnis, RundeZielEntfernenFehler::RundeLaden)
             .await?;
         info!(id = ?runde.id(), ziel_id = ?self.ziel_id, "freies ziel entfernt");
+        Ok(runde)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RundeZielNotizSetzenFehler {
+    #[error("die Anfrage ist ungültig")]
+    UngültigeAnfrage,
+    #[error("für diese Aktion ist eine Anmeldung erforderlich")]
+    NichtAngemeldet,
+    #[error("diese Runde gehört nicht zu diesem Benutzer")]
+    NichtErlaubt,
+    #[error("die Runde wurde nicht gefunden")]
+    NichtGefunden,
+    #[error("das Ziel wurde in dieser Runde nicht gefunden")]
+    ZielNichtGefunden,
+    #[error("die Runde ist nicht mehr in Bearbeitung")]
+    RundeNichtInBearbeitung,
+    #[error("die Runde konnte nicht geladen werden")]
+    RundeLaden,
+    #[error("die Runde konnte nicht gespeichert werden")]
+    Speichern,
+}
+
+#[derive(Debug, Clone)]
+pub struct RundeZielNotizSetzen {
+    pub runde_id: RundeId,
+    pub ziel_id: ZielId,
+    pub notiz: Option<Zielnotiz>,
+}
+
+#[async_trait]
+impl UseCase<Runde> for RundeZielNotizSetzen {
+    type Error = Report<RundeZielNotizSetzenFehler>;
+
+    #[instrument(skip_all, fields(runde_id = ?self.runde_id, ziel_id = ?self.ziel_id), err(Debug))]
+    async fn perform(self, ctx: ExecutionContext<'_>) -> Result<Runde, Self::Error> {
+        let benutzer_id = ctx
+            .auth()
+            .require_benutzer_id()
+            .change_context(RundeZielNotizSetzenFehler::NichtAngemeldet)?;
+        let uow = ctx
+            .enter()
+            .await
+            .change_context(RundeZielNotizSetzenFehler::RundeLaden)?;
+
+        let ergebnis = async {
+            let mut runde = match uow.runden().find_by_id(self.runde_id).await {
+                Ok(runde) => runde,
+                Err(fehler) => Err(match fehler.current_context() {
+                    RepositoryError::NotFound => {
+                        Report::new(RundeZielNotizSetzenFehler::NichtGefunden)
+                    }
+                    _ => fehler.change_context(RundeZielNotizSetzenFehler::RundeLaden),
+                })?,
+            };
+            if !runde.gehört_zu(benutzer_id) {
+                return Err(Report::new(RundeZielNotizSetzenFehler::NichtErlaubt));
+            }
+            match runde.cloned_data() {
+                Runde::MitParkour(mut offen) => {
+                    offen
+                        .ziel_notiz_setzen(self.ziel_id, self.notiz)
+                        .map_err(|_| Report::new(RundeZielNotizSetzenFehler::ZielNichtGefunden))?;
+                    runde.set_data(offen.into());
+                }
+                Runde::FreieRunde(mut offen) => {
+                    offen
+                        .ziel_notiz_setzen(self.ziel_id, self.notiz)
+                        .map_err(|_| Report::new(RundeZielNotizSetzenFehler::ZielNichtGefunden))?;
+                    runde.set_data(offen.into());
+                }
+                Runde::AbgeschlosseneRunde(_) => {
+                    return Err(Report::new(
+                        RundeZielNotizSetzenFehler::RundeNichtInBearbeitung,
+                    ));
+                }
+            }
+
+            uow.runden()
+                .update(&mut runde)
+                .await
+                .map_err(IntoReport::into_report)
+                .change_context(RundeZielNotizSetzenFehler::Speichern)?;
+            Ok(runde.into_data())
+        }
+        .await;
+
+        let runde = uow
+            .finish(ergebnis, RundeZielNotizSetzenFehler::RundeLaden)
+            .await?;
+        info!(id = ?runde.id(), ziel_id = ?self.ziel_id, "zielnotiz gespeichert");
         Ok(runde)
     }
 }

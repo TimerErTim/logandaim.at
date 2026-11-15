@@ -32,4 +32,5 @@ fn main() {
     runde.ziel_hinzufügen(None);
     runde.ziel_entfernen(ZielId(Uuid::nil()));
     runde.ziel_umbenennen(ZielId(Uuid::nil()), NonEmptyString::neu("Neu").unwrap());
+    runde.ziel_notiz_setzen(ZielId(Uuid::nil()), None);
 }

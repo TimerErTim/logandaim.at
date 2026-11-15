@@ -69,6 +69,9 @@ pub struct Ziel {
     pub zielnummer: u32,
     /// The Pflöcke that apply to this Ziel as captured, near to far.
     pub pfloecke: Vec<Pflock>,
+    /// Optional note attached to this Ziel.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notiz: Option<String>,
     /// The Wertung of this Ziel; absent while no Schuss has been logged at it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wertung: Option<Zielwertung>,
@@ -176,6 +179,7 @@ impl Runde {
                         abstand: pflock.abstand().map(|abstand| abstand.meter()),
                     })
                     .collect(),
+                notiz: ziel.notiz().map(ToString::to_string),
                 wertung: wertung.map(Into::into),
                 schuesse: schüsse
                     .iter()
@@ -236,6 +240,7 @@ impl From<domain::Runde> for Runde {
                             abstand: pflock.abstand().map(|abstand| abstand.meter()),
                         })
                         .collect(),
+                    notiz: ziel.notiz().map(ToString::to_string),
                     wertung: None,
                     schuesse: Vec::new(),
                 })

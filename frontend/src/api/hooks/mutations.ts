@@ -145,6 +145,12 @@ export function useStammdatenMutations() {
       ...SITE_HANDLED,
       onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
     }),
+    zielNotizSpeichern: useMutation({
+      mutationFn: (vars: { rundeId: string; zielId: string; notiz: string }) =>
+        api.zielNotizSpeichern(vars.rundeId, vars.zielId, vars.notiz),
+      ...SITE_HANDLED,
+      onSuccess: (runde) => invalidateRunde(queryClient, runde.id),
+    }),
     freiesZielEntfernen: useMutation({
       mutationFn: (vars: { rundeId: string; zielId: string }) =>
         api.freiesZielEntfernen(vars.rundeId, vars.zielId),

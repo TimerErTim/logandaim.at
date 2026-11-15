@@ -49,7 +49,7 @@ use crate::{
             PasswortVergessenRequest, PasswortWiederherstellenRequest,
             RegistrierungAbschlussRequest, RegistrierungStartRequest,
             RundeMitParkourStartenRequest, SchussAenderungRequest, SchussErstellungRequest,
-            ZielHinzufuegenRequest, ZielRequest, ZielUmbenennenRequest,
+            ZielHinzufuegenRequest, ZielNotizSetzenRequest, ZielRequest, ZielUmbenennenRequest,
         },
     },
     schema::{
@@ -678,11 +678,36 @@ impl LogandaimApiSpec {
             .into()
     }
 
+    /// Set or clear a target note (up to 1000 characters) in a running Runde.
+    ///
+    /// An empty or whitespace-only note clears it. Completed rounds are immutable.
+    #[oai(
+        path = "/runden/:runde_id/ziele/:ziel_id/notiz",
+        method = "put",
+        tag = "ApiTag::Runden"
+    )]
+    async fn runde_ziel_notiz_setzen(
+        &self,
+        #[oai(name = "Authorization")] authorization: RequiredBearerAuthorization,
+        runde_id: Path<Uuid>,
+        ziel_id: Path<Uuid>,
+        body: Json<ZielNotizSetzenRequest>,
+    ) -> TypicalJsonResponse<Runde> {
+        let auth = self
+            .auth_context(authorization.0.as_deref())
+            .await
+            .unwrap_or(AuthContext::Anonymous);
+        self.app_api
+            .runde_ziel_notiz_setzen(auth, RundeId(runde_id.0), ZielId(ziel_id.0), body.0)
+            .await
+            .into()
+    }
+
     /// Rename one `Freies Ziel` in a running free Runde.
     ///
     /// A name containing only whitespace is invalid. Only an open free round can be changed.
     #[oai(
-        path = "/runden/:runde_id/ziele/:ziel_id",
+        path = "/runden/:runde_id/ziele/:ziel_id/name",
         method = "put",
         tag = "ApiTag::Runden"
     )]

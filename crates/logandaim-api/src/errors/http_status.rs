@@ -8,9 +8,9 @@ use logandaim_core::service::{
     AbmeldungFehler, AnmeldungFehler, BenutzerLöschenFehler, ErneuerungFehler,
     PasswortVergessenFehler, PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler,
     RegistrierungStartenFehler, RundeAbschliessenFehler, RundeLöschenFehler, RundeStartenFehler,
-    RundeZielEntfernenFehler, RundeZielHinzufügenFehler, RundeZielUmbenennenFehler,
-    SchussLöschenFehler, SchussRegistrierenFehler, SchussÄndernFehler, SessionPrüfenFehler,
-    StammdatenFehler, SystemadministratorBefördernFehler,
+    RundeZielEntfernenFehler, RundeZielHinzufügenFehler, RundeZielNotizSetzenFehler,
+    RundeZielUmbenennenFehler, SchussLöschenFehler, SchussRegistrierenFehler, SchussÄndernFehler,
+    SessionPrüfenFehler, StammdatenFehler, SystemadministratorBefördernFehler,
 };
 
 use crate::api::errors::{RundeAnzeigenFehler, RundenAnzeigenFehler};
@@ -192,6 +192,17 @@ http_status!(RundeZielHinzufügenFehler {
     NichtErlaubt => StatusCode::FORBIDDEN,
     NichtGefunden => StatusCode::NOT_FOUND,
     RundeIstKeineFreieRunde => StatusCode::CONFLICT,
+    RundeNichtInBearbeitung => StatusCode::CONFLICT,
+    RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
+    Speichern => StatusCode::INTERNAL_SERVER_ERROR,
+});
+
+http_status!(RundeZielNotizSetzenFehler {
+    UngültigeAnfrage => StatusCode::BAD_REQUEST,
+    NichtAngemeldet => StatusCode::UNAUTHORIZED,
+    NichtErlaubt => StatusCode::FORBIDDEN,
+    NichtGefunden => StatusCode::NOT_FOUND,
+    ZielNichtGefunden => StatusCode::NOT_FOUND,
     RundeNichtInBearbeitung => StatusCode::CONFLICT,
     RundeLaden => StatusCode::INTERNAL_SERVER_ERROR,
     Speichern => StatusCode::INTERNAL_SERVER_ERROR,

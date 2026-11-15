@@ -952,7 +952,7 @@ async fn ac22_ac23_ac24_ac25_ac26_freie_runde_erfasst_positionen_wertungen_und_z
     let (status, renamed) = harness
         .client
         .put_json_auth(
-            &format!("/api/runden/{runde_id}/ziele/{erstes}"),
+            &format!("/api/runden/{runde_id}/ziele/{erstes}/name"),
             json!({"name":"Alter Apfelbaum"}),
             &anna,
         )
@@ -1063,6 +1063,109 @@ async fn ac22_ac23_ac24_ac25_ac26_freie_runde_erfasst_positionen_wertungen_und_z
 }
 
 #[test_log::test(pollster::test)]
+async fn ac29_zielnotiz_wird_gesetzt_gelesen_ersetzt_und_geloescht() {
+    let harness = E2eHarness::new().await;
+    let (anna, _) = neuer_benutzer(&harness, "anna@muster.at").await;
+    let (status, runde) = harness
+        .client
+        .post_json_auth("/api/runden/frei", json!({"name":"Wiese"}), &anna)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let runde_id = runde["id"].as_str().unwrap();
+    let (status, runde) = harness
+        .client
+        .post_json_auth(&format!("/api/runden/{runde_id}/ziele"), json!({}), &anna)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let ziel_id = runde["ziele"][0]["zielId"].as_str().unwrap();
+    let endpoint = format!("/api/runden/{runde_id}/ziele/{ziel_id}/notiz");
+
+    let (status, gesetzt) = harness
+        .client
+        .put_json_auth(&endpoint, json!({"notiz":"  Spur 🦌  "}), &anna)
+        .await;
+    assert_eq!(status, StatusCode::OK, "AC-29: Notiz accepted: {gesetzt}");
+    assert_eq!(gesetzt["ziele"][0]["notiz"], "Spur 🦌");
+    let (status, geladen) = harness
+        .client
+        .get_json_auth(&format!("/api/runden/{runde_id}"), &anna)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(geladen["ziele"][0]["notiz"], "Spur 🦌");
+
+    let (status, _) = harness
+        .client
+        .put_json_auth(&endpoint, json!({"notiz":"x".repeat(1001)}), &anna)
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "AC-29: 1001 chars rejected"
+    );
+    let (status, cleared) = harness
+        .client
+        .put_json_auth(&endpoint, json!({"notiz":"   "}), &anna)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(cleared["ziele"][0]["notiz"].is_null());
+}
+
+#[test_log::test(pollster::test)]
+async fn ac30_zielnotiz_ist_eigentuemergebunden_und_nach_abschluss_unveraenderlich() {
+    let harness = E2eHarness::new().await;
+    let (anna, _) = neuer_benutzer(&harness, "anna@muster.at").await;
+    let (bea, _) = neuer_benutzer(&harness, "bea@muster.at").await;
+    let (status, runde) = harness
+        .client
+        .post_json_auth("/api/runden/frei", json!({"name":"Wiese"}), &anna)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let runde_id = runde["id"].as_str().unwrap();
+    let (status, runde) = harness
+        .client
+        .post_json_auth(&format!("/api/runden/{runde_id}/ziele"), json!({}), &anna)
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    let ziel_id = runde["ziele"][0]["zielId"].as_str().unwrap();
+    let endpoint = format!("/api/runden/{runde_id}/ziele/{ziel_id}/notiz");
+    let (status, _) = harness
+        .client
+        .put_json_auth(&endpoint, json!({"notiz":"fremd"}), &bea)
+        .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "AC-30: foreign user refused");
+    harness
+        .client
+        .put_json_auth(&endpoint, json!({"notiz":"eingefroren"}), &anna)
+        .await;
+    harness
+        .client
+        .post_json_auth(
+            &format!("/api/runden/{runde_id}/abschluss"),
+            json!({}),
+            &anna,
+        )
+        .await;
+    let (status, _) = harness
+        .client
+        .put_json_auth(&endpoint, json!({"notiz":"nachher"}), &anna)
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "AC-30: completed round frozen"
+    );
+    let (status, _) = harness
+        .client
+        .put_json(&endpoint, json!({"notiz":"anonym"}))
+        .await;
+    assert_eq!(
+        status,
+        StatusCode::UNAUTHORIZED,
+        "AC-30: anonymous user refused"
+    );
+}
+
+#[test_log::test(pollster::test)]
 async fn ac22_parkour_ziele_koennen_nicht_ueber_freie_zielrouten_geaendert_werden() {
     let harness = E2eHarness::new().await;
     let (admin, _, ziel_id, parkour_id) = anlage_mit_parkour(&harness).await;
@@ -1118,7 +1221,7 @@ async fn ac22_freies_ziel_und_runde_sind_nur_fuer_eigentuemer_aenderbar() {
         let (status, _) = harness
             .client
             .put_json_auth(
-                &format!("/api/runden/{runde_id}/ziele/{ziel_id}"),
+                &format!("/api/runden/{runde_id}/ziele/{ziel_id}/name"),
                 json!({"name":"Fremd"}),
                 &bea,
             )
@@ -1131,7 +1234,7 @@ async fn ac22_freies_ziel_und_runde_sind_nur_fuer_eigentuemer_aenderbar() {
         let (status, _) = harness
             .client
             .put_json_auth(
-                &format!("/api/runden/{runde_id}/ziele/{ziel_id}"),
+                &format!("/api/runden/{runde_id}/ziele/{ziel_id}/name"),
                 json!({"name":"   "}),
                 &anna,
             )
@@ -1174,7 +1277,7 @@ async fn ac22_freies_ziel_und_runde_sind_nur_fuer_eigentuemer_aenderbar() {
         let (status, _) = harness
             .client
             .put_json_auth(
-                &format!("/api/runden/{runde_id}/ziele/{ziel_id}"),
+                &format!("/api/runden/{runde_id}/ziele/{ziel_id}/name"),
                 json!({"name":"Danach"}),
                 &anna,
             )

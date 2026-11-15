@@ -20,6 +20,7 @@ import { Rundenabschluss } from "./rundenabschluss";
 import { SchussLedger } from "./schuss-ledger";
 import { WertungAnzeige } from "./wertung-anzeige";
 import { WertungszoneGruppe } from "./wertungszone-gruppe";
+import { ZielNotiz } from "./ziel-notiz";
 import { Zieluebersicht } from "./zieluebersicht";
 
 export function ErfassenAnsicht({ runde }: { runde: Runde }) {
@@ -93,6 +94,11 @@ export function ErfassenAnsicht({ runde }: { runde: Runde }) {
       </CardHeader>
       <CardContent className="space-y-3 pt-3">
         <div className="space-y-3">
+          <ZielNotiz
+            rundeId={runde.id}
+            ziel={selected}
+            disabled={runde.zustand !== "InBearbeitung"}
+          />
           <PositionSteuerung
             key={selected.zielId}
             ziel={selected}

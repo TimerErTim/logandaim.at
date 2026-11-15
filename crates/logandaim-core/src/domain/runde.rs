@@ -132,6 +132,40 @@ pub struct ZielId(pub uuid::Uuid);
 /// The distance is folded in at capture, so a reader never has to join a Pflock list against
 /// a separate distance map. `None` is a Pflock the master data carries no distance for — a
 /// missing estimate, not a zero.
+/// Optional descriptive text attached to one round-local Ziel.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Zielnotiz(NonEmptyString);
+
+#[derive(Debug, thiserror::Error)]
+#[error("die Zielnotiz darf höchstens 1000 Zeichen lang sein")]
+pub struct ZielnotizFehler;
+
+impl Zielnotiz {
+    pub fn neu<S: AsRef<str>>(wert: S) -> Result<Self, ZielnotizFehler> {
+        let wert = NonEmptyString::neu(wert).map_err(|_| ZielnotizFehler)?;
+        if wert.as_str().chars().count() > 1000 {
+            return Err(ZielnotizFehler);
+        }
+        Ok(Self(wert))
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl AsRef<str> for Zielnotiz {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Display for Zielnotiz {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(self.as_str())
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Pflock {
     farbe: Farbe,
@@ -165,6 +199,7 @@ pub struct Ziel {
     name: NonEmptyString,
     ordinal: NonZeroU32,
     pflöcke: Vec<Pflock>,
+    notiz: Option<Zielnotiz>,
 }
 
 impl Ziel {
@@ -174,6 +209,7 @@ impl Ziel {
         name: NonEmptyString,
         ordinal: NonZeroU32,
         pflöcke: Vec<Pflock>,
+        notiz: Option<Zielnotiz>,
     ) -> Self {
         Self {
             id,
@@ -181,6 +217,7 @@ impl Ziel {
             name,
             ordinal,
             pflöcke,
+            notiz,
         }
     }
 
@@ -198,6 +235,14 @@ impl Ziel {
 
     pub fn ordinal(&self) -> NonZeroU32 {
         self.ordinal
+    }
+
+    pub fn notiz(&self) -> Option<&Zielnotiz> {
+        self.notiz.as_ref()
+    }
+
+    fn notiz_setzen(&mut self, notiz: Option<Zielnotiz>) {
+        self.notiz = notiz;
     }
 
     /// The Pflock set that applies to this Ziel, near to far, with its distances.
@@ -262,6 +307,7 @@ impl Rundenaufbau {
                     anlage_ziel.tiername().clone(),
                     anlage_ziel.zielnummer(),
                     pflöcke,
+                    None,
                 ))
             })
             .collect::<Result<Vec<_>, ParkourFehler>>()?;
@@ -284,6 +330,16 @@ impl Rundenaufbau {
         self.ziele.iter_mut().find(|ziel| ziel.id == id)
     }
 
+    pub fn ziel_notiz(
+        &mut self,
+        id: ZielId,
+        notiz: Option<Zielnotiz>,
+    ) -> Result<(), PositionNichtImAufbau> {
+        let ziel = self.ziel_mut(id).ok_or(PositionNichtImAufbau)?;
+        ziel.notiz_setzen(notiz);
+        Ok(())
+    }
+
     fn ziel_hinzufügen(&mut self, id: ZielId, name: Option<NonEmptyString>) {
         let ordinal = self
             .ziele
@@ -298,7 +354,7 @@ impl Rundenaufbau {
         });
         // A free Ziel configures no Pflock set: the archer names a colour per shot.
         self.ziele
-            .push(Ziel::from_parts(id, None, name, ordinal, Vec::new()));
+            .push(Ziel::from_parts(id, None, name, ordinal, Vec::new(), None));
     }
 
     fn ziel_entfernen(&mut self, id: ZielId) -> Option<Ziel> {
@@ -567,6 +623,14 @@ impl RundeMitParkour {
         self.state.herkunft()
     }
 
+    pub fn ziel_notiz_setzen(
+        &mut self,
+        id: ZielId,
+        notiz: Option<Zielnotiz>,
+    ) -> Result<(), PositionNichtImAufbau> {
+        self.aufbau.ziel_notiz(id, notiz)
+    }
+
     /// Whether this position may be captured at this Ziel (AC-9, AC-23).
     ///
     /// A Parkour round only accepts a Pflock its captured route carries at that Ziel; a
@@ -657,6 +721,14 @@ impl FreieRunde {
         };
         ziel.umbenennen(name);
         true
+    }
+
+    pub fn ziel_notiz_setzen(
+        &mut self,
+        id: ZielId,
+        notiz: Option<Zielnotiz>,
+    ) -> Result<(), PositionNichtImAufbau> {
+        self.aufbau.ziel_notiz(id, notiz)
     }
 
     /// Whether this Ziel belongs to this free round's route.
@@ -1129,6 +1201,83 @@ mod tests {
             )
             .unwrap(),
         )
+    }
+
+    #[test_log::test]
+    fn zielnotiz_wrappt_non_empty_string_and_limits_unicode_scalar_values() {
+        let note = Zielnotiz::neu("  Beobachtung 🦌  ").unwrap();
+        assert_eq!(note.as_str(), "Beobachtung 🦌");
+        assert_eq!(note.to_string(), "Beobachtung 🦌");
+        assert_eq!(
+            Zielnotiz::neu("ä".repeat(1000))
+                .unwrap()
+                .as_str()
+                .chars()
+                .count(),
+            1000
+        );
+        assert!(Zielnotiz::neu("ä".repeat(1001)).is_err());
+        assert!(Zielnotiz::neu(" ").is_err());
+    }
+
+    #[test_log::test]
+    fn zielnotiz_can_be_set_replaced_and_cleared_on_open_rounds() {
+        let mut round = runde(&[(10, "Keiler")]);
+        let target = round.aufbau().ziele()[0].id();
+        let first = Zielnotiz::neu("Spur links").unwrap();
+        let replacement = Zielnotiz::neu("Fährte am Bach").unwrap();
+
+        let Runde::MitParkour(open) = &mut round else {
+            panic!("Parkour round stays open");
+        };
+        open.ziel_notiz_setzen(target, Some(first)).unwrap();
+        assert_eq!(
+            open.aufbau()
+                .ziel(target)
+                .unwrap()
+                .notiz()
+                .unwrap()
+                .as_str(),
+            "Spur links"
+        );
+        open.ziel_notiz_setzen(target, Some(replacement)).unwrap();
+        assert_eq!(
+            open.aufbau()
+                .ziel(target)
+                .unwrap()
+                .notiz()
+                .unwrap()
+                .as_str(),
+            "Fährte am Bach"
+        );
+        open.ziel_notiz_setzen(target, None).unwrap();
+        assert!(open.aufbau().ziel(target).unwrap().notiz().is_none());
+        assert!(
+            open.ziel_notiz_setzen(ZielId(uuid::Uuid::nil()), None)
+                .is_err()
+        );
+    }
+
+    #[test_log::test]
+    fn freie_runde_traegt_zielnotiz_und_friert_sie_beim_abschluss_ein() {
+        let mut round = freie_runde();
+        let Runde::FreieRunde(open) = &mut round else {
+            panic!("free round stays open");
+        };
+        let target = open.ziel_hinzufügen(None);
+        open.ziel_notiz_setzen(target, Some(Zielnotiz::neu("Am Waldrand").unwrap()))
+            .unwrap();
+        let closed = open.clone().abschliessen(jetzt());
+        assert_eq!(
+            closed
+                .aufbau()
+                .ziel(target)
+                .unwrap()
+                .notiz()
+                .unwrap()
+                .as_str(),
+            "Am Waldrand"
+        );
     }
 
     #[test_log::test]

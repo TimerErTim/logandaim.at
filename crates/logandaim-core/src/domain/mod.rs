@@ -71,6 +71,8 @@ pub use runde::Rundenaufbau;
 pub use runde::Rundenwertung;
 pub use runde::Ziel;
 pub use runde::ZielId;
+pub use runde::Zielnotiz;
+pub use runde::ZielnotizFehler;
 pub use schuss::Erfasser;
 pub use schuss::NeuerSchuss;
 pub use schuss::Schuss;

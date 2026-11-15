@@ -16,5 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Ziel-specific Pflöcke and per-Ziel distances in the administration area.
 - Free Runden that need no Parkour: start one under your own name, add, rename, and remove Ziele
   while shooting, and record each arrow with a colour or an exact distance.
+- Add an optional note of up to 1000 characters to each Ziel while a Runde is in progress; notes
+  appear in capture and round details and are frozen when the Runde is completed.
 
 [Unreleased]: https://github.com/TimerErTim/logandaim.at/commits/main
