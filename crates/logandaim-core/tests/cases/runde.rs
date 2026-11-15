@@ -1379,6 +1379,44 @@ async fn ac29_zielnotiz_wird_gesetzt_ersetzt_geloescht_und_persistiert() {
 }
 
 #[test_log::test(pollster::test)]
+async fn ac29_zielnotiz_bleibt_auf_parkour_zielen_persistiert() {
+    let harness = harness().await;
+    let admin = systemadministrator(&harness, "admin@muster.at").await;
+    let (_, _, parkour_id) = parkour_mit_einem_ziel(&harness, admin).await;
+    let runde = harness
+        .app()
+        .execute(admin, RundeStarten::mit_parkour(parkour_id))
+        .await
+        .expect("die Parkour-Runde startet");
+    let ziel_id = runde.aufbau().ziele()[0].id();
+
+    harness
+        .app()
+        .execute(
+            admin,
+            RundeZielNotizSetzen {
+                runde_id: runde.id(),
+                ziel_id,
+                notiz: Some(Zielnotiz::neu("Hinweis am Parkourziel").unwrap()),
+            },
+        )
+        .await
+        .expect("die Notiz am Parkourziel wird gespeichert");
+
+    let (geladen, _) = super::helpers::runde_laden(&harness, runde.id()).await;
+    assert_eq!(
+        geladen
+            .aufbau()
+            .ziel(ziel_id)
+            .unwrap()
+            .notiz()
+            .unwrap()
+            .as_str(),
+        "Hinweis am Parkourziel"
+    );
+}
+
+#[test_log::test(pollster::test)]
 async fn ac30_zielnotiz_ist_eigentuemergebunden_und_beim_abschluss_eingefroren() {
     let harness = harness().await;
     let anna = benutzer_mit_ip(&harness, "anna@muster.at", 2).await;
