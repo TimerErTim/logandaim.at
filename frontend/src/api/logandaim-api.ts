@@ -194,22 +194,10 @@ export type ParkourÖffentlich = Schemas["ParkourOeffentlich"];
 export type AnlageÖffentlich = Schemas["AnlageOeffentlich"];
 export type ParkourKurz = Schemas["ParkourKurz"];
 export type RundeHerkunft = { anlageId: string; parkourId: string };
-/**
- * The only widening the generated schema needs: `herkunft` is emitted as absent rather
- * than as `null`, and a `Freie Runde` reads it as `null`. Nothing else is narrowed —
- * an `Omit` here would silently erase a field the schema adds later.
- */
-type RundeWireMitHerkunft<T> = Omit<T, "herkunft"> & {
-  herkunft: RundeHerkunft | null;
+export type RundeBasic = Omit<Schemas["RundeBasic"], "name"> & {
+  name: string;
 };
-export type RundeBasic = Omit<
-  RundeWireMitHerkunft<Schemas["RundeBasic"]>,
-  "name"
-> & { name: string };
-export type Runde = Omit<
-  RundeWireMitHerkunft<Schemas["Runde"]>,
-  "ziele" | "name"
-> & {
+export type Runde = Omit<Schemas["Runde"], "ziele" | "name"> & {
   name: string;
   ziele: RundeZiel[];
 };

@@ -472,10 +472,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     const runden = await this.authenticated(() =>
       this.client.GET("/runden", { headers: this.authorizationHeaders() }),
     );
-    return runden.map((runde) => ({
-      ...runde,
-      herkunft: runde.herkunft ?? null,
-    }));
+    return runden;
   }
 
   async rundeStarten(parkourId: string): Promise<Runde> {
@@ -485,7 +482,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
         headers: this.authorizationHeaders(),
       }),
     );
-    return { ...runde, herkunft: runde.herkunft ?? null };
+    return runde;
   }
 
   async freieRundeStarten(name: string): Promise<Runde> {
@@ -495,7 +492,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
         headers: this.authorizationHeaders(),
       }),
     );
-    return { ...runde, herkunft: runde.herkunft ?? null };
+    return runde;
   }
 
   async freiesZielHinzufuegen(rundeId: string, name?: string): Promise<Runde> {
@@ -506,7 +503,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
         headers: this.authorizationHeaders(),
       }),
     );
-    return { ...runde, herkunft: runde.herkunft ?? null };
+    return runde;
   }
 
   async freiesZielUmbenennen(
@@ -521,7 +518,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
         headers: this.authorizationHeaders(),
       }),
     );
-    return { ...runde, herkunft: runde.herkunft ?? null };
+    return runde;
   }
 
   async freiesZielEntfernen(rundeId: string, zielId: string): Promise<Runde> {
@@ -531,7 +528,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
         headers: this.authorizationHeaders(),
       }),
     );
-    return { ...runde, herkunft: runde.herkunft ?? null };
+    return runde;
   }
 
   async rundeLoeschen(id: string): Promise<void> {
@@ -550,7 +547,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
         headers: this.authorizationHeaders(),
       }),
     );
-    return { ...runde, herkunft: runde.herkunft ?? null };
+    return runde;
   }
 
   async rundeAbschliessen(id: string): Promise<Runde> {
@@ -560,7 +557,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
         headers: this.authorizationHeaders(),
       }),
     );
-    return { ...runde, herkunft: runde.herkunft ?? null };
+    return runde;
   }
 
   async schussRegistrieren(

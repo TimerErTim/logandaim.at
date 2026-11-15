@@ -46,7 +46,7 @@ export default function RundeErfassenPage() {
         </Alert>
       </div>
     );
-  return runde.data.herkunft === null ? (
+  return runde.data.herkunft === undefined ? (
     <FreieErfassenAnsicht runde={runde.data} />
   ) : (
     <ErfassenAnsicht runde={runde.data} />
