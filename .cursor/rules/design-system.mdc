@@ -214,8 +214,11 @@ Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour 
 - **`Separator`** — the ruled line; the standard section divider.
 - **`Input`, `Textarea`, `Select`, `SearchInput`** — `--bg-elevated` with a `--border-control`
   contour, turning `--color-primary` on focus and darkening on hover. All are drawn at 44px: they are
-  replaced elements and cannot take an overlay. `Select` stays native on purpose — the platform picker
-  survives touch and one-handed use; its chevron is a `currentColor` mask, so it flips with the theme.
+  replaced elements and cannot take an overlay. `Textarea` defaults to one row with a 44px minimum
+  and may grow by content; use more rows only when the context needs them. A field may visually hide its
+  label while keeping it programmatically attached, and place a short counter or hint at the trailing
+  edge of the label row. `Select` stays native on purpose — the platform picker survives touch and
+  one-handed use; its chevron is a `currentColor` mask, so it flips with the theme.
 - **`PasswordInput`** — a password field with an `Eye`/`EyeOff` toggle. The toggle is a real control
   (`aria-pressed`, a German name stating what the next press does) sitting *inside* the field's
   trailing area: the field reserves `pr-12` and the button occupies the 44×44 corner, so nothing is

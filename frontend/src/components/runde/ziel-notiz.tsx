@@ -27,20 +27,24 @@ export function ZielNotiz({ rundeId, ziel, disabled }: ZielNotizProps) {
     }
   };
 
+  const error = zielNotizSpeichern.isError
+    ? "Die Notiz konnte nicht gespeichert werden."
+    : undefined;
+  const characterCount = Array.from(value).length;
+
   return (
     <Field
-      label="Notiz"
-      hint={`${Array.from(value).length} / 1000`}
-      error={
-        zielNotizSpeichern.isError
-          ? "Die Notiz konnte nicht gespeichert werden."
-          : undefined
-      }
+      label={`Notiz für ${ziel.tiername}`}
+      labelHidden
+      hint={`${characterCount} / 1000`}
+      hintPlacement="trailing"
+      error={error}
+      className="space-y-1.5"
     >
       <Textarea
-        aria-label={`Notiz für ${ziel.tiername}`}
+        placeholder="Notiz"
         value={value}
-        rows={2}
+        className={value ? undefined : "bg-surface-muted focus:bg-elevated"}
         disabled={disabled || zielNotizSpeichern.isPending}
         onChange={(event) => {
           const next = event.target.value;
