@@ -35,7 +35,7 @@ export function SchussDistanzEditor({
     () =>
       new Map(
         ziel.pflöcke.flatMap((pflock) =>
-          pflock.abstand === undefined
+          typeof pflock.abstand !== "number"
             ? []
             : [[pflock.farbe, pflock.abstand] as const],
         ),

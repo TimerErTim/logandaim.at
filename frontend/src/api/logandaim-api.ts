@@ -177,8 +177,13 @@ export type Zielverwendung = Schemas["Zielverwendung"];
 export type ParkourPflock = Schemas["ParkourPflock"];
 export type PflockAbstand = Schemas["PflockAbstand"];
 export type Ziel = Schemas["Ziel"];
-/** The response's round-owned target; same wire schema as the domain name. */
-export type RundeZiel = Ziel;
+/** The response's round-owned target; unconfigured captured distances are `null`. */
+type RundenPflock = Omit<Schemas["Pflock"], "abstand"> & {
+  abstand?: number | null;
+};
+export type RundeZiel = Omit<Ziel, "pflöcke"> & {
+  pflöcke: RundenPflock[];
+};
 /** The Ziel-specific ordered set, or the Parkour-wide set when inherited. */
 export type ZielPflöcke = Schemas["ZielPfloecke"];
 export type Zielplatzierung = Schemas["Zielplatzierung"];

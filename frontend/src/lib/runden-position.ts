@@ -11,8 +11,8 @@ export function positionsModus(
   pflockAnzahl: number,
 ): PositionsModus {
   if (pflockAnzahl === 1) return "single";
-  return ziel.pflöcke.filter((pflock) => pflock.abstand !== undefined).length >=
-    2
+  return ziel.pflöcke.filter((pflock) => typeof pflock.abstand === "number")
+    .length >= 2
     ? "meter"
     : "staken";
 }
@@ -28,7 +28,7 @@ export function anfangsPosition(
   const naechster = ziel.pflöcke
     .filter(
       (pflock): pflock is typeof pflock & { abstand: number } =>
-        pflock.abstand !== undefined,
+        typeof pflock.abstand === "number",
     )
     .sort((a, b) => a.abstand - b.abstand)[0];
   return naechster ? { Pflock: { farbe: naechster.farbe } } : null;

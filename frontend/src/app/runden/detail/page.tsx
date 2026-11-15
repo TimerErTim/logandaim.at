@@ -394,7 +394,7 @@ function Zielabschnitt({
             >
               <SheetNumber>{index + 1}</SheetNumber>
               <PflockMarker farbe={pflock.farbe} />
-              {pflock.abstand !== undefined ? (
+              {typeof pflock.abstand === "number" ? (
                 <span className="font-medium tabular-nums text-ink">
                   {pflock.abstand} m
                 </span>
