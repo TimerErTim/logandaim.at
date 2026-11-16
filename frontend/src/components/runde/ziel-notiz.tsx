@@ -37,13 +37,14 @@ export function ZielNotiz({ rundeId, ziel, disabled }: ZielNotizProps) {
       label={`Notiz für ${ziel.tiername}`}
       labelHidden
       hint={`${characterCount} / 1000`}
-      hintPlacement="trailing"
+      hintAlignment="end"
       error={error}
       className="space-y-1.5"
     >
       <Textarea
         placeholder="Notiz"
         value={value}
+        autoGrow
         className={value ? undefined : "bg-surface-muted focus:bg-elevated"}
         disabled={disabled || zielNotizSpeichern.isPending}
         onChange={(event) => {

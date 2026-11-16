@@ -21,8 +21,8 @@ type FieldProps = HTMLAttributes<HTMLDivElement> & {
   optional?: boolean;
   /** Keeps the label available to assistive technology without taking visual space. */
   labelHidden?: boolean;
-  /** Places the hint in the label row, aligned to the trailing edge. */
-  hintPlacement?: "below" | "trailing";
+  /** Aligns the hint below the control. */
+  hintAlignment?: "start" | "end";
 };
 
 type LabelledProps = {
@@ -34,8 +34,8 @@ type LabelledProps = {
 
 /**
  * One labelled field on the form. The label sits above the control in small caps
- * with letter spacing, the way a printed form labels a line; the hint sits below or
- * at the trailing edge of the label row, and gives way to the announced error.
+ * with letter spacing, the way a printed form labels a line; the hint sits below
+ * the control and gives way to the announced error.
  *
  * The label is *attached* to the control, not merely drawn above it: `Field` mints an
  * id, hands it to a single control child that has none, and points the real
@@ -59,7 +59,7 @@ export function Field({
   error,
   optional = false,
   labelHidden = false,
-  hintPlacement = "below",
+  hintAlignment = "start",
   className,
   children,
   ...props
@@ -86,39 +86,31 @@ export function Field({
 
   return (
     <div className={cn("space-y-1.5", className)} {...props}>
-      {labelHidden ? (
-        <div className="flex min-h-[18px] items-center justify-end gap-2">
-          <Label className="sr-only" htmlFor={controlId}>
-            {label}
-          </Label>
-          {error ? (
-            <span role="alert" className="text-xs text-impact">
-              {error}
-            </span>
-          ) : hint && hintPlacement === "trailing" ? (
-            <span className="text-xs text-secondary">{hint}</span>
-          ) : null}
-        </div>
-      ) : (
-        <span className="flex min-h-[18px] items-center justify-between gap-2">
-          <Label htmlFor={controlId}>{label}</Label>
-          <span className="flex items-center gap-2">
-            {optional ? (
-              <span className="text-[11px] text-secondary">optional</span>
-            ) : null}
-            {error ? (
-              <span role="alert" className="text-xs text-impact">
-                {error}
-              </span>
-            ) : hint && hintPlacement === "trailing" ? (
-              <span className="text-xs text-secondary">{hint}</span>
-            ) : null}
-          </span>
-        </span>
-      )}
+      <span
+        className={cn(
+          "flex min-h-[18px] items-center justify-between gap-2",
+          labelHidden && "sr-only",
+        )}
+      >
+        <Label htmlFor={controlId}>{label}</Label>
+        {optional ? (
+          <span className="text-[11px] text-secondary">optional</span>
+        ) : null}
+      </span>
       {control}
-      {error ? null : hint && hintPlacement === "below" ? (
-        <p className="text-xs text-secondary">{hint}</p>
+      {error ? (
+        <p role="alert" className="text-xs text-impact">
+          {error}
+        </p>
+      ) : hint ? (
+        <p
+          className={cn(
+            "text-xs text-secondary",
+            hintAlignment === "end" && "text-right",
+          )}
+        >
+          {hint}
+        </p>
       ) : null}
     </div>
   );

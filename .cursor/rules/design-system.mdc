@@ -216,8 +216,8 @@ Only `Button`, `Alert`, and `Badge` carry status variants. Do not invent colour 
   contour, turning `--color-primary` on focus and darkening on hover. All are drawn at 44px: they are
   replaced elements and cannot take an overlay. `Textarea` defaults to one row with a 44px minimum
   and may grow by content; use more rows only when the context needs them. A field may visually hide its
-  label while keeping it programmatically attached, and place a short counter or hint at the trailing
-  edge of the label row. `Select` stays native on purpose — the platform picker survives touch and
+  label while keeping it programmatically attached, and align a short counter or hint below the control
+  at the trailing edge. `Select` stays native on purpose — the platform picker survives touch and
   one-handed use; its chevron is a `currentColor` mask, so it flips with the theme.
 - **`PasswordInput`** — a password field with an `Eye`/`EyeOff` toggle. The toggle is a real control
   (`aria-pressed`, a German name stating what the next press does) sitting *inside* the field's
