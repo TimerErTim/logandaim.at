@@ -104,7 +104,7 @@ MVP capabilities:
 | Master data and Anlage membership: Anlage, Parkour, Ziel, Pflock | [`stammdaten.md`](stammdaten.md) |
 | Requesting a new Anlage | [`anlage-anfrage.md`](anlage-anfrage.md) |
 | Log a Runde target by target, with distance slider between Pflöcke | [`runde.md`](runde.md) |
-| Personal history: scores and first-arrow hit rate per Parkour over time | to be written |
+| Personal history and statistics: scores, first-arrow hit rate, and progress per Parkour | [`statistik.md`](statistik.md) (Draft) |
 | Remove legacy branding and domain | [GitHub milestone "M0 Rebrand"](https://github.com/TimerErTim/logandaim.at/milestones) |
 
 ## Non-goals for MVP
@@ -216,3 +216,4 @@ Open questions:
 | 2026-10-26 | Split roles into account roles (`Benutzer`, `Systemadministrator`) and per-`Anlage` `AnlageVerwaltungen` (`Administrator`, `Mitarbeiter`); master data is no longer superuser-only and the "Master data by admin" decision was rewritten. Linked `stammdaten.md` and `anlage-anfrage.md`. | Agent (Cursor) |
 | 2026-10-26 | Distinguished `Benutzer` (logical identity) from `Konto` (one way to authenticate it); renamed the per-`Anlage` relationship from `Mitgliedschaft` to `AnlageVerwaltung` and dropped the `Anlagen-` role prefix. | Agent (Cursor) |
 | 2026-11-06 | MVP scope decision 5 (distance) now states what the slider records — a distance in meters or the `Pflock` — and that meter values exist only where the `Pflöcke` configure them. Linked `runde.md` in the capability table. | Agent (Cursor) |
+| 2026-11-16 | Linked the Draft personal statistics spec; MVP history and analytics scope awaits PO approval. | Agent (Cursor) |
