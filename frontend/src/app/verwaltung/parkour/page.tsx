@@ -34,8 +34,8 @@ import {
   type ParkourPflock,
   type ParkourSetupInput,
   type ZielPfloecke,
-  ZielPfloecke_ExplicitPfloeckeArt,
-  ZielPfloecke_InheritFromParkourPfloeckeArt,
+  ZielPfloecke_ExplicitArt,
+  ZielPfloecke_InheritFromParkourArt,
   type ZielPfloeckeExplicit,
   type Zielplatzierung,
 } from "@/api/logandaim-api";
@@ -173,13 +173,13 @@ function ParkourInhalt({
       pfloecke:
         platzierung.pfloecke.art === "Explicit"
           ? {
-              art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+              art: ZielPfloecke_ExplicitArt.Explicit,
               pfloecke: platzierung.pfloecke.pfloecke.map((pflock) => ({
                 ...pflock,
               })),
             }
           : {
-              art: ZielPfloecke_InheritFromParkourPfloeckeArt.InheritFromParkour,
+              art: ZielPfloecke_InheritFromParkourArt.InheritFromParkour,
             },
       abstaende: platzierung.abstaende.map((abstand) => ({ ...abstand })),
     })),
@@ -280,7 +280,7 @@ function ParkourInhalt({
               : null;
           const pfloecke = eigene
             ? ({
-                art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+                art: ZielPfloecke_ExplicitArt.Explicit,
                 pfloecke: eigene,
               } satisfies ZielPfloeckeExplicit)
             : platzierung.pfloecke;
@@ -380,7 +380,7 @@ function ParkourInhalt({
         return {
           ...platzierung,
           pfloecke: {
-            art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+            art: ZielPfloecke_ExplicitArt.Explicit,
             pfloecke,
           },
         };
@@ -402,7 +402,7 @@ function ParkourInhalt({
         return {
           ...platzierung,
           pfloecke: {
-            art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+            art: ZielPfloecke_ExplicitArt.Explicit,
             pfloecke: [...pfloecke, neuerPflock(pfloecke)],
           },
         };
@@ -426,7 +426,7 @@ function ParkourInhalt({
         return {
           ...platzierung,
           pfloecke: {
-            art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+            art: ZielPfloecke_ExplicitArt.Explicit,
             pfloecke,
           },
           abstaende: abstaendeBereinigen(platzierung.abstaende, pfloecke),
@@ -443,7 +443,7 @@ function ParkourInhalt({
           ? {
               ...platzierung,
               pfloecke: {
-                art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+                art: ZielPfloecke_ExplicitArt.Explicit,
                 pfloecke: arrayMove(platzierung.pfloecke.pfloecke, von, nach),
               },
             }
@@ -906,7 +906,7 @@ function SortablePlatzierung({
             disabled={gesperrt}
             onClick={() =>
               onZielPfloeckeAendern(platzierung.zielId, {
-                art: ZielPfloecke_InheritFromParkourPfloeckeArt.InheritFromParkour,
+                art: ZielPfloecke_InheritFromParkourArt.InheritFromParkour,
               })
             }
           >
@@ -923,7 +923,7 @@ function SortablePlatzierung({
             onClick={() => {
               if (platzierung.pfloecke.art === "Explicit") return;
               onZielPfloeckeAendern(platzierung.zielId, {
-                art: ZielPfloecke_ExplicitPfloeckeArt.Explicit,
+                art: ZielPfloecke_ExplicitArt.Explicit,
                 pfloecke: effektive.map((pflock) => ({
                   ...pflock,
                   id: crypto.randomUUID(),

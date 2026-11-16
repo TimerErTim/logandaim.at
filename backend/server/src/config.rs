@@ -24,7 +24,6 @@ pub enum ConfigError {
 pub struct ServerConfig {
     pub bind_address: String,
     pub bind_port: u16,
-    pub subpath: String,
     pub database_url: String,
     pub object_store_dir: PathBuf,
     pub log_dir: Option<PathBuf>,
@@ -34,6 +33,7 @@ pub struct ServerConfig {
     pub token_audience: String,
     /// Frontend origin the mailed links point at.
     pub frontend_basis_url: String,
+    pub public_url: Option<String>,
     /// SMTP relay host. Absent means "no relay": every send fails and is logged.
     pub smtp_host: Option<String>,
     pub smtp_port: u16,
@@ -49,7 +49,6 @@ impl Default for ServerConfig {
         Self {
             bind_address: "127.0.0.1".into(),
             bind_port: 3000,
-            subpath: "/".into(),
             database_url: "logandaim.db".into(),
             object_store_dir: PathBuf::from("storage/"),
             log_dir: None,
@@ -57,6 +56,7 @@ impl Default for ServerConfig {
             token_issuer: "logandaim.at".into(),
             token_audience: "logandaim-api".into(),
             frontend_basis_url: "http://localhost:3001".into(),
+            public_url: None,
             smtp_host: None,
             smtp_port: 1025,
             smtp_verschlüsselung: SmtpVerschlüsselung::Klar,
@@ -126,6 +126,10 @@ pub struct Cli {
     /// Frontend origin the mailed links point at
     #[arg(long, env = "LOGANDAIM_FRONTEND_BASIS_URL")]
     pub frontend_basis_url: Option<String>,
+
+    /// Public URL of the server
+    #[arg(long, env = "LOGANDAIM_PUBLIC_URL")]
+    pub public_url: Option<String>,
 
     /// SMTP relay host; omit to run without mail delivery
     #[arg(long, env = "LOGANDAIM_SMTP_HOST")]
@@ -213,9 +217,6 @@ fn overlay(mut config: ServerConfig, cli: &Cli) -> ServerConfig {
     if let Some(bind_port) = cli.bind_port {
         config.bind_port = bind_port;
     }
-    if let Some(subpath) = &cli.subpath {
-        config.subpath = subpath.clone();
-    }
     if let Some(database_url) = &cli.database_url {
         config.database_url = database_url.clone();
     }
@@ -236,6 +237,9 @@ fn overlay(mut config: ServerConfig, cli: &Cli) -> ServerConfig {
     }
     if let Some(frontend_basis_url) = &cli.frontend_basis_url {
         config.frontend_basis_url = frontend_basis_url.clone();
+    }
+    if let Some(public_url) = &cli.public_url {
+        config.public_url = Some(public_url.clone());
     }
     if let Some(smtp_host) = &cli.smtp_host {
         config.smtp_host = Some(smtp_host.clone());
@@ -433,7 +437,7 @@ logDir = "server-logs/"
                 "objectStoreDir": "objects/",
                 "bindAddress": "10.0.0.1",
                 "bindPort": 1234,
-                "subpath": "/logandaim.at/"
+                "publicUrl": "http://test.logandaim.at/"
             }"#,
         )
         .unwrap();
@@ -443,7 +447,7 @@ logDir = "server-logs/"
         assert_eq!(loaded.object_store_dir, PathBuf::from("objects/"));
         assert_eq!(loaded.bind_address, "10.0.0.1");
         assert_eq!(loaded.bind_port, 1234);
-        assert_eq!(loaded.subpath, "/logandaim.at/");
+        assert_eq!(loaded.public_url, Some("http://test.logandaim.at/".into()));
 
         std::fs::remove_dir_all(&dir).ok();
     }

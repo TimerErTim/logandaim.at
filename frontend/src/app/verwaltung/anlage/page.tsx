@@ -21,7 +21,7 @@ import {
   type ParkourInput,
   type ParkourPflock,
   type ZielInput,
-  ZielPfloecke_InheritFromParkourPfloeckeArt,
+  ZielPfloecke_InheritFromParkourArt,
 } from "@/api/logandaim-api";
 import { SetBreadcrumbLabel } from "@/components/layout/page-chrome";
 import { PageHeader } from "@/components/layout/page-header";
@@ -439,7 +439,7 @@ function Ziele({ anlage, gesperrt }: { anlage: Anlage; gesperrt: boolean }) {
                   <Input
                     type="number"
                     min={1}
-                    value={form.zielnummer}
+                    value={form.zielnummer ?? undefined}
                     onChange={(event) =>
                       setForm((bisher) => ({
                         ...bisher,
@@ -507,7 +507,7 @@ function ParkourListe({
       platzierungen: ausgewaehlteZiele.map((zielId) => ({
         zielId,
         pfloecke: {
-          art: ZielPfloecke_InheritFromParkourPfloeckeArt.InheritFromParkour,
+          art: ZielPfloecke_InheritFromParkourArt.InheritFromParkour,
         },
         abstaende: [],
       })),

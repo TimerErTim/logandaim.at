@@ -1,7 +1,7 @@
 mod config;
 mod tracing_setup;
 
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use error_stack::{Report, ResultExt};
 use logandaim_api::{errors::InternalServerError, openapi_service};
@@ -138,7 +138,9 @@ fn prüfe_mail_verbindung(sender: Arc<SmtpMailSender>) {
 
 /// Origin allowlist: the configured frontend plus the documented dev-server ports.
 fn allowed_origins(config: &config::ServerConfig) -> Vec<poem::http::HeaderValue> {
-    let mut origins = vec![config.frontend_basis_url.clone()];
+    let mut origins: HashSet<String> = vec![config.frontend_basis_url.clone()]
+        .into_iter()
+        .collect();
 
     origins.extend(
         [4173u16, 3001, 3002, 3003, 3004, 3005, 3006]
@@ -151,10 +153,13 @@ fn allowed_origins(config: &config::ServerConfig) -> Vec<poem::http::HeaderValue
             }),
     );
 
-    origins.push(format!(
+    origins.insert(format!(
         "http://{}:{}",
         config.bind_address, config.bind_port
     ));
+    if let Some(public_url) = &config.public_url {
+        origins.insert(public_url.clone());
+    }
 
     if let Ok(extra) = std::env::var("LOGANDAIM_CORS_ORIGIN") {
         origins.extend(
@@ -283,19 +288,11 @@ async fn main() -> Result<(), Report<BackendServerError>> {
 
     bootstrap_superuser(&app).await?;
 
-    let base_path = config.subpath.trim_matches('/');
-    let subpath = if base_path.is_empty() {
-        "/".to_string()
-    } else {
-        format!("/{}/", base_path)
-    };
-
-    let api_url = format!(
-        "http://{}:{}{}api",
-        config.bind_address, config.bind_port, subpath
-    );
-
-    // TODO: add dynamic version loading
+    let local_api_url = format!("http://{}:{}/api", config.bind_address, config.bind_port);
+    let api_url = config
+        .public_url
+        .clone()
+        .unwrap_or_else(|| local_api_url.clone());
     let api_service = openapi_service(app, [api_url.clone()]);
 
     let tracing = Tracing.combine(RequestId::new().reuse_id(ReuseId::Use));
@@ -319,7 +316,7 @@ async fn main() -> Result<(), Report<BackendServerError>> {
         .with(catch_panic())
         .with(cors(&config));
 
-    tracing::info!("Server started at {}", api_url);
+    tracing::info!(local_api_url = local_api_url, "server started at {api_url}");
     Server::new(TcpListener::bind(format!(
         "{}:{}",
         config.bind_address, config.bind_port

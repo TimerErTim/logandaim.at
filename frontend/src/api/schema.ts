@@ -95,7 +95,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -137,7 +137,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    authorization?: string;
+                    authorization?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -195,7 +195,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -251,7 +251,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -294,7 +294,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -357,7 +357,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -415,7 +415,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -477,7 +477,7 @@ export interface paths {
                     e_mail_adresse: string;
                 };
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -536,7 +536,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -585,7 +585,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -643,7 +643,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -704,7 +704,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -754,7 +754,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -812,7 +812,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -875,7 +875,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -936,7 +936,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -999,7 +999,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -1048,7 +1048,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     anlage_id: string;
@@ -1104,7 +1104,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -1162,7 +1162,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -1220,7 +1220,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -1278,7 +1278,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -1338,7 +1338,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     runde_id: string;
@@ -1399,7 +1399,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     runde_id: string;
@@ -1462,7 +1462,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     runde_id: string;
@@ -1527,7 +1527,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     runde_id: string;
@@ -1583,7 +1583,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     runde_id: string;
@@ -1628,7 +1628,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     runde_id: string;
@@ -1685,7 +1685,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     runde_id: string;
@@ -1743,7 +1743,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     runde_id: string;
@@ -1804,7 +1804,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     runde_id: string;
@@ -1853,7 +1853,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path: {
                     runde_id: string;
@@ -1911,8 +1911,8 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    "User-Agent"?: string;
-                    "Accept-Language"?: string;
+                    "User-Agent"?: string | null;
+                    "Accept-Language"?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -1975,8 +1975,8 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    "User-Agent"?: string;
-                    "Accept-Language"?: string;
+                    "User-Agent"?: string | null;
+                    "Accept-Language"?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -2008,7 +2008,7 @@ export interface paths {
                 };
                 "4XX": {
                     headers: {
-                        "SET-COOKIE"?: string;
+                        "SET-COOKIE"?: string | null;
                         "CACHE-CONTROL": string;
                         [name: string]: unknown;
                     };
@@ -2041,8 +2041,8 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    "User-Agent"?: string;
-                    "Accept-Language"?: string;
+                    "User-Agent"?: string | null;
+                    "Accept-Language"?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -2074,7 +2074,7 @@ export interface paths {
                 };
                 "4XX": {
                     headers: {
-                        "SET-COOKIE"?: string;
+                        "SET-COOKIE"?: string | null;
                         "CACHE-CONTROL": string;
                         [name: string]: unknown;
                     };
@@ -2107,12 +2107,12 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    "User-Agent"?: string;
-                    "Accept-Language"?: string;
+                    "User-Agent"?: string | null;
+                    "Accept-Language"?: string | null;
                 };
                 path?: never;
                 cookie?: {
-                    "__Host-logandaim_refresh"?: string;
+                    "__Host-logandaim_refresh"?: string | null;
                 };
             };
             requestBody?: never;
@@ -2138,7 +2138,7 @@ export interface paths {
                 };
                 "4XX": {
                     headers: {
-                        "SET-COOKIE"?: string;
+                        "SET-COOKIE"?: string | null;
                         "CACHE-CONTROL": string;
                         [name: string]: unknown;
                     };
@@ -2171,7 +2171,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -2232,8 +2232,8 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    "User-Agent"?: string;
-                    "Accept-Language"?: string;
+                    "User-Agent"?: string | null;
+                    "Accept-Language"?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -2357,7 +2357,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -2418,7 +2418,7 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    Authorization?: string;
+                    Authorization?: string | null;
                 };
                 path?: never;
                 cookie?: never;
@@ -2539,17 +2539,17 @@ export interface components {
          */
         AnlageKontakt: {
             /** @description Name of the person to reach. */
-            name?: string;
+            name?: string | null;
             /**
              * E-Mail-Adresse
              * @description E-mail address of the person to reach.
              * @example test@example.com
              */
-            email?: string;
+            email?: string | null;
             /** @description Phone number of the person to reach. */
-            telefon?: string;
+            telefon?: string | null;
             /** @description Website of the Anlage. */
-            website?: string;
+            website?: string | null;
         };
         /**
          * AnlageOeffentlich
@@ -2637,7 +2637,7 @@ export interface components {
             /** @description The Anlage itself, with its whole master data. */
             anlage: components["schemas"]["Anlage"] & unknown;
             /** @description The caller's role in this Anlage, absent when it holds none. */
-            rolle?: components["schemas"]["AnlageVerwaltungRolle"] & unknown;
+            rolle?: components["schemas"]["AnlageVerwaltungRolle"] | (never | null);
             /** @description Whether the caller is a Systemadministrator and may act regardless of `rolle`. */
             istSystemadministrator: boolean;
         };
@@ -2766,14 +2766,14 @@ export interface components {
          *     A Benutzer deletion anonymises its rows: the identity is gone and only the anonymisation
          *     time remains, so history survives without naming anyone.
          */
-        Erfasser: components["schemas"]["Erfasser_BenutzerErfasser"] | components["schemas"]["Erfasser_AnonymisierterErfasser"];
+        Erfasser: components["schemas"]["Erfasser_Benutzer"] | components["schemas"]["Erfasser_Anonymisiert"];
         /**
          * @description Who a row belongs to.
          *
          *     A Benutzer deletion anonymises its rows: the identity is gone and only the anonymisation
          *     time remains, so history survives without naming anyone.
          */
-        Erfasser_AnonymisierterErfasser: {
+        Erfasser_Anonymisiert: {
             Anonymisiert: components["schemas"]["AnonymisierterErfasser"];
         };
         /**
@@ -2782,7 +2782,7 @@ export interface components {
          *     A Benutzer deletion anonymises its rows: the identity is gone and only the anonymisation
          *     time remains, so history survives without naming anyone.
          */
-        Erfasser_BenutzerErfasser: {
+        Erfasser_Benutzer: {
             Benutzer: components["schemas"]["BenutzerErfasser"];
         };
         /**
@@ -2819,7 +2819,7 @@ export interface components {
          *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
          *     action.
          */
-        MailHealth: components["schemas"]["MailHealth_MailHealthUnknown"] | components["schemas"]["MailHealth_MailHealthOk"] | components["schemas"]["MailHealth_MailHealthFailed"];
+        MailHealth: components["schemas"]["MailHealth_Unknown"] | components["schemas"]["MailHealth_Ok"] | components["schemas"]["MailHealth_Failed"];
         /**
          * MailHealthFailed
          * @description The last probe failed. Sending will fail too.
@@ -2853,7 +2853,7 @@ export interface components {
              * Format: date-time
              * @description When a probe last reported, in UTC, if one ever has.
              */
-            checkedAt?: string;
+            checkedAt?: string | null;
         };
         /**
          * @description The mail relay's last probe verdict, tagged by `status`.
@@ -2861,12 +2861,12 @@ export interface components {
          *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
          *     action.
          */
-        MailHealth_MailHealthFailed: {
+        MailHealth_Failed: {
             /**
              * @example Failed
              * @enum {string}
              */
-            status: MailHealth_MailHealthFailedStatus;
+            status: MailHealth_FailedStatus;
         } & components["schemas"]["MailHealthFailed"];
         /**
          * @description The mail relay's last probe verdict, tagged by `status`.
@@ -2874,12 +2874,12 @@ export interface components {
          *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
          *     action.
          */
-        MailHealth_MailHealthOk: {
+        MailHealth_Ok: {
             /**
              * @example Ok
              * @enum {string}
              */
-            status: MailHealth_MailHealthOkStatus;
+            status: MailHealth_OkStatus;
         } & components["schemas"]["MailHealthOk"];
         /**
          * @description The mail relay's last probe verdict, tagged by `status`.
@@ -2887,12 +2887,12 @@ export interface components {
          *     Not a boolean: "not probed yet" and "probed and broken" call for different operator
          *     action.
          */
-        MailHealth_MailHealthUnknown: {
+        MailHealth_Unknown: {
             /**
              * @example Unknown
              * @enum {string}
              */
-            status: MailHealth_MailHealthUnknownStatus;
+            status: MailHealth_UnknownStatus;
         } & components["schemas"]["MailHealthUnknown"];
         /**
          * Ok
@@ -3050,7 +3050,7 @@ export interface components {
              * Format: uint32
              * @description Distance from this Pflock to its Ziel, in metres; absent when unconfigured.
              */
-            abstand?: number;
+            abstand?: number | null;
         };
         /**
          * PflockAbstand
@@ -3068,7 +3068,7 @@ export interface components {
              * Format: uint32
              * @description Distance from that Pflock to the Ziel, in metres; absent when unconfigured.
              */
-            meter?: number;
+            meter?: number | null;
         };
         /**
          * PflockPosition
@@ -3125,7 +3125,7 @@ export interface components {
              */
             id: string;
             /** @description The Anlage/Parkour pair; absent on a `Freie Runde`. */
-            herkunft?: components["schemas"]["RundeHerkunft"] & unknown;
+            herkunft?: components["schemas"]["RundeHerkunft"] | (never | null);
             /** @description The round's own name. */
             name: string;
             /** @description Who the Runde belongs to. */
@@ -3141,7 +3141,7 @@ export interface components {
              * Format: date-time
              * @description End of the Runde; absent while it is open.
              */
-            abgeschlossenAm?: string;
+            abgeschlossenAm?: string | null;
             /** @description The Ziele as captured, with their results. */
             ziele: components["schemas"]["Ziel"][];
             /**
@@ -3174,7 +3174,7 @@ export interface components {
              */
             id: string;
             /** @description The Anlage/Parkour pair; absent on a `Freie Runde`. */
-            herkunft?: components["schemas"]["RundeHerkunft"] & unknown;
+            herkunft?: components["schemas"]["RundeHerkunft"] | (never | null);
             /** @description The round's own name. */
             name: string;
             /**
@@ -3198,7 +3198,7 @@ export interface components {
              * Format: date-time
              * @description End of the Runde; absent while it is open.
              */
-            abgeschlossenAm?: string;
+            abgeschlossenAm?: string | null;
         };
         /**
          * RundeHerkunft
@@ -3267,7 +3267,7 @@ export interface components {
             pfeil: number;
             /** @description Where on the Ziel it landed. */
             wertungszone: components["schemas"]["Wertungszone"] & unknown;
-            position?: components["schemas"]["Schussposition"];
+            position?: components["schemas"]["Schussposition"] | (never | null);
         };
         /**
          * SchussAenderungRequest
@@ -3277,7 +3277,7 @@ export interface components {
             /** @description Where on the Ziel the arrow landed. */
             wertungszone: components["schemas"]["Wertungszone"] & unknown;
             /** @description Optional shot position; null clears the stored position. */
-            position?: components["schemas"]["SchusspositionRequest"] & unknown;
+            position?: components["schemas"]["SchusspositionRequest"] | (never | null);
         };
         /**
          * SchussErstellungRequest
@@ -3291,26 +3291,26 @@ export interface components {
             zielId: string;
             /** @description Where on the Ziel the arrow landed. */
             wertungszone: components["schemas"]["Wertungszone"] & unknown;
-            position?: components["schemas"]["SchusspositionRequest"];
+            position?: components["schemas"]["SchusspositionRequest"] | (never | null);
         };
         /** @description One logged arrow. */
-        Schussposition: components["schemas"]["Schussposition_DistanzPosition"] | components["schemas"]["Schussposition_PflockPosition"];
+        Schussposition: components["schemas"]["Schussposition_Distanz"] | components["schemas"]["Schussposition_Pflock"];
         /** @description Position supplied for a logged arrow. */
-        SchusspositionRequest: components["schemas"]["SchusspositionRequest_DistanzPositionRequest"] | components["schemas"]["SchusspositionRequest_PflockPositionRequest"];
+        SchusspositionRequest: components["schemas"]["SchusspositionRequest_Distanz"] | components["schemas"]["SchusspositionRequest_Pflock"];
         /** @description Position supplied for a logged arrow. */
-        SchusspositionRequest_DistanzPositionRequest: {
+        SchusspositionRequest_Distanz: {
             Distanz: components["schemas"]["DistanzPositionRequest"];
         };
         /** @description Position supplied for a logged arrow. */
-        SchusspositionRequest_PflockPositionRequest: {
+        SchusspositionRequest_Pflock: {
             Pflock: components["schemas"]["PflockPositionRequest"];
         };
         /** @description One logged arrow. */
-        Schussposition_DistanzPosition: {
+        Schussposition_Distanz: {
             Distanz: components["schemas"]["DistanzPosition"];
         };
         /** @description One logged arrow. */
-        Schussposition_PflockPosition: {
+        Schussposition_Pflock: {
             Pflock: components["schemas"]["PflockPosition"];
         };
         /**
@@ -3369,9 +3369,9 @@ export interface components {
             /** @description The Pflöcke that apply to this Ziel as captured, near to far. */
             pfloecke: components["schemas"]["Pflock"][];
             /** @description Optional note attached to this Ziel. */
-            notiz?: string;
+            notiz?: string | null;
             /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
-            wertung?: components["schemas"]["Zielwertung"] & unknown;
+            wertung?: components["schemas"]["Zielwertung"] | (never | null);
             /** @description The logged arrows at this Ziel, in Pfeil order. */
             schuesse: components["schemas"]["Schuss"][];
         };
@@ -3381,7 +3381,7 @@ export interface components {
          */
         ZielHinzufuegenRequest: {
             /** @description The Ziel's name; absent means "Ziel N" from its ordinal. */
-            name?: string;
+            name?: string | null;
         };
         /**
          * ZielNotizSetzenRequest
@@ -3396,19 +3396,19 @@ export interface components {
          *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
          *     near-to-far order that replaces it.
          */
-        ZielPfloecke: components["schemas"]["ZielPfloecke_InheritFromParkourPfloecke"] | components["schemas"]["ZielPfloecke_ExplicitPfloecke"];
+        ZielPfloecke: components["schemas"]["ZielPfloecke_InheritFromParkour"] | components["schemas"]["ZielPfloecke_Explicit"];
         /**
          * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
          *
          *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
          *     near-to-far order that replaces it.
          */
-        ZielPfloecke_ExplicitPfloecke: {
+        ZielPfloecke_Explicit: {
             /**
              * @example Explicit
              * @enum {string}
              */
-            art: ZielPfloecke_ExplicitPfloeckeArt;
+            art: ZielPfloecke_ExplicitArt;
         } & components["schemas"]["ExplicitPfloecke"];
         /**
          * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.
@@ -3416,12 +3416,12 @@ export interface components {
          *     `InheritFromParkour` selects the Parkour's order. `Explicit` provides a non-empty
          *     near-to-far order that replaces it.
          */
-        ZielPfloecke_InheritFromParkourPfloecke: {
+        ZielPfloecke_InheritFromParkour: {
             /**
              * @example InheritFromParkour
              * @enum {string}
              */
-            art: ZielPfloecke_InheritFromParkourPfloeckeArt;
+            art: ZielPfloecke_InheritFromParkourArt;
         } & components["schemas"]["InheritFromParkourPfloecke"];
         /**
          * ZielRequest
@@ -3438,7 +3438,7 @@ export interface components {
              *     Tiername. Editing refuses a request without one, because correcting the ordinal is
              *     the user's own act.
              */
-            zielnummer?: number;
+            zielnummer?: number | null;
         };
         /**
          * ZielUmbenennenRequest
@@ -3528,13 +3528,13 @@ export enum Laendercode {
     DE = "DE",
     CH = "CH"
 }
-export enum MailHealth_MailHealthFailedStatus {
+export enum MailHealth_FailedStatus {
     Failed = "Failed"
 }
-export enum MailHealth_MailHealthOkStatus {
+export enum MailHealth_OkStatus {
     Ok = "Ok"
 }
-export enum MailHealth_MailHealthUnknownStatus {
+export enum MailHealth_UnknownStatus {
     Unknown = "Unknown"
 }
 export enum RundeZustand {
@@ -3547,10 +3547,10 @@ export enum Wertungszone {
     Body = "Body",
     Miss = "Miss"
 }
-export enum ZielPfloecke_ExplicitPfloeckeArt {
+export enum ZielPfloecke_ExplicitArt {
     Explicit = "Explicit"
 }
-export enum ZielPfloecke_InheritFromParkourPfloeckeArt {
+export enum ZielPfloecke_InheritFromParkourArt {
     InheritFromParkour = "InheritFromParkour"
 }
 export type operations = Record<string, never>;

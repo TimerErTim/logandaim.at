@@ -5,8 +5,8 @@ import {
   Laendercode,
   RundeZustand,
   Wertungszone,
-  ZielPfloecke_ExplicitPfloeckeArt,
-  ZielPfloecke_InheritFromParkourPfloeckeArt,
+  ZielPfloecke_ExplicitArt,
+  ZielPfloecke_InheritFromParkourArt,
 } from "./schema";
 
 export {
@@ -15,8 +15,8 @@ export {
   Laendercode,
   RundeZustand,
   Wertungszone,
-  ZielPfloecke_ExplicitPfloeckeArt,
-  ZielPfloecke_InheritFromParkourPfloeckeArt,
+  ZielPfloecke_ExplicitArt,
+  ZielPfloecke_InheritFromParkourArt,
 };
 
 /**
@@ -148,9 +148,9 @@ export type AnlageVerwaltung = components["schemas"]["AnlageVerwaltung"];
 export type AnlageZiel = components["schemas"]["AnlageZiel"];
 export type ZielPfloecke = components["schemas"]["ZielPfloecke"];
 export type ZielPfloeckeExplicit =
-  components["schemas"]["ZielPfloecke_ExplicitPfloecke"];
+  components["schemas"]["ZielPfloecke_Explicit"];
 export type ZielPfloeckeInheritFromParkour =
-  components["schemas"]["ZielPfloecke_InheritFromParkourPfloecke"];
+  components["schemas"]["ZielPfloecke_InheritFromParkour"];
 export type Zielverwendung = components["schemas"]["Zielverwendung"];
 export type ParkourPflock = components["schemas"]["ParkourPflock"];
 export type PflockAbstand = components["schemas"]["PflockAbstand"];
