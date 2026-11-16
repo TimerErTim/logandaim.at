@@ -16,8 +16,7 @@ run = "cargo doc --release --workspace --no-deps --all-features"
 
 ["check:openapi"]
 description = "Fail when the generated OpenAPI client differs from the exported spec"
-depends = ["sync:openapi --release"]
-run = "git diff --exit-code -- frontend/src/api/schema.ts"
+depends = ["sync:openapi --release --check"]
 
 ["check:design"]
 description = "Fail when a design token is undocumented or a raw palette class leaks into a component"
