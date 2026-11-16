@@ -382,6 +382,8 @@ function Zielabschnitt({
         <SheetNumber>{ziel.zielId.slice(0, 8)}</SheetNumber>
       </div>
 
+      {ziel.notiz ? <MarginNote label="Notiz">{ziel.notiz}</MarginNote> : null}
+
       {ziel.pfloecke.length > 0 ? (
         <ol
           aria-label="Pflöcke für dieses Ziel"

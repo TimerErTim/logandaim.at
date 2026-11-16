@@ -33,10 +33,11 @@ use logandaim_core::{
         PasswortWiederherstellenFehler, RegistrierungAbschliessenFehler, RegistrierungAbschließen,
         RegistrierungStarten, RegistrierungStartenFehler, RundeAbschliessen,
         RundeAbschliessenFehler, RundeStarten, RundeStartenFehler, RundeZielEntfernenFehler,
-        RundeZielHinzufügenFehler, RundeZielUmbenennenFehler, SchussLöschen, SchussLöschenFehler,
-        SchussRegistrieren, SchussRegistrierenFehler, SchussÄndernFehler, SessionAusgestellt,
-        StammdatenFehler, ZielEntfernen, ZielErsetzen, ZielHinzufügen, ZielÄndern,
-        darf_anlage_lesen, darf_anlage_verwalten, darf_masterdaten_pflegen,
+        RundeZielHinzufügenFehler, RundeZielNotizSetzenFehler, RundeZielUmbenennenFehler,
+        SchussLöschen, SchussLöschenFehler, SchussRegistrieren, SchussRegistrierenFehler,
+        SchussÄndernFehler, SessionAusgestellt, StammdatenFehler, ZielEntfernen, ZielErsetzen,
+        ZielHinzufügen, ZielÄndern, darf_anlage_lesen, darf_anlage_verwalten,
+        darf_masterdaten_pflegen,
     },
 };
 use tracing::warn;
@@ -487,6 +488,20 @@ impl LogandaimAppApi {
         let use_case = anfrage.in_use_case(runde_id)?;
         let runde = self.app.execute(auth, use_case).await?;
         self.runde_mit_schuessen(runde, runde_id, || RundeZielHinzufügenFehler::RundeLaden)
+            .await
+    }
+
+    /// Set or clear one `Zielnotiz` and answer the updated read model.
+    pub async fn runde_ziel_notiz_setzen(
+        &self,
+        auth: AuthContext,
+        runde_id: RundeId,
+        ziel_id: ZielId,
+        anfrage: requests::ZielNotizSetzenRequest,
+    ) -> ResultReport<Runde, RundeZielNotizSetzenFehler> {
+        let use_case = anfrage.in_use_case(runde_id, ziel_id.0)?;
+        let runde = self.app.execute(auth, use_case).await?;
+        self.runde_mit_schuessen(runde, runde_id, || RundeZielNotizSetzenFehler::RundeLaden)
             .await
     }
 

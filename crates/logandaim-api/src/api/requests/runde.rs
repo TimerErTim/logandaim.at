@@ -12,10 +12,11 @@ use uuid::Uuid;
 use error_stack::{Report, ResultExt};
 
 use logandaim_core::{
-    domain::{NonEmptyString, ParkourId, RundeId, ZielId},
+    domain::{NonEmptyString, ParkourId, RundeId, ZielId, Zielnotiz},
     service::{
         RundeStarten, RundeStartenFehler, RundeZielEntfernen, RundeZielHinzufügen,
-        RundeZielHinzufügenFehler, RundeZielUmbenennen, RundeZielUmbenennenFehler,
+        RundeZielHinzufügenFehler, RundeZielNotizSetzen, RundeZielNotizSetzenFehler,
+        RundeZielUmbenennen, RundeZielUmbenennenFehler,
     },
 };
 
@@ -89,6 +90,70 @@ impl ZielHinzufuegenRequest {
             ),
         };
         Ok(RundeZielHinzufügen { runde_id, name })
+    }
+}
+
+/// Set or clear one Ziel's note inside its Runde.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "openapi", derive(poem_openapi::Object))]
+#[cfg_attr(feature = "openapi", oai(rename_all = "camelCase"))]
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZielNotizSetzenRequest {
+    pub notiz: String,
+}
+
+impl ZielNotizSetzenRequest {
+    pub fn in_use_case(
+        self,
+        runde_id: RundeId,
+        ziel_id: Uuid,
+    ) -> Result<RundeZielNotizSetzen, Report<RundeZielNotizSetzenFehler>> {
+        let notiz = self.notiz.trim();
+        let notiz = if notiz.is_empty() {
+            None
+        } else {
+            Some(Zielnotiz::neu(notiz).map_err(|error| {
+                Report::new(RundeZielNotizSetzenFehler::UngültigeAnfrage).attach(error)
+            })?)
+        };
+        Ok(RundeZielNotizSetzen {
+            runde_id,
+            ziel_id: ZielId(ziel_id),
+            notiz,
+        })
+    }
+}
+
+#[cfg(test)]
+mod ziel_notiz_tests {
+    use super::*;
+
+    #[test]
+    fn zielnotiz_request_trims_clears_and_rejects_overlong_input() {
+        let set = ZielNotizSetzenRequest {
+            notiz: "  Spur  ".into(),
+        }
+        .in_use_case(RundeId(Uuid::nil()), Uuid::nil())
+        .unwrap();
+        assert_eq!(set.notiz.unwrap().as_str(), "Spur");
+
+        let clear = ZielNotizSetzenRequest {
+            notiz: "  \n".into(),
+        }
+        .in_use_case(RundeId(Uuid::nil()), Uuid::nil())
+        .unwrap();
+        assert!(clear.notiz.is_none());
+
+        let too_long = ZielNotizSetzenRequest {
+            notiz: "x".repeat(1001),
+        }
+        .in_use_case(RundeId(Uuid::nil()), Uuid::nil())
+        .unwrap_err();
+        assert!(matches!(
+            too_long.current_context(),
+            RundeZielNotizSetzenFehler::UngültigeAnfrage
+        ));
     }
 }
 

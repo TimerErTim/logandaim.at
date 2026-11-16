@@ -19,6 +19,10 @@ type FieldProps = HTMLAttributes<HTMLDivElement> & {
   error?: string;
   /** Marks optional fields, as a printed form does. */
   optional?: boolean;
+  /** Keeps the label available to assistive technology without taking visual space. */
+  labelHidden?: boolean;
+  /** Aligns the hint below the control. */
+  hintAlignment?: "start" | "end";
 };
 
 type LabelledProps = {
@@ -30,8 +34,8 @@ type LabelledProps = {
 
 /**
  * One labelled field on the form. The label sits above the control in small caps
- * with letter spacing, the way a printed form labels a line; the hint sits below in
- * the secondary ink and gives way to the error, which is announced.
+ * with letter spacing, the way a printed form labels a line; the hint sits below
+ * the control and gives way to the announced error.
  *
  * The label is *attached* to the control, not merely drawn above it: `Field` mints an
  * id, hands it to a single control child that has none, and points the real
@@ -54,6 +58,8 @@ export function Field({
   hint,
   error,
   optional = false,
+  labelHidden = false,
+  hintAlignment = "start",
   className,
   children,
   ...props
@@ -80,7 +86,12 @@ export function Field({
 
   return (
     <div className={cn("space-y-1.5", className)} {...props}>
-      <span className="flex min-h-[18px] items-center justify-between gap-2">
+      <span
+        className={cn(
+          "flex min-h-[18px] items-center justify-between gap-2",
+          labelHidden && "sr-only",
+        )}
+      >
         <Label htmlFor={controlId}>{label}</Label>
         {optional ? (
           <span className="text-[11px] text-secondary">optional</span>
@@ -92,7 +103,14 @@ export function Field({
           {error}
         </p>
       ) : hint ? (
-        <p className="text-xs text-secondary">{hint}</p>
+        <p
+          className={cn(
+            "text-xs text-secondary",
+            hintAlignment === "end" && "text-right",
+          )}
+        >
+          {hint}
+        </p>
       ) : null}
     </div>
   );

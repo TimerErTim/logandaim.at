@@ -30,6 +30,7 @@ import { Rundenabschluss } from "./rundenabschluss";
 import { SchussLedger } from "./schuss-ledger";
 import { WertungAnzeige } from "./wertung-anzeige";
 import { WertungszoneGruppe } from "./wertungszone-gruppe";
+import { ZielNotiz } from "./ziel-notiz";
 import { Zieluebersicht } from "./zieluebersicht";
 
 export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
@@ -233,6 +234,11 @@ export function FreieErfassenAnsicht({ runde }: { runde: Runde }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4 pt-3">
+          <ZielNotiz
+            rundeId={runde.id}
+            ziel={ziel}
+            disabled={runde.zustand !== "InBearbeitung"}
+          />
           {runde.zustand === "InBearbeitung" ? (
             <>
               <FreiePositionSteuerung

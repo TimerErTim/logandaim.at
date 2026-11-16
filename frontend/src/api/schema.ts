@@ -1383,7 +1383,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/runden/{runde_id}/ziele/{ziel_id}": {
+    "/runden/{runde_id}/ziele/{ziel_id}/notiz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set or clear a target note (up to 1000 characters) in a running Runde.
+         * @description An empty or whitespace-only note clears it. Completed rounds are immutable.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: {
+                    Authorization?: string;
+                };
+                path: {
+                    runde_id: string;
+                    ziel_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json; charset=utf-8": components["schemas"]["ZielNotizSetzenRequest"];
+                };
+            };
+            responses: {
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["Runde"];
+                    };
+                };
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain; charset=utf-8": string;
+                    };
+                };
+                "4XX": {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json; charset=utf-8": components["schemas"]["StructuredError"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}/ziele/{ziel_id}/name": {
         parameters: {
             query?: never;
             header?: never;
@@ -1439,6 +1502,22 @@ export interface paths {
                 };
             };
         };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/runden/{runde_id}/ziele/{ziel_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
         post?: never;
         /**
          * Remove one `Freies Ziel` from a free Runde.
@@ -3289,6 +3368,8 @@ export interface components {
             zielnummer: number;
             /** @description The Pflöcke that apply to this Ziel as captured, near to far. */
             pfloecke: components["schemas"]["Pflock"][];
+            /** @description Optional note attached to this Ziel. */
+            notiz?: string;
             /** @description The Wertung of this Ziel; absent while no Schuss has been logged at it. */
             wertung?: components["schemas"]["Zielwertung"] & unknown;
             /** @description The logged arrows at this Ziel, in Pfeil order. */
@@ -3301,6 +3382,13 @@ export interface components {
         ZielHinzufuegenRequest: {
             /** @description The Ziel's name; absent means "Ziel N" from its ordinal. */
             name?: string;
+        };
+        /**
+         * ZielNotizSetzenRequest
+         * @description Set or clear one Ziel's note inside its Runde.
+         */
+        ZielNotizSetzenRequest: {
+            notiz: string;
         };
         /**
          * @description Whether a Ziel uses the Parkour-wide Pflock order or its own.

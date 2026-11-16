@@ -435,7 +435,7 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
     name: string,
   ): Promise<Runde> {
     const runde = await this.authenticated(() =>
-      this.client.PUT("/runden/{runde_id}/ziele/{ziel_id}", {
+      this.client.PUT("/runden/{runde_id}/ziele/{ziel_id}/name", {
         params: { path: { runde_id: rundeId, ziel_id: zielId } },
         body: { name },
         headers: this.authorizationHeaders(),
@@ -452,6 +452,20 @@ export class HttpLogandaimApi implements LogandaimApi, AuthSession {
       }),
     );
     return runde;
+  }
+
+  async zielNotizSpeichern(
+    rundeId: string,
+    zielId: string,
+    notiz: string,
+  ): Promise<Runde> {
+    return this.authenticated(() =>
+      this.client.PUT("/runden/{runde_id}/ziele/{ziel_id}/notiz", {
+        params: { path: { runde_id: rundeId, ziel_id: zielId } },
+        body: { notiz },
+        headers: this.authorizationHeaders(),
+      }),
+    );
   }
 
   async rundeLoeschen(id: string): Promise<void> {

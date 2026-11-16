@@ -12,5 +12,6 @@ description = "Sync OpenAPI spec from backend to frontend"
 dir = "{{ vars.REPO_ROOT }}/frontend"
 usage = """
 flag "--release" env="LOGANDAIM_BUILD_RELEASE" help="Compile with the release profile"
+flag "--check" env="LOGANDAIM_OPENAPI_CHECK" help="Only performs a check of the OpenAPI spec"
 """
-run = 'mise run --no-deps export:openapi{% if usage.release %} --release{% endif %} | npx openapi-typescript -o src/api/schema.ts --enum-values --empty-objects-unknown --enum --dedupe-enums'
+run = 'mise run --no-deps export:openapi{% if usage.release %} --release{% endif %} | npx openapi-typescript -o src/api/schema.ts --enum-values --empty-objects-unknown --enum --dedupe-enums{% if usage.check %} --check{% endif %}'

@@ -3,7 +3,7 @@ id: SPEC-runde
 title: Capture a Runde target by target, on phone and desktop
 status: PO-approved
 owner: TimerErTim
-issues: [11, 23, 72, 93]
+issues: [11, 23, 72, 93, 96]
 superseded_by: null
 ---
 
@@ -111,6 +111,7 @@ whole route out as cards on a wide screen, with one-thumb logging throughout.
 | `Runde` | One logged pass of one `Benutzer` through one `Parkour` — or through a `Freie Runde`'s own `Ziele` — on one `Datum` ([charter](charter.md#domain-terms)). Owns its `Schüsse` and its setup ([`stammdaten.md`](stammdaten.md)). |
 | `Freie Runde` | A `Runde` with no `Anlage` and no `Parkour`, whose `Ziele` the `Benutzer` adds and removes while shooting. Its own name identifies it. |
 | `Freies Ziel` | A `Ziel` of a `Freie Runde`, created on the spot from a name and auto-named "Ziel 1", "Ziel 2", … when none is given. It exists only inside that `Runde`. |
+| `Zielnotiz` | Optional free text attached to one `Ziel` in a `Runde`, up to 1000 characters. |
 | `Datum` | The day the `Runde` was shot. Part of the `Runde`, changeable by its owner. |
 | `Schuss` | One registered arrow at one `Ziel`: `Pfeil` position in shooting order, `Wertungszone`, `Schussposition`. |
 | `Schussposition` | Where a `Schuss` was shot from: a `Schussdistanz`, or the `Pflock` it was shot from — whose colour stands for the chosen colour on a `Freie Runde`. Exactly one of the two. |
@@ -297,6 +298,12 @@ be added, removed, or renamed afterwards:
     `Zielfortschritt` (rule 12), the capture presentations (rules 13–14), the `Rundenübersicht`
     band (rule 15), and the initial position state (rule 16) — holds for both variants. Where a
     rule names the `Parkour`, a `Freie Runde` names itself instead.
+22. A `Ziel` may carry one optional `Zielnotiz` of at most 1000 characters, in either a Parkour or
+    a free `Runde`. The owner may set, replace, or clear it while the `Runde` is in progress; a
+    blank value clears the note. The note is per `Runde` and has no effect on the `Ziel`'s master
+    data, `Pflöcke`, `Schüsse`, or `Wertung`. The `Rundenabschluss` freezes the note with the rest
+    of the route (rule 9). The capture view edits it directly below the `Ziel` name and the Runde
+    detail view displays it when present.
 
 ## Requirements
 
@@ -345,6 +352,9 @@ be added, removed, or renamed afterwards:
   the other and the field displays the active colour or meter.
 - FR-19: Rename a running `Freies Ziel` directly in its header by focusing the name and saving a
   changed non-empty name on defocus; Escape cancels (rule 20).
+- FR-20: Let the owner set, replace, or clear a `Zielnotiz` of up to 1000 characters on any
+  `Ziel` in a running `Runde`; show it in the `Runde` detail view and freeze it on completion
+  (rule 22).
 
 **Non-functional**
 
@@ -493,6 +503,13 @@ be added, removed, or renamed afterwards:
   and the field shows its number. Choosing either form clears the other; invalid/incomplete meter
   edits do not replace the last valid stored form, and the shot-row control opens with that shot's
   current form and offers the same colour palette, not a slider.
+- AC-29: Given an owned running Parkour or free `Runde` and one of its `Ziele`, when the owner
+  sets or replaces its `Zielnotiz`, then a trimmed note of 1–1000 Unicode scalar values is
+  persisted and appears in the Runde read model, capture card, and detail view. An empty or
+  whitespace-only value clears it. A 1001-character note is rejected; the note does not change
+  the `Ziel`'s `Schüsse`, `Pflöcke`, or `Wertung`.
+- AC-30: Given a request to change a `Zielnotiz`, then a completed `Runde` or a `Ziel` outside
+  the `Runde` is refused; a foreign user receives 403 and an unauthenticated request receives 401.
 
 ## Deferred requirements
 
@@ -559,6 +576,7 @@ check of focus/blur and shot-row editing on a phone-sized viewport.
 
 | Date | Decision | By |
 |------|----------|----|
+| 2026-11-15 | An optional note of up to 1000 characters belongs to each round-local `Ziel`, is editable while the round runs, displays in capture and detail, and freezes on completion. Blank input clears it. | TimerErTim (PO) |
 | 2026-11-12 | A `Freie Runde` route uses neutral round-local target identities and is frozen on completion. Completed targets and names are historical and cannot be edited. | TimerErTim (PO) |
 |------|----------|----|
 | 2026-10-23 | ~~Slider storage: `Anteil` fraction 0..1 between the two adjacent `Pflöcke`; meter estimate shown when `Pflock` `Distanzen` exist.~~ Superseded 2026-11-06 by the single optional distance. | TimerErTim (PO) |
@@ -598,6 +616,7 @@ check of focus/blur and shot-row editing on a phone-sized viewport.
 | 2026-11-06 | Approved. Status set to `PO-approved` on the PO's explicit instruction; implementation is tracked in #86. | TimerErTim (PO) |
 | 2026-11-10 | Added the per-Ziel `Pflöcke` set (rules 4–5, AC-5 to AC-7): a `Schussposition` on a `Ziel` with its own set resolves within that set, the slider and the ledger use the effective set, and each `Ziel` displays only the set that applies to it. | Agent (Cursor) |
 | 2026-11-10 | Added the `Freie Runde` (rules 17–20, FR-16 to FR-18, AC-21 to AC-25): a `Runde` with no `Anlage` and no `Parkour`, JIT `Freies Ziel`, a colour-or-distance `Schussposition` with no slider, and the `Wertung`/band/history rule extended to both setups. Set to `Draft` while the change is open; it returns to `PO-approved` only on the PO's explicit approval. | Agent (Cursor) |
+| 2026-11-15 | Added per-`Ziel` notes in both round variants (rule 22, FR-20, AC-29–AC-30): up to 1000 characters, editable while running, shown in capture and detail, and frozen on completion. Approved by the PO in chat and tracked in #96. | Agent (Cursor) |
 
 ## Appendix A: implementation sketch (non-normative)
 

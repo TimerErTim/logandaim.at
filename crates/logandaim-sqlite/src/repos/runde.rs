@@ -25,7 +25,7 @@ use logandaim_core::{
     domain::{
         Abstand, AnlageId, AnlageZielId, Erfasser, Farbe, FreieRundeInBearbeitung, NeueRunde,
         NonEmptyString, ParkourId, Pflock, Runde, RundeId, RundenHerkunft, Rundenaufbau, Ziel,
-        ZielId, konto::BenutzerId,
+        ZielId, Zielnotiz, konto::BenutzerId,
     },
     ports::{RepositoryError, RepositoryResult, RundeRepository},
 };
@@ -77,6 +77,8 @@ struct ZielDto {
     tiername: String,
     zielnummer: u32,
     pflöcke: Vec<PflockDto>,
+    #[serde(default)]
+    notiz: Option<String>,
 }
 
 fn parkour_to_dto(
@@ -107,6 +109,7 @@ fn ziel_to_dto(ziel: &Ziel) -> ZielDto {
                 abstand: pflock.abstand().map(|abstand| abstand.meter()),
             })
             .collect(),
+        notiz: ziel.notiz().map(ToString::to_string),
     }
 }
 
@@ -184,6 +187,11 @@ fn aufbau_from_json(
                 NonEmptyString::neu(&ziel.tiername).contextualize(RepositoryError::Data)?,
                 std::num::NonZeroU32::new(ziel.zielnummer).ok_or(RepositoryError::Data)?,
                 pflöcke,
+                ziel.notiz
+                    .as_deref()
+                    .map(Zielnotiz::neu)
+                    .transpose()
+                    .map_err(|_| RepositoryError::Data)?,
             ))
         })
         .collect::<RepositoryResult<Vec<_>>>()?;
@@ -209,7 +217,8 @@ mod tests {
                 "anlage_ziel_id":"00000000-0000-0000-0000-000000000004",
                 "tiername":"Scheibe",
                 "zielnummer":1,
-                "pflöcke":[{"farbe":"#123456","abstand":35}]
+                "pflöcke":[{"farbe":"#123456","abstand":35}],
+                "notiz":"Schatten"
             }]
         }"##;
 
@@ -230,10 +239,27 @@ mod tests {
         let pflock = aufbau.ziele()[0].pflöcke()[0];
         assert_eq!(pflock.farbe().to_hex(), "#123456");
         assert_eq!(pflock.abstand().unwrap().meter(), 35);
+        assert_eq!(aufbau.ziele()[0].notiz().unwrap().as_str(), "Schatten");
         let serialized = aufbau_to_json(Some(&herkunft), &name, &aufbau).unwrap();
         let json: serde_json::Value = serde_json::from_str(&serialized).unwrap();
         assert!(json.get("pflöcke").is_none());
         assert_eq!(json["ziele"][0]["pflöcke"][0]["abstand"], 35);
+        assert_eq!(json["ziele"][0]["notiz"], "Schatten");
+    }
+
+    #[test]
+    fn alte_snapshots_ohne_zielnotiz_bleiben_lesbar() {
+        let legacy_snapshot = r#"{
+            "name":"Wiese",
+            "ziele":[{
+                "ziel_id":"00000000-0000-0000-0000-000000000003",
+                "tiername":"Scheibe",
+                "zielnummer":1,
+                "pflöcke":[]
+            }]
+        }"#;
+        let (_, _, aufbau) = aufbau_from_json(legacy_snapshot).unwrap();
+        assert!(aufbau.ziele()[0].notiz().is_none());
     }
 
     #[test]
